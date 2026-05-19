@@ -816,8 +816,11 @@ func buildRepresentation(peer string, card, conclusions []string) string {
 	}
 
 	var b strings.Builder
+	b.WriteString("Representation for ")
+	b.WriteString(peer)
+	b.WriteString(":")
 	if len(card) > 0 {
-		b.WriteString("Profile facts:")
+		b.WriteString("\n\nProfile facts:")
 		for _, item := range card {
 			b.WriteString("\n- ")
 			b.WriteString(item)
