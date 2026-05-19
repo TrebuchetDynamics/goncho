@@ -220,6 +220,8 @@ forget_memory
 
 This lets a host start with simple memory tools and grow into richer context packs without changing the agent-facing vocabulary.
 
+Migration guide → [docs-site/src/content/docs/reference/honcho-compatibility.md](docs-site/src/content/docs/reference/honcho-compatibility.md)
+
 ## Design Principles
 
 Goncho follows seven principles from the project research in [`docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md`](docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md):
