@@ -20,33 +20,35 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 
-	_ "github.com/ncruces/go-sqlite3/driver"
-
 	"github.com/TrebuchetDynamics/goncho"
+	"github.com/TrebuchetDynamics/goncho/memory"
 )
 
 func main() {
-	db, err := sql.Open("sqlite3", "memory.db")
+	ctx := context.Background()
+
+	store, err := memory.OpenSqlite("memory.db", 0, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := store.Close(ctx); err != nil {
+			log.Printf("close memory store: %v", err)
+		}
+	}()
 
-	if err := goncho.RunMigrations(db); err != nil {
+	if err := goncho.RunMigrations(store.DB()); err != nil {
 		log.Fatal(err)
 	}
 
-	svc := goncho.NewService(db, goncho.Config{
+	svc := goncho.NewService(store.DB(), goncho.Config{
 		WorkspaceID:    "my-agent",
 		ObserverPeerID: "assistant",
 		RecentMessages: 4,
 	}, nil)
-
-	ctx := context.Background()
 
 	if err := svc.SetProfile(ctx, "telegram:12345", []string{
 		"Works in finance",
@@ -77,7 +79,8 @@ func main() {
 
 - `Config.WorkspaceID` keeps one agent runtime from collapsing into another runtime's memory.
 - `Config.ObserverPeerID` names the observing agent perspective.
-- `RunMigrations` initializes Goncho-owned SQLite tables.
+- `memory.OpenSqlite` initializes the service tables used by peer cards, search, context, summaries, and memory tools.
+- `RunMigrations` initializes the observation and audit tables.
 - `SetProfile` writes stable peer-card facts.
 - `Profile` reads the peer card back.
 - `Context` returns an orientation product for prompt construction.

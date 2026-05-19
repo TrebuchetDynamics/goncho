@@ -57,7 +57,7 @@ The approved design mentioned `goncho.RunMigrations`, matching the current READM
 rg -n "func RunMigrations|RunMigrations" -g '*.go'
 ```
 
-Expected: if `migrations.go` is present, Quick Start uses `goncho.RunMigrations(db)`. If the helper is removed before final merge, update Quick Start back to a pre-release setup note instead of documenting a fake call.
+Expected: if `migrations.go` is present, Quick Start uses the real setup path: `memory.OpenSqlite(...)`, then `goncho.RunMigrations(store.DB())`, then `goncho.NewService(store.DB(), ...)`. If the helper is removed before final merge, update Quick Start back to a pre-release setup note instead of documenting a fake call.
 
 ## Task 1: Scaffold Starlight Project
 
@@ -300,33 +300,35 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 
-	_ "github.com/ncruces/go-sqlite3/driver"
-
 	"github.com/TrebuchetDynamics/goncho"
+	"github.com/TrebuchetDynamics/goncho/memory"
 )
 
 func main() {
-	db, err := sql.Open("sqlite3", "memory.db")
+	ctx := context.Background()
+
+	store, err := memory.OpenSqlite("memory.db", 0, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := store.Close(ctx); err != nil {
+			log.Printf("close memory store: %v", err)
+		}
+	}()
 
-	if err := goncho.RunMigrations(db); err != nil {
+	if err := goncho.RunMigrations(store.DB()); err != nil {
 		log.Fatal(err)
 	}
 
-	svc := goncho.NewService(db, goncho.Config{
+	svc := goncho.NewService(store.DB(), goncho.Config{
 		WorkspaceID:    "my-agent",
 		ObserverPeerID: "assistant",
 		RecentMessages: 4,
 	}, nil)
-
-	ctx := context.Background()
 
 	if err := svc.SetProfile(ctx, "telegram:12345", []string{
 		"Works in finance",
@@ -357,7 +359,8 @@ func main() {
 
 - `Config.WorkspaceID` keeps one agent runtime from collapsing into another runtime's memory.
 - `Config.ObserverPeerID` names the observing agent perspective.
-- `RunMigrations` initializes Goncho-owned SQLite tables.
+- `memory.OpenSqlite` initializes the service tables used by peer cards, search, context, summaries, and memory tools.
+- `RunMigrations` initializes the observation and audit tables.
 - `SetProfile` writes stable peer-card facts.
 - `Profile` reads the peer card back.
 - `Context` returns an orientation product for prompt construction.
@@ -972,7 +975,7 @@ rg -n "RunMigrations" docs-site README.md
 
 Expected:
 
-- `docs-site/src/content/docs/start/quick-start.md` calls `goncho.RunMigrations(db)`.
+- `docs-site/src/content/docs/start/quick-start.md` calls `memory.OpenSqlite(...)` and `goncho.RunMigrations(store.DB())`.
 - `docs-site/src/content/docs/reference/core-api.md` documents `RunMigrations`.
 - `README.md` may also mention `goncho.RunMigrations` in its existing Quick Start.
 
@@ -1043,4 +1046,4 @@ Expected: unrelated pre-existing Go worktree changes may remain. Docs-site sourc
   - No task depends on unspecified pages or generated API docs.
   - All created files have concrete content.
 - Type and symbol consistency:
-  - Current Go symbols used in docs: `RunMigrations`, `Config.WorkspaceID`, `Config.ObserverPeerID`, `Config.RecentMessages`, `NewService`, `SetProfile`, `Profile`, `Context`, `ContextParams`, `NewLocalMarkdownMemoryStore`, `LocalMarkdownMemoryConfig`, and memory tool names verified from current source.
+  - Current Go symbols used in docs: `memory.OpenSqlite`, `RunMigrations`, `Config.WorkspaceID`, `Config.ObserverPeerID`, `Config.RecentMessages`, `NewService`, `SetProfile`, `Profile`, `Context`, `ContextParams`, `NewLocalMarkdownMemoryStore`, `LocalMarkdownMemoryConfig`, and memory tool names verified from current source.
