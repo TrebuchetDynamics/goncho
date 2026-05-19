@@ -23,6 +23,15 @@ const (
 	ReviewStatusResolved ReviewStatus = "resolved"
 )
 
+type ReviewResolution string
+
+const (
+	ReviewResolutionAccepted   ReviewResolution = "accepted"
+	ReviewResolutionRejected   ReviewResolution = "rejected"
+	ReviewResolutionSuperseded ReviewResolution = "superseded"
+	ReviewResolutionVerified   ReviewResolution = "verified"
+)
+
 type ReviewItemCreateParams struct {
 	Kind        ReviewKind `json:"kind"`
 	WorkspaceID string     `json:"workspace_id,omitempty"`
@@ -36,18 +45,29 @@ type ReviewItemCreateParams struct {
 }
 
 type ReviewItem struct {
-	ID          string       `json:"id"`
-	Kind        ReviewKind   `json:"kind"`
-	Status      ReviewStatus `json:"status"`
-	WorkspaceID string       `json:"workspace_id"`
-	PeerID      string       `json:"peer_id,omitempty"`
-	SessionKey  string       `json:"session_key,omitempty"`
-	SubjectID   string       `json:"subject_id"`
-	RelatedID   string       `json:"related_id,omitempty"`
-	Reason      string       `json:"reason"`
-	EvidenceIDs []string     `json:"evidence_ids,omitempty"`
-	CreatedAt   time.Time    `json:"created_at"`
-	ResolvedAt  *time.Time   `json:"resolved_at,omitempty"`
+	ID               string           `json:"id"`
+	Kind             ReviewKind       `json:"kind"`
+	Status           ReviewStatus     `json:"status"`
+	WorkspaceID      string           `json:"workspace_id"`
+	PeerID           string           `json:"peer_id,omitempty"`
+	SessionKey       string           `json:"session_key,omitempty"`
+	SubjectID        string           `json:"subject_id"`
+	RelatedID        string           `json:"related_id,omitempty"`
+	Reason           string           `json:"reason"`
+	EvidenceIDs      []string         `json:"evidence_ids,omitempty"`
+	CreatedAt        time.Time        `json:"created_at"`
+	Resolution       ReviewResolution `json:"resolution,omitempty"`
+	ResolvedBy       string           `json:"resolved_by,omitempty"`
+	ResolutionReason string           `json:"resolution_reason,omitempty"`
+	ResolvedAt       *time.Time       `json:"resolved_at,omitempty"`
+}
+
+type ReviewResolutionParams struct {
+	ID               string           `json:"id"`
+	Resolution       ReviewResolution `json:"resolution"`
+	ResolvedBy       string           `json:"resolved_by"`
+	ResolutionReason string           `json:"resolution_reason"`
+	ResolvedAt       time.Time        `json:"resolved_at,omitempty"`
 }
 
 type ReviewQuery struct {
@@ -108,6 +128,52 @@ func (s *Service) ListReviewItems(ctx context.Context, q ReviewQuery) (ReviewLis
 	return ListReviewItems(ctx, s.db, q)
 }
 
+func (s *Service) ResolveReviewItem(ctx context.Context, p ReviewResolutionParams) (ReviewItem, error) {
+	if s == nil {
+		return ReviewItem{}, fmt.Errorf("goncho: nil service")
+	}
+	return ResolveReviewItem(ctx, s.db, p)
+}
+
+func ResolveReviewItem(ctx context.Context, db *sql.DB, p ReviewResolutionParams) (ReviewItem, error) {
+	if err := ctx.Err(); err != nil {
+		return ReviewItem{}, err
+	}
+	if db == nil {
+		return ReviewItem{}, fmt.Errorf("goncho: nil db")
+	}
+	if err := ensureReviewTable(ctx, db); err != nil {
+		return ReviewItem{}, err
+	}
+	id := strings.TrimSpace(p.ID)
+	resolution := ReviewResolution(strings.TrimSpace(string(p.Resolution)))
+	resolvedBy := strings.TrimSpace(p.ResolvedBy)
+	resolutionReason := strings.TrimSpace(p.ResolutionReason)
+	if id == "" || !validReviewResolution(resolution) || resolvedBy == "" || resolutionReason == "" {
+		return ReviewItem{}, fmt.Errorf("goncho: resolve review item requires id, valid resolution, resolved_by, and resolution_reason")
+	}
+	resolvedAt := p.ResolvedAt.UTC()
+	if resolvedAt.IsZero() {
+		resolvedAt = time.Now().UTC()
+	}
+	result, err := db.ExecContext(ctx, `
+		UPDATE goncho_review_items
+		SET status = ?, resolution = ?, resolved_by = ?, resolution_reason = ?, resolved_at = ?
+		WHERE id = ? AND status = ?
+	`, string(ReviewStatusResolved), string(resolution), resolvedBy, resolutionReason, resolvedAt.UnixNano(), id, string(ReviewStatusOpen))
+	if err != nil {
+		return ReviewItem{}, fmt.Errorf("goncho: resolve review item: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return ReviewItem{}, fmt.Errorf("goncho: resolve review item rows: %w", err)
+	}
+	if rows == 0 {
+		return ReviewItem{}, fmt.Errorf("goncho: review item %q not found or not open", id)
+	}
+	return getReviewItem(ctx, db, id)
+}
+
 func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList, error) {
 	if err := ctx.Err(); err != nil {
 		return ReviewList{}, err
@@ -137,7 +203,7 @@ func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList
 	appendFilter("session_key", q.SessionKey)
 	appendFilter("kind", string(q.Kind))
 	appendFilter("status", string(q.Status))
-	query := `SELECT id, kind, status, workspace_id, peer_id, session_key, subject_id, related_id, reason, evidence_ids_json, created_at, resolved_at FROM goncho_review_items`
+	query := `SELECT id, kind, status, workspace_id, peer_id, session_key, subject_id, related_id, reason, evidence_ids_json, created_at, resolution, resolved_by, resolution_reason, resolved_at FROM goncho_review_items`
 	if len(where) > 0 {
 		query += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -205,14 +271,19 @@ func normalizeReviewItem(p ReviewItemCreateParams) (ReviewItem, string, error) {
 	return item, string(raw), nil
 }
 
+func getReviewItem(ctx context.Context, db *sql.DB, id string) (ReviewItem, error) {
+	row := db.QueryRowContext(ctx, `SELECT id, kind, status, workspace_id, peer_id, session_key, subject_id, related_id, reason, evidence_ids_json, created_at, resolution, resolved_by, resolution_reason, resolved_at FROM goncho_review_items WHERE id = ?`, id)
+	return scanReviewItem(row)
+}
+
 type reviewScanner interface{ Scan(...any) error }
 
 func scanReviewItem(scanner reviewScanner) (ReviewItem, error) {
 	var item ReviewItem
-	var kind, status, evidenceJSON string
+	var kind, status, evidenceJSON, resolution string
 	var createdAt int64
 	var resolvedAt sql.NullInt64
-	if err := scanner.Scan(&item.ID, &kind, &status, &item.WorkspaceID, &item.PeerID, &item.SessionKey, &item.SubjectID, &item.RelatedID, &item.Reason, &evidenceJSON, &createdAt, &resolvedAt); err != nil {
+	if err := scanner.Scan(&item.ID, &kind, &status, &item.WorkspaceID, &item.PeerID, &item.SessionKey, &item.SubjectID, &item.RelatedID, &item.Reason, &evidenceJSON, &createdAt, &resolution, &item.ResolvedBy, &item.ResolutionReason, &resolvedAt); err != nil {
 		return ReviewItem{}, fmt.Errorf("goncho: scan review item: %w", err)
 	}
 	var evidence []string
@@ -221,6 +292,7 @@ func scanReviewItem(scanner reviewScanner) (ReviewItem, error) {
 	}
 	item.Kind = ReviewKind(kind)
 	item.Status = ReviewStatus(status)
+	item.Resolution = ReviewResolution(resolution)
 	item.EvidenceIDs = evidence
 	item.CreatedAt = time.Unix(0, createdAt).UTC()
 	if resolvedAt.Valid {
@@ -230,9 +302,21 @@ func scanReviewItem(scanner reviewScanner) (ReviewItem, error) {
 	return item, nil
 }
 
+func validReviewResolution(resolution ReviewResolution) bool {
+	switch resolution {
+	case ReviewResolutionAccepted, ReviewResolutionRejected, ReviewResolutionSuperseded, ReviewResolutionVerified:
+		return true
+	default:
+		return false
+	}
+}
+
 func ensureReviewTable(ctx context.Context, db *sql.DB) error {
 	for _, stmt := range gonchoReviewDDL {
 		if _, err := db.ExecContext(ctx, stmt); err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+				continue
+			}
 			return fmt.Errorf("goncho: ensure review table: %w", err)
 		}
 	}
@@ -252,8 +336,14 @@ var gonchoReviewDDL = []string{
 		reason TEXT NOT NULL,
 		evidence_ids_json TEXT NOT NULL DEFAULT '[]',
 		created_at INTEGER NOT NULL,
+		resolution TEXT NOT NULL DEFAULT '',
+		resolved_by TEXT NOT NULL DEFAULT '',
+		resolution_reason TEXT NOT NULL DEFAULT '',
 		resolved_at INTEGER
 	)`,
+	`ALTER TABLE goncho_review_items ADD COLUMN resolution TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE goncho_review_items ADD COLUMN resolved_by TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE goncho_review_items ADD COLUMN resolution_reason TEXT NOT NULL DEFAULT ''`,
 	`CREATE INDEX IF NOT EXISTS idx_goncho_review_items_status ON goncho_review_items(workspace_id, status, created_at DESC)`,
 	`CREATE INDEX IF NOT EXISTS idx_goncho_review_items_scope ON goncho_review_items(workspace_id, peer_id, session_key, created_at DESC)`,
 	`CREATE INDEX IF NOT EXISTS idx_goncho_review_items_subject ON goncho_review_items(subject_id, created_at DESC)`,

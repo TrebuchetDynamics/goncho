@@ -76,3 +76,62 @@ func TestReviewInboxListsOpenConflictAndStaleItems(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveReviewItemClosesOpenItemWithReviewerAndReason(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	createdAt := time.Date(2026, 5, 19, 13, 0, 0, 0, time.UTC)
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:        ReviewKindConflict,
+		WorkspaceID: svc.workspaceID,
+		PeerID:      "peer-a",
+		SessionKey:  "session-a",
+		SubjectID:   "mem-new",
+		RelatedID:   "mem-old",
+		Reason:      "new memory conflicts with old memory",
+		EvidenceIDs: []string{"obs-a", "obs-b"},
+		CreatedAt:   createdAt,
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	resolvedAt := createdAt.Add(time.Minute)
+	resolved, err := svc.ResolveReviewItem(ctx, ReviewResolutionParams{
+		ID:               item.ID,
+		Resolution:       ReviewResolutionSuperseded,
+		ResolvedBy:       "agent:mineru",
+		ResolutionReason: "newer memory supersedes old memory after evidence review",
+		ResolvedAt:       resolvedAt,
+	})
+	if err != nil {
+		t.Fatalf("ResolveReviewItem: %v", err)
+	}
+	if resolved.Status != ReviewStatusResolved || resolved.Resolution != ReviewResolutionSuperseded {
+		t.Fatalf("resolved state = status %q resolution %q, want resolved/superseded", resolved.Status, resolved.Resolution)
+	}
+	if resolved.ResolvedBy != "agent:mineru" || resolved.ResolutionReason == "" {
+		t.Fatalf("resolved reviewer/reason = %+v", resolved)
+	}
+	if resolved.ResolvedAt == nil || !resolved.ResolvedAt.Equal(resolvedAt) {
+		t.Fatalf("resolved_at = %v, want %s", resolved.ResolvedAt, resolvedAt)
+	}
+
+	open, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-a", Status: ReviewStatusOpen})
+	if err != nil {
+		t.Fatalf("ListReviewItems open: %v", err)
+	}
+	if len(open.Items) != 0 {
+		t.Fatalf("open review items = %+v, want none", open.Items)
+	}
+
+	closed, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-a", Status: ReviewStatusResolved})
+	if err != nil {
+		t.Fatalf("ListReviewItems resolved: %v", err)
+	}
+	if len(closed.Items) != 1 || closed.Items[0].ID != item.ID || closed.Items[0].Resolution != ReviewResolutionSuperseded {
+		t.Fatalf("resolved review items = %+v, want superseded item %s", closed.Items, item.ID)
+	}
+}

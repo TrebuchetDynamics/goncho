@@ -3,6 +3,7 @@ package goncho
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 func RunMigrations(db *sql.DB) error {
@@ -26,7 +27,7 @@ func RunMigrations(db *sql.DB) error {
 	}
 	defer tx.Rollback()
 	for _, stmt := range append(gonchoObservationDDL, gonchoReviewDDL...) {
-		if _, err := tx.Exec(stmt); err != nil {
+		if err := applyGonchoMigrationStmt(tx, stmt); err != nil {
 			return fmt.Errorf("goncho: apply migration: %w", err)
 		}
 	}
@@ -34,6 +35,18 @@ func RunMigrations(db *sql.DB) error {
 		return fmt.Errorf("goncho: commit observation migrations: %w", err)
 	}
 	return nil
+}
+
+type gonchoMigrationExecer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+func applyGonchoMigrationStmt(exec gonchoMigrationExecer, stmt string) error {
+	_, err := exec.Exec(stmt)
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+		return nil
+	}
+	return err
 }
 
 var gonchoObservationDDL = []string{
