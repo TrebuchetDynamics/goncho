@@ -25,6 +25,7 @@ type GonchoMetaanalysisCoverageReport struct {
 	PrinciplesCovered             []string `json:"principles_covered"`
 	ContextLayersCovered          []string `json:"context_layers_covered"`
 	LifecycleStatesCovered        []string `json:"lifecycle_states_covered"`
+	CoreEvaluationsCovered        []string `json:"core_evaluations_covered"`
 	LocalFeaturesVerified         []string `json:"local_features_verified"`
 	DeferredFeatures              []string `json:"deferred_features"`
 	CompletionCondition           string   `json:"completion_condition"`
@@ -102,6 +103,19 @@ func BuildGonchoMetaanalysisCoverageReport(input GonchoMetaanalysisCoverageInput
 			"superseded",
 			"quarantined",
 			"review_required",
+		}),
+		CoreEvaluationsCovered: sortedGonchoProofStrings([]string{
+			"exact_recall",
+			"paraphrase_recall",
+			"multi_hop_recall",
+			"temporal_state",
+			"conflict_adjudication",
+			"stale_code_claim",
+			"token_budget",
+			"noise_resistance",
+			"scope_isolation",
+			"prompt_injection_persistence",
+			"drift_prevention",
 		}),
 		LocalFeaturesVerified: sortedGonchoProofStrings(features),
 		DeferredFeatures: sortedGonchoProofStrings([]string{

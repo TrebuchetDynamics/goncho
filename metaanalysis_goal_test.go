@@ -82,6 +82,23 @@ func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitect
 			t.Fatalf("features = %#v, missing %s", report.LocalFeaturesVerified, feature)
 		}
 	}
+	for _, evaluation := range []string{
+		"exact_recall",
+		"paraphrase_recall",
+		"multi_hop_recall",
+		"temporal_state",
+		"conflict_adjudication",
+		"stale_code_claim",
+		"token_budget",
+		"noise_resistance",
+		"scope_isolation",
+		"prompt_injection_persistence",
+		"drift_prevention",
+	} {
+		if !containsMetaanalysisValue(report.CoreEvaluationsCovered, evaluation) {
+			t.Fatalf("core evaluations = %#v, missing %s", report.CoreEvaluationsCovered, evaluation)
+		}
+	}
 	for _, deferred := range []string{"full_cognitive_map_ui", "postgres_team_adapter", "cloud_embeddings_required", "dashboard_visualization"} {
 		if !containsMetaanalysisValue(report.DeferredFeatures, deferred) {
 			t.Fatalf("deferred = %#v, missing %s", report.DeferredFeatures, deferred)
