@@ -26,15 +26,17 @@ type Metadata struct {
 }
 
 type MemMap struct {
-	mu   sync.Mutex
-	kv   map[string]string
-	meta map[string]Metadata
+	mu        sync.Mutex
+	kv        map[string]string
+	meta      map[string]Metadata
+	chatUsers map[string]string
 }
 
 func NewMemMap() *MemMap {
 	return &MemMap{
-		kv:   map[string]string{},
-		meta: map[string]Metadata{},
+		kv:        map[string]string{},
+		meta:      map[string]Metadata{},
+		chatUsers: map[string]string{},
 	}
 }
 
@@ -69,7 +71,20 @@ func (m *MemMap) PutMetadata(ctx context.Context, meta Metadata) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.meta[meta.SessionID] = meta
+	if meta.Source != "" && meta.ChatID != "" && meta.UserID != "" {
+		m.chatUsers[chatBindingKey(meta.Source, meta.ChatID)] = meta.UserID
+	}
 	return nil
+}
+
+func (m *MemMap) ResolveUserID(ctx context.Context, source, chatID string) (string, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return "", false, err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	userID, ok := m.chatUsers[chatBindingKey(strings.TrimSpace(source), strings.TrimSpace(chatID))]
+	return userID, ok, nil
 }
 
 func (m *MemMap) ListMetadataByUserID(ctx context.Context, userID string) ([]Metadata, error) {
@@ -109,4 +124,8 @@ func normalizeMetadata(meta Metadata) Metadata {
 		meta.UpdatedAt = meta.CreatedAt
 	}
 	return meta
+}
+
+func chatBindingKey(source, chatID string) string {
+	return source + "\x00" + chatID
 }

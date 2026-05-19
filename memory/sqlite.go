@@ -78,10 +78,22 @@ func ensureSchema(db *sql.DB) error {
 			ts_unix INTEGER NOT NULL DEFAULT 0,
 			chat_id TEXT,
 			meta_json TEXT,
-			memory_sync_status TEXT NOT NULL DEFAULT 'ready'
+			memory_sync_status TEXT NOT NULL DEFAULT 'ready',
+			memory_sync_reason TEXT
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session_id, ts_unix DESC, id DESC)`,
 		`CREATE INDEX IF NOT EXISTS idx_turns_chat ON turns(chat_id, ts_unix DESC, id DESC)`,
+		`CREATE VIRTUAL TABLE IF NOT EXISTS turns_fts USING fts5(content, content='turns', content_rowid='id')`,
+		`CREATE TRIGGER IF NOT EXISTS turns_fts_ai AFTER INSERT ON turns BEGIN
+			INSERT INTO turns_fts(rowid, content) VALUES (new.id, new.content);
+		END`,
+		`CREATE TRIGGER IF NOT EXISTS turns_fts_ad AFTER DELETE ON turns BEGIN
+			INSERT INTO turns_fts(turns_fts, rowid, content) VALUES('delete', old.id, old.content);
+		END`,
+		`CREATE TRIGGER IF NOT EXISTS turns_fts_au AFTER UPDATE OF content ON turns BEGIN
+			INSERT INTO turns_fts(turns_fts, rowid, content) VALUES('delete', old.id, old.content);
+			INSERT INTO turns_fts(rowid, content) VALUES (new.id, new.content);
+		END`,
 		`CREATE TABLE IF NOT EXISTS goncho_peer_cards (
 			workspace_id TEXT NOT NULL,
 			observer_peer_id TEXT NOT NULL,
@@ -123,15 +135,23 @@ func ensureSchema(db *sql.DB) error {
 			workspace_id TEXT NOT NULL,
 			observer_peer_id TEXT NOT NULL,
 			observed_peer_id TEXT NOT NULL,
+			dream_type TEXT NOT NULL DEFAULT 'consolidation',
 			status TEXT NOT NULL,
 			manual INTEGER NOT NULL DEFAULT 0,
 			work_unit_key TEXT NOT NULL,
 			reason TEXT NOT NULL DEFAULT '',
+			new_conclusions INTEGER NOT NULL DEFAULT 0,
+			min_conclusions INTEGER NOT NULL DEFAULT 0,
+			last_conclusion_id INTEGER NOT NULL DEFAULT 0,
+			scheduled_for INTEGER NOT NULL DEFAULT 0,
+			last_activity_at INTEGER NOT NULL DEFAULT 0,
+			cooldown_until INTEGER NOT NULL DEFAULT 0,
+			idle_until INTEGER NOT NULL DEFAULT 0,
 			started_at INTEGER,
 			completed_at INTEGER,
+			stale_at INTEGER,
 			created_at INTEGER NOT NULL,
-			updated_at INTEGER NOT NULL,
-			UNIQUE(workspace_id, observer_peer_id, observed_peer_id, status)
+			updated_at INTEGER NOT NULL
 		)`,
 		`CREATE TABLE IF NOT EXISTS goncho_memory_items (
 			memory_id TEXT PRIMARY KEY,

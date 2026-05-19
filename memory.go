@@ -386,8 +386,8 @@ func (idx searchLineageIndex) statusFor(sessionID string) string {
 }
 
 func sanitizeFTS5Pattern(raw string) string {
-	re := regexp.MustCompile(`[^\w\s\*\-\+"]`)
-	return strings.TrimSpace(re.ReplaceAllString(raw, ""))
+	re := regexp.MustCompile(`[^\w\s\*+"]`)
+	return strings.TrimSpace(re.ReplaceAllString(raw, " "))
 }
 
 func buildTurnSearchQuery(rawQuery string, sessionIDs, chatKeys, roles []string, limit int, sessionsOnly bool) (string, []any) {

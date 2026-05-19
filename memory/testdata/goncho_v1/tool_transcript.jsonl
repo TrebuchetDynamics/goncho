@@ -1,0 +1,5 @@
+{"tool":"store_memory","arguments":{"content":"Juan wants Goncho memory V1 to preserve user memory across upgrades.","tags":["goncho","v1"],"importance":0.95},"result":{"success":true,"id":"mem_agent_a_project","contract_version":"1"}}
+{"tool":"retrieve_memory","arguments":{"query":"Goncho memory V1","limit":5},"result":{"count":1,"ids":["mem_agent_a_project"],"contract_version":"1"}}
+{"tool":"update_memory","arguments":{"id":"mem_agent_a_project","content":"Juan wants Goncho memory V1 plus independent multi-agent memory."},"result":{"success":true,"revision":2,"contract_version":"1"}}
+{"tool":"forget_memory","arguments":{"id":"mem_agent_a_old_goal"},"result":{"success":true,"state":"tombstoned","contract_version":"1"}}
+{"tool":"summarize_memories","arguments":{"filter":"goncho","max_items":10},"result":{"summarized":1,"contract_version":"1"}}

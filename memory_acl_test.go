@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"testing"
 	"time"
+
+	_ "github.com/ncruces/go-sqlite3/driver"
 )
 
 func setupACLTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
+	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

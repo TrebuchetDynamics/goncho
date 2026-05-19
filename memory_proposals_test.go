@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"testing"
+
+	_ "github.com/ncruces/go-sqlite3/driver"
 )
 
 func newTestProposalsDB(t *testing.T) *sql.DB {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
+	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,8 +215,8 @@ func TestProposalEvidenceRoundTrip(t *testing.T) {
 	ctx := context.Background()
 
 	evidence := map[string]any{
-		"source":    "tool_call",
-		"tool_name": "Read",
+		"source":     "tool_call",
+		"tool_name":  "Read",
 		"confidence": 0.95,
 	}
 	ref, err := SubmitProposal(ctx, db, "sub_1", "child_a", "parent_a", "evidence test", TierDecision, KindFact, evidence)

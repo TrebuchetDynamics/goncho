@@ -35,7 +35,7 @@ func TestMemoryV1ToolContractDocumentsDurableToolSemantics(t *testing.T) {
 }
 
 func TestMemoryV1ContractFixtureMatchesGonchoToolContract(t *testing.T) {
-	body, err := os.ReadFile(filepath.Join("..", "memory", "testdata", "goncho_v1", "tool_transcript.jsonl"))
+	body, err := os.ReadFile(filepath.Join("memory", "testdata", "goncho_v1", "tool_transcript.jsonl"))
 	if err != nil {
 		t.Fatalf("read tool transcript fixture: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestMemoryV1ContractFixtureMatchesGonchoToolContract(t *testing.T) {
 }
 
 func TestMemoryV1AgentIsolationPolicyMatchesMemoryRecallHelper(t *testing.T) {
-	doc, err := memory.ParseGonchoMemoryV1Markdown(mustReadFixture(t, filepath.Join("..", "memory", "testdata", "goncho_v1", "memory.md")))
+	doc, err := memory.ParseGonchoMemoryV1Markdown(mustReadFixture(t, filepath.Join("memory", "testdata", "goncho_v1", "memory.md")))
 	if err != nil {
 		t.Fatalf("ParseGonchoMemoryV1Markdown: %v", err)
 	}
