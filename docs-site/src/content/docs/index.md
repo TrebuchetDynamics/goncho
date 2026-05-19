@@ -1,6 +1,35 @@
 ---
 title: Goncho
-description: Placeholder page for the Goncho documentation site.
+description: Trust-preserving context for Go agents.
+template: splash
+hero:
+  tagline: Trust-preserving context for Go agents.
+  actions:
+    - text: Start using Goncho
+      link: /start/quick-start/
+      icon: right-arrow
+    - text: Understand the architecture
+      link: /concepts/trust-preserving-context/
+      icon: open-book
 ---
 
-This page will be expanded in the next documentation task.
+Goncho is a local-first context architecture for Go agents that preserves evidence, derives scoped beliefs, and returns compact orientation instead of dumping memory into prompts.
+
+```text
+raw evidence -> claims -> scoped beliefs -> orientation -> action -> revision
+```
+
+## Memory Is Not Just Retrieval
+
+Vector search can help find relevant text. It does not decide what an agent should believe, where that belief applies, or when it may be stale.
+
+Goncho treats memory as the state an agent carries forward: what it knows about peers, what it has concluded from prior sessions, what failed before, and what should be surfaced now.
+
+:::note[Current status]
+Goncho is pre-release. The current Go library supports local persistence, peer cards, search, context assembly, session summaries, local markdown memory, and compatibility surfaces. First-class claims, confidence, temporal validity, and review workflows are architecture direction.
+:::
+
+## Two Paths
+
+- Start with [Quick Start](/start/quick-start/) if you want the current Go integration shape.
+- Start with [Trust-Preserving Context](/concepts/trust-preserving-context/) if you want the architecture model first.
