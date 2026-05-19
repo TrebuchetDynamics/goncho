@@ -40,6 +40,7 @@ var memoryToolDescriptors = []ToolDescriptor{
 	{Name: "update_memory", Description: "Update an existing memory entry.", Schema: json.RawMessage(`{"type":"object","properties":{"id":{"type":"string"},"content":{"type":"string"},"importance":{"type":"number"}},"required":["id"]}`)},
 	{Name: "summarize_memories", Description: "Summarize related memories.", Schema: json.RawMessage(`{"type":"object","properties":{"filter":{"type":"string"},"max_items":{"type":"integer"}},"required":["filter"]}`)},
 	{Name: "forget_memory", Description: "Remove a memory entry (soft delete).", Schema: json.RawMessage(`{"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}`)},
+	{Name: "goncho_review", Description: "Inspect and resolve Goncho memory review items.", Schema: json.RawMessage(`{"type":"object","properties":{"action":{"type":"string","enum":["list","resolve"]},"peer_id":{"type":"string"},"status":{"type":"string","enum":["open","resolved"]},"id":{"type":"string"},"resolution":{"type":"string","enum":["accepted","rejected","superseded","verified"]},"resolved_by":{"type":"string"},"resolution_reason":{"type":"string"}},"required":["action"]}`)},
 }
 
 func MemoryToolOperationSpec(name string) (OperationSpec, bool) {
@@ -52,6 +53,9 @@ func MemoryToolOperationSpec(name string) (OperationSpec, bool) {
 				s.Idempotent = true
 			case "forget_memory":
 				s.Idempotent = true
+			case "goncho_review":
+				s.AuditKind = "review"
+				s.TrustClass = []string{"operator", "system"}
 			}
 			return s, true
 		}

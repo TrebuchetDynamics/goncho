@@ -208,6 +208,7 @@ func TestMemoryToolNames(t *testing.T) {
 		{"update_memory", &updateMemoryTool{newMemoryToolBase(store)}},
 		{"summarize_memories", &summarizeMemoryTool{newMemoryToolBase(store)}},
 		{"forget_memory", &forgetMemoryTool{newMemoryToolBase(store)}},
+		{"goncho_review", NewReviewTool(newTestReviewToolService(t))},
 	}
 	for _, tc := range tests {
 		if tc.tool.Name() != tc.want {
@@ -222,12 +223,14 @@ func TestMemoryToolsExposeOperationSpecs(t *testing.T) {
 		tool       toolmeta.Tool
 		mutating   bool
 		idempotent bool
+		auditKind  string
 	}{
-		{NewStoreMemoryTool(store), true, false},
-		{NewRetrieveMemoryTool(store), false, true},
-		{NewUpdateMemoryTool(store), true, false},
-		{NewSummarizeMemoryTool(store), false, true},
-		{NewForgetMemoryTool(store), true, true},
+		{NewStoreMemoryTool(store), true, false, "memory"},
+		{NewRetrieveMemoryTool(store), false, true, "memory"},
+		{NewUpdateMemoryTool(store), true, false, "memory"},
+		{NewSummarizeMemoryTool(store), false, true, "memory"},
+		{NewForgetMemoryTool(store), true, true, "memory"},
+		{NewReviewTool(newTestReviewToolService(t)), true, false, "review"},
 	}
 	for _, tc := range tests {
 		specTool, ok := tc.tool.(toolmeta.Spec)
@@ -238,8 +241,8 @@ func TestMemoryToolsExposeOperationSpecs(t *testing.T) {
 		if spec.Name != tc.tool.Name() || spec.Description != tc.tool.Description() || string(spec.Schema) != string(tc.tool.Schema()) {
 			t.Fatalf("%s spec descriptor = %+v, want live tool descriptor", tc.tool.Name(), spec.ToolDescriptor)
 		}
-		if spec.AuditKind != "memory" || !spec.PromptSafe {
-			t.Fatalf("%s spec = %+v, want prompt-safe memory audit spec", tc.tool.Name(), spec)
+		if spec.AuditKind != tc.auditKind || !spec.PromptSafe {
+			t.Fatalf("%s spec = %+v, want prompt-safe %s audit spec", tc.tool.Name(), spec, tc.auditKind)
 		}
 		if !stringSliceContains(spec.TrustClass, "operator") || !stringSliceContains(spec.TrustClass, "system") {
 			t.Fatalf("%s trust class = %#v, want operator and system", tc.tool.Name(), spec.TrustClass)
@@ -510,4 +513,11 @@ func jsonArgs(t *testing.T, value any) string {
 		t.Fatalf("marshal args: %v", err)
 	}
 	return string(raw)
+}
+
+func newTestReviewToolService(t *testing.T) *Service {
+	t.Helper()
+	svc, cleanup := newTestService(t)
+	t.Cleanup(cleanup)
+	return svc
 }
