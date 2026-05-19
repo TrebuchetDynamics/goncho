@@ -244,9 +244,6 @@ description: Trust-preserving context for Go agents.
 template: splash
 hero:
   tagline: Trust-preserving context for Go agents.
-  image:
-    alt: ''
-    file: ''
   actions:
     - text: Start using Goncho
       link: /start/quick-start/
