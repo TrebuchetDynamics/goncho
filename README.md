@@ -35,6 +35,8 @@ npm ci
 npm run build
 ```
 
+The repository workflow builds docs on pull requests and publishes `docs-site/dist` from `main` when GitHub Pages is configured to use GitHub Actions as its source.
+
 ## Why Goncho Exists
 
 Most agent memory systems start as retrieval systems:
