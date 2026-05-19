@@ -1,0 +1,337 @@
+{
+  "trace_id": "b3765ad87524b8be6fcdf19dd43e946a8116dd8995e0e998f4a1f08bec69b9ef",
+  "pipeline_version": "test-pipeline",
+  "created_at": "2026-05-17T12:00:00Z",
+  "query": {
+    "workspace_id": "default",
+    "peer": "user-juan",
+    "query": "auth rate limit",
+    "session_key": "sess-auth",
+    "scope_id": "team",
+    "limit": 2
+  },
+  "scoring_config": {
+    "version": "test-v1",
+    "weights": {
+      "graph": 0.2,
+      "importance": 0.1,
+      "keyword": 0.25,
+      "recency": 0.1,
+      "scope": 0.05,
+      "semantic": 0.3
+    },
+    "rrf_k": 60,
+    "mmr_lambda": 0.7,
+    "diversity_keys": [
+      "session_id"
+    ],
+    "token_budget": 80
+  },
+  "candidates": [
+    {
+      "candidate": {
+        "memory_id": "mem-auth",
+        "source_type": "conclusion",
+        "content": "JWT auth uses jose middleware.",
+        "session_id": "sess-auth",
+        "agent_id": "gormes",
+        "scope_id": "team",
+        "created_at": "2026-05-17T11:00:00Z",
+        "importance": 0.9,
+        "provenance": [
+          {
+            "kind": "keyword",
+            "note": "matched auth",
+            "score": 0.8
+          },
+          {
+            "kind": "semantic",
+            "note": "embedding neighbor",
+            "score": 0.9
+          },
+          {
+            "kind": "graph",
+            "note": "AUTH_USES edge",
+            "score": 0.5
+          },
+          {
+            "kind": "scope",
+            "note": "same scope",
+            "score": 1
+          }
+        ]
+      },
+      "score": {
+        "keyword_score": 0.8,
+        "semantic_score": 0.9,
+        "graph_score": 0.5,
+        "recency_score": 0.999038,
+        "importance_score": 0.9,
+        "scope_score": 1,
+        "rrf_score": 0.016314,
+        "diversity_penalty": 0,
+        "final_score": 0.826218,
+        "why_selected": [
+          "final_score=0.826218",
+          "scoring_config=test-v1"
+        ]
+      }
+    },
+    {
+      "candidate": {
+        "memory_id": "mem-rate",
+        "source_type": "turn",
+        "content": "Rate limiting uses token bucket middleware.",
+        "session_id": "sess-auth",
+        "agent_id": "gormes",
+        "scope_id": "team",
+        "created_at": "2026-05-17T10:00:00Z",
+        "importance": 0.7,
+        "provenance": [
+          {
+            "kind": "keyword",
+            "note": "matched rate limit",
+            "score": 0.7
+          },
+          {
+            "kind": "semantic",
+            "note": "embedding neighbor",
+            "score": 0.86
+          },
+          {
+            "kind": "graph",
+            "note": "related middleware edge",
+            "score": 0.3
+          },
+          {
+            "kind": "scope",
+            "note": "same scope",
+            "score": 1
+          }
+        ]
+      },
+      "score": {
+        "keyword_score": 0.7,
+        "semantic_score": 0.86,
+        "graph_score": 0.3,
+        "recency_score": 0.998076,
+        "importance_score": 0.7,
+        "scope_score": 1,
+        "rrf_score": 0.016039,
+        "diversity_penalty": 0,
+        "final_score": 0.728847,
+        "why_selected": [
+          "final_score=0.728847",
+          "scoring_config=test-v1"
+        ]
+      }
+    },
+    {
+      "candidate": {
+        "memory_id": "mem-db",
+        "source_type": "conclusion",
+        "content": "Database performance work found an N+1 query.",
+        "session_id": "sess-db",
+        "agent_id": "gormes",
+        "scope_id": "team",
+        "created_at": "2026-05-17T11:30:00Z",
+        "importance": 0.6,
+        "provenance": [
+          {
+            "kind": "keyword",
+            "note": "weak lexical overlap",
+            "score": 0.2
+          },
+          {
+            "kind": "semantic",
+            "note": "weak embedding neighbor",
+            "score": 0.3
+          },
+          {
+            "kind": "graph",
+            "note": "database performance edge",
+            "score": 0.95
+          },
+          {
+            "kind": "scope",
+            "note": "same scope",
+            "score": 1
+          }
+        ]
+      },
+      "score": {
+        "keyword_score": 0.2,
+        "semantic_score": 0.3,
+        "graph_score": 0.95,
+        "recency_score": 0.999519,
+        "importance_score": 0.6,
+        "scope_score": 1,
+        "rrf_score": 0.016042,
+        "diversity_penalty": 0,
+        "final_score": 0.555994,
+        "why_selected": [
+          "final_score=0.555994",
+          "scoring_config=test-v1"
+        ]
+      }
+    }
+  ],
+  "selected": [
+    {
+      "candidate": {
+        "memory_id": "mem-auth",
+        "source_type": "conclusion",
+        "content": "JWT auth uses jose middleware.",
+        "session_id": "sess-auth",
+        "agent_id": "gormes",
+        "scope_id": "team",
+        "created_at": "2026-05-17T11:00:00Z",
+        "importance": 0.9,
+        "provenance": [
+          {
+            "kind": "keyword",
+            "note": "matched auth",
+            "score": 0.8
+          },
+          {
+            "kind": "semantic",
+            "note": "embedding neighbor",
+            "score": 0.9
+          },
+          {
+            "kind": "graph",
+            "note": "AUTH_USES edge",
+            "score": 0.5
+          },
+          {
+            "kind": "scope",
+            "note": "same scope",
+            "score": 1
+          }
+        ]
+      },
+      "score": {
+        "keyword_score": 0.8,
+        "semantic_score": 0.9,
+        "graph_score": 0.5,
+        "recency_score": 0.999038,
+        "importance_score": 0.9,
+        "scope_score": 1,
+        "rrf_score": 0.016314,
+        "diversity_penalty": 0,
+        "final_score": 0.826218,
+        "why_selected": [
+          "final_score=0.826218",
+          "scoring_config=test-v1",
+          "diversity_penalty=0.000000"
+        ]
+      }
+    },
+    {
+      "candidate": {
+        "memory_id": "mem-db",
+        "source_type": "conclusion",
+        "content": "Database performance work found an N+1 query.",
+        "session_id": "sess-db",
+        "agent_id": "gormes",
+        "scope_id": "team",
+        "created_at": "2026-05-17T11:30:00Z",
+        "importance": 0.6,
+        "provenance": [
+          {
+            "kind": "keyword",
+            "note": "weak lexical overlap",
+            "score": 0.2
+          },
+          {
+            "kind": "semantic",
+            "note": "weak embedding neighbor",
+            "score": 0.3
+          },
+          {
+            "kind": "graph",
+            "note": "database performance edge",
+            "score": 0.95
+          },
+          {
+            "kind": "scope",
+            "note": "same scope",
+            "score": 1
+          }
+        ]
+      },
+      "score": {
+        "keyword_score": 0.2,
+        "semantic_score": 0.3,
+        "graph_score": 0.95,
+        "recency_score": 0.999519,
+        "importance_score": 0.6,
+        "scope_score": 1,
+        "rrf_score": 0.016042,
+        "diversity_penalty": 0,
+        "final_score": 0.555994,
+        "why_selected": [
+          "final_score=0.555994",
+          "scoring_config=test-v1",
+          "diversity_penalty=0.000000"
+        ]
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "candidate": {
+        "memory_id": "mem-rate",
+        "source_type": "turn",
+        "content": "Rate limiting uses token bucket middleware.",
+        "session_id": "sess-auth",
+        "agent_id": "gormes",
+        "scope_id": "team",
+        "created_at": "2026-05-17T10:00:00Z",
+        "importance": 0.7,
+        "provenance": [
+          {
+            "kind": "keyword",
+            "note": "matched rate limit",
+            "score": 0.7
+          },
+          {
+            "kind": "semantic",
+            "note": "embedding neighbor",
+            "score": 0.86
+          },
+          {
+            "kind": "graph",
+            "note": "related middleware edge",
+            "score": 0.3
+          },
+          {
+            "kind": "scope",
+            "note": "same scope",
+            "score": 1
+          }
+        ]
+      },
+      "score": {
+        "keyword_score": 0.7,
+        "semantic_score": 0.86,
+        "graph_score": 0.3,
+        "recency_score": 0.998076,
+        "importance_score": 0.7,
+        "scope_score": 1,
+        "rrf_score": 0.016039,
+        "diversity_penalty": 0.3,
+        "final_score": 0.428847,
+        "why_selected": [
+          "final_score=0.728847",
+          "scoring_config=test-v1"
+        ]
+      },
+      "reason": "not_selected",
+      "why_rejected": [
+        "limit=2"
+      ]
+    }
+  ],
+  "warnings": []
+}
