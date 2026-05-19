@@ -2,6 +2,8 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
+  site: 'https://trebuchetdynamics.github.io',
+  base: '/goncho',
   integrations: [
     starlight({
       title: 'Goncho',

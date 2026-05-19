@@ -1,0 +1,39 @@
+name: Docs Site
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/docs-site.yml'
+      - 'docs-site/**'
+      - 'README.md'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/docs-site.yml'
+      - 'docs-site/**'
+      - 'README.md'
+
+jobs:
+  build:
+    name: Build Starlight docs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs-site
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build docs
+        run: npm run build

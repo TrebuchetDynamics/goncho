@@ -17,6 +17,24 @@ go get github.com/TrebuchetDynamics/goncho
 
 ---
 
+## Documentation Site
+
+The Starlight documentation site lives in [`docs-site/`](docs-site/). The default static deployment target is `https://trebuchetdynamics.github.io/goncho/`.
+
+```bash
+cd docs-site
+npm install
+npm run dev
+```
+
+For CI and deploy builds:
+
+```bash
+cd docs-site
+npm ci
+npm run build
+```
+
 ## Why Goncho Exists
 
 Most agent memory systems start as retrieval systems:
@@ -68,30 +86,29 @@ package main
 
 import (
     "context"
-    "database/sql"
     "fmt"
 
     "github.com/TrebuchetDynamics/goncho"
-    _ "github.com/ncruces/go-sqlite3/driver"
+    "github.com/TrebuchetDynamics/goncho/memory"
 )
 
 func main() {
-    db, err := sql.Open("sqlite3", "memory.db")
+    ctx := context.Background()
+
+    store, err := memory.OpenSqlite("memory.db", 0, nil)
     if err != nil {
         panic(err)
     }
-    defer db.Close()
+    defer func() { _ = store.Close(ctx) }()
 
-    if err := goncho.RunMigrations(db); err != nil {
+    if err := goncho.RunMigrations(store.DB()); err != nil {
         panic(err)
     }
 
-    svc := goncho.NewService(db, goncho.Config{
-        WorkspaceID: "my-agent",
-        Observer:    "assistant",
+    svc := goncho.NewService(store.DB(), goncho.Config{
+        WorkspaceID:    "my-agent",
+        ObserverPeerID: "assistant",
     }, nil)
-
-    ctx := context.Background()
 
     // Store durable peer knowledge.
     if err := svc.SetProfile(ctx, "telegram:12345", []string{
