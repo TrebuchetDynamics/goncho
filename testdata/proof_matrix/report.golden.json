@@ -1,1 +1,52 @@
-{"service":"goncho","proof_version":"goncho-full-local-proof-v1","sqlite_restart_verified":true,"api_contracts_verified":["conclude","context","create_messages","delete_conclusion","search","set_profile","sqlite_restart_search"],"scope_isolation_verified":true,"tombstone_exclusion_verified":true,"trace_projection_invariant":"no_projection_without_recall_trace","stable_trace_ids":["7439501d898fa5a5acd0728d80ce333ee32f9fe8c7b05a1851ecc2238e4136dc","977bb302ff07231570807aa9f1f6902df82727cddec6ba0ef387de33d29113da","9faf38dbad31259ce46285140240a2a7dd53f9f325425def16a7a12934d50590"],"warning_codes_seen":["scope_excluded_all_candidates","semantic_unavailable","token_budget_truncated"],"negative_controls_rejected":["scope:other-memory","tombstone:deleted-conclusion","workspace:other"],"benchmark_summary":{"corpus_version":"goncho-recall-benchmark-v1","case_count":2,"recall_at_5":1,"recall_at_10":1,"context_hit_rate":1,"token_budget_pass_rate":1,"warning_count":0},"kernel_e2e_fixture":"internal/e2e/testdata/goncho_memory_turn/golden.json","selected_memory_ids":["proof-default","proof-short"],"rejected_memory_ids":["proof-cross-scope","proof-scope-only","proof-too-long"],"stable_json_sha256":"a38036e49cb17a9ca0e123d7d9d0b250486075d6371b92ee28c40a8749990b4d"}
+{
+  "service": "goncho",
+  "proof_version": "goncho-full-local-proof-v1",
+  "sqlite_restart_verified": true,
+  "api_contracts_verified": [
+    "conclude",
+    "context",
+    "create_messages",
+    "delete_conclusion",
+    "search",
+    "set_profile",
+    "sqlite_restart_search"
+  ],
+  "scope_isolation_verified": true,
+  "tombstone_exclusion_verified": true,
+  "trace_projection_invariant": "no_projection_without_recall_trace",
+  "stable_trace_ids": [
+    "7439501d898fa5a5acd0728d80ce333ee32f9fe8c7b05a1851ecc2238e4136dc",
+    "977bb302ff07231570807aa9f1f6902df82727cddec6ba0ef387de33d29113da",
+    "9faf38dbad31259ce46285140240a2a7dd53f9f325425def16a7a12934d50590"
+  ],
+  "warning_codes_seen": [
+    "scope_excluded_all_candidates",
+    "semantic_unavailable",
+    "token_budget_truncated"
+  ],
+  "negative_controls_rejected": [
+    "scope:other-memory",
+    "tombstone:deleted-conclusion",
+    "workspace:other"
+  ],
+  "benchmark_summary": {
+    "corpus_version": "goncho-recall-benchmark-v1",
+    "case_count": 2,
+    "recall_at_5": 1,
+    "recall_at_10": 1,
+    "context_hit_rate": 1,
+    "token_budget_pass_rate": 1,
+    "warning_count": 0
+  },
+  "kernel_e2e_fixture": "internal/e2e/testdata/goncho_memory_turn/golden.json",
+  "selected_memory_ids": [
+    "proof-default",
+    "proof-short"
+  ],
+  "rejected_memory_ids": [
+    "proof-cross-scope",
+    "proof-scope-only",
+    "proof-too-long"
+  ],
+  "stable_json_sha256": "a38036e49cb17a9ca0e123d7d9d0b250486075d6371b92ee28c40a8749990b4d"
+}

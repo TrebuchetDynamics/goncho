@@ -1,1 +1,69 @@
-{"service":"goncho","corpus_version":"goncho-recall-benchmark-v1","case_count":2,"recall_at_5":1,"recall_at_10":1,"context_hit_rate":1,"token_budget_pass_rate":1,"latency":{"min_ms":12,"p50_ms":12,"p95_ms":25,"max_ms":25},"warning_count":0,"warnings":[],"cases":[{"id":"stable-trace-auth","trace_id":"b3765ad87524b8be6fcdf19dd43e946a8116dd8995e0e998f4a1f08bec69b9ef","pipeline_version":"test-pipeline","scoring_config_version":"test-v1","relevant_ids":["mem-auth","mem-rate"],"candidate_memory_ids":["mem-auth","mem-rate","mem-db"],"selected_memory_ids":["mem-auth","mem-db"],"recall_at_5":1,"recall_at_10":1,"context_satisfied":true,"token_budget":80,"selected_tokens":12,"token_budget_within":true,"latency_ms":12,"warning_codes":[]},{"id":"golden-turn-preference","trace_id":"trace-golden-turn-pref","pipeline_version":"goncho-golden-e2e-v1","scoring_config_version":"goncho-golden-scoring-v1","relevant_ids":["golden-pref"],"candidate_memory_ids":["golden-pref"],"selected_memory_ids":["golden-pref"],"recall_at_5":1,"recall_at_10":1,"context_satisfied":true,"token_budget":400,"selected_tokens":15,"token_budget_within":true,"latency_ms":25,"warning_codes":[]}]}
+{
+  "service": "goncho",
+  "corpus_version": "goncho-recall-benchmark-v1",
+  "case_count": 2,
+  "recall_at_5": 1,
+  "recall_at_10": 1,
+  "context_hit_rate": 1,
+  "token_budget_pass_rate": 1,
+  "latency": {
+    "min_ms": 12,
+    "p50_ms": 12,
+    "p95_ms": 25,
+    "max_ms": 25
+  },
+  "warning_count": 0,
+  "warnings": [],
+  "cases": [
+    {
+      "id": "stable-trace-auth",
+      "trace_id": "b3765ad87524b8be6fcdf19dd43e946a8116dd8995e0e998f4a1f08bec69b9ef",
+      "pipeline_version": "test-pipeline",
+      "scoring_config_version": "test-v1",
+      "relevant_ids": [
+        "mem-auth",
+        "mem-rate"
+      ],
+      "candidate_memory_ids": [
+        "mem-auth",
+        "mem-rate",
+        "mem-db"
+      ],
+      "selected_memory_ids": [
+        "mem-auth",
+        "mem-db"
+      ],
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "context_satisfied": true,
+      "token_budget": 80,
+      "selected_tokens": 12,
+      "token_budget_within": true,
+      "latency_ms": 12,
+      "warning_codes": []
+    },
+    {
+      "id": "golden-turn-preference",
+      "trace_id": "trace-golden-turn-pref",
+      "pipeline_version": "goncho-golden-e2e-v1",
+      "scoring_config_version": "goncho-golden-scoring-v1",
+      "relevant_ids": [
+        "golden-pref"
+      ],
+      "candidate_memory_ids": [
+        "golden-pref"
+      ],
+      "selected_memory_ids": [
+        "golden-pref"
+      ],
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "context_satisfied": true,
+      "token_budget": 400,
+      "selected_tokens": 15,
+      "token_budget_within": true,
+      "latency_ms": 25,
+      "warning_codes": []
+    }
+  ]
+}
