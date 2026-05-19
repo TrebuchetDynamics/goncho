@@ -1,10 +1,10 @@
 # Goncho
 
-**Persistent agent memory without infrastructure headaches.**
+**Honcho-compatible, local-first memory system for Go agents.**
 
-Most agent-memory systems become distributed systems before your agent even remembers a preference. You need a Postgres instance, a vector database, a sidecar process, and three API keys — just to remember that a user prefers dark mode.
+> Your memory layer should not require cloud infrastructure just to remember who the user is.
 
-Goncho runs entirely in your Go binary. One import. One SQLite file. Zero external dependencies.
+Goncho runs entirely in your Go binary — no sidecar, no cloud dependency, no mandatory API key. One import. One SQLite file. Your agent remembers across sessions without becoming a distributed system.
 
 ```
 go get github.com/TrebuchetDynamics/goncho
@@ -15,22 +15,65 @@ go get github.com/TrebuchetDynamics/goncho
 
 ---
 
-## The Problem
+## Why This Exists
 
-Your agent talks to a user. The user says *"I work in finance, prefer concise answers, and use Telegram."*
+Most agent-memory stacks require Postgres, a vector database, and three API keys before your agent can remember a single user preference. That's not memory — that's infrastructure debt.
 
-Next session, the agent asks: *"What do you do for work?"*
-
-This is the agent memory problem. The solutions on the market are:
-
-| Approach | What You Actually Get |
-|----------|----------------------|
-| **Hosted memory (mem0, Zep)** | Cloud dependency, API keys, vendor lock-in, $50/mo to remember preferences |
-| **Vector DB + embeddings** | Postgres + pgvector or Pinecone + OpenAI embeddings + a sidecar service |
-| **Raw text files** | Works until you need search, dedup, or multi-peer isolation |
+| What You're Comparing Against | What You Actually Get |
+|-------------------------------|----------------------|
+| **mem0, Zep, langmem** | Cloud dependency, API keys, $50/mo, vendor lock-in, network latency on every recall |
+| **Postgres + pgvector** | Docker compose file, connection pooling, embedding pipeline, OpenAI bill |
+| **Raw markdown files** | Works until you need search, dedup, or multi-peer isolation |
 | **Nothing** | Your agent has amnesia every session |
 
 Goncho is the fourth option: **a memory system that ships as a Go library and works offline from line one.**
+
+## Memory That Persists
+
+### Session 1 — Tuesday, 2pm
+
+```
+User: I prefer SQLite over Postgres. Had a bad experience
+      migrating to pgvector last year. Also, I work in finance.
+
+Assistant: Got it. [goncho stores this automatically]
+```
+
+### Session 2 — Wednesday, 9am (new process, same machine)
+
+```
+Assistant: [goncho.Context() assembles the peer card + conclusions]
+Assistant: Since you prefer SQLite, here's a schema design that
+           avoids the pgvector migration issues you ran into.
+
+User: Yes, exactly what I needed.
+```
+
+Same `memory.db` file. No cloud call. No embeddings. No restart ceremony. The agent just *remembers*.
+
+## Editable Memory
+
+Goncho can back memory with plain markdown files. Open them in any editor. Edit them by hand. Goncho detects changes on next read.
+
+```markdown
+# Goncho Memory
+
+## user-preference-database
+- **Peer:** telegram:12345
+- **Created:** 2026-05-19
+
+User prefers SQLite over Postgres after a painful migration
+experience with pgvector. Values simplicity over feature richness.
+
+## user-work-context
+- **Peer:** telegram:12345
+- **Created:** 2026-05-19
+
+Works in finance. Prefers concise, direct answers without
+explanation unless asked. Uses Telegram as primary platform.
+```
+
+Change a fact in your editor. Next session, the agent sees it. No API. No dashboard. Just a file.
 
 ## Quick Start
 
@@ -59,104 +102,30 @@ func main() {
 
     ctx := context.Background()
 
-    // Session 1: user tells you about themselves
+    // Store what you learn about a peer
     svc.SetProfile(ctx, "telegram:12345", []string{
         "Works in finance",
-        "Prefers concise answers",
-        "Uses Telegram",
+        "Prefers SQLite over Postgres",
     })
 
-    // Session 2 (next day, new process, same DB):
+    // Next session, it's still there
     card, _ := svc.Profile(ctx, "telegram:12345")
     fmt.Println(card.Card)
-    // [Works in finance Prefers concise answers Uses Telegram]
 }
 ```
 
-Same database. Same file. No restart. No cloud call. No embeddings required.
-
 ## What It Remembers
 
-Goncho models memory as composable artifacts, each with a specific role:
-
-| Artifact | What It Is | Example |
-|----------|-----------|---------|
+| Artifact | Purpose | Example |
+|----------|---------|---------|
 | **Peer Card** | Grounding facts about a peer | *"User is a Go developer, prefers SQLite"* |
-| **Conclusion** | Derived or authored facts | *"User abandoned Postgres after migration pain"* |
+| **Conclusion** | Derived or authored facts | *"Abandoned Postgres after migration pain"* |
 | **Summary** | Compressed session history | Short (every 20 msgs), long (every 60 msgs) |
-| **Context** | Token-budgeted read product | Assembled from the above + recent messages |
-
-### Before Goncho
-
-```
-User: I prefer SQLite over Postgres.
-Assistant: Got it!
-
---- next session ---
-
-Assistant: What database do you use?
-User: ...we just talked about this.
-```
-
-### After Goncho
-
-```
-User: I prefer SQLite over Postgres.
-Assistant: [stores conclusion via goncho.Conclude()]
-
---- next session, new process, same memory.db ---
-
-Assistant: [goncho.Context() assembles peer card + conclusions]
-Assistant: Since you prefer SQLite, here's a schema design...
-User: Yes, exactly what I needed.
-```
-
-## Local-First Markdown
-
-Goncho can back memory with plain markdown files you can open in any editor:
-
-```markdown
-# Goncho Memory
-
-## Entry: user-preference-database
-- **Agent:** assistant
-- **Peer:** telegram:12345
-- **Scope:** workspace
-- **Created:** 2026-05-19
-
-User prefers SQLite over Postgres after a painful migration
-experience with pgvector. Values simplicity over feature richness.
-
----
-
-## Entry: user-work-context
-- **Agent:** assistant
-- **Peer:** telegram:12345
-- **Scope:** workspace
-- **Created:** 2026-05-19
-
-Works in finance. Prefers concise, direct answers without
-explanation unless asked. Uses Telegram as primary platform.
-```
-
-Edit the file. Goncho detects the change on next read. Conflict-aware. Restart-persistent. No cloud API.
-
-## Comparison
-
-| | Goncho | mem0/Zep | Postgres + pgvector | Raw files |
-|---|---|---|---|---|
-| **Deployment** | `go get` | Cloud or Docker | Docker + managed DB | Manual |
-| **Storage** | SQLite — one file | Managed service | Postgres cluster | Text files |
-| **API Keys** | None | Required | Required (embeddings) | None |
-| **Search** | FTS + filter grammar | Vector similarity | Vector + FTS | `grep` |
-| **Multi-peer** | Workspace + peer scoped | Account-scoped | Schema-scoped | None |
-| **Editable** | Markdown or SQLite | Dashboard only | SQL only | Yes |
-| **Offline** | Full | Partial | Partial | Full |
-| **Honcho compat** | Drop-in | No | No | No |
+| **Context** | Token-budgeted read product | Card + conclusions + summary + recent messages |
 
 ## Core API
 
-Five methods cover 90% of use cases:
+Four methods cover most use cases:
 
 ```go
 svc := goncho.NewService(db, cfg, log)
@@ -164,63 +133,39 @@ svc := goncho.NewService(db, cfg, log)
 // Who is this peer?
 card, _ := svc.Profile(ctx, "telegram:12345")
 
-// Remember something about them
+// Remember something
 svc.SetProfile(ctx, "telegram:12345", []string{"Go developer", "prefers SQLite"})
 
 // Search what you know
-results, _ := svc.Search(ctx, goncho.SearchParams{Query: "database preferences"})
+results, _ := svc.Search(ctx, goncho.SearchParams{
+    Query: "database preferences",
+})
 
 // Build context for prompt injection
-context, _ := svc.Context(ctx, goncho.ContextParams{
+ctx, _ := svc.Context(ctx, goncho.ContextParams{
     Peer:      "telegram:12345",
     MaxTokens: 8000,
 })
-
-// Store a durable conclusion
-svc.Conclude(ctx, goncho.ConcludeParams{
-    Peer:    "telegram:12345",
-    Content: "Abandoned Postgres after migration pain",
-})
 ```
 
-Full API reference → [pkg.go.dev](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
+Full API → [pkg.go.dev](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
 
-## Optional Adapters
+## Zero External Dependencies
 
-Goncho works with zero external dependencies. Two optional adapters unlock enhanced capabilities:
+Goncho works without LLMs or embeddings. Both are optional adapters:
 
-```go
-type LLM interface {
-    Generate(ctx context.Context, prompt string, opts ...GenerateOption) (string, error)
-}
+| | Without | With |
+|---|---------|------|
+| **LLM adapter** | Manual conclusions only | Auto-generated summaries, reasoning |
+| **Embedder adapter** | FTS-only search | Vector-backed semantic search |
 
-type Embedder interface {
-    Embed(ctx context.Context, texts []string) ([][]float64, error)
-}
-```
+Pass `nil` for either. Goncho degrades gracefully — no startup failures, no missing-feature errors.
 
-| Adapter | Without It | With It |
-|---------|-----------|---------|
-| **LLM** | Manual conclusions only | Auto-generated summaries, reasoning |
-| **Embedder** | FTS-only search | Vector-backed semantic search |
+## Honcho Compatibility
 
-Both are nil-safe. Pass `nil`, Goncho degrades gracefully. No startup failures.
+Drop-in replacement for any Honcho integration. Tool names stay `honcho_profile`, `honcho_search`, `honcho_context`, `honcho_chat`, `honcho_conclude`. MCP memory tools (`store_memory`, `retrieve_memory`, etc.) included.
 
-## MCP & Honcho Compatibility
-
-Goncho exposes MCP-compatible memory tools and maintains full Honcho v3 tool-name compatibility:
-
-| Goncho Tool | Honcho Alias | Purpose |
-|-------------|-------------|---------|
-| `store_memory` | — | Persist a memory entry |
-| `retrieve_memory` | — | Search memories |
-| — | `honcho_profile` | Read/write peer cards |
-| — | `honcho_search` | Search conclusions |
-| — | `honcho_context` | Assemble prompt context |
-| — | `honcho_chat` | Dialectic peer chat |
-| — | `honcho_conclude` | Create manual conclusions |
-
-Drop-in replacement for any Honcho integration. See [docs/05-from-honcho.md](docs/05-from-honcho.md) for the migration guide.
+Migration guide → [docs/05-from-honcho.md](docs/05-from-honcho.md)
 
 ## Architecture
 
@@ -237,8 +182,7 @@ Drop-in replacement for any Honcho integration. See [docs/05-from-honcho.md](doc
 │                       │                           │
 │              ┌────────┴────────┐                  │
 │              │  Optional:      │                  │
-│              │  LLM Adapter    │                  │
-│              │  Embedder       │                  │
+│              │  LLM / Embedder │                  │
 │              └─────────────────┘                  │
 └─────────────────────────────────────────────────┘
 ```
@@ -247,19 +191,16 @@ No HTTP loopback. No extra process. No RPC bridge. No cloud dependency.
 
 ## Status
 
-**v0.1.0** — Pre-release. The public API is stable enough for integration but may change before v1.0.0.
+**v0.1.0** — Pre-release. The public API is stable enough for integration.
 
-| Capability | Status |
-|------------|--------|
-| Peer cards, conclusions, context assembly | ✅ |
-| Session summaries (short/long cadence) | ✅ |
-| Search (FTS + filter grammar) | ✅ |
-| MCP memory tools + Honcho compatibility | ✅ |
-| Local-first markdown store | ✅ |
-| Dialectic chat contract | ✅ |
-| Operator diagnostics (`goncho doctor`) | ✅ |
-| Memory V1 compatibility contract | ✅ |
-| Workspace isolation (global scope) | 📋 |
+| | |
+|---|---|
+| Peer cards, conclusions, context | ✅ Stable |
+| Search with filter grammar | ✅ Stable |
+| Session summaries | ✅ Stable |
+| Local-first markdown | ✅ Stable |
+| Honcho + MCP compatibility | ✅ Stable |
+| Migration-safe (V1 contract frozen) | ✅ Stable |
 
 ## License
 
