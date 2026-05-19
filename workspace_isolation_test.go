@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-
+	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
 // TestWorkspaceIsolation_ScopedMemories proves memories are filtered by

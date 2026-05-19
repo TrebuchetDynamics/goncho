@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-
+	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
 func newTestDynamicAgentRegistry(t *testing.T) (*DynamicAgentRegistry, *memory.SqliteStore, string) {

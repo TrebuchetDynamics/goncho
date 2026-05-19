@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-
+	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
 // LocalMarkdownMemoryConfig wires the local-first Goncho V1 memory tools to a

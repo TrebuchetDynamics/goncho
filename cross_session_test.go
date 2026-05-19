@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-
+	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
 func TestCrossSessionMemory_LoadRelevant(t *testing.T) {

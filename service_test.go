@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-
-
+	memory "github.com/TrebuchetDynamics/goncho/memory"
+	session "github.com/TrebuchetDynamics/goncho/session"
 )
 
 func TestService_ProfileRoundTrip(t *testing.T) {
@@ -473,9 +473,9 @@ func newTestServiceWithDirectory(t *testing.T) (*memory.SqliteStore, *session.Me
 	}
 	dir := session.NewMemMap()
 	svc := NewService(store.DB(), Config{
-		WorkspaceID:    "default",
-		ObserverPeerID: "gormes",
-		RecentMessages: 4,
+		WorkspaceID:      "default",
+		ObserverPeerID:   "gormes",
+		RecentMessages:   4,
 		SessionDirectory: &memMapAdapter{dir},
 	}, nil)
 	return store, dir, svc, func() {

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
 func TestGonchoProofMatrixFullLocalReportFixture(t *testing.T) {

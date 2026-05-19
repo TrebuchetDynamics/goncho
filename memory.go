@@ -6,12 +6,10 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -19,23 +17,23 @@ import (
 
 // Cross-chat recall constants.
 const (
-	CrossChatDecisionAllowed      = "allowed"
-	CrossChatDecisionDenied       = "denied"
-	CrossChatDecisionDegraded     = "degraded"
-	CrossChatFallbackSameChat     = "same-chat"
+	CrossChatDecisionAllowed       = "allowed"
+	CrossChatDecisionDenied        = "denied"
+	CrossChatDecisionDegraded      = "degraded"
+	CrossChatFallbackSameChat      = "same-chat"
 	SearchLineageStatusUnavailable = "unavailable"
 )
 
 // Lineage constants (mirrors internal/session).
 const (
-	LineageKindPrimary   = "primary"
+	LineageKindPrimary     = "primary"
 	LineageKindCompression = "compression"
-	LineageKindFork      = "fork"
-	LineageStatusOK      = "ok"
-	LineageStatusMissing = "missing"
-	LineageStatusOrphan  = "orphan"
-	LineageStatusLoop    = "loop"
-	LineageStatusError   = "error"
+	LineageKindFork        = "fork"
+	LineageStatusOK        = "ok"
+	LineageStatusMissing   = "missing"
+	LineageStatusOrphan    = "orphan"
+	LineageStatusLoop      = "loop"
+	LineageStatusError     = "error"
 )
 
 var ErrUserScopeDenied = errors.New("memory: user scope denied")
@@ -446,7 +444,6 @@ func normalizeRoles(roles []string) []string {
 	return out
 }
 
-
 // SearchMessages returns matching turns across the canonical sessions bound to
 // one user, optionally narrowed to a subset of sources.
 func SearchMessages(ctx context.Context, db *sql.DB, metas []SessionMetadata, filter SearchFilter, limit int) ([]MessageSearchHit, error) {
@@ -671,14 +668,14 @@ func parseV1YAMLMeta(item *GonchoMemoryV1Item, line string) error {
 // GonchoMemoryV1ContractInfo returns the V1 contract metadata.
 func GonchoMemoryV1ContractInfo() map[string]any {
 	return map[string]any{
-		"contract_version":                 GonchoMemoryV1ContractVersion,
-		"markdown_format_version":          GonchoMemoryV1MarkdownFormat,
-		"mcp_tool_contract_version":        GonchoMemoryV1MCPToolContract,
-		"private_agent_memory_default":     true,
+		"contract_version":                   GonchoMemoryV1ContractVersion,
+		"markdown_format_version":            GonchoMemoryV1MarkdownFormat,
+		"mcp_tool_contract_version":          GonchoMemoryV1MCPToolContract,
+		"private_agent_memory_default":       true,
 		"self_improvement_per_agent_default": true,
-		"foreign_config_runtime_reads":     "denied",
-		"fast_recall_path":                 []string{"sqlite", "fts"},
-		"optional_quality_layers":          []string{"embeddings", "qmd", "dialectic"},
+		"foreign_config_runtime_reads":       "denied",
+		"fast_recall_path":                   []string{"sqlite", "fts"},
+		"optional_quality_layers":            []string{"embeddings", "qmd", "dialectic"},
 	}
 }
 

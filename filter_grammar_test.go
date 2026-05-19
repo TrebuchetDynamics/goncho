@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-
+	session "github.com/TrebuchetDynamics/goncho/session"
 )
 
 func TestSearchFilterGrammarParsesHonchoOperators(t *testing.T) {

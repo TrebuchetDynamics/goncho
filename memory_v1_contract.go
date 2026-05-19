@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-
+	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
 type MemoryV1ToolContractInfo struct {
