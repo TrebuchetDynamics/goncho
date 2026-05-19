@@ -29,11 +29,18 @@ jobs:
       run:
         working-directory: docs-site
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          sparse-checkout: docs-site
+      - name: Check out docs site
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git config core.sparseCheckout true
+          printf "docs-site/\n" > .git/info/sparse-checkout
+          git fetch --depth=1 --filter=blob:none origin "$GITHUB_SHA"
+          git checkout --force FETCH_HEAD
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
 
       - name: Set up Node
         uses: actions/setup-node@v4
