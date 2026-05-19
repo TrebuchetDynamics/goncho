@@ -33,6 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          sparse-checkout: docs-site
 
       - name: Set up Node
         uses: actions/setup-node@v4
