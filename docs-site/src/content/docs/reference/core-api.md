@@ -30,3 +30,21 @@ This prevents one perspective from silently becoming universal truth.
 :::note[Current setup note]
 For a fresh SQLite database, use `memory.OpenSqlite(...)`, then `goncho.RunMigrations(store.DB())`, then pass `store.DB()` to `goncho.NewService`.
 :::
+
+## Local Smoke Lifecycle
+
+Before changing the embedded service API, run the local E2E smoke test:
+
+```bash
+go test ./... -run TestLocalE2E_ServiceLifecycleBuildsContextFromPublicAPIs
+```
+
+That test is the executable version of the happy path for local consumers:
+
+1. Open a temporary SQLite store with `memory.OpenSqlite`.
+2. Run `RunMigrations`.
+3. Construct `NewService` with a workspace and observer.
+4. Store profile facts with `SetProfile`.
+5. Persist session evidence with `CreateMessages`.
+6. Record a durable fact with `Conclude`.
+7. Verify `Context`, `Search`, and `Chat` return the expected local memory without any network, hosted Honcho, LLM, or browser dependency.

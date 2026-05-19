@@ -212,6 +212,16 @@ pack, err := svc.Context(ctx, goncho.ContextParams{
 
 Full API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
 
+## Local E2E Smoke Test
+
+Use the local service lifecycle test as the canonical smoke check before changing Goncho's embedded API behavior:
+
+```bash
+go test ./... -run TestLocalE2E_ServiceLifecycleBuildsContextFromPublicAPIs
+```
+
+The smoke path opens a temporary SQLite database, runs migrations, creates a service, stores profile facts, writes session messages, records a conclusion, and verifies `Context`, `Search`, and `Chat` using only exported APIs. It has no network, hosted Honcho, LLM, or browser dependency.
+
 ## Honcho and MCP Compatibility
 
 Goncho is designed for agents and hosts that already speak Honcho-style memory.
