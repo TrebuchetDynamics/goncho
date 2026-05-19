@@ -1,10 +1,16 @@
 package goncho
 
 import (
+	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -85,7 +91,91 @@ func (s *GonchoMarkdownStore) Reload(ctx interface{}) error {
 }
 
 func (s *GonchoMarkdownStore) Export(ctx interface{}) error {
-	return nil
+	if s == nil || s.cfg.Path == "" {
+		return nil
+	}
+	db, ok := s.db.(*sql.DB)
+	if !ok || db == nil {
+		return nil
+	}
+	c, ok := ctx.(context.Context)
+	if !ok {
+		c = context.Background()
+	}
+
+	rows, err := db.QueryContext(c, `
+		SELECT memory_id, agent_id, workspace_id, peer_id, session_key,
+		       source_kind, content, revision, active, scope,
+		       provenance_json, tags_json, importance, created_at, updated_at
+		FROM goncho_memory_items
+		WHERE active = 1
+		ORDER BY updated_at DESC, memory_id ASC
+	`)
+	if err != nil {
+		return fmt.Errorf("goncho: export markdown query: %w", err)
+	}
+	defer rows.Close()
+
+	var items []GonchoMemoryV1Item
+	for rows.Next() {
+		var item GonchoMemoryV1Item
+		var tagsRaw, provenanceRaw string
+		var createdAt, updatedAt int64
+		var sessionKey, sourceKind sql.NullString
+		var active int
+		if err := rows.Scan(&item.MemoryID, &item.AgentID, &item.WorkspaceID, &item.PeerID,
+			&sessionKey, &sourceKind, &item.Content, &item.Revision, &active,
+			&item.Scope, &provenanceRaw, &tagsRaw, &item.Importance, &createdAt, &updatedAt); err != nil {
+			return fmt.Errorf("goncho: export markdown scan: %w", err)
+		}
+		item.State = "active"
+		if active == 0 {
+			item.State = "tombstoned"
+		}
+		if sessionKey.Valid {
+			item.SessionID = sessionKey.String
+		}
+		if sourceKind.Valid {
+			item.SourceKind = sourceKind.String
+		}
+		item.CreatedAt = time.Unix(createdAt, 0).UTC().Format(time.RFC3339)
+		item.UpdatedAt = time.Unix(updatedAt, 0).UTC().Format(time.RFC3339)
+		item.Tags = []string{}
+		_ = json.Unmarshal([]byte(tagsRaw), &item.Tags)
+		item.ProvenanceJSON = provenanceRaw
+		item.Checksum = GonchoMemoryV1Checksum(item.Content)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("goncho: export markdown rows: %w", err)
+	}
+
+	var sb strings.Builder
+	sb.WriteString("<!-- goncho-memory -->\n")
+	for _, it := range items {
+		sb.WriteString(fmt.Sprintf("- memory_id: %s\n", it.MemoryID))
+		sb.WriteString(fmt.Sprintf("  agent_id: %s\n", it.AgentID))
+		sb.WriteString(fmt.Sprintf("  workspace_id: %s\n", it.WorkspaceID))
+		sb.WriteString(fmt.Sprintf("  peer_id: %s\n", it.PeerID))
+		if it.SessionID != "" {
+			sb.WriteString(fmt.Sprintf("  session_id: %s\n", it.SessionID))
+		}
+		sb.WriteString(fmt.Sprintf("  importance: %.2f\n", it.Importance))
+		sb.WriteString(fmt.Sprintf("  tags: %s\n", strings.Join(it.Tags, ", ")))
+		sb.WriteString(fmt.Sprintf("  created_at: %s\n", it.CreatedAt))
+		sb.WriteString(fmt.Sprintf("  updated_at: %s\n", it.UpdatedAt))
+		sb.WriteString(fmt.Sprintf("  content: |\n"))
+		for _, line := range strings.Split(it.Content, "\n") {
+			sb.WriteString(fmt.Sprintf("    %s\n", line))
+		}
+		sb.WriteString("\n")
+	}
+	sb.WriteString("<!-- /goncho-memory -->\n")
+
+	if err := os.MkdirAll(filepath.Dir(s.cfg.Path), 0o755); err != nil {
+		return fmt.Errorf("goncho: export markdown mkdir: %w", err)
+	}
+	return os.WriteFile(s.cfg.Path, []byte(sb.String()), 0o644)
 }
 
 func NewGonchoMarkdownStore(db interface{}, cfg GonchoMarkdownStoreConfig) (*GonchoMarkdownStore, error) {
