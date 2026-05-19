@@ -24,6 +24,17 @@ Local repositories inspected:
 | nebu-ctx | `nebu-ctx/` | Broader context runtime with Rust client, .NET host, hooks, project/session/brain stores, search, graph context, and dashboard. |
 | shokunin | `shokunin/` | Coding ecosystem with Chroma-backed memory, hybrid recall, freshness decay, claim verification, and skills. |
 
+Inspection method:
+
+- Read each project's root README and, where present in the target document, compared its architecture notes, tool surface, storage model, and lifecycle claims against the current Goncho design direction.
+- Treated README claims as project self-description, not verified benchmark truth, unless the claim was directly represented by local source files or docs in the checkout.
+- Favored reusable architectural patterns over implementation details tied to one language, hosted service, or agent runtime.
+- Considered Goncho's product goal to be local-first coding-agent context reliability, not generic chatbot memory.
+
+Coverage caveat:
+
+This is a local-source meta-analysis, not a live external market survey. It deliberately studies the open-source projects cloned in this directory and extracts design pressure from their concrete interfaces, schemas, flows, and failure modes.
+
 Academic concepts used as the lens:
 
 - Memory-augmented neural networks and DNC-style read/write separation.
@@ -112,6 +123,24 @@ Who is allowed to access it?
 What does it cost to retrieve?
 How much should the agent trust it?
 ```
+
+## Unique Lessons By Project
+
+| Project | Unique lesson | Goncho design implication |
+| --- | --- | --- |
+| agentmemory | End-to-end hook capture is the difference between a memory product and a note store. | Build hook-native capture early, but expose fewer public tools than agentmemory. |
+| paradigm-memory | Cognitive maps reduce context noise better than flat result lists. | Add tree/map orientation as a retrieval gate before broad graph expansion. |
+| agent-memory-mcp | Engineering memory needs stewardship: stale scans, conflict groups, canonical promotion, and review queues. | Treat maintenance as a product surface, not background magic. |
+| mii-memory | Simple scopes, tags, alerts, and expiration rules make local memory understandable. | Start with explicit global/workspace/project/session scopes and lightweight prospective memory. |
+| memory-mcp | A generated System Primer can orient a session if it is budgeted, cited, and regenerated from canonical state. | Generate boot packs from memory; never let hand-written flat files become the memory source of truth. |
+| memory-engine | Content plus tree path plus metadata plus temporal range is a compact production-grade record shape. | Keep the source record small and provider-neutral; put FTS/vector indexes beside it. |
+| anamnesis | Strategic value and reasoning fields matter because not all remembered facts deserve equal attention. | Store why a memory matters and separate authority from confidence. |
+| nautilus-compass | Raw local embeddings and negative drift anchors catch behavioral recurrence without LLM extraction. | Preserve an extraction-free evidence lane and make negative memory first-class. |
+| MARM-Systems | Human-facing notebooks, sessions, summaries, and dashboards increase trust and adoption. | Provide a simple inspection UI before advanced graph UX. |
+| nebu-ctx | Context runtime design works best with a tiny public MCP surface and rich internal routing. | Keep Goncho's agent-facing contract small: context, search, remember, review, handoff. |
+| shokunin | Old codebase memories are claims from frozen time, not facts. | Verify file/function/API claims against live repo state before using them. |
+
+The strongest shared signal is that memory quality is determined less by the database and more by the control loop around it: capture, classify, retrieve, verify, inject, observe outcome, and steward lifecycle.
 
 ## Unified Taxonomy
 
@@ -855,6 +884,44 @@ Risks:
 8. Storing every event equally makes retrieval worse over time.
 9. Boot primers become another context-stuffing problem without hard budgets.
 
+## Goncho Design Decisions From The Survey
+
+These are the concrete product decisions implied by the local project study.
+
+| Decision | Adopted direction | Why |
+| --- | --- | --- |
+| Source of truth | Event-sourced evidence plus derived claims. | Prevents hallucinated summaries from becoming untraceable truth. |
+| First storage backend | SQLite local kernel. | Matches developer trust and low setup friction from agentmemory, mii-memory, paradigm-memory, and shokunin. |
+| Server mode | Optional PostgreSQL adapter later. | memory-mcp, memory-engine, anamnesis, and nebu-ctx show why team mode benefits from Postgres features, but it should not block local use. |
+| Public MCP surface | Five stable tools: context, search, remember, review, handoff. | nebu-ctx shows small surfaces are easier for agents; memory-mcp shows admin tools should be separate. |
+| Retrieval default | Hybrid lexical + vector + recent/session + graph + temporal + trust scoring. | Every mature system moves beyond vector top-k. |
+| Boot behavior | Generated orientation pack with citations and hard token budget. | Avoids both amnesia and prompt stuffing. |
+| Memory lifecycle | Active stewardship queue with promotion, supersession, staleness, quarantine, and review. | Long-lived memory decays without maintenance. |
+| Code facts | Verify before acting. | Shokunin's claim verification directly addresses stale coding-agent failures. |
+| Negative memory | First-class type and drift anchor source. | Nautilus-compass shows repeated mistakes are one of memory's highest-value targets. |
+| UI | Inspection-first dashboard before complex visualization. | Users must see why memory was stored, retrieved, trusted, or suppressed. |
+
+Practical first-kernel cut:
+
+```text
+SQLite + FTS5 + local embeddings
+  + events/memories/links/reviews schema
+  + scoped context pack generation
+  + explicit remember/search/handoff/review tools
+  + basic claim verification and citation output
+```
+
+Defer until the kernel proves reliable:
+
+```text
+full cognitive-map UI
+team ACLs
+PostgreSQL adapter
+automated graph extraction at scale
+complex strategic reweighting
+cross-agent mesh coordination
+```
+
 ## Recommended Goncho Architecture
 
 ### Design Principles
@@ -1262,6 +1329,21 @@ Support shared project memory without sacrificing local-first solo workflows.
 | MARM-Systems | Human-friendly notebooks, session logs, dashboard simplicity. |
 | nebu-ctx | Small public tool surface, context gateway, compression safety, context runtime thinking. |
 | shokunin | Claim verification, freshness decay, RRF hybrid recall, codebase fact skepticism. |
+
+## Risk Matrix From The Studied Systems
+
+| Risk | Seen when | Mitigation for Goncho |
+| --- | --- | --- |
+| Feature sprawl | A memory system exposes dozens of agent tools or many loosely related concepts. | Keep public MCP tools small; hide rich internals behind context/search/review. |
+| Taxonomy lock-in | Tree paths or cognitive maps become wrong but still gate recall. | Support audit, reparenting, orphan detection, and fallback hybrid search. |
+| Silent false belief | LLM extraction writes confident but unsupported facts. | Preserve evidence refs, mark extraction confidence, and queue risky claims for review. |
+| Primer bloat | Session boot loads an ever-growing summary. | Enforce token budgets, citations, freshness, and separate boot packs from full memory. |
+| Stale code facts | Old memories mention moved files, removed flags, or changed APIs. | Run live verification before using codebase claims. |
+| Privacy leakage | Hooks capture secrets or prompt-injection documents. | Redact before indexing, quarantine suspicious text, and separate raw evidence from trusted claims. |
+| Review backlog | Stewardship produces more tasks than users can resolve. | Auto-apply only low-risk maintenance; batch and prioritize review-required items. |
+| Hosted dependency creep | Memory requires cloud embeddings, hosted DBs, or online auth. | Make local embeddings and local SQLite the default; add remote providers as optional adapters. |
+| Over-summarization | Session compression loses rare but critical details. | Keep raw evidence append-only and cite it from summaries. |
+| Historical erasure | Updating memory deletes the reason old decisions made sense. | Prefer supersession with valid intervals over destructive overwrite. |
 
 ## Design Traps To Avoid
 
