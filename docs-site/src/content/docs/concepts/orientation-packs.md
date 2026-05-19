@@ -5,6 +5,8 @@ description: Why Goncho returns context products instead of memory dumps.
 
 An agent does not need every remembered fact. It needs the facts that orient the next action.
 
+An orientation pack is the compact product Goncho assembles through `Context`.
+
 An orientation product should contain:
 
 - relevant peer facts;
