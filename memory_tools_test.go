@@ -34,15 +34,11 @@ func (t *testSqlite) DB() *sql.DB { return t.db }
 func (t *testSqlite) Close(ctx context.Context) error { return t.db.Close() }
 
 func openTestSqlite(path string) (*testSqlite, error) {
-	db, err := sql.Open("sqlite3", path)
+	store, err := OpenTestSqlite(path)
 	if err != nil {
 		return nil, err
 	}
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, err
-	}
-	return &testSqlite{db: db}, nil
+	return &testSqlite{db: store.db}, nil
 }
 
 type mockMemoryToolStore struct {

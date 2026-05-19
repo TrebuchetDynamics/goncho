@@ -144,6 +144,12 @@ func LookupTelemetryEvent(eventType string) (EventMatrixEntry, bool) {
 }
 
 func SummarizePayload(payload map[string]any) (string, error) {
+	if payload == nil {
+		return "", nil
+	}
+	// Strip sensitive fields
+	delete(payload, "api_key")
+	delete(payload, "prompt")
 	return "", nil
 }
 
