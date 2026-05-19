@@ -174,6 +174,31 @@ func ResolveReviewItem(ctx context.Context, db *sql.DB, p ReviewResolutionParams
 	return getReviewItem(ctx, db, id)
 }
 
+func (s *Service) reviewContextUnavailableEvidence(ctx context.Context, peer string) ([]ContextUnavailableEvidence, error) {
+	items, err := s.ListReviewItems(ctx, ReviewQuery{PeerID: peer, Status: ReviewStatusOpen})
+	if err != nil {
+		return nil, err
+	}
+	if len(items.Items) == 0 {
+		return nil, nil
+	}
+	counts := map[ReviewKind]int{}
+	for _, item := range items.Items {
+		counts[item.Kind]++
+	}
+	parts := []string{}
+	for _, kind := range []ReviewKind{ReviewKindConflict, ReviewKindStale} {
+		if counts[kind] > 0 {
+			parts = append(parts, fmt.Sprintf("%s=%d", kind, counts[kind]))
+		}
+	}
+	return []ContextUnavailableEvidence{{
+		Field:      "review",
+		Capability: "review_required",
+		Reason:     fmt.Sprintf("%d open review items require adjudication: %s", len(items.Items), strings.Join(parts, " ")),
+	}}, nil
+}
+
 func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList, error) {
 	if err := ctx.Err(); err != nil {
 		return ReviewList{}, err

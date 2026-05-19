@@ -324,6 +324,11 @@ func (s *Service) Context(ctx context.Context, params ContextParams) (ContextRes
 		}
 		unavailable = append(unavailable, dreamEvidence...)
 	}
+	reviewEvidence, err := s.reviewContextUnavailableEvidence(ctx, peer)
+	if err != nil {
+		return ContextResult{}, err
+	}
+	unavailable = append(unavailable, reviewEvidence...)
 
 	card, err := getPeerCard(ctx, s.db, s.workspaceID, s.observer, peer)
 	if err != nil {
