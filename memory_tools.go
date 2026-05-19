@@ -361,6 +361,7 @@ func memoryToolOperationSpec(name, description string, schema json.RawMessage) O
 		return DefaultSpec(name, description, schema)
 	}
 	spec.InputSchema = schema
+	spec.Schema = schema
 	spec.Description = description
 	return spec
 }
