@@ -4,7 +4,7 @@
 
 **Goal:** Build an isolated Astro Starlight docs site under `docs-site/` that presents Goncho as trust-preserving context for Go agents while clearly separating current implementation from architecture direction.
 
-**Architecture:** Keep Node/Astro files inside `docs-site/` and leave the Go module root clean. Use default Starlight layout, explicit sidebar groups, plain Markdown content, and a small amount of README link cleanup. Documentation must be honest about current exported Go symbols: this package currently does not export `RunMigrations`, so Quick Start must not present that call as copy-paste current API.
+**Architecture:** Keep Node/Astro files inside `docs-site/` and leave the Go module root clean. Use default Starlight layout, explicit sidebar groups, plain Markdown content, and a small amount of README link cleanup. Documentation must be honest about current exported Go symbols; if `RunMigrations` is present in the current workspace, Quick Start should use it.
 
 **Tech Stack:** Astro `6.3.5`, `@astrojs/starlight` `0.39.2`, TypeScript `6.0.3`, npm, Markdown, current Goncho Go package symbols.
 
@@ -49,17 +49,15 @@ Modify:
 
 - `README.md`: replace the broken `docs/05-from-honcho.md` migration link with a pointer to the new Starlight source page. Do not rewrite the README in this task.
 
-## Known Current API Constraint
+## Current API Constraint
 
-The approved design mentioned `goncho.RunMigrations`, matching the current README. Planning verified that the current package does not export `RunMigrations`:
+The approved design mentioned `goncho.RunMigrations`, matching the current README. Initial planning found no exported implementation, but later workspace changes added `migrations.go` with `RunMigrations`:
 
 ```sh
 rg -n "func RunMigrations|RunMigrations" -g '*.go'
 ```
 
-Expected: no Go implementation result.
-
-Implementation rule: do not show `goncho.RunMigrations` as current API in the Starlight Quick Start. Add a visible pre-release note that current public schema initialization is not exposed by this package yet. A future Go API task can add a public migration helper and then the docs can become fully copy-paste runnable.
+Expected: if `migrations.go` is present, Quick Start uses `goncho.RunMigrations(db)`. If the helper is removed before final merge, update Quick Start back to a pre-release setup note instead of documenting a fake call.
 
 ## Task 1: Scaffold Starlight Project
 
@@ -291,8 +289,8 @@ Goncho is a Go library for local-first agent memory and context assembly.
 go get github.com/TrebuchetDynamics/goncho
 ```
 
-:::caution[Pre-release setup note]
-The current README mentions `goncho.RunMigrations`, but the package does not currently export that symbol. This page shows the current service integration shape and calls out the missing public schema initialization helper instead of pretending the example is fully copy-paste runnable.
+:::note[Pre-release note]
+Goncho is pre-release. The setup flow is intentionally small, but you should pin the module version or commit you deploy against.
 :::
 
 ## Minimal Service Shape
@@ -318,9 +316,9 @@ func main() {
 	}
 	defer db.Close()
 
-	// Pre-release note: this package does not currently expose a public
-	// schema migration helper. The database must be initialized by the host
-	// runtime until Goncho exposes that helper.
+	if err := goncho.RunMigrations(db); err != nil {
+		log.Fatal(err)
+	}
 
 	svc := goncho.NewService(db, goncho.Config{
 		WorkspaceID:    "my-agent",
@@ -359,11 +357,12 @@ func main() {
 
 - `Config.WorkspaceID` keeps one agent runtime from collapsing into another runtime's memory.
 - `Config.ObserverPeerID` names the observing agent perspective.
+- `RunMigrations` initializes Goncho-owned SQLite tables.
 - `SetProfile` writes stable peer-card facts.
 - `Profile` reads the peer card back.
 - `Context` returns an orientation product for prompt construction.
 
-Because Goncho is pre-release, pin the module version or commit you deploy against.
+The example ends with `Context` because the core payoff is orientation, not just storage.
 ````
 
 - [ ] **Step 3: Create Current Capabilities**
@@ -727,8 +726,8 @@ Memory is not globally true by default. Goncho can distinguish what one observer
 
 This prevents one perspective from silently becoming universal truth.
 
-:::caution[Current setup note]
-The package currently does not export a public migration helper. Do not call `goncho.RunMigrations` until such a symbol exists in the current code.
+:::note[Current setup note]
+Call `goncho.RunMigrations(db)` before using a fresh SQLite database.
 :::
 ```
 
@@ -907,7 +906,7 @@ With:
 Migration guide → [docs-site/src/content/docs/reference/honcho-compatibility.md](docs-site/src/content/docs/reference/honcho-compatibility.md)
 ```
 
-Do not change the README Quick Start in this task. The README has a broader `RunMigrations` mismatch that should be handled as a focused README/API cleanup after this docs site lands.
+Do not change the README Quick Start in this task. It already uses `RunMigrations`; keep broader README edits scoped to the migration-link fix.
 
 - [ ] **Step 3: Build and commit roadmap plus README link**
 
@@ -973,9 +972,9 @@ rg -n "RunMigrations" docs-site README.md
 
 Expected:
 
-- `docs-site/src/content/docs/start/quick-start.md` mentions `RunMigrations` only in the pre-release warning.
-- `docs-site/src/content/docs/reference/core-api.md` mentions `RunMigrations` only in the warning not to call it.
-- `README.md` may still mention `goncho.RunMigrations` in its existing Quick Start; report that as a known existing mismatch if it remains.
+- `docs-site/src/content/docs/start/quick-start.md` calls `goncho.RunMigrations(db)`.
+- `docs-site/src/content/docs/reference/core-api.md` documents `RunMigrations`.
+- `README.md` may also mention `goncho.RunMigrations` in its existing Quick Start.
 
 - [ ] **Step 4: Verify sidebar slugs have pages**
 
@@ -1039,9 +1038,9 @@ Expected: unrelated pre-existing Go worktree changes may remain. Docs-site sourc
   - README broken migration link: Task 5.
   - Build verification: Tasks 2 through 6.
 - Spec variance:
-  - The approved design named `RunMigrations`, but current code does not export it. This plan resolves the conflict by documenting the current API honestly and not showing a fake call.
+  - Initial planning did not see `RunMigrations`, but later workspace changes added it. This plan follows the current workspace and documents the helper.
 - Placeholder scan:
   - No task depends on unspecified pages or generated API docs.
   - All created files have concrete content.
 - Type and symbol consistency:
-  - Current Go symbols used in docs: `Config.WorkspaceID`, `Config.ObserverPeerID`, `Config.RecentMessages`, `NewService`, `SetProfile`, `Profile`, `Context`, `ContextParams`, `NewLocalMarkdownMemoryStore`, `LocalMarkdownMemoryConfig`, and memory tool names verified from current source.
+  - Current Go symbols used in docs: `RunMigrations`, `Config.WorkspaceID`, `Config.ObserverPeerID`, `Config.RecentMessages`, `NewService`, `SetProfile`, `Profile`, `Context`, `ContextParams`, `NewLocalMarkdownMemoryStore`, `LocalMarkdownMemoryConfig`, and memory tool names verified from current source.

@@ -9,8 +9,8 @@ Goncho is a Go library for local-first agent memory and context assembly.
 go get github.com/TrebuchetDynamics/goncho
 ```
 
-:::caution[Pre-release setup note]
-The current README mentions `goncho.RunMigrations`, but the package does not currently export that symbol. This page shows the current service integration shape and calls out the missing public schema initialization helper instead of pretending the example is fully copy-paste runnable.
+:::note[Pre-release note]
+Goncho is pre-release. The setup flow is intentionally small, but you should pin the module version or commit you deploy against.
 :::
 
 ## Minimal Service Shape
@@ -36,9 +36,9 @@ func main() {
 	}
 	defer db.Close()
 
-	// Pre-release note: this package does not currently expose a public
-	// schema migration helper. The database must be initialized by the host
-	// runtime until Goncho exposes that helper.
+	if err := goncho.RunMigrations(db); err != nil {
+		log.Fatal(err)
+	}
 
 	svc := goncho.NewService(db, goncho.Config{
 		WorkspaceID:    "my-agent",
@@ -77,8 +77,9 @@ func main() {
 
 - `Config.WorkspaceID` keeps one agent runtime from collapsing into another runtime's memory.
 - `Config.ObserverPeerID` names the observing agent perspective.
+- `RunMigrations` initializes Goncho-owned SQLite tables.
 - `SetProfile` writes stable peer-card facts.
 - `Profile` reads the peer card back.
 - `Context` returns an orientation product for prompt construction.
 
-Because Goncho is pre-release, pin the module version or commit you deploy against.
+The example ends with `Context` because the core payoff is orientation, not just storage.
