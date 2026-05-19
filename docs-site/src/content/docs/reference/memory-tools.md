@@ -3,7 +3,7 @@ title: Memory Tools
 description: Generic agent-facing memory tools exposed by Goncho.
 ---
 
-Goncho exposes generic memory tools around [`MemoryToolStore`](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho#MemoryToolStore).
+Goncho exposes generic memory tools around `MemoryToolStore`.
 
 | Tool | Purpose |
 | --- | --- |

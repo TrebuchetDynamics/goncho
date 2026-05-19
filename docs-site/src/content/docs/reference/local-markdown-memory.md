@@ -7,8 +7,8 @@ Goncho's local markdown memory store persists tool memory to SQLite and mirrors 
 
 Current exported constructor and config:
 
-- [`NewLocalMarkdownMemoryStore`](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho#NewLocalMarkdownMemoryStore)
-- [`LocalMarkdownMemoryConfig`](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho#LocalMarkdownMemoryConfig)
+- `NewLocalMarkdownMemoryStore`
+- `LocalMarkdownMemoryConfig`
 
 ```go
 store := goncho.NewLocalMarkdownMemoryStore(db, goncho.LocalMarkdownMemoryConfig{
