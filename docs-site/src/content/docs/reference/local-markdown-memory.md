@@ -5,7 +5,10 @@ description: Human-editable memory backed by SQLite and markdown.
 
 Goncho's local markdown memory store persists tool memory to SQLite and mirrors it to a markdown file.
 
-Current exported constructor:
+Current exported constructor and config:
+
+- [`NewLocalMarkdownMemoryStore`](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho#NewLocalMarkdownMemoryStore)
+- [`LocalMarkdownMemoryConfig`](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho#LocalMarkdownMemoryConfig)
 
 ```go
 store := goncho.NewLocalMarkdownMemoryStore(db, goncho.LocalMarkdownMemoryConfig{
