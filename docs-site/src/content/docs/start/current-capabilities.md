@@ -7,7 +7,7 @@ Goncho is usable as a pre-release Go library, but the architecture is still cons
 
 | Capability | Today | Direction |
 | --- | --- | --- |
-| SQLite persistence | Current storage foundation | Public migration helper and clearer operational docs |
+| SQLite persistence | `memory.OpenSqlite` initializes service tables; `RunMigrations` initializes observation and audit tables | Clearer operational migration docs and lifecycle guidance |
 | Peer cards | `SetProfile`, `Profile`, directional peer-card support | Richer belief provenance |
 | Search | `Search` over stored conclusions and fallback session turns | Stronger evidence lineage and ranking diagnostics |
 | Context assembly | `Context` returns peer card, conclusions, summaries, search hits, and recent turns | Compact orientation packs with stronger provenance |
