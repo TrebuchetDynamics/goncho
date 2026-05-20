@@ -42,6 +42,7 @@ type ObservationParams struct {
 	ID          string            `json:"id,omitempty"`
 	Kind        ObservationKind   `json:"kind"`
 	WorkspaceID string            `json:"workspace_id,omitempty"`
+	ProfileID   string            `json:"profile_id,omitempty"`
 	PeerID      string            `json:"peer_id,omitempty"`
 	SessionKey  string            `json:"session_key,omitempty"`
 	ContextID   string            `json:"context_id,omitempty"`
@@ -57,6 +58,7 @@ type Observation struct {
 	ID                  string            `json:"id"`
 	Kind                ObservationKind   `json:"kind"`
 	WorkspaceID         string            `json:"workspace_id,omitempty"`
+	ProfileID           string            `json:"profile_id,omitempty"`
 	PeerID              string            `json:"peer_id,omitempty"`
 	SessionKey          string            `json:"session_key,omitempty"`
 	ContextID           string            `json:"context_id,omitempty"`
@@ -82,6 +84,7 @@ type ObservationResult struct {
 
 type ObservationQuery struct {
 	WorkspaceID string            `json:"workspace_id,omitempty"`
+	ProfileID   string            `json:"profile_id,omitempty"`
 	PeerID      string            `json:"peer_id,omitempty"`
 	SessionKey  string            `json:"session_key,omitempty"`
 	ContextID   string            `json:"context_id,omitempty"`
@@ -225,6 +228,7 @@ func ListObservations(ctx context.Context, db *sql.DB, q ObservationQuery) (Obse
 		args = append(args, value)
 	}
 	appendExactFilter("workspace_id", q.WorkspaceID)
+	appendExactFilter("profile_id", q.ProfileID)
 	appendExactFilter("peer_id", q.PeerID)
 	appendExactFilter("session_key", q.SessionKey)
 	appendExactFilter("context_id", q.ContextID)
@@ -249,7 +253,7 @@ func ListObservations(ctx context.Context, db *sql.DB, q ObservationQuery) (Obse
 		args = append(args, q.Until.UTC().UnixNano())
 	}
 
-	query := `SELECT id, kind, workspace_id, peer_id, session_key, context_id, input, output, success, metadata_json, input_truncated, output_truncated, input_original_bytes, output_original_bytes, redacted, redaction_count, checksum, observed_at FROM goncho_observations`
+	query := `SELECT id, kind, workspace_id, profile_id, peer_id, session_key, context_id, input, output, success, metadata_json, input_truncated, output_truncated, input_original_bytes, output_original_bytes, redacted, redaction_count, checksum, observed_at FROM goncho_observations`
 	if len(where) > 0 {
 		query += ` WHERE ` + strings.Join(where, " AND ")
 	}
@@ -322,6 +326,10 @@ func normalizeObservationParams(p ObservationParams) (normalizedObservation, err
 	if err != nil {
 		return normalizedObservation{}, err
 	}
+	profileID, err := normalizeObservationIDPart("profile_id", p.ProfileID, observationScopeIDMaxBytes, false)
+	if err != nil {
+		return normalizedObservation{}, err
+	}
 	peerID, err := normalizeObservationIDPart("peer_id", p.PeerID, observationScopeIDMaxBytes, false)
 	if err != nil {
 		return normalizedObservation{}, err
@@ -354,6 +362,7 @@ func normalizeObservationParams(p ObservationParams) (normalizedObservation, err
 		ID:                  id,
 		Kind:                kind,
 		WorkspaceID:         workspaceID,
+		ProfileID:           profileID,
 		PeerID:              peerID,
 		SessionKey:          sessionKey,
 		ContextID:           contextID,
@@ -452,15 +461,16 @@ func isValidObservationKind(kind ObservationKind) bool {
 func insertObservation(ctx context.Context, tx *sql.Tx, norm normalizedObservation) error {
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO goncho_observations(
-			id, kind, workspace_id, peer_id, session_key, context_id, input, output, success,
+			id, kind, workspace_id, profile_id, peer_id, session_key, context_id, input, output, success,
 			metadata_json, input_truncated, output_truncated, input_original_bytes,
 			output_original_bytes, redacted, redaction_count, checksum, observed_at
 		)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		norm.obs.ID,
 		string(norm.obs.Kind),
 		norm.obs.WorkspaceID,
+		norm.obs.ProfileID,
 		norm.obs.PeerID,
 		norm.obs.SessionKey,
 		norm.obs.ContextID,
@@ -486,7 +496,7 @@ func insertObservation(ctx context.Context, tx *sql.Tx, norm normalizedObservati
 func getObservationByID(ctx context.Context, q interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }, id string) (Observation, bool, error) {
-	row := q.QueryRowContext(ctx, `SELECT id, kind, workspace_id, peer_id, session_key, context_id, input, output, success, metadata_json, input_truncated, output_truncated, input_original_bytes, output_original_bytes, redacted, redaction_count, checksum, observed_at FROM goncho_observations WHERE id = ?`, id)
+	row := q.QueryRowContext(ctx, `SELECT id, kind, workspace_id, profile_id, peer_id, session_key, context_id, input, output, success, metadata_json, input_truncated, output_truncated, input_original_bytes, output_original_bytes, redacted, redaction_count, checksum, observed_at FROM goncho_observations WHERE id = ?`, id)
 	obs, err := scanObservation(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Observation{}, false, nil
@@ -512,6 +522,7 @@ func scanObservation(scanner observationScanner) (Observation, error) {
 		&obs.ID,
 		&kind,
 		&obs.WorkspaceID,
+		&obs.ProfileID,
 		&obs.PeerID,
 		&obs.SessionKey,
 		&obs.ContextID,
@@ -555,6 +566,7 @@ func observationChecksum(obs Observation) string {
 	payload := struct {
 		Kind                ObservationKind   `json:"kind"`
 		WorkspaceID         string            `json:"workspace_id"`
+		ProfileID           string            `json:"profile_id"`
 		PeerID              string            `json:"peer_id"`
 		SessionKey          string            `json:"session_key"`
 		ContextID           string            `json:"context_id"`
@@ -571,6 +583,7 @@ func observationChecksum(obs Observation) string {
 	}{
 		Kind:                obs.Kind,
 		WorkspaceID:         obs.WorkspaceID,
+		ProfileID:           obs.ProfileID,
 		PeerID:              obs.PeerID,
 		SessionKey:          obs.SessionKey,
 		ContextID:           obs.ContextID,

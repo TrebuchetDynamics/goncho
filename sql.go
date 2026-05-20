@@ -18,6 +18,7 @@ type lifecycleSQL interface {
 
 type conclusionRow struct {
 	WorkspaceID    string
+	ProfileID      string
 	ObserverPeerID string
 	PeerID         string
 	SessionKey     string
@@ -304,30 +305,30 @@ func copyMetadata(in map[string]any) map[string]any {
 	return out
 }
 
-func upsertPeerCard(ctx context.Context, db *sql.DB, workspaceID, observer, peer string, card []string) error {
+func upsertPeerCard(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, card []string) error {
 	raw, err := json.Marshal(card)
 	if err != nil {
 		return fmt.Errorf("goncho: marshal peer card: %w", err)
 	}
 	_, err = db.ExecContext(ctx, `
-		INSERT INTO goncho_peer_cards(workspace_id, observer_peer_id, peer_id, card_json, updated_at)
-		VALUES(?, ?, ?, ?, ?)
-		ON CONFLICT(workspace_id, observer_peer_id, peer_id)
+		INSERT INTO goncho_peer_cards(workspace_id, profile_id, observer_peer_id, peer_id, card_json, updated_at)
+		VALUES(?, ?, ?, ?, ?, ?)
+		ON CONFLICT(workspace_id, profile_id, observer_peer_id, peer_id)
 		DO UPDATE SET card_json = excluded.card_json, updated_at = excluded.updated_at
-	`, workspaceID, observer, peer, string(raw), time.Now().Unix())
+	`, workspaceID, profileID, observer, peer, string(raw), time.Now().Unix())
 	if err != nil {
 		return fmt.Errorf("goncho: upsert peer card: %w", err)
 	}
 	return nil
 }
 
-func getPeerCard(ctx context.Context, db *sql.DB, workspaceID, observer, peer string) ([]string, error) {
+func getPeerCard(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string) ([]string, error) {
 	var raw string
 	err := db.QueryRowContext(ctx, `
 		SELECT card_json
 		FROM goncho_peer_cards
-		WHERE workspace_id = ? AND observer_peer_id = ? AND peer_id = ?
-	`, workspaceID, observer, peer).Scan(&raw)
+		WHERE workspace_id = ? AND profile_id = ? AND observer_peer_id = ? AND peer_id = ?
+	`, workspaceID, profileID, observer, peer).Scan(&raw)
 	if err == sql.ErrNoRows {
 		return []string{}, nil
 	}
@@ -441,14 +442,15 @@ func upsertConclusion(ctx context.Context, db *sql.DB, row conclusionRow) (int64
 	}
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO goncho_conclusions(
-			workspace_id, observer_peer_id, peer_id, session_key, content,
+			workspace_id, profile_id, observer_peer_id, peer_id, session_key, content,
 			kind, status, source, idempotency_key, evidence_json, created_at, updated_at, scope
 		)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(workspace_id, observer_peer_id, peer_id, idempotency_key)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(workspace_id, profile_id, observer_peer_id, peer_id, idempotency_key)
 		DO UPDATE SET updated_at = excluded.updated_at
 	`,
 		row.WorkspaceID,
+		row.ProfileID,
 		row.ObserverPeerID,
 		row.PeerID,
 		nullIfBlank(row.SessionKey),
@@ -471,19 +473,19 @@ func upsertConclusion(ctx context.Context, db *sql.DB, row conclusionRow) (int64
 	err = db.QueryRowContext(ctx, `
 		SELECT id, status
 		FROM goncho_conclusions
-		WHERE workspace_id = ? AND observer_peer_id = ? AND peer_id = ? AND idempotency_key = ?
-	`, row.WorkspaceID, row.ObserverPeerID, row.PeerID, row.IdempotencyKey).Scan(&id, &status)
+		WHERE workspace_id = ? AND profile_id = ? AND observer_peer_id = ? AND peer_id = ? AND idempotency_key = ?
+	`, row.WorkspaceID, row.ProfileID, row.ObserverPeerID, row.PeerID, row.IdempotencyKey).Scan(&id, &status)
 	if err != nil {
 		return 0, "", fmt.Errorf("goncho: lookup conclusion after upsert: %w", err)
 	}
 	return id, status, nil
 }
 
-func deleteConclusion(ctx context.Context, db *sql.DB, workspaceID, observer, peer string, id int64) (bool, error) {
+func deleteConclusion(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, id int64) (bool, error) {
 	res, err := db.ExecContext(ctx, `
 		DELETE FROM goncho_conclusions
-		WHERE id = ? AND workspace_id = ? AND observer_peer_id = ? AND peer_id = ?
-	`, id, workspaceID, observer, peer)
+		WHERE id = ? AND workspace_id = ? AND profile_id = ? AND observer_peer_id = ? AND peer_id = ?
+	`, id, workspaceID, profileID, observer, peer)
 	if err != nil {
 		return false, fmt.Errorf("goncho: delete conclusion: %w", err)
 	}
@@ -494,14 +496,29 @@ func deleteConclusion(ctx context.Context, db *sql.DB, workspaceID, observer, pe
 	return affected > 0, nil
 }
 
-func findConclusions(ctx context.Context, db *sql.DB, workspaceID, observer, peer, query, sessionKey string, filter compiledSearchFilter, limit int) ([]SearchHit, error) {
+func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer, query, sessionKey, memoryScope string, filter compiledSearchFilter, limit int) ([]SearchHit, error) {
 	base := `
 		SELECT id, content, COALESCE(session_key, '')
 		FROM goncho_conclusions
 		WHERE observer_peer_id = ? AND peer_id = ?
-		  AND (workspace_id = ? AND scope = 'workspace' OR scope = 'global')
 	`
-	args := []any{observer, peer, workspaceID}
+	args := []any{observer, peer}
+	switch normalizeMemoryScope(memoryScope, profileID) {
+	case MemoryScopeProfile:
+		base += ` AND workspace_id = ? AND profile_id = ? AND scope = 'profile'`
+		args = append(args, workspaceID, profileID)
+	case MemoryScopeWorkspace:
+		base += ` AND ((workspace_id = ? AND scope = 'workspace') OR scope = 'global')`
+		args = append(args, workspaceID)
+	case MemoryScopeShared:
+		base += ` AND workspace_id = ? AND scope = 'shared'`
+		args = append(args, workspaceID)
+	case MemoryScopeSession:
+		base += ` AND workspace_id = ? AND profile_id = ? AND scope = 'session'`
+		args = append(args, workspaceID, profileID)
+	case MemoryScopeGlobal:
+		base += ` AND scope = 'global'`
+	}
 	if trimmed := strings.TrimSpace(sessionKey); trimmed != "" {
 		base += ` AND (session_key = ? OR session_key IS NULL)`
 		args = append(args, trimmed)

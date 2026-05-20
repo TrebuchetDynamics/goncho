@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 )
@@ -96,15 +97,19 @@ func ensureSchema(db *sql.DB) error {
 		END`,
 		`CREATE TABLE IF NOT EXISTS goncho_peer_cards (
 			workspace_id TEXT NOT NULL,
+			profile_id TEXT NOT NULL DEFAULT '',
 			observer_peer_id TEXT NOT NULL,
 			peer_id TEXT NOT NULL,
 			card_json TEXT NOT NULL DEFAULT '[]',
 			updated_at INTEGER NOT NULL DEFAULT 0,
-			PRIMARY KEY(workspace_id, observer_peer_id, peer_id)
+			PRIMARY KEY(workspace_id, profile_id, observer_peer_id, peer_id)
 		)`,
+		`ALTER TABLE goncho_peer_cards ADD COLUMN profile_id TEXT NOT NULL DEFAULT ''`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_goncho_peer_cards_profile_identity ON goncho_peer_cards(workspace_id, profile_id, observer_peer_id, peer_id)`,
 		`CREATE TABLE IF NOT EXISTS goncho_conclusions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			workspace_id TEXT NOT NULL,
+			profile_id TEXT NOT NULL DEFAULT '',
 			observer_peer_id TEXT NOT NULL,
 			peer_id TEXT NOT NULL,
 			session_key TEXT,
@@ -117,9 +122,11 @@ func ensureSchema(db *sql.DB) error {
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER NOT NULL,
 			scope TEXT NOT NULL DEFAULT 'workspace',
-			UNIQUE(workspace_id, observer_peer_id, peer_id, idempotency_key)
+			UNIQUE(workspace_id, profile_id, observer_peer_id, peer_id, idempotency_key)
 		)`,
-		`CREATE INDEX IF NOT EXISTS idx_goncho_conclusions_lookup ON goncho_conclusions(workspace_id, observer_peer_id, peer_id, session_key, updated_at DESC)`,
+		`ALTER TABLE goncho_conclusions ADD COLUMN profile_id TEXT NOT NULL DEFAULT ''`,
+		`CREATE INDEX IF NOT EXISTS idx_goncho_conclusions_lookup ON goncho_conclusions(workspace_id, profile_id, observer_peer_id, peer_id, session_key, updated_at DESC)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_goncho_conclusions_profile_idempotency ON goncho_conclusions(workspace_id, profile_id, observer_peer_id, peer_id, idempotency_key)`,
 		`CREATE TABLE IF NOT EXISTS goncho_session_summaries (
 			workspace_id TEXT NOT NULL,
 			session_key TEXT NOT NULL,
@@ -189,6 +196,9 @@ func ensureSchema(db *sql.DB) error {
 		)`,
 	} {
 		if _, err := db.Exec(stmt); err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+				continue
+			}
 			return fmt.Errorf("memory: apply schema: %w", err)
 		}
 	}

@@ -88,7 +88,7 @@ func (s *Service) SetProfile(ctx context.Context, peer string, card []string) er
 	if err != nil {
 		return err
 	}
-	return upsertPeerCard(ctx, s.db, s.workspaceID, scope.Observer, scope.Observed, normalizePeerCard(card))
+	return upsertPeerCard(ctx, s.db, s.workspaceID, "", scope.Observer, scope.Observed, normalizePeerCard(card))
 }
 
 func (s *Service) SetProfileForTarget(ctx context.Context, peer, target string, card []string) error {
@@ -96,7 +96,20 @@ func (s *Service) SetProfileForTarget(ctx context.Context, peer, target string, 
 	if err != nil {
 		return err
 	}
-	return upsertPeerCard(ctx, s.db, s.workspaceID, scope.Observer, scope.Observed, normalizePeerCard(card))
+	return upsertPeerCard(ctx, s.db, s.workspaceID, "", scope.Observer, scope.Observed, normalizePeerCard(card))
+}
+
+func (s *Service) SetProfileInNamespace(ctx context.Context, ns MemoryNamespace, card []string) error {
+	profileID := strings.TrimSpace(ns.ProfileID)
+	peer := strings.TrimSpace(ns.PeerID)
+	if peer == "" {
+		return fmt.Errorf("goncho: peer_id is required")
+	}
+	workspaceID := strings.TrimSpace(ns.WorkspaceID)
+	if workspaceID == "" {
+		workspaceID = s.workspaceID
+	}
+	return upsertPeerCard(ctx, s.db, workspaceID, profileID, s.observer, peer, normalizePeerCard(card))
 }
 
 func (s *Service) Profile(ctx context.Context, peer string) (ProfileResult, error) {
@@ -113,6 +126,34 @@ func (s *Service) ProfileForTarget(ctx context.Context, peer, target string) (Pr
 		return ProfileResult{}, err
 	}
 	return s.profileForScope(ctx, scope)
+}
+
+func (s *Service) ProfileInNamespace(ctx context.Context, ns MemoryNamespace) (ProfileResult, error) {
+	profileID := strings.TrimSpace(ns.ProfileID)
+	peer := strings.TrimSpace(ns.PeerID)
+	if peer == "" {
+		return ProfileResult{}, fmt.Errorf("goncho: peer_id is required")
+	}
+	workspaceID := strings.TrimSpace(ns.WorkspaceID)
+	if workspaceID == "" {
+		workspaceID = s.workspaceID
+	}
+	out := ProfileResult{WorkspaceID: workspaceID, ProfileID: profileID, Peer: peer, ObserverPeerID: s.observer, ObservedPeerID: peer, Card: []string{}}
+	if !s.peerCardEnabled {
+		out.Result = emptyProfileResultText
+		out.Hint = profileHint("peer_card_disabled", "This is not an error. Peer-card support is disabled in Goncho config, so no curated card can be read for this peer.")
+		return out, nil
+	}
+	card, err := getPeerCard(ctx, s.db, workspaceID, profileID, s.observer, peer)
+	if err != nil {
+		return ProfileResult{}, err
+	}
+	out.Card = card
+	if len(card) == 0 {
+		out.Result = emptyProfileResultText
+		out.Hint = profileHint("peer_card_empty_unknown", "This is not an error. The peer card has no facts yet; Goncho builds cards over time from observed turns, and local or self-hosted deployments may not have run enough derivation work yet.")
+	}
+	return out, nil
 }
 
 func (s *Service) defaultPeerCardScope(peer string) (peerCardScope, error) {
@@ -161,7 +202,7 @@ func (s *Service) profileForScope(ctx context.Context, scope peerCardScope) (Pro
 		)
 		return out, nil
 	}
-	card, err := getPeerCard(ctx, s.db, s.workspaceID, scope.Observer, scope.Observed)
+	card, err := getPeerCard(ctx, s.db, s.workspaceID, "", scope.Observer, scope.Observed)
 	if err != nil {
 		return ProfileResult{}, err
 	}
@@ -199,8 +240,10 @@ func (s *Service) Conclude(ctx context.Context, params ConcludeParams) (Conclude
 	if peer == "" {
 		return ConcludeResult{}, fmt.Errorf("goncho: peer is required")
 	}
+	profileID := strings.TrimSpace(params.ProfileID)
+	memoryScope := normalizeMemoryScope(params.Scope, profileID)
 	if params.DeleteID > 0 {
-		deleted, err := deleteConclusion(ctx, s.db, s.workspaceID, s.observer, peer, params.DeleteID)
+		deleted, err := deleteConclusion(ctx, s.db, s.workspaceID, profileID, s.observer, peer, params.DeleteID)
 		if err != nil {
 			return ConcludeResult{}, err
 		}
@@ -209,6 +252,7 @@ func (s *Service) Conclude(ctx context.Context, params ConcludeParams) (Conclude
 		}
 		return ConcludeResult{
 			WorkspaceID: s.workspaceID,
+			ProfileID:   profileID,
 			Peer:        peer,
 			ID:          params.DeleteID,
 			Status:      "processed",
@@ -221,10 +265,10 @@ func (s *Service) Conclude(ctx context.Context, params ConcludeParams) (Conclude
 		return ConcludeResult{}, fmt.Errorf("goncho: conclusion is required when delete_id is absent")
 	}
 
-	idempotencyKey := makeIdempotencyKey(s.workspaceID, s.observer, peer, params.SessionKey, conclusion)
-	scope := normalizeScope(params.Scope)
+	idempotencyKey := makeIdempotencyKey(s.workspaceID, profileID, s.observer, peer, params.SessionKey, conclusion)
 	id, status, err := upsertConclusion(ctx, s.db, conclusionRow{
 		WorkspaceID:    s.workspaceID,
+		ProfileID:      profileID,
 		ObserverPeerID: s.observer,
 		PeerID:         peer,
 		SessionKey:     params.SessionKey,
@@ -234,7 +278,7 @@ func (s *Service) Conclude(ctx context.Context, params ConcludeParams) (Conclude
 		Source:         "manual",
 		IdempotencyKey: idempotencyKey,
 		EvidenceJSON:   "[]",
-		Scope:          scope,
+		Scope:          memoryScope,
 	})
 	if err != nil {
 		return ConcludeResult{}, err
@@ -247,6 +291,7 @@ func (s *Service) Conclude(ctx context.Context, params ConcludeParams) (Conclude
 
 	return ConcludeResult{
 		WorkspaceID: s.workspaceID,
+		ProfileID:   profileID,
 		Peer:        peer,
 		ID:          id,
 		Status:      status,
@@ -258,6 +303,8 @@ func (s *Service) Search(ctx context.Context, params SearchParams) (SearchResult
 	if peer == "" {
 		return SearchResultSet{}, fmt.Errorf("goncho: peer is required")
 	}
+	profileID := strings.TrimSpace(params.ProfileID)
+	memoryScope := normalizeMemoryScope(params.Scope, profileID)
 	compiled, err := parseAndCompileSearchFilter(params.Filters, peer)
 	if err != nil {
 		return SearchResultSet{}, err
@@ -266,6 +313,7 @@ func (s *Service) Search(ctx context.Context, params SearchParams) (SearchResult
 	if denySources || compiled.DenyAll || filterValuesDenyAll(compiled.SessionIDs) {
 		return SearchResultSet{
 			WorkspaceID: s.workspaceID,
+			ProfileID:   profileID,
 			Peer:        peer,
 			Query:       params.Query,
 			Results:     []SearchHit{},
@@ -277,12 +325,12 @@ func (s *Service) Search(ctx context.Context, params SearchParams) (SearchResult
 	var results []SearchHit
 	var scopeEvidence *CrossChatRecallEvidence
 	if len(compiled.Sources) == 0 || filterHasWildcard(compiled.Sources) {
-		results, err = findConclusions(ctx, s.db, s.workspaceID, s.observer, peer, params.Query, params.SessionKey, compiled, limit)
+		results, err = findConclusions(ctx, s.db, s.workspaceID, profileID, s.observer, peer, params.Query, params.SessionKey, memoryScope, compiled, limit)
 		if err != nil {
 			return SearchResultSet{}, err
 		}
 		if len(results) == 0 && strings.TrimSpace(params.Query) != "" {
-			results, err = findConclusions(ctx, s.db, s.workspaceID, s.observer, peer, "", params.SessionKey, compiled, limit)
+			results, err = findConclusions(ctx, s.db, s.workspaceID, profileID, s.observer, peer, "", params.SessionKey, memoryScope, compiled, limit)
 			if err != nil {
 				return SearchResultSet{}, err
 			}
@@ -299,8 +347,12 @@ func (s *Service) Search(ctx context.Context, params SearchParams) (SearchResult
 	}
 	results = limitHitsByTokens(results, params.MaxTokens)
 
+	if scopeEvidence == nil && profileID != "" {
+		scopeEvidence = profileScopeEvidence(profileID, memoryScope)
+	}
 	return SearchResultSet{
 		WorkspaceID:   s.workspaceID,
+		ProfileID:     profileID,
 		Peer:          peer,
 		Query:         params.Query,
 		ScopeEvidence: scopeEvidence,
@@ -313,6 +365,7 @@ func (s *Service) Context(ctx context.Context, params ContextParams) (ContextRes
 	if peer == "" {
 		return ContextResult{}, fmt.Errorf("goncho: peer is required")
 	}
+	profileID := strings.TrimSpace(params.ProfileID)
 	sessionKey := strings.TrimSpace(params.SessionKey)
 	query := effectiveContextQuery(params)
 	tokenLimit := effectiveContextTokenLimit(params)
@@ -335,13 +388,14 @@ func (s *Service) Context(ctx context.Context, params ContextParams) (ContextRes
 	}
 	unavailable = append(unavailable, quarantineEvidence...)
 
-	card, err := getPeerCard(ctx, s.db, s.workspaceID, s.observer, peer)
+	card, err := getPeerCard(ctx, s.db, s.workspaceID, profileID, s.observer, peer)
 	if err != nil {
 		return ContextResult{}, err
 	}
 
 	searchResult := SearchResultSet{
 		WorkspaceID: s.workspaceID,
+		ProfileID:   profileID,
 		Peer:        peer,
 		Query:       query,
 	}
@@ -357,6 +411,7 @@ func (s *Service) Context(ctx context.Context, params ContextParams) (ContextRes
 			scope = ""
 		}
 		searchResult, err = s.Search(ctx, SearchParams{
+			ProfileID:  profileID,
 			Peer:       peer,
 			Query:      query,
 			MaxTokens:  effectiveSearchTokenLimit(params),
@@ -418,6 +473,7 @@ func (s *Service) Context(ctx context.Context, params ContextParams) (ContextRes
 
 	return ContextResult{
 		WorkspaceID:    s.workspaceID,
+		ProfileID:      profileID,
 		Peer:           peer,
 		ObserverPeerID: s.observer,
 		ObservedPeerID: peer,
@@ -447,7 +503,7 @@ func (s *Service) Chat(ctx context.Context, peer string, params ChatParams) (Cha
 		return ChatResult{}, fmt.Errorf("goncho: unsupported reasoning_level %q", params.ReasoningLevel)
 	}
 
-	card, err := getPeerCard(ctx, s.db, s.workspaceID, s.observer, peer)
+	card, err := getPeerCard(ctx, s.db, s.workspaceID, "", s.observer, peer)
 	if err != nil {
 		return ChatResult{}, err
 	}
@@ -613,11 +669,28 @@ func normalizeReasoningLevel(level string) string {
 }
 
 func normalizeScope(scope string) string {
+	return normalizeMemoryScope(scope, "")
+}
+
+func normalizeMemoryScope(scope, profileID string) string {
 	scope = strings.ToLower(strings.TrimSpace(scope))
-	if scope == "global" {
-		return "global"
+	switch scope {
+	case MemoryScopeProfile, MemoryScopeWorkspace, MemoryScopeShared, MemoryScopeSession, MemoryScopeGlobal:
+		return scope
 	}
-	return "workspace"
+	if strings.TrimSpace(profileID) != "" {
+		return MemoryScopeProfile
+	}
+	return MemoryScopeWorkspace
+}
+
+func profileScopeEvidence(profileID, scope string) *CrossChatRecallEvidence {
+	return &CrossChatRecallEvidence{
+		Decision: CrossChatDecisionAllowed,
+		Scope:    scope,
+		Reason:   fmt.Sprintf("profile_id %q resolved; no cross-profile widening unless an explicit shared/workspace scope is requested", profileID),
+		UserID:   profileID,
+	}
 }
 
 func chatUnavailableEvidence(params ChatParams) []ContextUnavailableEvidence {
@@ -894,10 +967,11 @@ func buildChatContent(peer, query, reasoningLevel string, card []string, hits []
 	return b.String()
 }
 
-func makeIdempotencyKey(workspaceID, observer, peer, sessionKey, conclusion string) string {
+func makeIdempotencyKey(workspaceID, profileID, observer, peer, sessionKey, conclusion string) string {
 	normalized := strings.ToLower(strings.TrimSpace(conclusion))
 	sum := sha256.Sum256([]byte(strings.Join([]string{
 		workspaceID,
+		profileID,
 		observer,
 		peer,
 		strings.TrimSpace(sessionKey),

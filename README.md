@@ -23,6 +23,7 @@ go get github.com/TrebuchetDynamics/goncho
 | Storage | SQLite by default. No required hosted service. |
 | Agent surface | Context, search, remember, review, handoff, and Honcho-compatible primitives. |
 | Core idea | Evidence before belief; live verification before action. |
+| Multi-profile contract | `workspace_id + profile_id + scope + peer_id` determines memory visibility. |
 | Trust model | Surface provenance, staleness, quarantine, review, and verification warnings. |
 | Best fit | Coding agents, private assistants, MCP hosts, and long-running local agents. |
 | Verification | Deterministic local E2E tests with temporary SQLite, local files, and `httptest`. |
@@ -103,6 +104,7 @@ Vectors are useful. Search is useful. Goncho does not make either one the source
 | **MCP-style memory tools** | `store_memory`, `retrieve_memory`, `update_memory`, `summarize_memories`, and `forget_memory`. |
 | **Public Goncho tools** | Stable agent-facing tools for context, search, remember, review, and handoff. |
 | **Context packs** | Build compact prompt-ready orientation instead of dumping every matching memory. |
+| **Multi-profile memory isolation** | Gormes-style multi-profile hosts can pass `profile_id` so profile-private memories do not bleed across agents. |
 | **Evidence and claims** | Preserve raw observations separately from interpreted conclusions. |
 | **Review queues** | Surface conflict and stale-memory items instead of silently trusting them. |
 | **Prompt-injection quarantine** | Prompt-injection-like imported content is preserved as skipped evidence and excluded from trusted context. |
@@ -121,7 +123,7 @@ Use Goncho when you are building:
 - long-running agents that need reviewable beliefs, not just chat history,
 - systems where stale facts, prompt injection, or repeated failed fixes are unacceptable.
 
-Do not use Goncho if you only need a hosted vector search API or a large agent-integration catalog. Goncho is a memory runtime for agents that care about trust, locality, provenance, lifecycle, and verified action.
+Do not use Goncho if you only need a hosted vector search API or a large agent-integration catalog. Goncho is a memory runtime for agents that care about trust, locality, provenance, lifecycle, profile isolation, and verified action.
 
 ## Non-Goals
 
@@ -204,14 +206,16 @@ err = svc.SetProfile(ctx, "telegram:12345", []string{
     "Prefers local-first tools",
 })
 
-// Search what Goncho knows.
+// Search what Goncho knows for one Gormes profile.
 results, err := svc.Search(ctx, goncho.SearchParams{
-    Query: "database preferences",
-    Limit: 5,
+    ProfileID: "mineru",
+    Query:     "database preferences",
+    Limit:     5,
 })
 
 // Build prompt-ready context.
 pack, err := svc.Context(ctx, goncho.ContextParams{
+    ProfileID: "mineru",
     Peer:      "telegram:12345",
     MaxTokens: 8000,
 })
@@ -256,6 +260,10 @@ Useful memory is not just an old text span. It is a scoped claim with provenance
 ### Live verification before action
 
 Memory is not permission to act. Before using remembered state for an irreversible or repo-sensitive action, Goncho should help the host verify live reality: current files, current APIs, current approvals, current process state, and current policy.
+
+### Profile isolation before recall
+
+Gormes can manage multiple profiles in one runtime. Goncho treats profile identity as part of the memory contract: `workspace_id + profile_id + scope + peer_id` determines what can be read or written. The default for requests with `profile_id` is private `profile` scope; shared workspace recall requires explicit `scope: "workspace"`.
 
 ### Orientation, not dumping
 
@@ -424,6 +432,7 @@ Goncho's implementation roadmap follows those constraints rather than treating m
 | --- | --- |
 | **Evidence before belief** | Preserve raw events and tool outputs first; derive beliefs second. |
 | **Live verification before action** | Treat remembered state as orientation until current files, tools, approvals, or policies verify it. |
+| **Profile isolation before recall** | Require explicit `profile_id` and scope for multi-profile hosts so one profile cannot accidentally read another profile's memory. |
 | **Claims, not chunks** | Store what is believed with proof, confidence, scope, and time. |
 | **Bounded memory writes** | Keep writes explicit, scoped, auditable, and reversible instead of letting agents freely rewrite their own reality. |
 | **Reproducible retrieval** | Prefer deterministic local tests, cited context packs, and explainable scoring over opaque recall. |
@@ -454,6 +463,7 @@ Goncho is pre-1.0 software. The v0.1.x line provides the initial importable loca
 | SQLite storage and migrations | Implemented and tested |
 | Peer profiles and conclusions | Implemented and tested |
 | Search and context APIs | Implemented and tested |
+| Multi-profile memory isolation | Implemented and tested |
 | Honcho-compatible tool names | Implemented |
 | MCP-style memory tool contracts | Implemented and tested |
 | Public context/search/remember/review/handoff tools | Implemented and tested |

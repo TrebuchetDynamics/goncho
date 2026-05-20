@@ -48,20 +48,41 @@ func TestContractContextResultIncludesStableFields(t *testing.T) {
 
 func TestContractSearchParamsOptionalScopeAndSourcesJSONShape(t *testing.T) {
 	raw, err := json.Marshal(SearchParams{
-		Peer:    "user-juan",
-		Query:   "Atlas",
-		Scope:   "user",
-		Sources: []string{"discord"},
+		ProfileID: "mineru",
+		Peer:      "user-juan",
+		Query:     "Atlas",
+		Scope:     "user",
+		Sources:   []string{"discord"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	text := string(raw)
+	if !strings.Contains(text, `"profile_id":"mineru"`) {
+		t.Fatalf("missing profile_id in %s", raw)
+	}
 	if !strings.Contains(text, `"scope":"user"`) {
 		t.Fatalf("missing scope in %s", raw)
 	}
 	if !strings.Contains(text, `"sources":["discord"]`) {
 		t.Fatalf("missing sources in %s", raw)
+	}
+}
+
+func TestContractMemoryNamespaceJSONShape(t *testing.T) {
+	raw, err := json.Marshal(MemoryNamespace{
+		WorkspaceID: "gormes",
+		ProfileID:   "mineru",
+		PeerID:      "telegram:6586915095",
+		Scope:       MemoryScopeProfile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := `{"workspace_id":"gormes","profile_id":"mineru","peer_id":"telegram:6586915095","scope":"profile"}`
+	if string(raw) != want {
+		t.Fatalf("memory namespace json = %s, want %s", raw, want)
 	}
 }

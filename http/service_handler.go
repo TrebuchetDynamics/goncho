@@ -55,9 +55,24 @@ func (h serviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h serviceHandler) handleSetPeerCard(w http.ResponseWriter, r *http.Request, peer string) {
 	var body struct {
-		Card []string `json:"card"`
+		ProfileID string   `json:"profile_id"`
+		Card      []string `json:"card"`
 	}
 	if !decodeJSONBody(w, r, &body) {
+		return
+	}
+	profileID := strings.TrimSpace(body.ProfileID)
+	if profileID != "" {
+		if err := h.svc.SetProfileInNamespace(r.Context(), goncho.MemoryNamespace{ProfileID: profileID, PeerID: peer, Scope: goncho.MemoryScopeProfile}, body.Card); err != nil {
+			writeHTTPError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		result, err := h.svc.ProfileInNamespace(r.Context(), goncho.MemoryNamespace{ProfileID: profileID, PeerID: peer, Scope: goncho.MemoryScopeProfile})
+		if err != nil {
+			writeHTTPError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
 		return
 	}
 	if err := h.svc.SetProfile(r.Context(), peer, body.Card); err != nil {
@@ -92,6 +107,7 @@ func (h serviceHandler) handleCreateMessages(w http.ResponseWriter, r *http.Requ
 
 func (h serviceHandler) handleConclude(w http.ResponseWriter, r *http.Request) {
 	var body struct {
+		ProfileID  string `json:"profile_id"`
 		Peer       string `json:"peer"`
 		PeerID     string `json:"peer_id"`
 		Conclusion string `json:"conclusion"`
@@ -103,6 +119,7 @@ func (h serviceHandler) handleConclude(w http.ResponseWriter, r *http.Request) {
 	}
 	peer := firstNonEmpty(body.Peer, body.PeerID)
 	result, err := h.svc.Conclude(r.Context(), goncho.ConcludeParams{
+		ProfileID:  body.ProfileID,
 		Peer:       peer,
 		Conclusion: body.Conclusion,
 		SessionKey: body.SessionKey,
@@ -118,6 +135,7 @@ func (h serviceHandler) handleConclude(w http.ResponseWriter, r *http.Request) {
 func (h serviceHandler) handlePeerContext(w http.ResponseWriter, r *http.Request, peer string) {
 	query := r.URL.Query()
 	result, err := h.svc.Context(r.Context(), goncho.ContextParams{
+		ProfileID:  query.Get("profile_id"),
 		Peer:       peer,
 		Query:      firstNonEmpty(query.Get("query"), query.Get("search_query")),
 		SessionKey: firstNonEmpty(query.Get("session_key"), query.Get("session_id")),

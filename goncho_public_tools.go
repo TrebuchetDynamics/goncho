@@ -34,7 +34,7 @@ func (t *GonchoContextTool) Description() string {
 	return "Build a local Goncho orientation pack for a peer and session."
 }
 func (t *GonchoContextTool) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"peer_id":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"max_tokens":{"type":"integer"}},"required":["peer_id"]}`)
+	return json.RawMessage(`{"type":"object","properties":{"profile_id":{"type":"string"},"peer_id":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"max_tokens":{"type":"integer"}},"required":["peer_id"]}`)
 }
 func (t *GonchoContextTool) Spec() toolmeta.OperationSpec {
 	return gonchoPublicToolSpec(t.Name(), t.Description(), t.Schema(), false, true)
@@ -44,6 +44,7 @@ func (t *GonchoContextTool) Execute(ctx context.Context, args json.RawMessage) (
 		return nil, errors.New("goncho_context: service is required")
 	}
 	var in struct {
+		ProfileID  string `json:"profile_id"`
 		PeerID     string `json:"peer_id"`
 		Peer       string `json:"peer"`
 		Query      string `json:"query"`
@@ -53,7 +54,7 @@ func (t *GonchoContextTool) Execute(ctx context.Context, args json.RawMessage) (
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("goncho_context: %w", err)
 	}
-	out, err := t.svc.Context(ctx, ContextParams{Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, MaxTokens: in.MaxTokens})
+	out, err := t.svc.Context(ctx, ContextParams{ProfileID: in.ProfileID, Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, MaxTokens: in.MaxTokens})
 	if err != nil {
 		return nil, fmt.Errorf("goncho_context: %w", err)
 	}
@@ -66,7 +67,7 @@ func (t *GonchoSearchTool) Description() string {
 	return "Search local Goncho memory with peer, session, scope, and token controls."
 }
 func (t *GonchoSearchTool) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"peer_id":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"},"max_tokens":{"type":"integer"}},"required":["peer_id","query"]}`)
+	return json.RawMessage(`{"type":"object","properties":{"profile_id":{"type":"string"},"peer_id":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"},"max_tokens":{"type":"integer"}},"required":["peer_id","query"]}`)
 }
 func (t *GonchoSearchTool) Spec() toolmeta.OperationSpec {
 	return gonchoPublicToolSpec(t.Name(), t.Description(), t.Schema(), false, true)
@@ -76,6 +77,7 @@ func (t *GonchoSearchTool) Execute(ctx context.Context, args json.RawMessage) (j
 		return nil, errors.New("goncho_search: service is required")
 	}
 	var in struct {
+		ProfileID  string `json:"profile_id"`
 		PeerID     string `json:"peer_id"`
 		Peer       string `json:"peer"`
 		Query      string `json:"query"`
@@ -86,11 +88,11 @@ func (t *GonchoSearchTool) Execute(ctx context.Context, args json.RawMessage) (j
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("goncho_search: %w", err)
 	}
-	out, err := t.svc.Search(ctx, SearchParams{Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, Scope: in.Scope, MaxTokens: in.MaxTokens})
+	out, err := t.svc.Search(ctx, SearchParams{ProfileID: in.ProfileID, Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, Scope: in.Scope, MaxTokens: in.MaxTokens})
 	if err != nil {
 		return nil, fmt.Errorf("goncho_search: %w", err)
 	}
-	return json.Marshal(map[string]any{"action": "search", "count": len(out.Results), "results": out.Results, "workspace_id": out.WorkspaceID, "peer": out.Peer, "query": out.Query})
+	return json.Marshal(map[string]any{"action": "search", "count": len(out.Results), "results": out.Results, "workspace_id": out.WorkspaceID, "profile_id": out.ProfileID, "peer": out.Peer, "query": out.Query})
 }
 
 func (t *GonchoRememberTool) Name() string           { return "goncho_remember" }
@@ -99,7 +101,7 @@ func (t *GonchoRememberTool) Description() string {
 	return "Store an explicit local Goncho claim for a peer."
 }
 func (t *GonchoRememberTool) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"peer_id":{"type":"string"},"content":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"}},"required":["peer_id","content"]}`)
+	return json.RawMessage(`{"type":"object","properties":{"profile_id":{"type":"string"},"peer_id":{"type":"string"},"content":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"}},"required":["peer_id","content"]}`)
 }
 func (t *GonchoRememberTool) Spec() toolmeta.OperationSpec {
 	return gonchoPublicToolSpec(t.Name(), t.Description(), t.Schema(), true, false)
@@ -109,6 +111,7 @@ func (t *GonchoRememberTool) Execute(ctx context.Context, args json.RawMessage) 
 		return nil, errors.New("goncho_remember: service is required")
 	}
 	var in struct {
+		ProfileID  string `json:"profile_id"`
 		PeerID     string `json:"peer_id"`
 		Peer       string `json:"peer"`
 		Content    string `json:"content"`
@@ -119,11 +122,11 @@ func (t *GonchoRememberTool) Execute(ctx context.Context, args json.RawMessage) 
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("goncho_remember: %w", err)
 	}
-	out, err := t.svc.Conclude(ctx, ConcludeParams{Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Conclusion: firstPublicNonEmpty(in.Content, in.Conclusion), SessionKey: in.SessionKey, Scope: in.Scope})
+	out, err := t.svc.Conclude(ctx, ConcludeParams{ProfileID: in.ProfileID, Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Conclusion: firstPublicNonEmpty(in.Content, in.Conclusion), SessionKey: in.SessionKey, Scope: in.Scope})
 	if err != nil {
 		return nil, fmt.Errorf("goncho_remember: %w", err)
 	}
-	return json.Marshal(map[string]any{"success": true, "action": "remember", "id": out.ID, "status": out.Status, "peer": out.Peer, "workspace_id": out.WorkspaceID})
+	return json.Marshal(map[string]any{"success": true, "action": "remember", "id": out.ID, "status": out.Status, "peer": out.Peer, "workspace_id": out.WorkspaceID, "profile_id": out.ProfileID})
 }
 
 func (t *GonchoHandoffTool) Name() string           { return "goncho_handoff" }

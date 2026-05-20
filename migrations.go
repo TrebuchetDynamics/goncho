@@ -54,6 +54,7 @@ var gonchoObservationDDL = []string{
 		id TEXT PRIMARY KEY,
 		kind TEXT NOT NULL CHECK(kind IN ('session_start','user_prompt','tool_call','tool_result','tool_error','assistant_response','compact','session_end','custom')),
 		workspace_id TEXT NOT NULL DEFAULT '',
+		profile_id TEXT NOT NULL DEFAULT '',
 		peer_id TEXT NOT NULL DEFAULT '',
 		session_key TEXT NOT NULL DEFAULT '',
 		context_id TEXT NOT NULL DEFAULT '',
@@ -70,8 +71,10 @@ var gonchoObservationDDL = []string{
 		checksum TEXT NOT NULL,
 		observed_at INTEGER NOT NULL
 	)`,
+	`ALTER TABLE goncho_observations ADD COLUMN profile_id TEXT NOT NULL DEFAULT ''`,
 	`CREATE INDEX IF NOT EXISTS idx_goncho_observations_observed_at ON goncho_observations(observed_at DESC)`,
 	`CREATE INDEX IF NOT EXISTS idx_goncho_observations_workspace ON goncho_observations(workspace_id, observed_at DESC)`,
+	`CREATE INDEX IF NOT EXISTS idx_goncho_observations_profile ON goncho_observations(profile_id, observed_at DESC)`,
 	`CREATE INDEX IF NOT EXISTS idx_goncho_observations_peer ON goncho_observations(peer_id, observed_at DESC)`,
 	`CREATE INDEX IF NOT EXISTS idx_goncho_observations_session ON goncho_observations(session_key, observed_at DESC)`,
 	`CREATE INDEX IF NOT EXISTS idx_goncho_observations_context ON goncho_observations(context_id, observed_at DESC)`,

@@ -37,6 +37,21 @@ const (
 )
 
 const (
+	MemoryScopeProfile   = "profile"
+	MemoryScopeWorkspace = "workspace"
+	MemoryScopeShared    = "shared"
+	MemoryScopeSession   = "session"
+	MemoryScopeGlobal    = "global"
+)
+
+type MemoryNamespace struct {
+	WorkspaceID string `json:"workspace_id"`
+	ProfileID   string `json:"profile_id"`
+	PeerID      string `json:"peer_id,omitempty"`
+	Scope       string `json:"scope,omitempty"`
+}
+
+const (
 	DefaultRecentMessages               = 4
 	DefaultMaxMessageSize               = 25_000
 	DefaultMaxFileSize                  = 5_242_880
@@ -123,6 +138,7 @@ type SessionDirectory interface {
 // ProfileResult is the external shape used by profile reads and updates.
 type ProfileResult struct {
 	WorkspaceID    string       `json:"workspace_id"`
+	ProfileID      string       `json:"profile_id,omitempty"`
 	Peer           string       `json:"peer"`
 	Target         string       `json:"target,omitempty"`
 	ObserverPeerID string       `json:"observer_peer_id,omitempty"`
@@ -142,6 +158,7 @@ type ProfileHint struct {
 
 // ConcludeParams controls manual conclusion writes and deletes.
 type ConcludeParams struct {
+	ProfileID  string `json:"profile_id,omitempty"`
 	Peer       string `json:"peer"`
 	Conclusion string `json:"conclusion,omitempty"`
 	DeleteID   int64  `json:"delete_id,omitempty"`
@@ -153,6 +170,7 @@ type ConcludeParams struct {
 // ConcludeResult represents the outcome of a create/delete conclusion operation.
 type ConcludeResult struct {
 	WorkspaceID string `json:"workspace_id"`
+	ProfileID   string `json:"profile_id,omitempty"`
 	Peer        string `json:"peer"`
 	ID          int64  `json:"id,omitempty"`
 	Status      string `json:"status"`
@@ -161,6 +179,7 @@ type ConcludeResult struct {
 
 // SearchParams controls retrieval for honcho_search.
 type SearchParams struct {
+	ProfileID  string         `json:"profile_id,omitempty"`
 	Peer       string         `json:"peer"`
 	Query      string         `json:"query"`
 	MaxTokens  int            `json:"max_tokens,omitempty"`
@@ -192,15 +211,17 @@ type SearchLineage struct {
 
 // SearchResultSet is the stable JSON shape for honcho_search.
 type SearchResultSet struct {
-	WorkspaceID   string                          `json:"workspace_id"`
-	Peer          string                          `json:"peer"`
-	Query         string                          `json:"query"`
+	WorkspaceID   string                   `json:"workspace_id"`
+	ProfileID     string                   `json:"profile_id,omitempty"`
+	Peer          string                   `json:"peer"`
+	Query         string                   `json:"query"`
 	ScopeEvidence *CrossChatRecallEvidence `json:"scope_evidence,omitempty"`
-	Results       []SearchHit                     `json:"results"`
+	Results       []SearchHit              `json:"results"`
 }
 
 // ContextParams controls honcho_context reads.
 type ContextParams struct {
+	ProfileID           string   `json:"profile_id,omitempty"`
 	Peer                string   `json:"peer"`
 	Query               string   `json:"query,omitempty"`
 	SearchQuery         string   `json:"search_query,omitempty"`
@@ -262,20 +283,21 @@ type ContextUnavailableEvidence struct {
 
 // ContextResult is the stable JSON shape for honcho_context.
 type ContextResult struct {
-	WorkspaceID       string                          `json:"workspace_id"`
-	Peer              string                          `json:"peer"`
-	ObserverPeerID    string                          `json:"observer_peer_id,omitempty"`
-	ObservedPeerID    string                          `json:"observed_peer_id,omitempty"`
-	SessionKey        string                          `json:"session_key,omitempty"`
-	PeerCard          []string                        `json:"peer_card"`
-	Representation    string                          `json:"representation"`
-	Summary           *SessionSummary                 `json:"summary,omitempty"`
-	StructuredSummary *StructuredSummary              `json:"structured_summary,omitempty"`
-	Conclusions       []string                        `json:"conclusions,omitempty"`
-	SearchResults     []SearchHit                     `json:"search_results,omitempty"`
-	ScopeEvidence     *CrossChatRecallEvidence `json:"scope_evidence,omitempty"`
-	RecentMessages    []MessageSlice                  `json:"recent_messages,omitempty"`
-	Unavailable       []ContextUnavailableEvidence    `json:"unavailable,omitempty"`
+	WorkspaceID       string                       `json:"workspace_id"`
+	ProfileID         string                       `json:"profile_id,omitempty"`
+	Peer              string                       `json:"peer"`
+	ObserverPeerID    string                       `json:"observer_peer_id,omitempty"`
+	ObservedPeerID    string                       `json:"observed_peer_id,omitempty"`
+	SessionKey        string                       `json:"session_key,omitempty"`
+	PeerCard          []string                     `json:"peer_card"`
+	Representation    string                       `json:"representation"`
+	Summary           *SessionSummary              `json:"summary,omitempty"`
+	StructuredSummary *StructuredSummary           `json:"structured_summary,omitempty"`
+	Conclusions       []string                     `json:"conclusions,omitempty"`
+	SearchResults     []SearchHit                  `json:"search_results,omitempty"`
+	ScopeEvidence     *CrossChatRecallEvidence     `json:"scope_evidence,omitempty"`
+	RecentMessages    []MessageSlice               `json:"recent_messages,omitempty"`
+	Unavailable       []ContextUnavailableEvidence `json:"unavailable,omitempty"`
 }
 
 // ChatParams mirrors Honcho's DialecticOptions request body for peer.chat().
@@ -301,6 +323,7 @@ type CreateMessagesParams struct {
 }
 
 type CreateMessage struct {
+	ProfileID string         `json:"profile_id,omitempty"`
 	Peer      string         `json:"peer_id"`
 	Role      string         `json:"role,omitempty"`
 	Content   string         `json:"content"`

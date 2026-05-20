@@ -23,6 +23,7 @@ A Gormes integration should provide:
 | --- | --- |
 | Agent runtime id | `Config.WorkspaceID` |
 | Agent name/perspective | `Config.ObserverPeerID`, usually `gormes` |
+| Active Gormes profile | `profile_id` / `ContextParams.ProfileID` / `SearchParams.ProfileID` / `ConcludeParams.ProfileID` |
 | User or peer id | `peer_id` / `ContextParams.Peer` |
 | Conversation id | `session_key` |
 | Prompt budget | `ContextParams.MaxTokens` |
@@ -30,6 +31,14 @@ A Gormes integration should provide:
 | Agent tools | `goncho_context`, `goncho_search`, `goncho_remember`, `goncho_review`, `goncho_handoff` |
 
 Keep these mappings stable. Most memory bugs are scope bugs.
+
+For multi-profile Gormes runtimes, treat `profile_id` as required on memory reads and writes. Goncho's profile-aware contract is:
+
+```text
+workspace_id + profile_id + scope + peer_id -> memory visibility
+```
+
+When `profile_id` is present and no explicit scope is provided, Goncho defaults to private `profile` scope. Shared workspace recall requires explicit `scope: "workspace"`.
 
 ## Minimal Wiring
 
@@ -79,6 +88,7 @@ At the start of a model turn:
 
 ```go
 orientation, err := mem.Svc.Context(ctx, goncho.ContextParams{
+    ProfileID:  activeProfileID,
     Peer:       userID,
     SessionKey: sessionID,
     Query:      userPrompt,
@@ -92,10 +102,11 @@ After a meaningful decision or user preference:
 
 ```go
 _, err := mem.Svc.Conclude(ctx, goncho.ConcludeParams{
+    ProfileID:  activeProfileID,
     Peer:       userID,
     SessionKey: sessionID,
     Conclusion: "User prefers local SQLite memory over hosted vector services.",
-    Scope:      "workspace",
+    Scope:      "profile",
 })
 ```
 
@@ -175,6 +186,7 @@ Suggested starting values:
 
 | Failure | Prevention |
 | --- | --- |
+| Cross-profile leakage | Always pass the active `profile_id`; default to profile scope unless the host intentionally asks for shared workspace memory. |
 | Cross-user leakage | Always pass the correct `peer_id`; separate DBs for separate tenants until ACLs exist. |
 | Cross-session confusion | Pass `session_key` on context/search/remember calls. |
 | Prompt bloat | Set per-call `MaxTokens`; do not inject raw search dumps. |
