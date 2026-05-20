@@ -23,6 +23,11 @@ func TestLoadLocomoDatasetParsesSchema(t *testing.T) {
 	if data.Questions[0].QuestionID == "" || data.Questions[0].AnswerHint == "" || len(data.Questions[0].GoldMemoryIDs) == 0 {
 		t.Fatalf("first question missing schema fields: %+v", data.Questions[0])
 	}
+	firstConversation := data.Memories[0].ConversationID
+	indexed := data.memoriesByConversation[firstConversation]
+	if len(indexed) == 0 || indexed[0].MemoryID != data.Memories[0].MemoryID {
+		t.Fatalf("conversation index did not preserve memory order for %q", firstConversation)
+	}
 }
 
 func TestLocomoScoringStrictAnyAndMRR(t *testing.T) {

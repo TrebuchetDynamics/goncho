@@ -42,8 +42,9 @@ type locomoQuestionRow struct {
 }
 
 type locomoDataset struct {
-	Memories  []locomoMemoryRow
-	Questions []locomoQuestionRow
+	Memories               []locomoMemoryRow
+	Questions              []locomoQuestionRow
+	memoriesByConversation map[string][]locomoMemoryRow
 }
 
 type locomoReport struct {
@@ -191,7 +192,7 @@ func loadLocomoDataset(memoriesPath, questionsPath string) (locomoDataset, error
 	if err != nil {
 		return locomoDataset{}, err
 	}
-	return locomoDataset{Memories: memories, Questions: questions}, nil
+	return locomoDataset{Memories: memories, Questions: questions, memoriesByConversation: indexLocomoMemoriesByConversation(memories)}, nil
 }
 
 func loadLocomoMemories(path string) ([]locomoMemoryRow, error) {
@@ -334,6 +335,9 @@ func retrieveLocomo(ctx context.Context, svc *goncho.Service, data locomoDataset
 }
 
 func locomoConversationMemories(data locomoDataset, conversationID string) []locomoMemoryRow {
+	if data.memoriesByConversation != nil {
+		return append([]locomoMemoryRow(nil), data.memoriesByConversation[conversationID]...)
+	}
 	out := []locomoMemoryRow{}
 	for _, mem := range data.Memories {
 		if mem.ConversationID == conversationID {
@@ -341,6 +345,14 @@ func locomoConversationMemories(data locomoDataset, conversationID string) []loc
 		}
 	}
 	return out
+}
+
+func indexLocomoMemoriesByConversation(memories []locomoMemoryRow) map[string][]locomoMemoryRow {
+	byConversation := make(map[string][]locomoMemoryRow, len(memories))
+	for _, mem := range memories {
+		byConversation[mem.ConversationID] = append(byConversation[mem.ConversationID], mem)
+	}
+	return byConversation
 }
 
 func locomoFirstIDs(items []locomoMemoryRow, limit int) []string {
