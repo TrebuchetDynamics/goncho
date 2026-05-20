@@ -282,15 +282,16 @@ Goncho includes a local LongMemEval-style benchmark runner. It loads a JSONL mem
 
 ```bash
 go test ./cmd/goncho-bench
-go run ./cmd/goncho-bench \
-  --dataset ./cmd/goncho-bench/testdata/tiny-longmemeval.jsonl \
-  --out ./artifacts/tiny-longmemeval-report.json \
-  --db ./artifacts/tiny-longmemeval.db \
-  --limit 10 \
-  --runs 20
+make bench-longmemeval-s-smoke
 ```
 
-The bundled tiny fixture is a harness smoke test, not a leaderboard claim. It currently reaches `R@5=1`, `R@10=1`, `recall_any@5=1`, `recall_any@10=1`, and `MRR=1` after BM25-style lexical conclusion ranking. To evaluate LongMemEval-S, convert the official 500-question dataset to the documented JSONL format and report the real generated numbers.
+Manual full run from a clean checkout:
+
+```bash
+make bench-longmemeval-s
+```
+
+The bundled tiny fixture is a harness smoke test, not a leaderboard claim. The full `make bench-longmemeval-s` target pins the Hugging Face dataset revision, verifies SHA256, converts the 500-question set, runs deterministic ID-based scoring, emits JSON reports, and writes failure-audit JSONL.
 
 Docs: [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
 

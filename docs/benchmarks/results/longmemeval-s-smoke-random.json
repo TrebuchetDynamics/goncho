@@ -1,0 +1,72 @@
+{
+  "system": "random",
+  "dataset": "tiny-longmemeval",
+  "dataset_revision": "smoke-fixture",
+  "dataset_sha256": "smoke-fixture",
+  "go_version": "go1.26.1",
+  "goos": "linux",
+  "goarch": "amd64",
+  "cpu_count": 22,
+  "memory_count": 3,
+  "question_count": 3,
+  "runs": 2,
+  "leakage": {
+    "query_in_memory": 0,
+    "gold_id_in_memory": 0
+  },
+  "recall_at_5": 1,
+  "recall_at_10": 1,
+  "recall_any_at_5": 1,
+  "recall_any_at_10": 1,
+  "mrr": 0.6111,
+  "questions": [
+    {
+      "id": "q-auth-owner",
+      "query": "Who reviews JWT middleware authentication changes?",
+      "relevant_ids": [
+        "mem-auth-owner"
+      ],
+      "retrieved_ids": [
+        "mem-dead-end",
+        "mem-auth-owner",
+        "mem-db-owner"
+      ],
+      "rank": 2,
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "mrr": 0.5
+    },
+    {
+      "id": "q-db-owner",
+      "query": "Who owns analytics warehouse database permissions?",
+      "relevant_ids": [
+        "mem-db-owner"
+      ],
+      "retrieved_ids": [
+        "mem-dead-end",
+        "mem-auth-owner",
+        "mem-db-owner"
+      ],
+      "rank": 3,
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "mrr": 0.3333
+    },
+    {
+      "id": "q-docker-dead-end",
+      "query": "Which failed path should not be repeated for flaky integration tests?",
+      "relevant_ids": [
+        "mem-dead-end"
+      ],
+      "retrieved_ids": [
+        "mem-dead-end",
+        "mem-db-owner",
+        "mem-auth-owner"
+      ],
+      "rank": 1,
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "mrr": 1
+    }
+  ]
+}

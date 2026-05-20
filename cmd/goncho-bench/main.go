@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho"
@@ -16,11 +17,16 @@ import (
 )
 
 type config struct {
-	DatasetPath  string
-	OutPath      string
-	DatabasePath string
-	Limit        int
-	Runs         int
+	DatasetPath     string
+	OutPath         string
+	FailurePath     string
+	DatabasePath    string
+	Limit           int
+	Runs            int
+	System          string
+	DatasetRevision string
+	DatasetSHA256   string
+	FailOnLeakage   bool
 }
 
 type dataset struct {
@@ -56,17 +62,24 @@ type QuestionRecord struct {
 }
 
 type BenchmarkReport struct {
-	System        string                    `json:"system"`
-	Dataset       string                    `json:"dataset"`
-	MemoryCount   int                       `json:"memory_count"`
-	QuestionCount int                       `json:"question_count"`
-	Runs          int                       `json:"runs"`
-	RecallAt5     float64                   `json:"recall_at_5"`
-	RecallAt10    float64                   `json:"recall_at_10"`
-	RecallAnyAt5  float64                   `json:"recall_any_at_5"`
-	RecallAnyAt10 float64                   `json:"recall_any_at_10"`
-	MRR           float64                   `json:"mrr"`
-	Questions     []BenchmarkQuestionReport `json:"questions"`
+	System          string                    `json:"system"`
+	Dataset         string                    `json:"dataset"`
+	DatasetRevision string                    `json:"dataset_revision,omitempty"`
+	DatasetSHA256   string                    `json:"dataset_sha256,omitempty"`
+	GoVersion       string                    `json:"go_version"`
+	GOOS            string                    `json:"goos"`
+	GOARCH          string                    `json:"goarch"`
+	CPUCount        int                       `json:"cpu_count"`
+	MemoryCount     int                       `json:"memory_count"`
+	QuestionCount   int                       `json:"question_count"`
+	Runs            int                       `json:"runs"`
+	Leakage         LeakageReport             `json:"leakage"`
+	RecallAt5       float64                   `json:"recall_at_5"`
+	RecallAt10      float64                   `json:"recall_at_10"`
+	RecallAnyAt5    float64                   `json:"recall_any_at_5"`
+	RecallAnyAt10   float64                   `json:"recall_any_at_10"`
+	MRR             float64                   `json:"mrr"`
+	Questions       []BenchmarkQuestionReport `json:"questions"`
 }
 
 type BenchmarkQuestionReport struct {
@@ -84,7 +97,12 @@ func main() {
 	cfg := config{}
 	flag.StringVar(&cfg.DatasetPath, "dataset", "", "LongMemEval-style JSONL dataset path")
 	flag.StringVar(&cfg.OutPath, "out", "", "JSON report output path")
+	flag.StringVar(&cfg.FailurePath, "failures", "", "JSONL failure audit output path")
 	flag.StringVar(&cfg.DatabasePath, "db", "", "SQLite database path; defaults to a temp file")
+	flag.StringVar(&cfg.System, "system", "goncho", "retrieval system: goncho, goncho-no-rank, random, bm25, sqlite-fts5")
+	flag.StringVar(&cfg.DatasetRevision, "dataset-revision", "", "dataset source revision for report metadata")
+	flag.StringVar(&cfg.DatasetSHA256, "dataset-sha256", "", "dataset source sha256 for report metadata")
+	flag.BoolVar(&cfg.FailOnLeakage, "fail-on-leakage", false, "exit non-zero if leakage checks find query/gold-id leakage")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
@@ -125,6 +143,15 @@ func run(ctx context.Context, cfg config) error {
 		reports = append(reports, report)
 	}
 	report := aggregateReports(reports)
+	report.DatasetRevision = cfg.DatasetRevision
+	report.DatasetSHA256 = cfg.DatasetSHA256
+	report.Leakage = checkLeakage(data)
+	if cfg.FailOnLeakage && (report.Leakage.QueryInMemory > 0 || report.Leakage.GoldIDInMemory > 0) {
+		return fmt.Errorf("goncho-bench: leakage check failed: query_in_memory=%d gold_id_in_memory=%d", report.Leakage.QueryInMemory, report.Leakage.GoldIDInMemory)
+	}
+	if err := writeFailureAudit(cfg.FailurePath, report); err != nil {
+		return err
+	}
 	raw, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode report: %w", err)
@@ -144,37 +171,36 @@ func run(ctx context.Context, cfg config) error {
 }
 
 func evaluateOnce(ctx context.Context, data dataset, cfg config) (BenchmarkReport, error) {
-	store, err := memory.OpenSqlite(cfg.DatabasePath, 0, nil)
-	if err != nil {
-		return BenchmarkReport{}, fmt.Errorf("goncho-bench: open sqlite: %w", err)
+	system := strings.TrimSpace(cfg.System)
+	if system == "" {
+		system = "goncho"
 	}
-	defer store.Close(ctx)
-	if err := goncho.RunMigrations(store.DB()); err != nil {
-		return BenchmarkReport{}, fmt.Errorf("goncho-bench: run migrations: %w", err)
-	}
-	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-bench", ObserverPeerID: "goncho-bench", RecentMessages: 0}, nil)
+	var svc *goncho.Service
 	contentIDs := map[string][]string{}
-	for _, mem := range data.Memories {
-		if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: mem.Peer, SessionKey: mem.SessionKey, Conclusion: mem.Content, Scope: "benchmark"}); err != nil {
-			return BenchmarkReport{}, fmt.Errorf("goncho-bench: store memory %s: %w", mem.ID, err)
+	var closeStore func() error
+	if system == "goncho" {
+		store, err := memory.OpenSqlite(cfg.DatabasePath, 0, nil)
+		if err != nil {
+			return BenchmarkReport{}, fmt.Errorf("goncho-bench: open sqlite: %w", err)
 		}
-		contentIDs[mem.Content] = append(contentIDs[mem.Content], mem.ID)
+		closeStore = func() error { return store.Close(ctx) }
+		defer closeStore()
+		if err := goncho.RunMigrations(store.DB()); err != nil {
+			return BenchmarkReport{}, fmt.Errorf("goncho-bench: run migrations: %w", err)
+		}
+		svc = goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-bench", ObserverPeerID: "goncho-bench", RecentMessages: 0}, nil)
+		for _, mem := range data.Memories {
+			if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: mem.Peer, SessionKey: mem.SessionKey, Conclusion: mem.Content, Scope: "benchmark"}); err != nil {
+				return BenchmarkReport{}, fmt.Errorf("goncho-bench: store memory %s: %w", mem.ID, err)
+			}
+			contentIDs[mem.Content] = append(contentIDs[mem.Content], mem.ID)
+		}
 	}
-	report := BenchmarkReport{System: "goncho", Dataset: data.Name, MemoryCount: len(data.Memories), QuestionCount: len(data.Questions), Runs: 1, Questions: []BenchmarkQuestionReport{}}
+	report := BenchmarkReport{System: system, Dataset: data.Name, GoVersion: runtime.Version(), GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, CPUCount: runtime.NumCPU(), MemoryCount: len(data.Memories), QuestionCount: len(data.Questions), Runs: 1, Questions: []BenchmarkQuestionReport{}}
 	for _, q := range data.Questions {
-		result, err := svc.Search(ctx, goncho.SearchParams{Peer: q.Peer, SessionKey: q.SessionKey, Query: q.Query, Limit: cfg.Limit, MaxTokens: 100_000})
+		retrievedIDs, err := retrieveForSystem(ctx, svc, data, q, contentIDs, system, cfg.Limit)
 		if err != nil {
 			return BenchmarkReport{}, fmt.Errorf("goncho-bench: search question %s: %w", q.ID, err)
-		}
-		retrievedIDs := make([]string, 0, len(result.Results))
-		seen := map[string]struct{}{}
-		for _, hit := range result.Results {
-			for _, id := range contentIDs[hit.Content] {
-				if _, ok := seen[id]; !ok {
-					retrievedIDs = append(retrievedIDs, id)
-					seen[id] = struct{}{}
-				}
-			}
 		}
 		qr := BenchmarkQuestionReport{ID: q.ID, Query: q.Query, RelevantIDs: q.RelevantIDs, RetrievedIDs: retrievedIDs, Rank: firstRelevantRank(retrievedIDs, q.RelevantIDs)}
 		qr.RecallAt5 = recallAtKForIDs(retrievedIDs, q.RelevantIDs, 5)

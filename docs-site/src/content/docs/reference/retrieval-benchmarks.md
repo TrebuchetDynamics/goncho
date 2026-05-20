@@ -5,7 +5,7 @@ description: Run LongMemEval-style retrieval accuracy checks for Goncho.
 
 Goncho includes a local benchmark runner for LongMemEval-style retrieval accuracy checks.
 
-The runner does not download datasets. It consumes a local JSONL file, loads memories into a temporary Goncho SQLite store, runs Goncho search for each question, and reports:
+The runner itself does not download datasets. It consumes a local JSONL file, loads memories, runs a selected retrieval system, performs leakage checks, writes optional failure audits, and reports:
 
 - `recall_at_5`
 - `recall_at_10`
@@ -13,8 +13,33 @@ The runner does not download datasets. It consumes a local JSONL file, loads mem
 - `recall_any_at_10`
 - `mrr`
 - per-question retrieved IDs and first relevant rank
+- leakage counts for exact query text and gold IDs in indexed memory
 
-## Command
+## Scientific Validation Targets
+
+Use the smoke target in normal CI and the full target manually from a clean checkout.
+
+```sh
+make bench-longmemeval-s-smoke
+```
+
+The smoke target runs the tiny pinned fixture across deterministic baselines:
+
+- `random`
+- `bm25`
+- `sqlite-fts5`
+- `goncho-no-rank`
+- `goncho`
+
+For the full pinned LongMemEval-S run:
+
+```sh
+make bench-longmemeval-s
+```
+
+The full target downloads `xiaowu0162/longmemeval-cleaned` at revision `98d7416c24c778c2fee6e6f3006e7a073259d48f`, verifies SHA256 `d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442`, converts the dataset, and writes JSON reports plus failure audits.
+
+## Direct Command
 
 ```sh
 go run ./cmd/goncho-bench \
