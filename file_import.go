@@ -42,15 +42,17 @@ type FileImportResult struct {
 
 // ImportedFileMessage is the stable return shape for each imported chunk.
 type ImportedFileMessage struct {
-	ID            int64              `json:"id"`
-	SessionKey    string             `json:"session_key"`
-	PeerID        string             `json:"peer_id"`
-	Role          string             `json:"role"`
-	Content       string             `json:"content"`
-	CreatedAt     time.Time          `json:"created_at"`
-	Metadata      map[string]any     `json:"metadata,omitempty"`
-	Configuration map[string]any     `json:"configuration,omitempty"`
-	File          FileImportMetadata `json:"file"`
+	ID               int64              `json:"id"`
+	SessionKey       string             `json:"session_key"`
+	PeerID           string             `json:"peer_id"`
+	Role             string             `json:"role"`
+	Content          string             `json:"content"`
+	CreatedAt        time.Time          `json:"created_at"`
+	MemorySyncStatus string             `json:"memory_sync_status"`
+	MemorySyncReason string             `json:"memory_sync_reason,omitempty"`
+	Metadata         map[string]any     `json:"metadata,omitempty"`
+	Configuration    map[string]any     `json:"configuration,omitempty"`
+	File             FileImportMetadata `json:"file"`
 }
 
 // FileImportMetadata mirrors Honcho's file-related internal metadata attached
@@ -118,6 +120,14 @@ func (s *Service) ImportFile(ctx context.Context, params ImportFileParams) (File
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	quarantined := importLooksLikePromptInjection(text)
+	memorySyncStatus := "ready"
+	memorySyncReason := ""
+	if quarantined {
+		memorySyncStatus = "skipped"
+		memorySyncReason = "quarantined_prompt_injection"
+	}
+
 	messages := make([]ImportedFileMessage, 0, len(chunks))
 	for i, chunk := range chunks {
 		fileMeta := FileImportMetadata{
@@ -134,9 +144,9 @@ func (s *Service) ImportFile(ctx context.Context, params ImportFileParams) (File
 			return FileImportResult{}, err
 		}
 		res, err := tx.ExecContext(ctx, `
-			INSERT INTO turns(session_id, role, content, ts_unix, chat_id, meta_json, memory_sync_status)
-			VALUES(?, 'user', ?, ?, ?, ?, 'ready')
-		`, sessionKey, chunk.content, createdAt.Unix(), peerID, metaJSON)
+			INSERT INTO turns(session_id, role, content, ts_unix, chat_id, meta_json, memory_sync_status, memory_sync_reason)
+			VALUES(?, 'user', ?, ?, ?, ?, ?, ?)
+		`, sessionKey, chunk.content, createdAt.Unix(), peerID, metaJSON, memorySyncStatus, memorySyncReason)
 		if err != nil {
 			return FileImportResult{}, fmt.Errorf("goncho: insert imported file message: %w", err)
 		}
@@ -145,19 +155,26 @@ func (s *Service) ImportFile(ctx context.Context, params ImportFileParams) (File
 			return FileImportResult{}, fmt.Errorf("goncho: imported file message id: %w", err)
 		}
 		messages = append(messages, ImportedFileMessage{
-			ID:            id,
-			SessionKey:    sessionKey,
-			PeerID:        peerID,
-			Role:          "user",
-			Content:       chunk.content,
-			CreatedAt:     time.Unix(createdAt.Unix(), 0).UTC(),
-			Metadata:      cloneMap(params.Metadata),
-			Configuration: cloneMap(params.Configuration),
-			File:          fileMeta,
+			ID:               id,
+			SessionKey:       sessionKey,
+			PeerID:           peerID,
+			Role:             "user",
+			Content:          chunk.content,
+			CreatedAt:        time.Unix(createdAt.Unix(), 0).UTC(),
+			MemorySyncStatus: memorySyncStatus,
+			MemorySyncReason: memorySyncReason,
+			Metadata:         cloneMap(params.Metadata),
+			Configuration:    cloneMap(params.Configuration),
+			File:             fileMeta,
 		})
 	}
 	if err := tx.Commit(); err != nil {
 		return FileImportResult{}, fmt.Errorf("goncho: commit file import: %w", err)
+	}
+
+	unavailable := []ContextUnavailableEvidence{queueUnavailableEvidence()}
+	if quarantined {
+		unavailable = append(unavailable, promptInjectionQuarantineEvidence())
 	}
 
 	return FileImportResult{
@@ -166,7 +183,7 @@ func (s *Service) ImportFile(ctx context.Context, params ImportFileParams) (File
 		PeerID:      peerID,
 		FileID:      fileID,
 		Messages:    messages,
-		Unavailable: []ContextUnavailableEvidence{queueUnavailableEvidence()},
+		Unavailable: unavailable,
 	}, nil
 }
 

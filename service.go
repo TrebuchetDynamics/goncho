@@ -329,6 +329,11 @@ func (s *Service) Context(ctx context.Context, params ContextParams) (ContextRes
 		return ContextResult{}, err
 	}
 	unavailable = append(unavailable, reviewEvidence...)
+	quarantineEvidence, err := promptInjectionQuarantineEvidenceForSession(ctx, s.db, sessionKey)
+	if err != nil {
+		return ContextResult{}, err
+	}
+	unavailable = append(unavailable, quarantineEvidence...)
 
 	card, err := getPeerCard(ctx, s.db, s.workspaceID, s.observer, peer)
 	if err != nil {
