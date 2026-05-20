@@ -193,7 +193,8 @@ func evaluateOnce(ctx context.Context, data dataset, cfg config) (BenchmarkRepor
 			if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: mem.Peer, SessionKey: mem.SessionKey, Conclusion: mem.Content, Scope: "benchmark"}); err != nil {
 				return BenchmarkReport{}, fmt.Errorf("goncho-bench: store memory %s: %w", mem.ID, err)
 			}
-			contentIDs[mem.Content] = append(contentIDs[mem.Content], mem.ID)
+			key := contentIDKey(mem.Peer, mem.Content)
+			contentIDs[key] = append(contentIDs[key], mem.ID)
 		}
 	}
 	report := BenchmarkReport{System: system, Dataset: data.Name, GoVersion: runtime.Version(), GOOS: runtime.GOOS, GOARCH: runtime.GOARCH, CPUCount: runtime.NumCPU(), MemoryCount: len(data.Memories), QuestionCount: len(data.Questions), Runs: 1, Questions: []BenchmarkQuestionReport{}}

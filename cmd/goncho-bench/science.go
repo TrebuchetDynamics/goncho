@@ -47,7 +47,7 @@ func retrieveGoncho(ctx context.Context, svc *goncho.Service, q QuestionRecord, 
 	retrievedIDs := make([]string, 0, len(result.Results))
 	seen := map[string]struct{}{}
 	for _, hit := range result.Results {
-		for _, id := range contentIDs[hit.Content] {
+		for _, id := range contentIDs[contentIDKey(q.Peer, hit.Content)] {
 			if _, ok := seen[id]; !ok {
 				retrievedIDs = append(retrievedIDs, id)
 				seen[id] = struct{}{}
@@ -55,6 +55,10 @@ func retrieveGoncho(ctx context.Context, svc *goncho.Service, q QuestionRecord, 
 		}
 	}
 	return retrievedIDs, nil
+}
+
+func contentIDKey(peer, content string) string {
+	return strings.TrimSpace(peer) + "\x1f" + content
 }
 
 func retrieveRecency(data dataset, q QuestionRecord, limit int) []string {

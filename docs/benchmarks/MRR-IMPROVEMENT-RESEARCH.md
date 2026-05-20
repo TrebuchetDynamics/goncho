@@ -10,7 +10,7 @@ Source report:
 
 - `docs/benchmarks/results/longmemeval-s-2026-05-20-goncho.json`
 
-Current metrics:
+Original pre-fix metrics that triggered this investigation:
 
 | Metric | Value |
 | --- | ---: |
@@ -19,7 +19,7 @@ Current metrics:
 | recall_any@10 | 98.00% |
 | MRR | 81.12% |
 
-Rank distribution:
+Original pre-fix rank distribution:
 
 | Bucket | Count |
 | --- | ---: |
@@ -29,7 +29,16 @@ Rank distribution:
 | Rank 6-10 | 8 |
 | Miss top 10 | 10 |
 
-MRR is mainly limited by rank-2 cases, not top-10 recall. Moving rank-2 cases to rank 1 is the largest near-term lever.
+After the peer-scoped benchmark mapping fix, current regenerated metrics are:
+
+| Metric | Value |
+| --- | ---: |
+| Questions | 500 |
+| recall_any@5 | 96.80% |
+| recall_any@10 | 98.00% |
+| MRR | 91.05% |
+
+The original MRR was mainly limited by rank-2 cases caused by cross-peer duplicate-content ID mapping. Current residual MRR is limited by a smaller set of true rank-ordering and miss cases.
 
 ## Failure categories
 
@@ -56,7 +65,35 @@ These are upper-bound estimates, not benchmark claims.
 
 ## Most important finding
 
-The highest-impact issue is not recall. It is **tie-breaking and near-duplicate ordering**.
+2026-05-20 follow-up: the largest MRR loss was a **benchmark harness ID-mapping bug**, not a retrieval-model weakness.
+
+The Goncho benchmark converted a `Search` hit back to LongMemEval memory IDs through a global `content -> []id` map. LongMemEval reuses identical session text across different question peers, so a hit from peer `p2` could be reported first as an ID belonging to peer `p1` when the content was identical. This preserved high recall_any@K but depressed strict ID MRR.
+
+A peer-scoped map, `peer + content -> []id`, fixes this measurement artifact.
+
+Measured locally on the pinned cached LongMemEval-S conversion:
+
+| System / condition | MRR | recall_any@5 | recall_any@10 |
+| --- | ---: | ---: | ---: |
+| Published Goncho report before peer-scoped ID mapping | 0.8112 | 0.964 | 0.980 |
+| Goncho after peer-scoped ID mapping | 0.9105 | 0.968 | 0.980 |
+| Standalone BM25 baseline | 0.9105 | 0.968 | 0.980 |
+
+New strict rank distribution after peer-scoped mapping:
+
+| Bucket | Count |
+| --- | ---: |
+| Rank 1 | 435 |
+| Rank 2 | 25 |
+| Rank 3 | 13 |
+| Rank 4 | 7 |
+| Rank 5 | 4 |
+| Rank 6-10 | 6 |
+| Miss top 10 | 10 |
+
+Conclusion: the first and safest way to increase reported MRR is to fix benchmark identity mapping and regenerate the benchmark report. After that, remaining MRR work should target the true residual failures: 25 rank-2 cases, 13 rank-3 cases, and 10 top-10 misses.
+
+The highest-impact retrieval issue after the harness fix is no longer broad recall. It is **residual top-rank ordering among a much smaller set of hard cases**.
 
 Common pattern:
 
@@ -271,12 +308,14 @@ Acceptance:
 
 ## Best next implementation slice
 
-Implement `bench-failures classify` or equivalent report-generation logic that reads `docs/benchmarks/results/longmemeval-s-2026-05-20-goncho.json` and writes:
+1. Fix peer-scoped content ID mapping in `cmd/goncho-bench`.
+2. Regenerate the canonical LongMemEval-S Goncho report.
+3. Then implement `bench-failures classify` or equivalent report-generation logic that reads the regenerated report and writes:
 
 ```text
 docs/benchmarks/failures/longmemeval-s-2026-05-20-categories.json
 ```
 
-Then use that category file to target direct-answer role weighting.
+After peer-scoped mapping, use that category file to target direct-answer role weighting and temporal/numeric reranking.
 
-This keeps the work scientific: understand rank loss first, change ranking second.
+This keeps the work scientific: fix measurement first, understand residual rank loss second, change retrieval ranking third.

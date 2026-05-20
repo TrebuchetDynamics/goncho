@@ -17,7 +17,7 @@ This report is generated from `docs/benchmarks/results/longmemeval-s-2026-05-20-
 - Go: `go1.26.1`.
 - OS/arch: `linux/amd64`.
 - CPU count: 22.
-- Runtime evidence: `elapsed=8:50.48 maxrss=609092KB`.
+- Runtime evidence: `elapsed=not recorded maxrss=not recorded`.
 
 ## Command
 
@@ -38,7 +38,7 @@ go run ./cmd/goncho-bench \
 
 | System | Runs | R@5 strict | R@10 strict | recall_any@5 | recall_any@10 | MRR |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| goncho | 20 | 88.90% | 93.86% | 96.40% | 98.00% | 81.12% |
+| goncho | 20 | 91.25% | 94.66% | 96.80% | 98.00% | 91.05% |
 
 `recall_any@K` is the metric used by the local research comparison table for LongMemEval retrieval. Strict `R@K` counts the fraction of all gold session IDs found, which is lower when a question has multiple gold sessions.
 
@@ -61,7 +61,7 @@ The one query-text hit in this run is an official LongMemEval case where the pri
 | --- | ---: | ---: | ---: |
 | agentmemory BM25+Vector reference | 95.20% | 98.60% | 88.20% |
 | agentmemory BM25-only reference | 86.20% | 94.60% | 71.50% |
-| Goncho 2026-05-20 run | 96.40% | 98.00% | 81.12% |
+| Goncho 2026-05-20 run | 96.80% | 98.00% | 91.05% |
 
 ## Interpretation
 

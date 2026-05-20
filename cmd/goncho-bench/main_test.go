@@ -37,6 +37,33 @@ func TestRunLongMemEvalStyleFixtureComputesRetrievalMetrics(t *testing.T) {
 	}
 }
 
+func TestGonchoBenchmarkMapsDuplicateContentWithinQuestionPeer(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duplicate-content.jsonl")
+	raw := "{\"type\":\"meta\",\"dataset\":\"duplicate-content\"}\n" +
+		"{\"type\":\"memory\",\"id\":\"wrong-peer-id\",\"peer\":\"p1\",\"content\":\"user: I bought a blue Snaggletooth action figure at a thrift store.\\nassistant: Nice find.\"}\n" +
+		"{\"type\":\"question\",\"id\":\"q1\",\"peer\":\"p1\",\"query\":\"What action figure did I buy?\",\"relevant_ids\":[\"wrong-peer-id\"]}\n" +
+		"{\"type\":\"memory\",\"id\":\"right-peer-id\",\"peer\":\"p2\",\"content\":\"user: I bought a blue Snaggletooth action figure at a thrift store.\\nassistant: Nice find.\"}\n" +
+		"{\"type\":\"question\",\"id\":\"q2\",\"peer\":\"p2\",\"query\":\"What action figure did I buy?\",\"relevant_ids\":[\"right-peer-id\"]}\n"
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatalf("write duplicate-content fixture: %v", err)
+	}
+	out := filepath.Join(t.TempDir(), "report.json")
+	if err := run(context.Background(), config{DatasetPath: path, OutPath: out, DatabasePath: filepath.Join(t.TempDir(), "bench.db"), System: "goncho", Limit: 10}); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	rawReport, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read report: %v", err)
+	}
+	var report BenchmarkReport
+	if err := json.Unmarshal(rawReport, &report); err != nil {
+		t.Fatalf("decode report: %v", err)
+	}
+	if report.MRR != 1 || len(report.Questions) != 2 || report.Questions[0].Rank != 1 || report.Questions[1].Rank != 1 {
+		t.Fatalf("report = %+v, want duplicate content mapped inside each question peer", report)
+	}
+}
+
 func TestRunLongMemEvalStyleFixtureSupportsTwentyRunLoop(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "report.json")
 	if err := run(context.Background(), config{
