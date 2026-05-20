@@ -36,7 +36,7 @@ After the peer-scoped benchmark mapping fix, current regenerated metrics are:
 | Questions | 500 |
 | recall_any@5 | 96.80% |
 | recall_any@10 | 98.00% |
-| MRR | 91.05% |
+| MRR | 91.35% |
 
 The original MRR was mainly limited by rank-2 cases caused by cross-peer duplicate-content ID mapping. Current residual MRR is limited by a smaller set of true rank-ordering and miss cases.
 
@@ -77,6 +77,7 @@ Measured locally on the pinned cached LongMemEval-S conversion:
 | --- | ---: | ---: | ---: |
 | Published Goncho report before peer-scoped ID mapping | 0.8112 | 0.964 | 0.980 |
 | Goncho after peer-scoped ID mapping | 0.9105 | 0.968 | 0.980 |
+| Goncho after conservative temporal reranking | 0.9135 | 0.968 | 0.980 |
 | Standalone BM25 baseline | 0.9105 | 0.968 | 0.980 |
 
 New strict rank distribution after peer-scoped mapping:
@@ -104,11 +105,11 @@ Current hard-case counts after classification:
 
 | Bucket | Count |
 | --- | ---: |
-| rank-2 cases | 25 |
+| rank-2 cases | 22 |
 | rank-3 cases | 13 |
 | misses in top 10 | 10 |
 
-Largest category: `temporal_ambiguity` with 26 cases. Next optimization should target temporal/order/duration reranking before broad lexical tuning.
+Conservative temporal reranking moved 3 rank-2 temporal cases to rank 1 and one rank-7 case to rank 6, with no recall_any@10 regression in the full cached LongMemEval-S run. Remaining largest category: `temporal_ambiguity` with 23 cases.
 
 Common pattern:
 

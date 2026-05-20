@@ -4,16 +4,16 @@ This report classifies remaining hard cases before any ranking optimization. It 
 
 - system: `goncho`
 - dataset: `longmemeval-s-cleaned`
-- MRR: `0.9105`
+- MRR: `0.9135`
 - recall_any@10: `0.9800`
-- hard cases classified: `48`
+- hard cases classified: `45`
 
 ## Counts by bucket
 
 | Bucket | Count |
 | --- | ---: |
 | misses in top 10 | 10 |
-| rank-2 cases | 25 |
+| rank-2 cases | 22 |
 | rank-3 cases | 13 |
 
 ## Counts by category
@@ -24,7 +24,7 @@ This report classifies remaining hard cases before any ranking optimization. It 
 | `direct_answer_mismatch` | 6 |
 | `lexical_miss` | 10 |
 | `numeric_entity_exactness` | 2 |
-| `temporal_ambiguity` | 26 |
+| `temporal_ambiguity` | 23 |
 
 ## Examples
 
@@ -32,10 +32,6 @@ This report classifies remaining hard cases before any ranking optimization. It 
   - reason: query asks for time, order, recency, duration, or before/after comparison
   - relevant: `answer_e0585cb5_2`, `answer_e0585cb5_1`
   - retrieved top 5: `c51583cd_3`, `answer_e0585cb5_1`, `answer_e0585cb5_2`, `84889496_1`, `8dd2fca2`
-- `157a136e` rank `2` category `temporal_ambiguity`: How many years older is my grandma than me?
-  - reason: query asks for time, order, recency, duration, or before/after comparison
-  - relevant: `answer_8de18468_2`, `answer_8de18468_1`
-  - retrieved top 5: `ultrachat_255132`, `answer_8de18468_2`, `a2e2cb72_5`, `sharegpt_qqo6qRj_0`, `ultrachat_506827`
 - `195a1a1b` rank `2` category `direct_answer_mismatch`: Can you suggest some activities that I can do in the evening?
   - reason: relevant evidence is retrieved but not at the top rank
   - relevant: `answer_6dc4305e`
@@ -48,10 +44,14 @@ This report classifies remaining hard cases before any ranking optimization. It 
   - reason: multiple gold IDs or abstention variants suggest ambiguous strict attribution
   - relevant: `answer_c9d35c00_1`, `answer_c9d35c00_2`
   - retrieved top 5: `16756728_1`, `answer_c9d35c00_2`, `9d4312f6_3`, `ca3a4e4f_1`, `fb303dd2_2`
-- `35a27287` rank `2` category `temporal_ambiguity`: Can you recommend some interesting cultural events happening around me this weekend?
+- `57f827a0` rank `2` category `temporal_ambiguity`: I was thinking about rearranging the furniture in my bedroom this weekend. Any tips?
   - reason: query asks for time, order, recency, duration, or before/after comparison
-  - relevant: `answer_9b182436`
-  - retrieved top 5: `ultrachat_267380`, `answer_9b182436`, `880ee13e`, `58ae7c4f_3`, `a98ff421_1`
+  - relevant: `answer_1bde8d3b`
+  - retrieved top 5: `e85e0eaf_1`, `answer_1bde8d3b`, `d0f42e3f`, `5150a4e9_2`, `1fc5074c_2`
+- `61f8c8f8` rank `2` category `temporal_ambiguity`: How much faster did I finish the 5K run compared to my previous year's time?
+  - reason: query asks for time, order, recency, duration, or before/after comparison
+  - relevant: `answer_872e8da2_2`, `answer_872e8da2_1`
+  - retrieved top 5: `a3107e2a_1`, `answer_872e8da2_1`, `answer_872e8da2_2`, `7b88c38b_2`, `6e110a53_1`
 - `8a2466db` rank `2` category `numeric_entity_exactness`: Can you recommend some resources where I can learn more about video editing?
   - reason: query asks for exact count, amount, name, entity, or object identification
   - relevant: `answer_edb03329`
