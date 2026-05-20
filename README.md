@@ -23,7 +23,7 @@ go get github.com/TrebuchetDynamics/goncho
 | Storage | SQLite by default. No required hosted service. |
 | Agent surface | Context, search, remember, review, handoff, and Honcho-compatible primitives. |
 | Core idea | Evidence before belief; live verification before action. |
-| Multi-profile contract | `workspace_id + profile_id + scope + peer_id` determines memory visibility. |
+| Multi-profile contract | `workspace_id + profile_id + scope + peer_id` determines memory visibility; `profile_directory` records where profile-local state lives. |
 | Trust model | Surface provenance, staleness, quarantine, review, and verification warnings. |
 | Best fit | Coding agents, private assistants, MCP hosts, and long-running local agents. |
 | Verification | Deterministic local E2E tests with temporary SQLite, local files, and `httptest`. |
@@ -265,6 +265,15 @@ Memory is not permission to act. Before using remembered state for an irreversib
 
 Gormes can manage multiple profiles in one runtime. Goncho treats profile identity as part of the memory contract: `workspace_id + profile_id + scope + peer_id` determines what can be read or written. The default for requests with `profile_id` is private `profile` scope; shared workspace recall requires explicit `scope: "workspace"`.
 
+Profile-local state can also be rooted in a custom directory. For Gormes, the expected layout is:
+
+```text
+.gormes/profiles/<profile_id>/goncho.db
+.gormes/profiles/<profile_id>/GONCHO_MEMORY.md
+```
+
+This keeps contract identity and filesystem state aligned: the same `profile_id` that scopes memory also selects the profile directory.
+
 ### Orientation, not dumping
 
 Agents need compact working context:
@@ -433,6 +442,7 @@ Goncho's implementation roadmap follows those constraints rather than treating m
 | **Evidence before belief** | Preserve raw events and tool outputs first; derive beliefs second. |
 | **Live verification before action** | Treat remembered state as orientation until current files, tools, approvals, or policies verify it. |
 | **Profile isolation before recall** | Require explicit `profile_id` and scope for multi-profile hosts so one profile cannot accidentally read another profile's memory. |
+| **Profile-local directories** | Support custom profile roots such as `.gormes/profiles/<profile_id>/` for profile-owned SQLite and markdown memory files. |
 | **Claims, not chunks** | Store what is believed with proof, confidence, scope, and time. |
 | **Bounded memory writes** | Keep writes explicit, scoped, auditable, and reversible instead of letting agents freely rewrite their own reality. |
 | **Reproducible retrieval** | Prefer deterministic local tests, cited context packs, and explainable scoring over opaque recall. |

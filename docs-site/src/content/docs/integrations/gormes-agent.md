@@ -24,6 +24,8 @@ A Gormes integration should provide:
 | Agent runtime id | `Config.WorkspaceID` |
 | Agent name/perspective | `Config.ObserverPeerID`, usually `gormes` |
 | Active Gormes profile | `profile_id` / `ContextParams.ProfileID` / `SearchParams.ProfileID` / `ConcludeParams.ProfileID` |
+| Gormes profiles root | `ProfilesDirectory`, commonly `.gormes/profiles/` |
+| Profile-local directory | `profile_directory`, derived as `ProfilesDirectory/ProfileID` |
 | User or peer id | `peer_id` / `ContextParams.Peer` |
 | Conversation id | `session_key` |
 | Prompt budget | `ContextParams.MaxTokens` |
@@ -39,6 +41,13 @@ workspace_id + profile_id + scope + peer_id -> memory visibility
 ```
 
 When `profile_id` is present and no explicit scope is provided, Goncho defaults to private `profile` scope. Shared workspace recall requires explicit `scope: "workspace"`.
+
+Gormes can either pass an explicit `DatabasePath`, or pass `ProfilesDirectory` and `ProfileID` so Goncho derives profile-local paths:
+
+```text
+.gormes/profiles/mineru/goncho.db
+.gormes/profiles/mineru/GONCHO_MEMORY.md
+```
 
 ## Minimal Wiring
 
@@ -58,9 +67,10 @@ func main() {
     ctx := context.Background()
 
     mem, err := gormesgoncho.Open(ctx, gormesgoncho.Config{
-        DatabasePath: "/var/lib/gormes/goncho.db",
-        WorkspaceID:  "gormes-prod",
-        ObserverID:   "gormes",
+        ProfilesDirectory: ".gormes/profiles",
+        ProfileID:         "mineru",
+        WorkspaceID:       "gormes-prod",
+        ObserverID:        "gormes",
     })
     if err != nil {
         log.Fatal(err)
@@ -78,7 +88,7 @@ func main() {
 }
 ```
 
-The adapter requires an explicit `DatabasePath`, opens SQLite, runs Goncho migrations, creates `goncho.Service`, wires public tools, and exposes `Status()` for startup logs.
+The adapter requires either an explicit `DatabasePath` or the pair `ProfilesDirectory` plus `ProfileID`. With `ProfilesDirectory: ".gormes/profiles"` and `ProfileID: "mineru"`, it opens `.gormes/profiles/mineru/goncho.db`, derives `.gormes/profiles/mineru/GONCHO_MEMORY.md`, runs Goncho migrations, creates `goncho.Service`, wires public tools, and exposes `Status()` for startup logs.
 
 If your Gormes host already has a tool registry, register the tool values by their `Name()`, `Schema()`, `Description()`, `Timeout()`, and `Execute(ctx, args)` methods.
 
@@ -179,7 +189,9 @@ Suggested starting values:
 | `ObserverPeerID` | `gormes` |
 | `RecentMessages` | `4` to `8` |
 | context `MaxTokens` | host-specific, commonly `2000` to `8000` |
-| database path | explicit path outside ephemeral build directories |
+| profiles directory | `.gormes/profiles` for profile-owned agents |
+| profile id | active Gormes profile, for example `mineru` |
+| database path | explicit path outside ephemeral build directories, or derived from `ProfilesDirectory/ProfileID/goncho.db` |
 | write tools | disabled for untrusted users unless mediated by host policy |
 
 ## Failure Modes to Watch
@@ -187,6 +199,7 @@ Suggested starting values:
 | Failure | Prevention |
 | --- | --- |
 | Cross-profile leakage | Always pass the active `profile_id`; default to profile scope unless the host intentionally asks for shared workspace memory. |
+| Wrong profile directory | Validate `ProfileID` as a safe path segment and derive profile state under `.gormes/profiles/<profile_id>/`. |
 | Cross-user leakage | Always pass the correct `peer_id`; separate DBs for separate tenants until ACLs exist. |
 | Cross-session confusion | Pass `session_key` on context/search/remember calls. |
 | Prompt bloat | Set per-call `MaxTokens`; do not inject raw search dumps. |

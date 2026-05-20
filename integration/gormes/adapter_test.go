@@ -65,10 +65,48 @@ func TestOpenRuntimeUsesDeploySafeDefaults(t *testing.T) {
 	}
 }
 
+func TestOpenRuntimeDerivesProfilePathsFromProfilesDirectory(t *testing.T) {
+	ctx := context.Background()
+	profilesDir := filepath.Join(t.TempDir(), ".gormes", "profiles")
+	runtime, err := gormes.Open(ctx, gormes.Config{
+		ProfilesDirectory: profilesDir,
+		ProfileID:         "mineru",
+	})
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer runtime.Close(ctx)
+
+	status := runtime.Status()
+	wantProfileDir := filepath.Join(profilesDir, "mineru")
+	if status.ProfileID != "mineru" {
+		t.Fatalf("profile_id = %q, want mineru", status.ProfileID)
+	}
+	if status.ProfilesDirectory != profilesDir {
+		t.Fatalf("profiles_directory = %q, want %q", status.ProfilesDirectory, profilesDir)
+	}
+	if status.ProfileDirectory != wantProfileDir {
+		t.Fatalf("profile_directory = %q, want %q", status.ProfileDirectory, wantProfileDir)
+	}
+	if status.DatabasePath != filepath.Join(wantProfileDir, "goncho.db") {
+		t.Fatalf("database_path = %q", status.DatabasePath)
+	}
+	if status.MemoryMarkdownPath != filepath.Join(wantProfileDir, "GONCHO_MEMORY.md") {
+		t.Fatalf("memory_markdown_path = %q", status.MemoryMarkdownPath)
+	}
+}
+
 func TestOpenRuntimeRejectsEmptyDatabasePath(t *testing.T) {
 	_, err := gormes.Open(context.Background(), gormes.Config{})
 	if err == nil {
 		t.Fatalf("Open with empty database path succeeded, want deploy-safe error")
+	}
+}
+
+func TestOpenRuntimeRejectsUnsafeProfileIDForProfilesDirectory(t *testing.T) {
+	_, err := gormes.Open(context.Background(), gormes.Config{ProfilesDirectory: t.TempDir(), ProfileID: "../mineru"})
+	if err == nil {
+		t.Fatalf("Open with unsafe profile id succeeded, want error")
 	}
 }
 

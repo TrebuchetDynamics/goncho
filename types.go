@@ -45,10 +45,11 @@ const (
 )
 
 type MemoryNamespace struct {
-	WorkspaceID string `json:"workspace_id"`
-	ProfileID   string `json:"profile_id"`
-	PeerID      string `json:"peer_id,omitempty"`
-	Scope       string `json:"scope,omitempty"`
+	WorkspaceID      string `json:"workspace_id"`
+	ProfileID        string `json:"profile_id"`
+	PeerID           string `json:"peer_id,omitempty"`
+	Scope            string `json:"scope,omitempty"`
+	ProfileDirectory string `json:"profile_directory,omitempty"`
 }
 
 const (
