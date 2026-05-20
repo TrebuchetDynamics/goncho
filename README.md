@@ -311,7 +311,27 @@ Benchmarks:
 ```bash
 go test ./cmd/goncho-bench
 make bench-longmemeval-s-smoke
+make bench-locomo-smoke
+make bench-locomo
 ```
+
+### LOCOMO Retrieval Benchmark
+
+Goncho includes a deterministic LOCOMO retrieval harness. This evaluates retrieval only, not answer generation. It uses ID-based scoring with no LLM judge, and `answer_hint` fields are never indexed or scored.
+
+Pinned full run evidence:
+
+| Dataset | Questions | Memories | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| LOCOMO full | 1,982 | 5,882 | 52.47% | 58.73% | 44.80% | 49.95% | 41.04% |
+| LOCOMO smoke | 8 | 17 | 100.00% | 100.00% | 100.00% | 100.00% | 85.42% |
+
+The full LOCOMO run compares random, recency, BM25, SQLite FTS5, and Goncho baselines against the pinned official LOCOMO source dataset.
+
+- Full report: [docs/benchmarks/locomo-2026-05-20.md](docs/benchmarks/locomo-2026-05-20.md)
+- Smoke report: [docs/benchmarks/locomo-smoke.md](docs/benchmarks/locomo-smoke.md)
+- Dataset notes: [docs/benchmarks/LOCOMO-DATASET.md](docs/benchmarks/LOCOMO-DATASET.md)
+- JSON evidence: [docs/benchmarks/results/locomo-2026-05-20-goncho.json](docs/benchmarks/results/locomo-2026-05-20-goncho.json)
 
 Retrieval benchmark docs: [docs-site/src/content/docs/reference/retrieval-benchmarks.md](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
 
