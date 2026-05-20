@@ -1,10 +1,10 @@
 # Goncho
 
-**Local-first memory infrastructure for Go agents.**
+**High-trust memory runtime for Go agents.**
 
 Goncho gives AI agents durable, auditable memory without requiring a hosted memory API, a vector database, or a pile of prompt-stuffed notes. It runs in your Go process, stores state in SQLite, and exposes Honcho-compatible primitives for profile, search, context, chat, conclusions, review, handoff, and local memory tools.
 
-> Goncho helps agents know what they know, why they know it, when it may be stale, and what not to repeat.
+> Goncho helps agents know what they know, why they know it, when it may be stale, and what they must verify before acting.
 
 ```bash
 go get github.com/TrebuchetDynamics/goncho
@@ -19,10 +19,10 @@ go get github.com/TrebuchetDynamics/goncho
 
 | Question | Answer |
 | --- | --- |
-| What is it? | A local-first memory kernel for Go agent hosts. |
+| What is it? | A high-trust memory runtime for Go agent hosts. |
 | Storage | SQLite by default. No required hosted service. |
 | Agent surface | Context, search, remember, review, handoff, and Honcho-compatible primitives. |
-| Core idea | Evidence and scoped beliefs, not untrusted chunks in a prompt. |
+| Core idea | Evidence before belief; live verification before action. |
 | Trust model | Surface provenance, staleness, quarantine, review, and verification warnings. |
 | Best fit | Coding agents, private assistants, MCP hosts, and long-running local agents. |
 | Verification | Deterministic local E2E tests with temporary SQLite, local files, and `httptest`. |
@@ -47,6 +47,23 @@ go get github.com/TrebuchetDynamics/goncho
 ---
 
 ## Why Goncho
+
+The crowded path for agent memory is broader integration, more tools, and more autonomy theater. Goncho takes a narrower infrastructure path: memory correctness, operational trust, verified state, bounded behavior, and retrieval discipline.
+
+Goncho is inspired by broad integration systems like [`agentmemory`](docs/opensource-memory-systems/agentmemory/README.md), but it makes a different product bet:
+
+```text
+agentmemory: broad integration layer
+Goncho:      high-trust memory runtime
+```
+
+That means fewer tools by default, stronger trust semantics, bounded memory writes, reproducible retrieval, local inspectable state, and one hard rule for engineering agents:
+
+```text
+live verification before action
+```
+
+If memory says a file exists, verify it. If memory says Redis is installed, verify it. If memory says the user approved a migration, verify it. If memory says an API path still exists, verify it. Goncho treats memory as orientation until evidence proves it is safe to act.
 
 Most agent memory systems start as retrieval systems:
 
@@ -74,7 +91,7 @@ raw evidence
   -> review, verification, revision, or forgetting
 ```
 
-Vectors are useful. Search is useful. Goncho does not make either one the source of truth. The source of truth is local, auditable memory with scope, provenance, lifecycle state, and verification warnings.
+Vectors are useful. Search is useful. Goncho does not make either one the source of truth. The source of truth is local, auditable memory with scope, provenance, lifecycle state, and verification warnings. Retrieval can suggest; verification decides.
 
 ## What Goncho Provides Today
 
@@ -104,7 +121,7 @@ Use Goncho when you are building:
 - long-running agents that need reviewable beliefs, not just chat history,
 - systems where stale facts, prompt injection, or repeated failed fixes are unacceptable.
 
-Do not use Goncho if you only need a hosted vector search API. Goncho is a memory kernel for agents that care about trust, locality, provenance, and lifecycle.
+Do not use Goncho if you only need a hosted vector search API or a large agent-integration catalog. Goncho is a memory runtime for agents that care about trust, locality, provenance, lifecycle, and verified action.
 
 ## Non-Goals
 
@@ -114,8 +131,10 @@ Goncho intentionally avoids several common memory-system traps:
 - It is not a vector database wrapper.
 - It is not a dashboard-first knowledge base.
 - It is not trying to expose dozens of tools to the agent.
+- It is not optimizing for capability breadth over memory correctness.
 - It does not treat imported text as trusted memory by default.
 - It does not collapse historical truth into current truth.
+- It does not ask agents to act on stale assumptions without verification.
 
 The base workflow should stay local, auditable, and testable. Optional server, team, graph, and dashboard layers can grow around that kernel without becoming mandatory for a single developer agent.
 
@@ -226,13 +245,17 @@ Goncho separates memory into layers that answer different trust questions.
                          SQLite database
 ```
 
-### Evidence before memory
+### Evidence before belief
 
-Raw observations from sessions, tools, imports, files, and user messages are preserved before interpretation.
+Raw observations from sessions, tools, imports, files, and user messages are preserved before interpretation. Goncho distinguishes what was observed from what the agent should currently believe.
 
 ### Claims, not chunks
 
 Useful memory is not just an old text span. It is a scoped claim with provenance, time, lifecycle, confidence, and evidence.
+
+### Live verification before action
+
+Memory is not permission to act. Before using remembered state for an irreversible or repo-sensitive action, Goncho should help the host verify live reality: current files, current APIs, current approvals, current process state, and current policy.
 
 ### Orientation, not dumping
 
@@ -376,8 +399,11 @@ Goncho's implementation roadmap follows those constraints rather than treating m
 
 | Principle | Meaning |
 | --- | --- |
-| **Evidence before memory** | Preserve raw events and tool outputs first; derive memories second. |
+| **Evidence before belief** | Preserve raw events and tool outputs first; derive beliefs second. |
+| **Live verification before action** | Treat remembered state as orientation until current files, tools, approvals, or policies verify it. |
 | **Claims, not chunks** | Store what is believed with proof, confidence, scope, and time. |
+| **Bounded memory writes** | Keep writes explicit, scoped, auditable, and reversible instead of letting agents freely rewrite their own reality. |
+| **Reproducible retrieval** | Prefer deterministic local tests, cited context packs, and explainable scoring over opaque recall. |
 | **Hooks over manual saves** | Capture at cognitive transition points such as session start, tool use, compaction, and stop. |
 | **Orientation, not dumping** | Inject compact task context, not every semantically similar memory. |
 | **Negative memory matters** | Failed paths and rejected approaches are part of intelligence. |
@@ -392,6 +418,7 @@ Goncho's implementation roadmap follows those constraints rather than treating m
 | Vector-only memory | Good fuzzy recall | Returns plausible but stale or wrong chunks. |
 | Cloud memory APIs | Easy hosted setup | Adds network dependency, privacy risk, and vendor lock-in. |
 | Postgres + pgvector stacks | Powerful production search | Raises the setup floor for a single local Go agent. |
+| Broad integration memory, such as agentmemory | Strong hook coverage, MCP/REST reach, many agent connectors | Goncho borrows the integration lessons while keeping a smaller, stricter trust surface. |
 | Goncho | Local evidence, scoped beliefs, compact context | Keeps the base workflow embedded, auditable, offline-capable, and warning-aware. |
 
 ## Current Status
