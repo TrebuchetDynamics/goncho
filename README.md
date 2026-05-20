@@ -278,7 +278,7 @@ These tests prove that Goncho can:
 
 ## Retrieval Accuracy Benchmarks
 
-Goncho includes a local LongMemEval-style benchmark runner. It loads a JSONL memory/question fixture into Goncho, runs retrieval, and reports `R@5`, `R@10`, and `MRR` without network or hosted services.
+Goncho includes a local LongMemEval-style benchmark runner. It loads a JSONL memory/question fixture into Goncho, runs retrieval, and reports strict `R@5`/`R@10`, LongMemEval-style `recall_any@5`/`recall_any@10`, and `MRR` without network or hosted services.
 
 ```bash
 go test ./cmd/goncho-bench
@@ -290,7 +290,7 @@ go run ./cmd/goncho-bench \
   --runs 20
 ```
 
-The bundled tiny fixture is a harness smoke test, not a leaderboard claim. It currently reaches `R@5=1`, `R@10=1`, and `MRR=1` after lexical conclusion ranking. To evaluate LongMemEval-S, convert the official 500-question dataset to the documented JSONL format and report the real generated numbers.
+The bundled tiny fixture is a harness smoke test, not a leaderboard claim. It currently reaches `R@5=1`, `R@10=1`, `recall_any@5=1`, `recall_any@10=1`, and `MRR=1` after BM25-style lexical conclusion ranking. To evaluate LongMemEval-S, convert the official 500-question dataset to the documented JSONL format and report the real generated numbers.
 
 Docs: [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
 

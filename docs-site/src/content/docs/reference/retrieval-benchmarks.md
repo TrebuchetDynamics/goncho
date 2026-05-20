@@ -9,6 +9,8 @@ The runner does not download datasets. It consumes a local JSONL file, loads mem
 
 - `recall_at_5`
 - `recall_at_10`
+- `recall_any_at_5`
+- `recall_any_at_10`
 - `mrr`
 - per-question retrieved IDs and first relevant rank
 
@@ -72,6 +74,8 @@ Each line is one JSON object.
   "runs": 20,
   "recall_at_5": 1,
   "recall_at_10": 1,
+  "recall_any_at_5": 1,
+  "recall_any_at_10": 1,
   "mrr": 1,
   "questions": [
     {
@@ -111,8 +115,10 @@ go run ./cmd/goncho-bench \
 
 | Metric | Meaning |
 | --- | --- |
-| `recall_at_5` | Fraction of gold relevant memory IDs retrieved in the top 5. |
-| `recall_at_10` | Fraction of gold relevant memory IDs retrieved in the top 10. |
+| `recall_at_5` | Fraction of all gold relevant memory IDs retrieved in the top 5. |
+| `recall_at_10` | Fraction of all gold relevant memory IDs retrieved in the top 10. |
+| `recall_any_at_5` | Whether any gold relevant memory appears in the top 5, averaged across questions. This matches the LongMemEval retrieval table methodology. |
+| `recall_any_at_10` | Whether any gold relevant memory appears in the top 10, averaged across questions. This matches the LongMemEval retrieval table methodology. |
 | `mrr` | Mean reciprocal rank of the first relevant memory. |
 
 Use this runner to compare Goncho versions, scoring changes, and dataset conversions. Goncho v0.1.x does not claim LongMemEval-S leaderboard performance until the real dataset is run and the report is published.

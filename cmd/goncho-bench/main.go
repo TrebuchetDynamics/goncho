@@ -63,6 +63,8 @@ type BenchmarkReport struct {
 	Runs          int                       `json:"runs"`
 	RecallAt5     float64                   `json:"recall_at_5"`
 	RecallAt10    float64                   `json:"recall_at_10"`
+	RecallAnyAt5  float64                   `json:"recall_any_at_5"`
+	RecallAnyAt10 float64                   `json:"recall_any_at_10"`
 	MRR           float64                   `json:"mrr"`
 	Questions     []BenchmarkQuestionReport `json:"questions"`
 }
@@ -183,6 +185,7 @@ func evaluateOnce(ctx context.Context, data dataset, cfg config) (BenchmarkRepor
 		report.Questions = append(report.Questions, qr)
 	}
 	report.RecallAt5, report.RecallAt10, report.MRR = summarizeMetrics(report.Questions)
+	report.RecallAnyAt5, report.RecallAnyAt10 = summarizeRecallAny(report.Questions)
 	return report, nil
 }
 
@@ -192,14 +195,18 @@ func aggregateReports(reports []BenchmarkReport) BenchmarkReport {
 	}
 	out := reports[len(reports)-1]
 	out.Runs = len(reports)
-	var r5, r10, mrr float64
+	var r5, r10, any5, any10, mrr float64
 	for _, report := range reports {
 		r5 += report.RecallAt5
 		r10 += report.RecallAt10
+		any5 += report.RecallAnyAt5
+		any10 += report.RecallAnyAt10
 		mrr += report.MRR
 	}
 	out.RecallAt5 = roundMetric(r5 / float64(len(reports)))
 	out.RecallAt10 = roundMetric(r10 / float64(len(reports)))
+	out.RecallAnyAt5 = roundMetric(any5 / float64(len(reports)))
+	out.RecallAnyAt10 = roundMetric(any10 / float64(len(reports)))
 	out.MRR = roundMetric(mrr / float64(len(reports)))
 	return out
 }
@@ -212,6 +219,7 @@ func loadDataset(path string) (dataset, error) {
 	defer file.Close()
 	data := dataset{Name: strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))}
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 1024*1024), 32*1024*1024)
 	lineNo := 0
 	for scanner.Scan() {
 		lineNo++
@@ -299,6 +307,22 @@ func summarizeMetrics(questions []BenchmarkQuestionReport) (float64, float64, fl
 		mrr += q.MRR
 	}
 	return roundMetric(r5 / float64(len(questions))), roundMetric(r10 / float64(len(questions))), roundMetric(mrr / float64(len(questions)))
+}
+
+func summarizeRecallAny(questions []BenchmarkQuestionReport) (float64, float64) {
+	if len(questions) == 0 {
+		return 0, 0
+	}
+	var any5, any10 float64
+	for _, q := range questions {
+		if q.Rank > 0 && q.Rank <= 5 {
+			any5++
+		}
+		if q.Rank > 0 && q.Rank <= 10 {
+			any10++
+		}
+	}
+	return roundMetric(any5 / float64(len(questions))), roundMetric(any10 / float64(len(questions)))
 }
 
 func set(values []string) map[string]struct{} {
