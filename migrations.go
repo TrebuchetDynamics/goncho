@@ -26,7 +26,7 @@ func RunMigrations(db *sql.DB) error {
 		return fmt.Errorf("goncho: begin migrations: %w", err)
 	}
 	defer tx.Rollback()
-	for _, stmt := range append(gonchoObservationDDL, gonchoReviewDDL...) {
+	for _, stmt := range append(append(gonchoObservationDDL, gonchoReviewDDL...), gonchoSkillLearningProposalDDL...) {
 		if err := applyGonchoMigrationStmt(tx, stmt); err != nil {
 			return fmt.Errorf("goncho: apply migration: %w", err)
 		}
