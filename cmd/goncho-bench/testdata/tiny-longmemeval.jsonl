@@ -1,0 +1,7 @@
+{"type":"meta","dataset":"tiny-longmemeval"}
+{"type":"memory","id":"mem-auth-owner","peer":"eval-user","session_key":"eval-session","content":"Alice owns the authentication service and reviews JWT middleware changes."}
+{"type":"memory","id":"mem-db-owner","peer":"eval-user","session_key":"eval-session","content":"Bob owns database permissions for the analytics warehouse."}
+{"type":"memory","id":"mem-dead-end","peer":"eval-user","session_key":"eval-session","content":"Dead end: retrying Docker cache cleanup did not fix the flaky integration test."}
+{"type":"question","id":"q-auth-owner","peer":"eval-user","session_key":"eval-session","query":"Who reviews JWT middleware authentication changes?","relevant_ids":["mem-auth-owner"]}
+{"type":"question","id":"q-db-owner","peer":"eval-user","session_key":"eval-session","query":"Who owns analytics warehouse database permissions?","relevant_ids":["mem-db-owner"]}
+{"type":"question","id":"q-docker-dead-end","peer":"eval-user","session_key":"eval-session","query":"Which failed path should not be repeated for flaky integration tests?","relevant_ids":["mem-dead-end"]}

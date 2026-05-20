@@ -1,0 +1,279 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho"
+	"github.com/TrebuchetDynamics/goncho/memory"
+)
+
+type config struct {
+	DatasetPath  string
+	OutPath      string
+	DatabasePath string
+	Limit        int
+}
+
+type dataset struct {
+	Name      string
+	Memories  []MemoryRecord
+	Questions []QuestionRecord
+}
+
+type jsonlRecord struct {
+	Type        string   `json:"type"`
+	Dataset     string   `json:"dataset,omitempty"`
+	ID          string   `json:"id,omitempty"`
+	Peer        string   `json:"peer,omitempty"`
+	SessionKey  string   `json:"session_key,omitempty"`
+	Content     string   `json:"content,omitempty"`
+	Query       string   `json:"query,omitempty"`
+	RelevantIDs []string `json:"relevant_ids,omitempty"`
+}
+
+type MemoryRecord struct {
+	ID         string `json:"id"`
+	Peer       string `json:"peer"`
+	SessionKey string `json:"session_key,omitempty"`
+	Content    string `json:"content"`
+}
+
+type QuestionRecord struct {
+	ID          string   `json:"id"`
+	Peer        string   `json:"peer"`
+	SessionKey  string   `json:"session_key,omitempty"`
+	Query       string   `json:"query"`
+	RelevantIDs []string `json:"relevant_ids"`
+}
+
+type BenchmarkReport struct {
+	System        string                    `json:"system"`
+	Dataset       string                    `json:"dataset"`
+	MemoryCount   int                       `json:"memory_count"`
+	QuestionCount int                       `json:"question_count"`
+	RecallAt5     float64                   `json:"recall_at_5"`
+	RecallAt10    float64                   `json:"recall_at_10"`
+	MRR           float64                   `json:"mrr"`
+	Questions     []BenchmarkQuestionReport `json:"questions"`
+}
+
+type BenchmarkQuestionReport struct {
+	ID           string   `json:"id"`
+	Query        string   `json:"query"`
+	RelevantIDs  []string `json:"relevant_ids"`
+	RetrievedIDs []string `json:"retrieved_ids"`
+	Rank         int      `json:"rank"`
+	RecallAt5    float64  `json:"recall_at_5"`
+	RecallAt10   float64  `json:"recall_at_10"`
+	MRR          float64  `json:"mrr"`
+}
+
+func main() {
+	cfg := config{}
+	flag.StringVar(&cfg.DatasetPath, "dataset", "", "LongMemEval-style JSONL dataset path")
+	flag.StringVar(&cfg.OutPath, "out", "", "JSON report output path")
+	flag.StringVar(&cfg.DatabasePath, "db", "", "SQLite database path; defaults to a temp file")
+	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
+	flag.Parse()
+	if err := run(context.Background(), cfg); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, cfg config) error {
+	if strings.TrimSpace(cfg.DatasetPath) == "" {
+		return errors.New("goncho-bench: --dataset is required")
+	}
+	if cfg.Limit <= 0 {
+		cfg.Limit = 10
+	}
+	data, err := loadDataset(cfg.DatasetPath)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(cfg.DatabasePath) == "" {
+		dir, err := os.MkdirTemp("", "goncho-bench-*")
+		if err != nil {
+			return fmt.Errorf("goncho-bench: create temp db dir: %w", err)
+		}
+		cfg.DatabasePath = filepath.Join(dir, "bench.db")
+	}
+	store, err := memory.OpenSqlite(cfg.DatabasePath, 0, nil)
+	if err != nil {
+		return fmt.Errorf("goncho-bench: open sqlite: %w", err)
+	}
+	defer store.Close(ctx)
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		return fmt.Errorf("goncho-bench: run migrations: %w", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-bench", ObserverPeerID: "goncho-bench", RecentMessages: 0}, nil)
+	contentIDs := map[string][]string{}
+	for _, mem := range data.Memories {
+		if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: mem.Peer, SessionKey: mem.SessionKey, Conclusion: mem.Content, Scope: "benchmark"}); err != nil {
+			return fmt.Errorf("goncho-bench: store memory %s: %w", mem.ID, err)
+		}
+		contentIDs[mem.Content] = append(contentIDs[mem.Content], mem.ID)
+	}
+	report := BenchmarkReport{System: "goncho", Dataset: data.Name, MemoryCount: len(data.Memories), QuestionCount: len(data.Questions), Questions: []BenchmarkQuestionReport{}}
+	for _, q := range data.Questions {
+		result, err := svc.Search(ctx, goncho.SearchParams{Peer: q.Peer, SessionKey: q.SessionKey, Query: q.Query, Limit: cfg.Limit, MaxTokens: 100_000})
+		if err != nil {
+			return fmt.Errorf("goncho-bench: search question %s: %w", q.ID, err)
+		}
+		retrievedIDs := make([]string, 0, len(result.Results))
+		seen := map[string]struct{}{}
+		for _, hit := range result.Results {
+			for _, id := range contentIDs[hit.Content] {
+				if _, ok := seen[id]; !ok {
+					retrievedIDs = append(retrievedIDs, id)
+					seen[id] = struct{}{}
+				}
+			}
+		}
+		qr := BenchmarkQuestionReport{ID: q.ID, Query: q.Query, RelevantIDs: q.RelevantIDs, RetrievedIDs: retrievedIDs, Rank: firstRelevantRank(retrievedIDs, q.RelevantIDs)}
+		qr.RecallAt5 = recallAtKForIDs(retrievedIDs, q.RelevantIDs, 5)
+		qr.RecallAt10 = recallAtKForIDs(retrievedIDs, q.RelevantIDs, 10)
+		if qr.Rank > 0 {
+			qr.MRR = roundMetric(1 / float64(qr.Rank))
+		}
+		report.Questions = append(report.Questions, qr)
+	}
+	report.RecallAt5, report.RecallAt10, report.MRR = summarizeMetrics(report.Questions)
+	raw, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("goncho-bench: encode report: %w", err)
+	}
+	raw = append(raw, '\n')
+	if strings.TrimSpace(cfg.OutPath) == "" {
+		_, err = os.Stdout.Write(raw)
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(cfg.OutPath), 0o755); err != nil {
+		return fmt.Errorf("goncho-bench: create report dir: %w", err)
+	}
+	if err := os.WriteFile(cfg.OutPath, raw, 0o644); err != nil {
+		return fmt.Errorf("goncho-bench: write report: %w", err)
+	}
+	return nil
+}
+
+func loadDataset(path string) (dataset, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return dataset{}, fmt.Errorf("goncho-bench: open dataset: %w", err)
+	}
+	defer file.Close()
+	data := dataset{Name: strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))}
+	scanner := bufio.NewScanner(file)
+	lineNo := 0
+	for scanner.Scan() {
+		lineNo++
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		var rec jsonlRecord
+		if err := json.Unmarshal([]byte(line), &rec); err != nil {
+			return dataset{}, fmt.Errorf("goncho-bench: decode dataset line %d: %w", lineNo, err)
+		}
+		switch strings.ToLower(strings.TrimSpace(rec.Type)) {
+		case "meta":
+			if strings.TrimSpace(rec.Dataset) != "" {
+				data.Name = rec.Dataset
+			}
+		case "memory":
+			if rec.ID == "" || rec.Content == "" {
+				return dataset{}, fmt.Errorf("goncho-bench: memory line %d requires id and content", lineNo)
+			}
+			if rec.Peer == "" {
+				rec.Peer = "benchmark-peer"
+			}
+			data.Memories = append(data.Memories, MemoryRecord{ID: rec.ID, Peer: rec.Peer, SessionKey: rec.SessionKey, Content: rec.Content})
+		case "question":
+			if rec.ID == "" || rec.Query == "" {
+				return dataset{}, fmt.Errorf("goncho-bench: question line %d requires id and query", lineNo)
+			}
+			if len(rec.RelevantIDs) == 0 {
+				return dataset{}, fmt.Errorf("goncho-bench: question line %d requires relevant_ids", lineNo)
+			}
+			if rec.Peer == "" {
+				rec.Peer = "benchmark-peer"
+			}
+			data.Questions = append(data.Questions, QuestionRecord{ID: rec.ID, Peer: rec.Peer, SessionKey: rec.SessionKey, Query: rec.Query, RelevantIDs: rec.RelevantIDs})
+		default:
+			return dataset{}, fmt.Errorf("goncho-bench: line %d has unsupported type %q", lineNo, rec.Type)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return dataset{}, fmt.Errorf("goncho-bench: scan dataset: %w", err)
+	}
+	if len(data.Memories) == 0 || len(data.Questions) == 0 {
+		return dataset{}, errors.New("goncho-bench: dataset requires at least one memory and one question")
+	}
+	return data, nil
+}
+
+func firstRelevantRank(retrievedIDs, relevantIDs []string) int {
+	relevant := set(relevantIDs)
+	for i, id := range retrievedIDs {
+		if _, ok := relevant[id]; ok {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func recallAtKForIDs(retrievedIDs, relevantIDs []string, k int) float64 {
+	if len(relevantIDs) == 0 || k <= 0 {
+		return 0
+	}
+	relevant := set(relevantIDs)
+	limit := k
+	if len(retrievedIDs) < limit {
+		limit = len(retrievedIDs)
+	}
+	found := map[string]struct{}{}
+	for _, id := range retrievedIDs[:limit] {
+		if _, ok := relevant[id]; ok {
+			found[id] = struct{}{}
+		}
+	}
+	return roundMetric(float64(len(found)) / float64(len(relevant)))
+}
+
+func summarizeMetrics(questions []BenchmarkQuestionReport) (float64, float64, float64) {
+	if len(questions) == 0 {
+		return 0, 0, 0
+	}
+	var r5, r10, mrr float64
+	for _, q := range questions {
+		r5 += q.RecallAt5
+		r10 += q.RecallAt10
+		mrr += q.MRR
+	}
+	return roundMetric(r5 / float64(len(questions))), roundMetric(r10 / float64(len(questions))), roundMetric(mrr / float64(len(questions)))
+}
+
+func set(values []string) map[string]struct{} {
+	out := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			out[value] = struct{}{}
+		}
+	}
+	return out
+}
+
+func roundMetric(v float64) float64 {
+	return float64(int(v*10000+0.5)) / 10000
+}

@@ -276,6 +276,23 @@ These tests prove that Goncho can:
 - verify stale code claims against live repo state,
 - warn before repeating known failed paths.
 
+## Retrieval Accuracy Benchmarks
+
+Goncho includes a local LongMemEval-style benchmark runner. It loads a JSONL memory/question fixture into Goncho, runs retrieval, and reports `R@5`, `R@10`, and `MRR` without network or hosted services.
+
+```bash
+go test ./cmd/goncho-bench
+go run ./cmd/goncho-bench \
+  --dataset ./cmd/goncho-bench/testdata/tiny-longmemeval.jsonl \
+  --out ./artifacts/tiny-longmemeval-report.json \
+  --db ./artifacts/tiny-longmemeval.db \
+  --limit 10
+```
+
+The bundled tiny fixture is a harness smoke test, not a leaderboard claim. To evaluate LongMemEval-S, convert the official dataset to the documented JSONL format and report the real generated numbers.
+
+Docs: [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
+
 ## Proof Matrix
 
 The metaanalysis recommends evaluating memory quality with deterministic local tests before making benchmark claims. Goncho's README links claims to checks you can run locally.

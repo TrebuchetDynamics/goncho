@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `cmd/goncho-bench`, a local LongMemEval-style retrieval benchmark runner that reports `R@5`, `R@10`, and `MRR` from JSONL memory/question fixtures.
+- Retrieval benchmark documentation and a tiny deterministic fixture for harness validation.
+
 ## v0.1.0 - 2026-05-19
 
 Initial tagged release for local-first Goncho agent memory.
