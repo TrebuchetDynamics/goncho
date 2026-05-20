@@ -33,75 +33,43 @@ Keep these mappings stable. Most memory bugs are scope bugs.
 
 ## Minimal Wiring
 
+Goncho ships a small Gormes adapter package so the host does not need to assemble the service and tools manually.
+
 ```go
-package gormesmemory
+package main
 
 import (
     "context"
-    "database/sql"
+    "log"
 
-    "github.com/TrebuchetDynamics/goncho"
-    "github.com/TrebuchetDynamics/goncho/memory"
+    gormesgoncho "github.com/TrebuchetDynamics/goncho/integration/gormes"
 )
 
-type RuntimeMemory struct {
-    Store *memory.SqliteStore
-    DB    *sql.DB
-    Svc   *goncho.Service
+func main() {
+    ctx := context.Background()
 
-    Context  *goncho.GonchoContextTool
-    Search   *goncho.GonchoSearchTool
-    Remember *goncho.GonchoRememberTool
-    Review   *goncho.ReviewTool
-    Handoff  *goncho.GonchoHandoffTool
-}
-
-func Open(ctx context.Context, dbPath string) (*RuntimeMemory, error) {
-    store, err := memory.OpenSqlite(dbPath, 0, nil)
-    if err != nil {
-        return nil, err
-    }
-    if err := goncho.RunMigrations(store.DB()); err != nil {
-        _ = store.Close(ctx)
-        return nil, err
-    }
-
-    svc := goncho.NewService(store.DB(), goncho.Config{
-        WorkspaceID:    "gormes",
-        ObserverPeerID: "gormes",
-        RecentMessages: 8,
-    }, nil)
-
-    // Use the same local memory store for handoffs if your host uses the
-    // generic MemoryToolStore path. If your Gormes runtime has its own store,
-    // adapt it to goncho.MemoryToolStore instead.
-    handoffStore := goncho.NewLocalMarkdownMemoryStore(store.DB(), goncho.LocalMarkdownMemoryConfig{
-        Path:        "GONCHO_MEMORY.md",
-        AgentID:     "agent:gormes",
-        WorkspaceID: "gormes",
-        PeerID:      "operator",
-        SessionID:   "startup",
+    mem, err := gormesgoncho.Open(ctx, gormesgoncho.Config{
+        DatabasePath: "/var/lib/gormes/goncho.db",
+        WorkspaceID:  "gormes-prod",
+        ObserverID:   "gormes",
     })
-
-    return &RuntimeMemory{
-        Store:    store,
-        DB:       store.DB(),
-        Svc:      svc,
-        Context:  goncho.NewGonchoContextTool(svc),
-        Search:   goncho.NewGonchoSearchTool(svc),
-        Remember: goncho.NewGonchoRememberTool(svc),
-        Review:   goncho.NewReviewTool(svc),
-        Handoff:  goncho.NewGonchoHandoffTool(handoffStore),
-    }, nil
-}
-
-func (m *RuntimeMemory) Close(ctx context.Context) error {
-    if m == nil || m.Store == nil {
-        return nil
+    if err != nil {
+        log.Fatal(err)
     }
-    return m.Store.Close(ctx)
+    defer func() { _ = mem.Close(ctx) }()
+
+    log.Printf("goncho ready: %+v", mem.Status())
+
+    // Register these with the Gormes tool registry:
+    _ = mem.ContextTool
+    _ = mem.SearchTool
+    _ = mem.RememberTool
+    _ = mem.ReviewTool
+    _ = mem.HandoffTool
 }
 ```
+
+The adapter requires an explicit `DatabasePath`, opens SQLite, runs Goncho migrations, creates `goncho.Service`, wires public tools, and exposes `Status()` for startup logs.
 
 If your Gormes host already has a tool registry, register the tool values by their `Name()`, `Schema()`, `Description()`, `Timeout()`, and `Execute(ctx, args)` methods.
 
@@ -174,6 +142,7 @@ Do not hide warnings from the model. A memory system earns trust by surfacing un
 Run these commands in the Goncho repository before plugging into a Gormes release:
 
 ```sh
+go test ./integration/gormes
 go test ./...
 go test ./... -run TestGonchoPublicToolsRestartE2E
 go test ./... -run TestGonchoGoalPromptInjectionImportIsQuarantinedE2E

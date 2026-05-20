@@ -23,6 +23,22 @@ A Goncho deployment should make these facts obvious:
 
 ## Recommended Runtime Shape
 
+For Gormes-style hosts, prefer the adapter package:
+
+```go
+mem, err := gormesgoncho.Open(ctx, gormesgoncho.Config{
+    DatabasePath: "/var/lib/gormes/goncho.db",
+    WorkspaceID:  "gormes-prod",
+    ObserverID:   "gormes",
+})
+if err != nil {
+    return err
+}
+defer func() { _ = mem.Close(ctx) }()
+```
+
+For custom hosts, wire the service directly:
+
 ```go
 store, err := memory.OpenSqlite("goncho.db", 0, nil)
 if err != nil {
@@ -32,8 +48,8 @@ if err := goncho.RunMigrations(store.DB()); err != nil {
     return err
 }
 svc := goncho.NewService(store.DB(), goncho.Config{
-    WorkspaceID:    "gormes-prod",
-    ObserverPeerID: "gormes",
+    WorkspaceID:    "custom-agent",
+    ObserverPeerID: "assistant",
     RecentMessages: 8,
 }, nil)
 ```
@@ -74,6 +90,7 @@ Prefer `goncho_context`, `goncho_search`, `goncho_remember`, `goncho_review`, an
 ### Build-time checks
 
 ```sh
+go test ./integration/gormes
 go test ./...
 cd docs-site && npm run build
 ```

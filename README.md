@@ -463,6 +463,7 @@ Operator and integration entry points:
 
 - [Operator Runbook](docs-site/src/content/docs/operators/runbook.md) — deployment, backup, health checks, release checks, and troubleshooting.
 - [Gormes Agent Integration](docs-site/src/content/docs/integrations/gormes-agent.md) — recommended seam for plugging Goncho into a Gormes-style Go agent host.
+- [`integration/gormes`](integration/gormes) — import-ready adapter that opens SQLite, runs migrations, creates `goncho.Service`, wires public tools, reports status, and closes cleanly.
 
 ```bash
 cd docs-site
