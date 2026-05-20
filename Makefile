@@ -9,7 +9,7 @@ LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jso
 LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
 
-.PHONY: bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo
+.PHONY: bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
 
 bench-longmemeval-s-smoke:
 	@mkdir -p artifacts/bench-smoke docs/benchmarks/results docs/benchmarks/failures
@@ -70,3 +70,21 @@ bench-locomo: prepare-locomo
 		--out ./docs/benchmarks/results/locomo-$(LOCOMO_DATE)-goncho.json \
 		--failures ./docs/benchmarks/failures/locomo-$(LOCOMO_DATE)-categories.jsonl \
 		--locomo-md-out ./docs/benchmarks/locomo-$(LOCOMO_DATE).md
+
+bench-locomo-backends-smoke:
+	@mkdir -p docs/benchmarks/results docs/benchmarks/failures
+	go run ./cmd/goncho-bench \
+		--locomo-memories $(LOCOMO_SMOKE_MEMORIES) \
+		--locomo-questions $(LOCOMO_SMOKE_QUESTIONS) \
+		--locomo-backend-comparison-json-out ./docs/benchmarks/results/locomo-backend-comparison-smoke.json \
+		--locomo-backend-comparison-failures-out ./docs/benchmarks/failures/locomo-backend-comparison-smoke.jsonl \
+		--locomo-backend-comparison-md-out ./docs/benchmarks/locomo-backend-comparison-smoke.md
+
+bench-locomo-backends: prepare-locomo
+	@mkdir -p docs/benchmarks/results docs/benchmarks/failures
+	go run ./cmd/goncho-bench \
+		--locomo-memories $(LOCOMO_MEMORIES) \
+		--locomo-questions $(LOCOMO_QUESTIONS) \
+		--locomo-backend-comparison-json-out ./docs/benchmarks/results/locomo-backend-comparison.json \
+		--locomo-backend-comparison-failures-out ./docs/benchmarks/failures/locomo-backend-comparison.jsonl \
+		--locomo-backend-comparison-md-out ./docs/benchmarks/locomo-backend-comparison.md

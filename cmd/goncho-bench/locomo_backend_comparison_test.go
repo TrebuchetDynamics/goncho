@@ -31,6 +31,7 @@ func TestLocomoBackendComparisonUsesStableMemoryIDs(t *testing.T) {
 		Memories: []locomoMemoryRow{
 			{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", Content: "Maya keeps the orchid marker in the archive cabinet.", TurnIndex: 1},
 			{MemoryID: "m2", ConversationID: "c1", SessionID: "s1", Speaker: "Leo", Content: "Leo talked about unrelated dashboard notes.", TurnIndex: 2},
+			{MemoryID: "m3", ConversationID: "c2", SessionID: "s1", Speaker: "Nia", Content: "Nia repeats orchid marker orchid marker orchid marker in another conversation.", TurnIndex: 1},
 		},
 		Questions: []locomoQuestionRow{
 			{QuestionID: "q1", ConversationID: "c1", Question: "Where is the orchid marker?", GoldMemoryIDs: []string{"m1"}, Category: "single_hop_retrieval"},
@@ -63,12 +64,19 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 `)
 	jsonOut := filepath.Join(dir, "locomo-backend-comparison.json")
 	mdOut := filepath.Join(dir, "locomo-backend-comparison.md")
-	if err := runLocomoBackendComparison(ctx, config{LocomoMemoriesPath: memories, LocomoQuestionsPath: questions, LocomoBackendComparisonJSON: jsonOut, LocomoBackendComparisonMD: mdOut}); err != nil {
+	failuresOut := filepath.Join(dir, "locomo-backend-comparison.jsonl")
+	if err := runLocomoBackendComparison(ctx, config{LocomoMemoriesPath: memories, LocomoQuestionsPath: questions, LocomoBackendComparisonJSON: jsonOut, LocomoBackendComparisonMD: mdOut, LocomoBackendComparisonFailures: failuresOut}); err != nil {
 		t.Fatal(err)
 	}
+	assertBenchFileContains(t, jsonOut, `"backend": "goncho"`)
 	assertBenchFileContains(t, jsonOut, `"backend": "agentmemory"`)
 	assertBenchFileContains(t, jsonOut, `"comparable": false`)
+	assertBenchFileNotContains(t, jsonOut, `"backend": "random"`)
+	assertBenchFileNotContains(t, jsonOut, `"backend": "recency"`)
+	assertBenchFileContains(t, failuresOut, `"backend":"agentmemory"`)
+	assertBenchFileContains(t, failuresOut, `"failure_category":"not_comparable"`)
 	assertBenchFileContains(t, mdOut, "benchmark adapter suite")
+	assertBenchFileContains(t, mdOut, "Failure JSONL")
 }
 
 func writeTestFile(t *testing.T, path, content string) {
@@ -86,5 +94,16 @@ func assertBenchFileContains(t *testing.T, path, want string) {
 	}
 	if !strings.Contains(string(raw), want) {
 		t.Fatalf("%s missing %q\n%s", path, want, raw)
+	}
+}
+
+func assertBenchFileNotContains(t *testing.T, path, unwanted string) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	if strings.Contains(string(raw), unwanted) {
+		t.Fatalf("%s unexpectedly contains %q\n%s", path, unwanted, raw)
 	}
 }

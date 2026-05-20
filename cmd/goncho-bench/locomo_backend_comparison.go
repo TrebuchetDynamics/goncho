@@ -29,6 +29,10 @@ type BackendResult struct {
 	Score    float64 `json:"score"`
 }
 
+type scopedMemoryBackend interface {
+	SearchScoped(context.Context, string, string, int) ([]BackendResult, error)
+}
+
 type locomoBackendComparisonReport struct {
 	BenchmarkName string                         `json:"benchmark_name"`
 	Mode          string                         `json:"mode"`
@@ -73,7 +77,7 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	if err != nil {
 		return err
 	}
-	backends := []string{"goncho", "agentmemory", "mem0", "memo0", "bm25", "sqlite-fts5", "recency", "random"}
+	backends := []string{"goncho", "bm25", "sqlite-fts5", "agentmemory", "mem0"}
 	entries := make([]locomoBackendComparisonEntry, 0, len(backends))
 	for _, name := range backends {
 		entry, err := evaluateLocomoBackend(ctx, data, name, 10)
@@ -105,7 +109,10 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	if err := writeLocomoBackendComparisonJSON(cfg.LocomoBackendComparisonJSON, report); err != nil {
 		return err
 	}
-	return writeLocomoBackendComparisonMarkdown(cfg.LocomoBackendComparisonMD, report)
+	if err := writeLocomoBackendComparisonFailures(cfg.LocomoBackendComparisonFailures, data, report); err != nil {
+		return err
+	}
+	return writeLocomoBackendComparisonMarkdown(cfg.LocomoBackendComparisonMD, report, cfg.LocomoBackendComparisonJSON, cfg.LocomoBackendComparisonFailures)
 }
 
 func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string, topK int) (locomoBackendComparisonEntry, error) {
@@ -130,7 +137,7 @@ func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string,
 	searchStart := time.Now()
 	results := make([]locomoQuestionResult, 0, len(data.Questions))
 	for _, q := range data.Questions {
-		hits, err := backend.Search(ctx, q.Question, topK)
+		hits, err := searchLocomoBackend(ctx, backend, q, topK)
 		if err != nil {
 			return locomoBackendComparisonEntry{}, err
 		}
@@ -164,19 +171,27 @@ func newLocomoBackend(name string) (MemoryBackend, string, error) {
 	case "goncho":
 		return newGonchoBackend()
 	case "agentmemory":
-		return nil, "not comparable yet: local reference exposes product MCP/REST surfaces, but this harness has no stable-memory-id retrieval adapter wired to return inserted LOCOMO memory IDs", nil
-	case "mem0", "memo0":
-		return nil, "not comparable yet: no local stable-memory-id retrieval adapter is wired; vector/search APIs must return the original inserted memory_id to be scored", nil
+		return nil, externalBackendNotComparableReason("agentmemory"), nil
+	case "mem0":
+		return nil, externalBackendNotComparableReason("mem0"), nil
 	default:
 		return nil, "", fmt.Errorf("unknown backend %q", name)
 	}
 }
 
+func searchLocomoBackend(ctx context.Context, backend MemoryBackend, q locomoQuestionRow, topK int) ([]BackendResult, error) {
+	if scoped, ok := backend.(scopedMemoryBackend); ok {
+		return scoped.SearchScoped(ctx, q.ConversationID, q.Question, topK)
+	}
+	return backend.Search(ctx, q.Question, topK)
+}
+
 type backendMemory struct {
-	ID       string
-	Content  string
-	Metadata map[string]any
-	Seq      int
+	ID             string
+	Content        string
+	ConversationID string
+	Metadata       map[string]any
+	Seq            int
 }
 
 type randomBackend struct{ items map[string]backendMemory }
@@ -187,15 +202,20 @@ func (b *randomBackend) Reset(context.Context) error {
 	return nil
 }
 func (b *randomBackend) Insert(_ context.Context, id, content string, metadata map[string]any) error {
-	b.items[id] = backendMemory{ID: id, Content: content, Metadata: metadata, Seq: len(b.items)}
+	b.items[id] = backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
 	return nil
 }
 func (b *randomBackend) Search(_ context.Context, question string, topK int) ([]BackendResult, error) {
-	items := backendSortedItems(b.items)
+	return b.searchItems(question, topK, backendSortedItems(b.items)), nil
+}
+func (b *randomBackend) SearchScoped(_ context.Context, conversationID, question string, topK int) ([]BackendResult, error) {
+	return b.searchItems(question, topK, backendItemsForConversation(b.items, conversationID)), nil
+}
+func (b *randomBackend) searchItems(question string, topK int, items []backendMemory) []BackendResult {
 	sort.SliceStable(items, func(i, j int) bool {
 		return stableHash(question+"/"+items[i].ID) < stableHash(question+"/"+items[j].ID)
 	})
-	return backendFirstResults(items, topK), nil
+	return backendFirstResults(items, topK)
 }
 func (b *randomBackend) Close(context.Context) error { return nil }
 
@@ -207,13 +227,18 @@ func (b *recencyBackend) Reset(context.Context) error {
 	return nil
 }
 func (b *recencyBackend) Insert(_ context.Context, id, content string, metadata map[string]any) error {
-	b.items[id] = backendMemory{ID: id, Content: content, Metadata: metadata, Seq: len(b.items)}
+	b.items[id] = backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
 	return nil
 }
 func (b *recencyBackend) Search(_ context.Context, _ string, topK int) ([]BackendResult, error) {
-	items := backendSortedItems(b.items)
+	return b.searchItems(topK, backendSortedItems(b.items)), nil
+}
+func (b *recencyBackend) SearchScoped(_ context.Context, conversationID, _ string, topK int) ([]BackendResult, error) {
+	return b.searchItems(topK, backendItemsForConversation(b.items, conversationID)), nil
+}
+func (b *recencyBackend) searchItems(topK int, items []backendMemory) []BackendResult {
 	sort.SliceStable(items, func(i, j int) bool { return items[i].Seq > items[j].Seq })
-	return backendFirstResults(items, topK), nil
+	return backendFirstResults(items, topK)
 }
 func (b *recencyBackend) Close(context.Context) error { return nil }
 
@@ -222,20 +247,26 @@ type bm25Backend struct{ items map[string]backendMemory }
 func (b *bm25Backend) Name() string                { return "bm25" }
 func (b *bm25Backend) Reset(context.Context) error { b.items = map[string]backendMemory{}; return nil }
 func (b *bm25Backend) Insert(_ context.Context, id, content string, metadata map[string]any) error {
-	b.items[id] = backendMemory{ID: id, Content: content, Metadata: metadata, Seq: len(b.items)}
+	b.items[id] = backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
 	return nil
 }
 func (b *bm25Backend) Search(_ context.Context, question string, topK int) ([]BackendResult, error) {
-	records := make([]MemoryRecord, 0, len(b.items))
-	for _, item := range b.items {
-		records = append(records, MemoryRecord{ID: item.ID, Peer: "locomo", Content: item.Content})
+	return b.searchItems(question, topK, backendSortedItems(b.items)), nil
+}
+func (b *bm25Backend) SearchScoped(_ context.Context, conversationID, question string, topK int) ([]BackendResult, error) {
+	return b.searchItems(question, topK, backendItemsForConversation(b.items, conversationID)), nil
+}
+func (b *bm25Backend) searchItems(question string, topK int, items []backendMemory) []BackendResult {
+	records := make([]MemoryRecord, 0, len(items))
+	for _, item := range items {
+		records = append(records, MemoryRecord{ID: item.ID, Peer: item.ConversationID, Content: item.Content})
 	}
 	ranked := rankMemoriesBM25(question, records)
 	out := make([]BackendResult, 0, min(topK, len(ranked)))
 	for i, item := range ranked[:min(topK, len(ranked))] {
 		out = append(out, BackendResult{MemoryID: item.ID, Score: float64(topK - i)})
 	}
-	return out, nil
+	return out
 }
 func (b *bm25Backend) Close(context.Context) error { return nil }
 
@@ -259,11 +290,11 @@ func (b *sqliteFTSBackend) Reset(ctx context.Context) error {
 		return err
 	}
 	b.store, b.db = store, store.DB()
-	_, err = b.db.ExecContext(ctx, `CREATE VIRTUAL TABLE locomo_fts USING fts5(id UNINDEXED, content)`)
+	_, err = b.db.ExecContext(ctx, `CREATE VIRTUAL TABLE locomo_fts USING fts5(id UNINDEXED, conversation_id UNINDEXED, content)`)
 	return err
 }
-func (b *sqliteFTSBackend) Insert(ctx context.Context, id, content string, _ map[string]any) error {
-	_, err := b.db.ExecContext(ctx, `INSERT INTO locomo_fts(id, content) VALUES(?, ?)`, id, content)
+func (b *sqliteFTSBackend) Insert(ctx context.Context, id, content string, metadata map[string]any) error {
+	_, err := b.db.ExecContext(ctx, `INSERT INTO locomo_fts(id, conversation_id, content) VALUES(?, ?, ?)`, id, metadataString(metadata, "conversation_id"), content)
 	return err
 }
 func (b *sqliteFTSBackend) Search(ctx context.Context, question string, topK int) ([]BackendResult, error) {
@@ -286,6 +317,27 @@ func (b *sqliteFTSBackend) Search(ctx context.Context, question string, topK int
 	}
 	return out, rows.Err()
 }
+func (b *sqliteFTSBackend) SearchScoped(ctx context.Context, conversationID, question string, topK int) ([]BackendResult, error) {
+	query := ftsQuery(question)
+	if query == "" {
+		return nil, nil
+	}
+	rows, err := b.db.QueryContext(ctx, `SELECT id, bm25(locomo_fts) FROM locomo_fts WHERE conversation_id = ? AND locomo_fts MATCH ? ORDER BY bm25(locomo_fts) LIMIT ?`, conversationID, query, topK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []BackendResult
+	for rows.Next() {
+		var r BackendResult
+		if err := rows.Scan(&r.MemoryID, &r.Score); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 func (b *sqliteFTSBackend) Close(ctx context.Context) error {
 	if b.store != nil {
 		_ = b.store.Close(ctx)
@@ -324,14 +376,18 @@ func (b *gonchoBackend) Reset(ctx context.Context) error {
 	return nil
 }
 func (b *gonchoBackend) Insert(ctx context.Context, id, content string, metadata map[string]any) error {
-	result, err := b.svc.Conclude(ctx, goncho.ConcludeParams{Peer: "locomo", Conclusion: content, Scope: "benchmark"})
+	peer := metadataString(metadata, "conversation_id")
+	if peer == "" {
+		peer = "locomo"
+	}
+	result, err := b.svc.Conclude(ctx, goncho.ConcludeParams{Peer: peer, Conclusion: content, Scope: "benchmark"})
 	if err != nil {
 		return err
 	}
 	if _, err := b.store.DB().ExecContext(ctx, `UPDATE goncho_conclusions SET created_at = ?, updated_at = ? WHERE id = ?`, len(b.contentIDs)+1, len(b.contentIDs)+1, result.ID); err != nil {
 		return err
 	}
-	b.contentIDs[content] = append(b.contentIDs[content], id)
+	b.contentIDs[contentIDKey(peer, content)] = append(b.contentIDs[contentIDKey(peer, content)], id)
 	return nil
 }
 func (b *gonchoBackend) Search(ctx context.Context, question string, topK int) ([]BackendResult, error) {
@@ -342,7 +398,25 @@ func (b *gonchoBackend) Search(ctx context.Context, question string, topK int) (
 	var out []BackendResult
 	seen := map[string]struct{}{}
 	for rank, hit := range result.Results {
-		for _, id := range b.contentIDs[hit.Content] {
+		for _, id := range b.contentIDs[contentIDKey("locomo", hit.Content)] {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			out = append(out, BackendResult{MemoryID: id, Score: float64(topK - rank)})
+		}
+	}
+	return out, nil
+}
+func (b *gonchoBackend) SearchScoped(ctx context.Context, conversationID, question string, topK int) ([]BackendResult, error) {
+	result, err := b.svc.Search(ctx, goncho.SearchParams{Peer: conversationID, Query: question, Limit: topK, MaxTokens: 100_000})
+	if err != nil {
+		return nil, err
+	}
+	var out []BackendResult
+	seen := map[string]struct{}{}
+	for rank, hit := range result.Results {
+		for _, id := range b.contentIDs[contentIDKey(conversationID, hit.Content)] {
 			if _, ok := seen[id]; ok {
 				continue
 			}
@@ -364,6 +438,25 @@ func (b *gonchoBackend) Close(ctx context.Context) error {
 
 func locomoMemoryMetadata(mem locomoMemoryRow) map[string]any {
 	return map[string]any{"conversation_id": mem.ConversationID, "session_id": mem.SessionID, "speaker": mem.Speaker, "turn_index": mem.TurnIndex, "timestamp": mem.Timestamp}
+}
+func metadataString(metadata map[string]any, key string) string {
+	if metadata == nil {
+		return ""
+	}
+	if value, ok := metadata[key].(string); ok {
+		return value
+	}
+	return ""
+}
+func backendItemsForConversation(m map[string]backendMemory, conversationID string) []backendMemory {
+	out := make([]backendMemory, 0)
+	for _, item := range m {
+		if item.ConversationID == conversationID {
+			out = append(out, item)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
 }
 func backendSortedItems(m map[string]backendMemory) []backendMemory {
 	out := make([]backendMemory, 0, len(m))
@@ -399,11 +492,21 @@ func locomoFailureCategories(results []locomoQuestionResult) map[string]int {
 func setupNotesForBackend(name string) []string {
 	switch name {
 	case "agentmemory":
-		return []string{"Requires adapter that can reset local state, insert LOCOMO memories with caller-supplied memory_id, and return those same IDs from search."}
-	case "mem0", "memo0":
-		return []string{"Requires adapter that preserves caller-supplied memory_id through retrieval results."}
+		return []string{"External Python probe: scripts/bench_agentmemory_locomo.py --capability.", "Exact package version used in this run: none; backend marked not comparable before scoring.", "Install candidate: package per upstream agentmemory docs; adapter is comparable only if retrieval returns caller-supplied memory_id unchanged.", "Current status: not comparable in this harness until a stable-ID local adapter is wired."}
+	case "mem0":
+		return []string{"External Python probe: scripts/bench_mem0_locomo.py --capability.", "Exact package version used in this run: none; backend marked not comparable before scoring.", "Install candidate: pip install mem0ai, with local/vector dependencies configured by upstream mem0 docs.", "Current status: not comparable in this harness until search results return caller-supplied memory_id unchanged without LLM answer scoring."}
 	default:
 		return []string{"Local deterministic adapter in cmd/goncho-bench."}
+	}
+}
+func externalBackendNotComparableReason(name string) string {
+	switch name {
+	case "agentmemory":
+		return "not comparable: no stable-memory-id LOCOMO adapter is wired for agentmemory; scoring requires search results to return the inserted memory_id exactly"
+	case "mem0":
+		return "not comparable: no stable-memory-id LOCOMO adapter is wired for mem0; scoring requires search results to return the inserted memory_id exactly"
+	default:
+		return "not comparable: stable memory IDs unavailable"
 	}
 }
 func currentRSSBytes() uint64 { var m runtime.MemStats; runtime.ReadMemStats(&m); return m.Sys }
@@ -424,7 +527,51 @@ func writeLocomoBackendComparisonJSON(path string, report locomoBackendCompariso
 	return os.WriteFile(path, raw, 0o644)
 }
 
-func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendComparisonReport) error {
+func writeLocomoBackendComparisonFailures(path string, data locomoDataset, report locomoBackendComparisonReport) error {
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+	memByID := map[string]locomoMemoryRow{}
+	for _, mem := range data.Memories {
+		memByID[mem.MemoryID] = mem
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	enc := json.NewEncoder(file)
+	for _, backend := range report.Backends {
+		if !backend.Comparable {
+			row := map[string]any{"backend": backend.Backend, "comparable": false, "failure_category": "not_comparable", "notes": backend.NotComparableReason}
+			if err := enc.Encode(row); err != nil {
+				_ = file.Close()
+				return err
+			}
+			continue
+		}
+		for _, q := range backend.QuestionsDetail {
+			if q.Rank == 1 {
+				continue
+			}
+			row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: backend.Backend + ":" + locomoFailureNotes(q), Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
+			for i, id := range q.RetrievedIDs[:min(10, len(q.RetrievedIDs))] {
+				mem := memByID[id]
+				row.TopHits = append(row.TopHits, locomoFailureHit{Rank: i + 1, MemoryID: id, Content: mem.Content, Score: 0, Speaker: mem.Speaker, SessionID: mem.SessionID, TurnIndex: mem.TurnIndex})
+			}
+			wrapped := map[string]any{"backend": backend.Backend, "comparable": true, "failure": row}
+			if err := enc.Encode(wrapped); err != nil {
+				_ = file.Close()
+				return err
+			}
+		}
+	}
+	return file.Close()
+}
+
+func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendComparisonReport, jsonPath, failuresPath string) error {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
@@ -434,7 +581,12 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	var b strings.Builder
 	b.WriteString("# LOCOMO External Backend Comparison\n\n")
 	b.WriteString("This is a benchmark adapter suite, not a marketing dunk. It compares retrieval backends only when they can return stable inserted memory IDs.\n\n")
-	fmt.Fprintf(&b, "- JSON evidence: `%s`\n", pathToJSONFromMarkdown(path))
+	if strings.TrimSpace(jsonPath) != "" {
+		fmt.Fprintf(&b, "- JSON evidence: `%s`\n", jsonPath)
+	}
+	if strings.TrimSpace(failuresPath) != "" {
+		fmt.Fprintf(&b, "- Failure JSONL: `%s`\n", failuresPath)
+	}
 	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.NoLLMJudge)
 	b.WriteString("## Rules\n\n")
 	for _, rule := range report.Rules {
@@ -448,10 +600,10 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 		}
 		fmt.Fprintf(&b, "| `%s` | %t | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %s |\n", e.Backend, e.Comparable, e.RecallAnyAt5*100, e.RecallAnyAt10*100, e.StrictRecallAt5*100, e.StrictRecallAt10*100, e.MRR*100, e.SearchLatencyMs, strings.ReplaceAll(note, "|", "/"))
 	}
+	b.WriteString("\n## Setup notes\n\n")
+	b.WriteString("- Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")
+	b.WriteString("- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Comparable only after a local adapter can reset state, insert caller-supplied `memory_id`, and return that same ID from retrieval.\n")
+	b.WriteString("- mem0 probe: `python3 scripts/bench_mem0_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Candidate install: `pip install mem0ai` plus upstream local vector-store dependencies. Comparable only after configured local retrieval can return caller-supplied `memory_id` without answer-generation scoring.\n")
 	b.WriteString("\n## Interpretation\n\nBackends marked not comparable are excluded from score claims until they implement the `MemoryBackend` contract and return the same stable `memory_id` values that were inserted. This keeps the arena fair and prevents answer-generation or LLM-judge effects from leaking into retrieval metrics.\n")
 	return os.WriteFile(path, []byte(b.String()), 0o644)
-}
-
-func pathToJSONFromMarkdown(md string) string {
-	return strings.Replace(md, "docs/benchmarks/", "docs/benchmarks/results/", 1)[:max(0, len(strings.Replace(md, "docs/benchmarks/", "docs/benchmarks/results/", 1))-3)] + ".json"
 }

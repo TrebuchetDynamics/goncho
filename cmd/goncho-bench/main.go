@@ -17,29 +17,30 @@ import (
 )
 
 type config struct {
-	DatasetPath                 string
-	OutPath                     string
-	FailurePath                 string
-	DatabasePath                string
-	Limit                       int
-	Runs                        int
-	System                      string
-	DatasetRevision             string
-	DatasetSHA256               string
-	FailOnLeakage               bool
-	ClassifyReportPath          string
-	ClassifyFailurePath         string
-	ClassifyJSONLOut            string
-	ClassifyMarkdownOut         string
-	LocomoMemoriesPath          string
-	LocomoQuestionsPath         string
-	LocomoMarkdownOut           string
-	LocomoName                  string
-	LocomoCompareReport         string
-	LocomoCompareJSONL          string
-	LocomoCompareMD             string
-	LocomoBackendComparisonJSON string
-	LocomoBackendComparisonMD   string
+	DatasetPath                     string
+	OutPath                         string
+	FailurePath                     string
+	DatabasePath                    string
+	Limit                           int
+	Runs                            int
+	System                          string
+	DatasetRevision                 string
+	DatasetSHA256                   string
+	FailOnLeakage                   bool
+	ClassifyReportPath              string
+	ClassifyFailurePath             string
+	ClassifyJSONLOut                string
+	ClassifyMarkdownOut             string
+	LocomoMemoriesPath              string
+	LocomoQuestionsPath             string
+	LocomoMarkdownOut               string
+	LocomoName                      string
+	LocomoCompareReport             string
+	LocomoCompareJSONL              string
+	LocomoCompareMD                 string
+	LocomoBackendComparisonJSON     string
+	LocomoBackendComparisonMD       string
+	LocomoBackendComparisonFailures string
 }
 
 type dataset struct {
@@ -129,6 +130,7 @@ func main() {
 	flag.StringVar(&cfg.LocomoCompareMD, "locomo-compare-md-out", "", "Markdown output path for LOCOMO BM25 vs Goncho comparison")
 	flag.StringVar(&cfg.LocomoBackendComparisonJSON, "locomo-backend-comparison-json-out", "", "JSON output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoBackendComparisonMD, "locomo-backend-comparison-md-out", "", "Markdown output path for LOCOMO external-backend adapter comparison")
+	flag.StringVar(&cfg.LocomoBackendComparisonFailures, "locomo-backend-comparison-failures-out", "", "JSONL failure output path for LOCOMO external-backend adapter comparison")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
