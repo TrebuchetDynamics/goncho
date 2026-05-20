@@ -1,12 +1,10 @@
 # Goncho
 
-**Local-first context and belief memory for Go agents.**
+**Local-first memory infrastructure for Go agents.**
 
-Goncho is a Go library for agents that need durable memory without turning memory into a cloud service, a vector database project, or a pile of prompt-stuffed notes.
+Goncho gives AI agents durable, auditable memory without requiring a hosted memory API, a vector database, or a pile of prompt-stuffed notes. It runs in your Go process, stores state in SQLite, and exposes Honcho-compatible primitives for profile, search, context, chat, conclusions, review, handoff, and local memory tools.
 
-It runs inside your Go process, stores state in SQLite, and exposes Honcho-compatible primitives for profile, search, context, chat, and conclusions.
-
-> Goncho is not trying to be the biggest memory store. It is trying to help agents know what they know, why they know it, when it may be stale, and what not to repeat.
+> Goncho helps agents know what they know, why they know it, when it may be stale, and what not to repeat.
 
 ```bash
 go get github.com/TrebuchetDynamics/goncho
@@ -17,27 +15,7 @@ go get github.com/TrebuchetDynamics/goncho
 
 ---
 
-## Documentation Site
-
-The Starlight documentation site lives in [`docs-site/`](docs-site/). The default static deployment target is `https://trebuchetdynamics.github.io/goncho/`.
-
-```bash
-cd docs-site
-npm install
-npm run dev
-```
-
-For CI and deploy builds:
-
-```bash
-cd docs-site
-npm ci
-npm run build
-```
-
-The repository workflow builds docs on pull requests and publishes `docs-site/dist` from `main` when GitHub Pages is configured to use GitHub Actions as its source.
-
-## Why Goncho Exists
+## Why Goncho
 
 Most agent memory systems start as retrieval systems:
 
@@ -45,14 +23,14 @@ Most agent memory systems start as retrieval systems:
 old text -> vector search -> top-k chunks -> prompt
 ```
 
-That works until the agent has to handle real engineering memory:
+That is not enough for long-running engineering agents. Real memory has failure modes:
 
-- A fact used to be true but is stale now.
-- A user preference changed last week.
+- A fact was true last week but is stale now.
 - A file moved, but old memory still mentions the old path.
-- A previous fix failed three times and should not be repeated.
+- A previous fix failed repeatedly and should not be retried blindly.
 - A memory came from an untrusted import and should not steer behavior.
-- A cloud memory service is unacceptable for private developer workflows.
+- A useful conclusion needs scope: user, repo, session, project, or workspace.
+- Private developer workflows cannot depend on a remote memory service.
 
 Goncho treats memory as **trust-preserving context architecture**:
 
@@ -62,24 +40,40 @@ raw evidence
   -> scoped temporal beliefs
   -> task-specific orientation
   -> agent action
-  -> consolidation, revision, or forgetting
+  -> review, verification, revision, or forgetting
 ```
 
-Vectors are useful. Search is useful. But they are not the source of truth. Goncho's source of truth is local, auditable memory with scope, provenance, time, and lifecycle state.
+Vectors are useful. Search is useful. Goncho does not make either one the source of truth. The source of truth is local, auditable memory with scope, provenance, lifecycle state, and verification warnings.
 
-## What You Get
+## What Goncho Provides Today
 
 | Capability | What it means |
 | --- | --- |
-| **Local-first storage** | SQLite by default. No required sidecar, hosted API, or vector database. |
-| **Honcho compatibility** | Preserve familiar `honcho_profile`, `honcho_search`, `honcho_context`, `honcho_chat`, and `honcho_conclude` semantics. |
-| **MCP memory tools** | Includes `store_memory`, `retrieve_memory`, `update_memory`, `summarize_memories`, and `forget_memory` contracts. |
-| **Scoped memory** | Model memory by peer, session, workspace, project, or agent boundary. |
-| **Temporal beliefs** | Keep track of what was observed, what is current, and what may be stale. |
+| **Embedded Go service** | Use Goncho as a library inside your agent host. |
+| **SQLite by default** | Durable local memory with no required network service, sidecar, or cloud dependency. |
+| **Honcho-compatible primitives** | Profile, search, context, chat, conclude, reasoning-style compatibility surfaces. |
+| **MCP-style memory tools** | `store_memory`, `retrieve_memory`, `update_memory`, `summarize_memories`, and `forget_memory`. |
+| **Public Goncho tools** | Stable agent-facing tools for context, search, remember, review, and handoff. |
 | **Context packs** | Build compact prompt-ready orientation instead of dumping every matching memory. |
 | **Evidence and claims** | Preserve raw observations separately from interpreted conclusions. |
-| **Negative memory** | Remember dead ends, failed attempts, and patterns the agent should avoid. |
-| **Optional adapters** | LLMs and embedders can improve summaries/search, but the base system works without them. |
+| **Review queues** | Surface conflict and stale-memory items instead of silently trusting them. |
+| **Prompt-injection quarantine** | Prompt-injection-like imported content is preserved as skipped evidence and excluded from trusted context. |
+| **Live code-claim verification** | Check remembered file/path claims against live repo state before trusting them. |
+| **Negative drift anchors** | Warn when a new prompt resembles a known failed path or dead end. |
+| **Local E2E coverage** | Core behavior is tested with deterministic SQLite and `httptest` flows. |
+
+## When to Use Goncho
+
+Use Goncho when you are building:
+
+- coding agents that need repo-aware memory,
+- local-first assistants for private workflows,
+- agent hosts that need Honcho-compatible semantics,
+- MCP hosts that need durable memory tools,
+- long-running agents that need reviewable beliefs, not just chat history,
+- systems where stale facts, prompt injection, or repeated failed fixes are unacceptable.
+
+Do not use Goncho if you only need a hosted vector search API. Goncho is a memory kernel for agents that care about trust, locality, provenance, and lifecycle.
 
 ## Quick Start
 
@@ -131,59 +125,9 @@ func main() {
 }
 ```
 
-## The Core Model
+## Core API Shape
 
-Goncho separates memory into layers that answer different trust questions.
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                         Agent Loop                           │
-└───────────────┬──────────────────────────────────────────────┘
-                │
-                ▼
-┌──────────────────────────────────────────────────────────────┐
-│                         Goncho                               │
-│                                                              │
-│  Evidence  ->  Claims  ->  Scoped Beliefs  ->  Context Pack  │
-│     │             │              │                 │          │
-│     ▼             ▼              ▼                 ▼          │
-│  events      conclusions      profiles        prompt-ready    │
-│  tools       summaries        relations       orientation     │
-│  sessions    decisions        validity        with citations  │
-│                                                              │
-└───────────────────────────────┬──────────────────────────────┘
-                                │
-                                ▼
-                         SQLite database
-```
-
-### Evidence
-
-Raw observations from sessions, tools, imports, files, and user messages. Evidence should be preserved before interpretation.
-
-### Claims
-
-Interpreted facts derived from evidence: preferences, decisions, project facts, summaries, warnings, and conclusions.
-
-### Scoped beliefs
-
-Claims become useful only when they have scope and time: who they apply to, which project they belong to, when they were observed, and whether newer evidence supersedes them.
-
-### Orientation packs
-
-Agents do not need a memory dump. They need a small working set:
-
-- current peer or project profile,
-- relevant canonical facts,
-- recent high-signal episodes,
-- known dead ends,
-- unresolved conflicts,
-- verification warnings,
-- citations back to source memory.
-
-## Core API
-
-Four service calls cover the most common embedded use case:
+Four calls cover the common embedded path:
 
 ```go
 svc := goncho.NewService(db, cfg, log)
@@ -212,15 +156,81 @@ pack, err := svc.Context(ctx, goncho.ContextParams{
 
 Full API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
 
-## Local E2E Smoke Test
+## Trust-Preserving Memory Model
 
-Use the local service lifecycle test as the canonical smoke check before changing Goncho's embedded API behavior:
+Goncho separates memory into layers that answer different trust questions.
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                         Agent Loop                           │
+└───────────────┬──────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────────────────────┐
+│                         Goncho                               │
+│                                                              │
+│  Evidence  ->  Claims  ->  Scoped Beliefs  ->  Context Pack  │
+│     │             │              │                 │          │
+│     ▼             ▼              ▼                 ▼          │
+│  events      conclusions      profiles        prompt-ready    │
+│  tools       summaries        relations       orientation     │
+│  sessions    decisions        validity        with warnings   │
+│                                                              │
+└───────────────────────────────┬──────────────────────────────┘
+                                │
+                                ▼
+                         SQLite database
+```
+
+### Evidence before memory
+
+Raw observations from sessions, tools, imports, files, and user messages are preserved before interpretation.
+
+### Claims, not chunks
+
+Useful memory is not just an old text span. It is a scoped claim with provenance, time, lifecycle, confidence, and evidence.
+
+### Orientation, not dumping
+
+Agents need compact working context:
+
+- current peer or project profile,
+- relevant canonical facts,
+- recent high-signal episodes,
+- known dead ends,
+- unresolved conflicts,
+- stale or quarantine warnings,
+- source citations and verification requirements.
+
+## Real Local E2E Proof
+
+Goncho favors deterministic local verification. The core suite uses temporary SQLite databases, local files, and `httptest`; it does not require a hosted Honcho service, network access, cloud embeddings, or an LLM.
+
+```bash
+go test ./...
+```
+
+High-signal E2E checks:
 
 ```bash
 go test ./... -run TestLocalE2E_ServiceLifecycleBuildsContextFromPublicAPIs
+go test ./... -run TestHTTPServiceRestartE2E
+go test ./... -run TestGonchoPublicToolsRestartE2E
+go test ./... -run TestGonchoGoalPromptInjectionImportIsQuarantinedE2E
+go test ./... -run TestGonchoGoalStaleCodeClaimRequiresLiveVerificationE2E
+go test ./... -run TestGonchoGoalNegativeDriftAnchorWarnsBeforeRepeatedFailureE2E
 ```
 
-The smoke path opens a temporary SQLite database, runs migrations, creates a service, stores profile facts, writes session messages, records a conclusion, and verifies `Context`, `Search`, and `Chat` using only exported APIs. It has no network, hosted Honcho, LLM, or browser dependency.
+These tests prove that Goncho can:
+
+- open a local SQLite store,
+- run migrations,
+- persist profile/session/conclusion data,
+- build context and search results from exported APIs,
+- restart and retain public-tool memory,
+- quarantine prompt-injection-like imports,
+- verify stale code claims against live repo state,
+- warn before repeating known failed paths.
 
 ## Honcho and MCP Compatibility
 
@@ -237,7 +247,7 @@ honcho_reasoning
 honcho_conclude
 ```
 
-MCP memory contracts are available for hosts that use generic memory tools:
+MCP-style memory contracts are available for hosts that use generic memory tools:
 
 ```text
 store_memory
@@ -249,29 +259,48 @@ forget_memory
 
 This lets a host start with simple memory tools and grow into richer context packs without changing the agent-facing vocabulary.
 
-Migration guide → [docs-site/src/content/docs/reference/honcho-compatibility.md](docs-site/src/content/docs/reference/honcho-compatibility.md)
+Migration guide: [docs-site/src/content/docs/reference/honcho-compatibility.md](docs-site/src/content/docs/reference/honcho-compatibility.md)
+
+## Research Grounding
+
+Goncho is built from the project research in [`docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md`](docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md). The metaanalysis compares open-source agent memory systems and extracts fourteen design constraints for trustworthy memory, including:
+
+1. Local-first by default, server/team mode optional.
+2. MCP-first and hook-native.
+3. Small agent-facing surface, rich internal pipeline.
+4. Memory records are evidence, claims, routines, alerts, or relationships.
+5. Memory records are scoped and time-aware.
+6. Retrieval is hybrid, budgeted, and warning-aware.
+7. Context injection produces cited packs, not raw dumps.
+8. Stale, conflicting, and low-confidence memories are visible.
+9. Negative memory and dead ends are first-class.
+10. Secrets and prompt-injection-like content are quarantined before promotion.
+11. Live truth is pulled from governed tools when memory is stale.
+12. Surfaced memory should explain: why this, why now, why trust it?
+
+Goncho's implementation roadmap follows those constraints rather than treating memory as plain retrieval.
 
 ## Design Principles
 
-Goncho follows seven principles from the project research in [`docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md`](docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md):
-
-1. **Evidence before memory** — preserve raw events and tool outputs first; derive memories second.
-2. **Claims, not chunks** — store what is believed with proof, confidence, scope, and time.
-3. **Hooks over manual saves** — capture at cognitive transition points such as session start, tool use, compaction, and stop.
-4. **Orientation, not dumping** — inject compact task context, not every semantically similar memory.
-5. **Negative memory matters** — failed paths and rejected approaches are part of intelligence.
-6. **Small agent surface** — expose stable primitives for context, search, remember, review, and handoff.
-7. **Trust is the moat** — every surfaced memory should answer: why this, why now, and why trust it?
+| Principle | Meaning |
+| --- | --- |
+| **Evidence before memory** | Preserve raw events and tool outputs first; derive memories second. |
+| **Claims, not chunks** | Store what is believed with proof, confidence, scope, and time. |
+| **Hooks over manual saves** | Capture at cognitive transition points such as session start, tool use, compaction, and stop. |
+| **Orientation, not dumping** | Inject compact task context, not every semantically similar memory. |
+| **Negative memory matters** | Failed paths and rejected approaches are part of intelligence. |
+| **Small agent surface** | Expose stable primitives for context, search, remember, review, and handoff. |
+| **Trust is the moat** | Every surfaced memory should answer: why this, why now, and why trust it? |
 
 ## Comparison
 
 | Approach | Strength | Failure mode Goncho avoids |
 | --- | --- | --- |
-| Flat markdown memory | Simple and editable | Becomes token bloat without search, scope, or lifecycle. |
+| Flat markdown memory | Simple and editable | Becomes token bloat without search, scope, lifecycle, or review. |
 | Vector-only memory | Good fuzzy recall | Returns plausible but stale or wrong chunks. |
 | Cloud memory APIs | Easy hosted setup | Adds network dependency, privacy risk, and vendor lock-in. |
 | Postgres + pgvector stacks | Powerful production search | Raises the setup floor for a single local Go agent. |
-| Goncho | Local evidence, scoped beliefs, compact context | Keeps the base workflow embedded, auditable, and offline-capable. |
+| Goncho | Local evidence, scoped beliefs, compact context | Keeps the base workflow embedded, auditable, offline-capable, and warning-aware. |
 
 ## Current Status
 
@@ -279,15 +308,20 @@ Goncho is pre-release software. The repository is actively building the local me
 
 | Area | Status |
 | --- | --- |
-| Embedded Go service | In progress |
-| SQLite storage and migrations | In progress |
-| Peer profiles and conclusions | In progress |
-| Search and context APIs | In progress |
-| Honcho-compatible tool names | In progress |
-| MCP memory tool contracts | In progress |
+| Embedded Go service | Implemented and tested |
+| SQLite storage and migrations | Implemented and tested |
+| Peer profiles and conclusions | Implemented and tested |
+| Search and context APIs | Implemented and tested |
+| Honcho-compatible tool names | Implemented |
+| MCP-style memory tool contracts | Implemented and tested |
+| Public context/search/remember/review/handoff tools | Implemented and tested |
 | Local markdown/import workflows | Experimental |
+| Prompt-injection quarantine | Implemented and tested |
+| Stale code-claim verification | Implemented and tested |
+| Negative drift anchors | Implemented and tested |
 | Lifecycle stewardship and review queues | Experimental |
-| Graph, drift, and dashboard layers | Planned |
+| Graph/cognitive-map/dashboard layers | Planned |
+| PostgreSQL team adapter | Planned |
 
 ## Roadmap
 
@@ -297,7 +331,7 @@ Goncho is pre-release software. The repository is actively building the local me
 - FTS-backed search.
 - Peer profiles, conclusions, summaries, and context packs.
 - Honcho-compatible service and tool names.
-- MCP memory contracts.
+- MCP-style memory contracts.
 - Local-first operation with no mandatory external model.
 
 ### Phase 2: Lifecycle and Trust
@@ -337,11 +371,36 @@ Goncho is pre-release software. The repository is actively building the local me
 | `types.go` | Public request/result types. |
 | `memory.go` | Memory retrieval and profile behavior. |
 | `memory_tools.go` | Generic MCP-style memory tools. |
+| `goncho_public_tools.go` | Public agent-facing tool surface. |
+| `review.go` / `review_tool.go` | Review queues and review tool behavior. |
+| `file_import.go` / `quarantine.go` | Local imports and prompt-injection quarantine. |
+| `code_claim_verification.go` | Live verification for remembered code/file claims. |
+| `drift_anchor.go` | Negative-memory drift warning logic. |
 | `host_integration.go` | Host-facing compatibility metadata. |
 | `docs/opensource-memory-systems/` | Research corpus and metaanalysis. |
-| `docs/superpowers/` | Design specs and implementation plans. |
+| `docs-site/` | Starlight documentation site. |
 | `http/` | HTTP-facing routes and tests. |
 | `toolmeta/` | Tool metadata helpers. |
+
+## Documentation Site
+
+The Starlight documentation site lives in [`docs-site/`](docs-site/). The default static deployment target is `https://trebuchetdynamics.github.io/goncho/`.
+
+```bash
+cd docs-site
+npm install
+npm run dev
+```
+
+For CI and deploy builds:
+
+```bash
+cd docs-site
+npm ci
+npm run build
+```
+
+The repository workflow builds docs on pull requests and publishes `docs-site/dist` from `main` when GitHub Pages is configured to use GitHub Actions as its source.
 
 ## Development
 
@@ -351,7 +410,7 @@ cd goncho
 go test ./...
 ```
 
-If tests fail, treat the first compiler or test error as the source of truth. This repository intentionally favors evidence over optimistic status claims.
+If tests fail, treat the first compiler or test error as the source of truth. Goncho intentionally favors evidence over optimistic status claims.
 
 ## License
 
