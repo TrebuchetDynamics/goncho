@@ -1,0 +1,165 @@
+{
+  "benchmark_name": "LOCOMO backend comparison",
+  "mode": "retrieval_backend_adapter",
+  "no_llm_judge": true,
+  "generated_at": "2026-05-20T20:22:50Z",
+  "repo_commit": "bc245d68c10255d652ad1eb8114f853984ea5ff7",
+  "go_version": "go1.26.1",
+  "goos": "linux",
+  "goarch": "amd64",
+  "cpu_count": 22,
+  "fixture_paths": {
+    "memories": "./data/locomo/memories.jsonl",
+    "questions": "./data/locomo/questions.jsonl"
+  },
+  "source": {
+    "converted_memories_sha256": "bd24ddbebb21e3dfeb9108c4f869048afc8d0425003424b37630bde1b35b48ff",
+    "converted_questions_sha256": "904c90f99963b9744117d4bfabd5f7570044c94d014c8b05a42ff444af27e5cd",
+    "license": "Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)",
+    "license_file": "LICENSE.txt",
+    "license_sha256": "41003d4a74749c0220e33dd415042164b5a1093ed401f36277234f772d22d3d0",
+    "memories": "data/locomo/memories.jsonl",
+    "memory_count": 5882,
+    "missing_evidence_count": 2,
+    "missing_evidence_examples": [
+      "locomo-conv-42-D10-19",
+      "locomo-conv-47-D4-36"
+    ],
+    "question_count": 1982,
+    "questions": "data/locomo/questions.jsonl",
+    "source_file": "data/locomo10.json",
+    "source_repo": "snap-research/locomo",
+    "source_revision": "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376",
+    "source_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "source_url": "https://github.com/snap-research/locomo"
+  },
+  "rules": [
+    "retrieval only",
+    "no LLM judge",
+    "no answer generation",
+    "same converted memories/questions",
+    "same gold memory IDs",
+    "same top-K scoring",
+    "if stable memory IDs are unavailable, mark backend not comparable",
+    "publish failure categories, not just scores"
+  ],
+  "memory_count": 5882,
+  "question_count": 1982,
+  "source_report": "docs/benchmarks/results/locomo-2026-05-20-goncho.json",
+  "backends": [
+    {
+      "backend": "goncho",
+      "comparable": true,
+      "questions": 1982,
+      "recall_any_at_5": 0.5247,
+      "recall_any_at_10": 0.5873,
+      "strict_recall_at_5": 0.448,
+      "strict_recall_at_10": 0.4995,
+      "mrr": 0.4104,
+      "failure_categories": {
+        "miss_top_10": 818,
+        "gold_not_rank_1": 513,
+        "gold_rank_1": 651
+      },
+      "setup_notes": [
+        "Scores imported from committed pinned deterministic LOCOMO harness report; adapter interface added in cmd/goncho-bench."
+      ]
+    },
+    {
+      "backend": "agentmemory",
+      "comparable": false,
+      "not_comparable_reason": "not comparable yet: local reference exposes MCP/REST product surfaces, but no stable-memory-id adapter is wired to return inserted LOCOMO memory_id values",
+      "setup_notes": [
+        "Implement MemoryBackend.Reset, Insert(memory_id, content, metadata), and Search(question, topK) returning stable memory_id results."
+      ]
+    },
+    {
+      "backend": "mem0",
+      "comparable": false,
+      "not_comparable_reason": "not comparable yet: no stable-memory-id adapter is wired for this backend; retrieval must return original inserted LOCOMO memory_id values before scoring",
+      "setup_notes": [
+        "Implement MemoryBackend.Reset, Insert(memory_id, content, metadata), and Search(question, topK) returning stable memory_id results."
+      ]
+    },
+    {
+      "backend": "memo0",
+      "comparable": false,
+      "not_comparable_reason": "not comparable yet: no stable-memory-id adapter is wired for this backend; retrieval must return original inserted LOCOMO memory_id values before scoring",
+      "setup_notes": [
+        "Implement MemoryBackend.Reset, Insert(memory_id, content, metadata), and Search(question, topK) returning stable memory_id results."
+      ]
+    },
+    {
+      "backend": "bm25",
+      "comparable": true,
+      "questions": 1982,
+      "recall_any_at_5": 0.6019,
+      "recall_any_at_10": 0.6796,
+      "strict_recall_at_5": 0.5126,
+      "strict_recall_at_10": 0.5787,
+      "mrr": 0.4688,
+      "failure_categories": {
+        "miss_top_10": 635,
+        "gold_not_rank_1": 614,
+        "gold_rank_1": 733
+      },
+      "setup_notes": [
+        "Scores imported from committed pinned deterministic LOCOMO harness report; adapter interface added in cmd/goncho-bench."
+      ]
+    },
+    {
+      "backend": "sqlite-fts5",
+      "comparable": true,
+      "questions": 1982,
+      "recall_any_at_5": 0.4914,
+      "recall_any_at_10": 0.5676,
+      "strict_recall_at_5": 0.4213,
+      "strict_recall_at_10": 0.4854,
+      "mrr": 0.3816,
+      "failure_categories": {
+        "miss_top_10": 857,
+        "gold_not_rank_1": 541,
+        "gold_rank_1": 584
+      },
+      "setup_notes": [
+        "Scores imported from committed pinned deterministic LOCOMO harness report; adapter interface added in cmd/goncho-bench."
+      ]
+    },
+    {
+      "backend": "recency",
+      "comparable": true,
+      "questions": 1982,
+      "recall_any_at_5": 0.004,
+      "recall_any_at_10": 0.0081,
+      "strict_recall_at_5": 0.003,
+      "strict_recall_at_10": 0.0055,
+      "mrr": 0.0022,
+      "failure_categories": {
+        "miss_top_10": 1966,
+        "gold_not_rank_1": 14,
+        "gold_rank_1": 2
+      },
+      "setup_notes": [
+        "Scores imported from committed pinned deterministic LOCOMO harness report; adapter interface added in cmd/goncho-bench."
+      ]
+    },
+    {
+      "backend": "random",
+      "comparable": true,
+      "questions": 1982,
+      "recall_any_at_5": 0.0131,
+      "recall_any_at_10": 0.0247,
+      "strict_recall_at_5": 0.0086,
+      "strict_recall_at_10": 0.0182,
+      "mrr": 0.008,
+      "failure_categories": {
+        "miss_top_10": 1933,
+        "gold_not_rank_1": 43,
+        "gold_rank_1": 6
+      },
+      "setup_notes": [
+        "Scores imported from committed pinned deterministic LOCOMO harness report; adapter interface added in cmd/goncho-bench."
+      ]
+    }
+  ]
+}

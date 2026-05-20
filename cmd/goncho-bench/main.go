@@ -17,27 +17,29 @@ import (
 )
 
 type config struct {
-	DatasetPath         string
-	OutPath             string
-	FailurePath         string
-	DatabasePath        string
-	Limit               int
-	Runs                int
-	System              string
-	DatasetRevision     string
-	DatasetSHA256       string
-	FailOnLeakage       bool
-	ClassifyReportPath  string
-	ClassifyFailurePath string
-	ClassifyJSONLOut    string
-	ClassifyMarkdownOut string
-	LocomoMemoriesPath  string
-	LocomoQuestionsPath string
-	LocomoMarkdownOut   string
-	LocomoName          string
-	LocomoCompareReport string
-	LocomoCompareJSONL  string
-	LocomoCompareMD     string
+	DatasetPath                 string
+	OutPath                     string
+	FailurePath                 string
+	DatabasePath                string
+	Limit                       int
+	Runs                        int
+	System                      string
+	DatasetRevision             string
+	DatasetSHA256               string
+	FailOnLeakage               bool
+	ClassifyReportPath          string
+	ClassifyFailurePath         string
+	ClassifyJSONLOut            string
+	ClassifyMarkdownOut         string
+	LocomoMemoriesPath          string
+	LocomoQuestionsPath         string
+	LocomoMarkdownOut           string
+	LocomoName                  string
+	LocomoCompareReport         string
+	LocomoCompareJSONL          string
+	LocomoCompareMD             string
+	LocomoBackendComparisonJSON string
+	LocomoBackendComparisonMD   string
 }
 
 type dataset struct {
@@ -125,6 +127,8 @@ func main() {
 	flag.StringVar(&cfg.LocomoCompareReport, "locomo-compare-report", "", "existing LOCOMO JSON report to compare BM25 vs Goncho")
 	flag.StringVar(&cfg.LocomoCompareJSONL, "locomo-compare-jsonl-out", "", "JSONL output path for LOCOMO BM25 vs Goncho comparison")
 	flag.StringVar(&cfg.LocomoCompareMD, "locomo-compare-md-out", "", "Markdown output path for LOCOMO BM25 vs Goncho comparison")
+	flag.StringVar(&cfg.LocomoBackendComparisonJSON, "locomo-backend-comparison-json-out", "", "JSON output path for LOCOMO external-backend adapter comparison")
+	flag.StringVar(&cfg.LocomoBackendComparisonMD, "locomo-backend-comparison-md-out", "", "Markdown output path for LOCOMO external-backend adapter comparison")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
@@ -137,6 +141,9 @@ func main() {
 func run(ctx context.Context, cfg config) error {
 	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
 		return generateLocomoComparison(cfg.LocomoCompareReport, cfg.LocomoCompareJSONL, cfg.LocomoCompareMD)
+	}
+	if strings.TrimSpace(cfg.LocomoBackendComparisonJSON) != "" || strings.TrimSpace(cfg.LocomoBackendComparisonMD) != "" {
+		return runLocomoBackendComparison(ctx, cfg)
 	}
 	if strings.TrimSpace(cfg.ClassifyReportPath) != "" {
 		return generateFailureCategoryReports(cfg.ClassifyReportPath, cfg.ClassifyFailurePath, cfg.ClassifyJSONLOut, cfg.ClassifyMarkdownOut)
