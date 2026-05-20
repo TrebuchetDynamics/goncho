@@ -146,4 +146,6 @@ go run ./cmd/goncho-bench \
 | `recall_any_at_10` | Whether any gold relevant memory appears in the top 10, averaged across questions. This matches the LongMemEval retrieval table methodology. |
 | `mrr` | Mean reciprocal rank of the first relevant memory. |
 
-Use this runner to compare Goncho versions, scoring changes, and dataset conversions. Goncho v0.1.x does not claim LongMemEval-S leaderboard performance until the real dataset is run and the report is published.
+Use this runner to compare Goncho versions, scoring changes, and dataset conversions.
+
+Next experiments are tracked in the [Benchmark Roadmap](/roadmap/benchmark-roadmap/): LOCOMO, InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay.

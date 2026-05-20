@@ -316,7 +316,10 @@ make bench-longmemeval-s
 
 The bundled tiny fixture is a harness smoke test, not a leaderboard claim. The full `make bench-longmemeval-s` target pins the Hugging Face dataset revision, verifies SHA256, converts the 500-question set, runs deterministic ID-based scoring, emits JSON reports, and writes failure-audit JSONL.
 
-Docs: [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
+Docs:
+
+- [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
+- [Benchmark Roadmap](docs/benchmarks/ROADMAP.md)
 
 ## Proof Matrix
 

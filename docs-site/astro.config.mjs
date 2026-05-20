@@ -49,7 +49,10 @@ export default defineConfig({
         },
         {
           label: 'Roadmap',
-          items: [{ label: 'Architecture Direction', slug: 'roadmap/architecture-direction' }],
+          items: [
+            { label: 'Architecture Direction', slug: 'roadmap/architecture-direction' },
+            { label: 'Benchmark Roadmap', slug: 'roadmap/benchmark-roadmap' },
+          ],
         },
       ],
     }),

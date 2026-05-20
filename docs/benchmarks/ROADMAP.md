@@ -1,0 +1,178 @@
+# Goncho Benchmark Roadmap
+
+Goncho is evaluated as a long-term memory retrieval system for agents, not as a generic vector store.
+
+LongMemEval-S proved the first layer: deterministic retrieval sanity on long conversational haystacks. The next work should progressively test harder forms of memory: evolving facts, temporal state, scale, noise, standard IR credibility, and real agent utility.
+
+## Benchmark progression
+
+| Phase | Benchmark | Purpose | Why it matters for Goncho | Status |
+| --- | --- | --- | --- | --- |
+| 1 | LongMemEval-S | Long conversational retrieval | Proves ID-based recall over many sessions without LLM judgment. | First scientific pass done. |
+| 2 | LOCOMO | Conversational long-term memory | Tests long conversations, evolving facts, temporal recall, contradictions, and relationship changes. | Next target. |
+| 3 | InfiniteBench / RULER | Scale and buried-fact stress | Tests whether retrieval survives very large memory, distractors, and long-context pressure. | Planned. |
+| 4 | BABILong | Controlled synthetic reasoning | Tests temporal/entity tracking and consistency under known-answer synthetic tasks. | Planned. |
+| 5 | BEIR | Standard IR credibility | Compares Goncho against classic retrieval systems beyond agent-memory-specific tasks. | Planned. |
+| 6 | Real-world agent replay | Actual agent utility | Tests whether memory helps on real coding sessions, user preferences, rejected approaches, and repeated mistakes. | Planned; most important long term. |
+
+## Phase 2: LOCOMO
+
+LOCOMO is the best next benchmark because it is closer to real agent memory than plain retrieval.
+
+It should test:
+
+- long conversations,
+- temporal memory,
+- multi-session recall,
+- evolving facts,
+- contradictions over time,
+- relationship and event changes.
+
+Goncho-specific questions:
+
+- Does Goncho preserve older truth while surfacing current truth?
+- Does it handle changed preferences and changed relationships?
+- Can it answer from memory without leaking stale facts as current facts?
+- Can review/staleness warnings explain uncertainty?
+
+Expected outputs:
+
+- JSON result report,
+- markdown summary generated from JSON,
+- failure audit JSONL,
+- contradiction/staleness audit where applicable,
+- latency/RSS metrics.
+
+## Phase 3: InfiniteBench and RULER
+
+These benchmarks stress scale.
+
+They should test:
+
+- retrieval with huge memory pools,
+- buried facts,
+- distractors,
+- structured retrieval,
+- memory growth degradation,
+- context budget pressure.
+
+Goncho-specific measurements:
+
+- recall as memory count grows,
+- latency as memory count grows,
+- RSS as memory count grows,
+- degradation curves under added noise,
+- token-budget pass rate.
+
+## Phase 4: BABILong
+
+BABILong is synthetic and controlled. It is not realistic enough alone, but it is useful scientifically.
+
+It should test:
+
+- temporal reasoning,
+- entity tracking,
+- simple multi-hop consistency,
+- repeated facts under distractors.
+
+Goncho-specific measurements:
+
+- exact answer evidence recall,
+- relation-chain retrieval,
+- temporal ordering errors,
+- false positives under similar entity names.
+
+## Phase 5: BEIR
+
+BEIR is not agent-memory-specific, but it is important for credibility.
+
+It should compare Goncho against:
+
+- random,
+- BM25,
+- SQLite FTS5,
+- vector-only,
+- hybrid BM25+vector where available.
+
+Goncho-specific question:
+
+- Can Goncho remain credible as an information-retrieval system while adding agent-memory semantics like scope, lifecycle, review, and trust warnings?
+
+## Phase 6: Real-world replay benchmark
+
+This is the most important eventual benchmark.
+
+Synthetic benchmarks do not prove agent utility. Goncho should eventually replay real sessions such as:
+
+- real coding tasks,
+- real chat preferences,
+- rejected approaches,
+- stale code paths,
+- recurring mistakes,
+- user corrections,
+- handoffs and compactions.
+
+Example checks:
+
+- “Three days ago the user rejected Redis. Did Goncho remember that?”
+- “The file moved after memory was written. Did Goncho verify live state before trusting it?”
+- “The agent repeated a failed Docker fix before. Did Goncho warn?”
+- “A prompt-injection import entered memory. Did Goncho quarantine it?”
+
+Outputs:
+
+- replay fixture,
+- memory state before task,
+- retrieved context,
+- action taken,
+- expected memory behavior,
+- failure reason if behavior differs.
+
+## Metrics every serious benchmark should report
+
+Do not report only “recall.” Report:
+
+- recall@K,
+- recall_any@K when the benchmark uses any-gold-session scoring,
+- MRR,
+- NDCG where applicable,
+- latency min/p50/p95/max,
+- RSS / peak memory,
+- database size,
+- memory count and total token estimate,
+- degradation as distractors increase,
+- stale-memory warning rate,
+- contradiction handling accuracy,
+- leakage counts,
+- failure categories.
+
+## Required scientific controls
+
+Every benchmark should include:
+
+1. Pinned dataset source and revision.
+2. Raw artifact checksum.
+3. Conversion script.
+4. Converted artifact checksum when practical.
+5. Deterministic scoring by evidence ID, not LLM judgment, unless explicitly running an answer-generation benchmark.
+6. Baselines: random, BM25, SQLite FTS5, Goncho without current ranking, Goncho current.
+7. Leakage checks:
+   - query text not accidentally stored as memory,
+   - gold IDs not present in retrievable content,
+   - answer labels not indexed unless the benchmark intentionally includes them.
+8. Failure audit:
+   - query,
+   - expected memory ID,
+   - retrieved top 10,
+   - rank of correct item if present,
+   - likely miss reason.
+9. One-command clean-room reproduction where licensing permits.
+10. CI-safe smoke target with tiny pinned fixtures.
+
+## Framing
+
+The public framing should remain:
+
+> Goncho is being evaluated as a long-term memory retrieval system for agents, not just a vector store.
+
+That means retrieval scores are only one layer. Goncho also needs to prove scope isolation, trust preservation, stale-memory behavior, contradiction handling, negative memory, and real agent utility.

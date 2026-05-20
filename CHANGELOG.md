@@ -11,6 +11,7 @@
 - Deterministic baselines for `random`, `bm25`, `sqlite-fts5`, `goncho-no-rank`, and `goncho`.
 - `make bench-longmemeval-s-smoke` and `make bench-longmemeval-s` clean-room benchmark targets.
 - BM25-style lexical conclusion ranking so search results are ordered by query/content token relevance before recency tie-breaks.
+- Benchmark roadmap covering LOCOMO, InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay as future scientific evaluations.
 - Retrieval benchmark documentation and a tiny deterministic fixture for harness validation.
 
 ## v0.1.0 - 2026-05-19
