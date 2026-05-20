@@ -1,9 +1,15 @@
 # Goncho TODO
 
-[BLOCKED] Full Go verification for local smoke docs — 2026-05-19 15:46:32 CST
-  blocker: `go test ./...` cannot compile because an unrelated uncommitted `review_test.go` addition references missing review-resolution APIs.
-  evidence: `./review_test.go:102:23: svc.ResolveReviewItem undefined`; also `undefined: ReviewResolutionParams` and `undefined: ReviewResolutionSuperseded`.
-  unblocks when: review-resolution production API is implemented or the unrelated `review_test.go` WIP is removed/stashed by its owner.
-  owner: person/agent currently editing `review_test.go`.
-  workaround/pivot: validated docs with `cd docs-site && npm run build`; committed only docs/TODO changes, leaving `review_test.go` untouched.
-  next check: 2026-05-19 17:00 CST
+## Release state
+
+- 2026-05-19: stale full-verification blocker resolved. Current release gate passes with:
+  - `go test ./integration/gormes`
+  - `go test ./...`
+  - `cd docs-site && npm run build`
+
+## Next after v0.1.0
+
+- Add a generated primer/token-budget E2E.
+- Continue lifecycle trust work: temporal validity, supersession chains, and confidence/freshness scoring.
+- Expand graph/cognitive-map features behind deterministic tests.
+- Add optional PostgreSQL/team adapter only after local SQLite API remains stable.

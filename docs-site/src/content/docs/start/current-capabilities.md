@@ -3,7 +3,7 @@ title: Current Capabilities
 description: What Goncho supports today and what remains architecture direction.
 ---
 
-Goncho is usable as a pre-release Go library, but the architecture is still consolidating around evidence, scoped beliefs, and orientation products.
+Goncho is usable as a pre-1.0 Go library, with v0.1.x focused on the importable local memory kernel, compatibility surfaces, and deterministic local E2E proof.
 
 | Capability | Today | Direction |
 | --- | --- | --- |

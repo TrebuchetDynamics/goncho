@@ -9,9 +9,9 @@ Goncho is a Go library for local-first agent memory and context assembly.
 go get github.com/TrebuchetDynamics/goncho
 ```
 
-:::note[Pre-release note]
-Goncho is pre-release. The setup flow is intentionally small, but you should pin the module version or commit you deploy against.
-:::
+:::note[Pre-1.0 note]
+Goncho is pre-1.0. The setup flow is intentionally small, and operators should pin the module version or commit they deploy against.
+::: 
 
 ## Minimal Service Shape
 

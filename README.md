@@ -377,7 +377,7 @@ Goncho's implementation roadmap follows those constraints rather than treating m
 
 ## Current Status
 
-Goncho is pre-release software. The repository is actively building the local memory kernel and compatibility layer.
+Goncho is pre-1.0 software. The v0.1.x line provides the initial importable local memory kernel and compatibility layer while the architecture continues to evolve.
 
 | Area | Status |
 | --- | --- |
