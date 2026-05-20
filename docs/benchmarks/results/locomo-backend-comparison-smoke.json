@@ -2,8 +2,8 @@
   "benchmark_name": "LOCOMO backend comparison",
   "mode": "retrieval_backend_adapter",
   "no_llm_judge": true,
-  "generated_at": "2026-05-20T21:19:01Z",
-  "repo_commit": "c34f4a39c735e1a74f26c1e71df58167232a9b74",
+  "generated_at": "2026-05-20T21:41:58Z",
+  "repo_commit": "94416072e20296ac84fddac0d8cd9d2df8d76263",
   "go_version": "go1.26.1",
   "goos": "linux",
   "goarch": "amd64",
@@ -35,7 +35,7 @@
       "mrr": 0.8542,
       "insert_latency_ms": 2,
       "search_latency_ms": 1,
-      "rss_bytes": 12278024,
+      "rss_bytes": 12540168,
       "failure_categories": {
         "gold_not_rank_1": 2,
         "gold_rank_1": 6
@@ -237,7 +237,7 @@
       "strict_recall_at_5": 1,
       "strict_recall_at_10": 1,
       "mrr": 0.8542,
-      "rss_bytes": 12278024,
+      "rss_bytes": 12802312,
       "failure_categories": {
         "gold_not_rank_1": 2,
         "gold_rank_1": 6
@@ -455,7 +455,7 @@
       "mrr": 0.8125,
       "insert_latency_ms": 1,
       "search_latency_ms": 1,
-      "rss_bytes": 12540168,
+      "rss_bytes": 12802312,
       "failure_categories": {
         "gold_not_rank_1": 2,
         "gold_rank_1": 6
@@ -650,13 +650,149 @@
     },
     {
       "backend": "agentmemory",
-      "comparable": false,
-      "not_comparable_reason": "not comparable: agentmemory memory_save/REST surfaces generate internal mem_* IDs and the public tool schema has no external_id or metadata passthrough that search returns; content-only matching is rejected because LOCOMO contains duplicate content",
+      "comparable": true,
+      "questions": 8,
+      "failure_categories": {
+        "miss_top_10": 8
+      },
+      "question_results": [
+        {
+          "question_id": "locomo-smoke-q-001",
+          "conversation_id": "conv-001",
+          "category": "latest_state_retrieval",
+          "question": "What does Maya use now for local memory?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-003"
+          ],
+          "retrieved_ids": null,
+          "rank": 0,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "mrr": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-002",
+          "conversation_id": "conv-001",
+          "category": "historical_retrieval",
+          "question": "What did Maya use before SQLite?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-001"
+          ],
+          "retrieved_ids": null,
+          "rank": 0,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "mrr": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-003",
+          "conversation_id": "conv-001",
+          "category": "speaker_attribution",
+          "question": "Who dislikes chamomile tea according to Maya?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-008"
+          ],
+          "retrieved_ids": null,
+          "rank": 0,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "mrr": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-004",
+          "conversation_id": "conv-001",
+          "category": "contradiction_supersession",
+          "question": "What drink does Maya currently prefer in the morning?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-006"
+          ],
+          "retrieved_ids": null,
+          "rank": 0,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "mrr": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-005",
+          "conversation_id": "conv-001",
+          "category": "multi_session_continuity",
+          "question": "What benchmark planning topic did Maya ask to revisit next week?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "retrieved_ids": null,
+          "rank": 0,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "mrr": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-006",
+          "conversation_id": "conv-002",
+          "category": "lexical_miss",
+          "question": "Where does Leo keep his portable journal?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "retrieved_ids": null,
+          "rank": 0,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "mrr": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-007",
+          "conversation_id": "conv-003",
+          "category": "gold_ambiguity",
+          "question": "Who did Priya meet at the design review?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "retrieved_ids": null,
+          "rank": 0,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "mrr": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-008",
+          "conversation_id": "conv-004",
+          "category": "true_retrieval_failure",
+          "question": "Where is Quinn's emergency access token stored?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "retrieved_ids": null,
+          "rank": 0,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "mrr": 0
+        }
+      ],
       "setup_notes": [
         "External Python probe: scripts/bench_agentmemory_locomo.py --capability.",
-        "Source inspected: @agentmemory/agentmemory 0.9.20 from docs/opensource-memory-systems/agentmemory/package.json; no Python package is imported.",
-        "Install candidate: npm install -g @agentmemory/agentmemory@0.9.20; adapter is comparable only if retrieval returns caller-supplied memory_id unchanged.",
-        "Current status: not comparable because public memory_save/REST surfaces generate internal mem_* IDs and do not return external_id metadata from search."
+        "Comparable when AGENTMEMORY_SOURCE_DIR points at PR #583 / commit 9b18a80c9d2839b025279978d3f4b5e1f9bc6e74 with npm dependencies installed.",
+        "Adapter path uses standalone InMemoryKV fallback: memory_save external_id plus metadata.memory_id, then memory_smart_search. This validates stable IDs but is not the full running agentmemory server.",
+        "If AGENTMEMORY_SOURCE_DIR is absent, agentmemory is marked not comparable."
       ]
     },
     {

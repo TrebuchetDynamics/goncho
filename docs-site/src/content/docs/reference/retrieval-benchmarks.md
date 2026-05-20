@@ -198,14 +198,14 @@ Current status:
 | Goncho | yes | Local deterministic adapter. |
 | BM25 | yes | Local lexical baseline. |
 | SQLite FTS5 | yes | Local SQLite FTS baseline. |
-| agentmemory | no | `@agentmemory/agentmemory 0.9.20` public `memory_save`/REST surfaces generate internal `mem_*` IDs and do not return caller-supplied external IDs. |
+| agentmemory | yes, PR standalone fallback | PR #583 commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` preserves stable IDs through `external_id`/metadata. LOCOMO full scored `0.0000` in standalone InMemoryKV fallback mode; this is not the full running agentmemory server. |
 | mem0 | no | `mem0`/`mem0ai` is not installed in this environment; no stable-ID run was produced. |
 
 Probe commands:
 
 ```sh
-python3 scripts/bench_agentmemory_locomo.py --capability
-python3 scripts/bench_agentmemory_locomo.py --smoke
+AGENTMEMORY_SOURCE_DIR=/path/to/agentmemory-pr583 python3 scripts/bench_agentmemory_locomo.py --capability
+AGENTMEMORY_SOURCE_DIR=/path/to/agentmemory-pr583 python3 scripts/bench_agentmemory_locomo.py --smoke
 python3 scripts/bench_mem0_locomo.py --capability
 python3 scripts/bench_mem0_locomo.py --smoke
 ```

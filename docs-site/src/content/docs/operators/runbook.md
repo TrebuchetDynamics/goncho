@@ -188,8 +188,8 @@ Operator rules:
 Backend probe commands:
 
 ```sh
-python3 scripts/bench_agentmemory_locomo.py --capability
-python3 scripts/bench_agentmemory_locomo.py --smoke
+AGENTMEMORY_SOURCE_DIR=/path/to/agentmemory-pr583 python3 scripts/bench_agentmemory_locomo.py --capability
+AGENTMEMORY_SOURCE_DIR=/path/to/agentmemory-pr583 python3 scripts/bench_agentmemory_locomo.py --smoke
 python3 scripts/bench_mem0_locomo.py --capability
 python3 scripts/bench_mem0_locomo.py --smoke
 ```
@@ -201,7 +201,7 @@ Expected current status:
 | Goncho | comparable | Local adapter returns stable IDs. |
 | BM25 | comparable | Local lexical baseline returns stable IDs. |
 | SQLite FTS5 | comparable | Local FTS baseline returns stable IDs. |
-| agentmemory | not comparable | Public surfaces generate internal `mem_*` IDs and do not return caller-supplied stable IDs. |
+| agentmemory | comparable with PR source | Set `AGENTMEMORY_SOURCE_DIR` to PR #583 commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74`. Stable IDs work; standalone fallback LOCOMO score is `0.0000`, and this is not the full running server. |
 | mem0 | not comparable | Package is not installed locally; no stable-ID run exists. |
 
 Primary outputs:

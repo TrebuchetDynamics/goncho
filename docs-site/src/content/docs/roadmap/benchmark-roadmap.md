@@ -97,7 +97,7 @@ Current LOCOMO backend status:
 | Goncho | yes | Local deterministic adapter. |
 | BM25 | yes | Local lexical baseline. |
 | SQLite FTS5 | yes | Local SQLite FTS baseline. |
-| agentmemory | no | Public surfaces do not return caller-supplied stable IDs. |
+| agentmemory | yes, PR standalone fallback | PR #583 stable IDs work; standalone InMemoryKV fallback scored `0.0000` on LOCOMO full and is not the full running server. |
 | mem0 | no | Package not installed locally; no stable-ID run exists. |
 
 See `docs/benchmarks/external-backend-adapters.md` for the adapter contract and operator notes.

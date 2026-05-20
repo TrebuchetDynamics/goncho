@@ -341,7 +341,7 @@ Current external-backend status:
 | Goncho | yes | Native local adapter with stable IDs. |
 | BM25 | yes | Local lexical baseline with stable LOCOMO IDs. |
 | SQLite FTS5 | yes | Local FTS baseline with stable LOCOMO IDs. |
-| agentmemory | no | Public `memory_save`/REST surfaces generate internal `mem_*` IDs and do not return caller-supplied external IDs. |
+| agentmemory | yes, PR standalone fallback | PR #583 commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` preserves stable IDs via `external_id`/metadata. LOCOMO full scored `0.0000` in standalone InMemoryKV fallback mode; this is not the full running agentmemory server. |
 | mem0 | no | `mem0`/`mem0ai` is not installed in the local benchmark environment; no stable-ID run was produced. |
 
 - Milestone note: [docs/benchmarks/MILESTONE-LOCOMO-CANDIDATE-GENERATION.md](docs/benchmarks/MILESTONE-LOCOMO-CANDIDATE-GENERATION.md)

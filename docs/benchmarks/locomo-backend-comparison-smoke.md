@@ -27,13 +27,13 @@ This is a benchmark adapter suite, not a marketing dunk. It compares retrieval b
 | `goncho` | true | 100.00% | 100.00% | 100.00% | 100.00% | 85.42% | 1 | Local deterministic adapter in cmd/goncho-bench. |
 | `bm25` | true | 100.00% | 100.00% | 100.00% | 100.00% | 85.42% | 0 | Local deterministic adapter in cmd/goncho-bench. |
 | `sqlite-fts5` | true | 87.50% | 100.00% | 87.50% | 100.00% | 81.25% | 1 | Local deterministic adapter in cmd/goncho-bench. |
-| `agentmemory` | false | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0 | not comparable: agentmemory memory_save/REST surfaces generate internal mem_* IDs and the public tool schema has no external_id or metadata passthrough that search returns; content-only matching is rejected because LOCOMO contains duplicate content |
+| `agentmemory` | true | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0 | External Python probe: scripts/bench_agentmemory_locomo.py --capability. Comparable when AGENTMEMORY_SOURCE_DIR points at PR #583 / commit 9b18a80c9d2839b025279978d3f4b5e1f9bc6e74 with npm dependencies installed. Adapter path uses standalone InMemoryKV fallback: memory_save external_id plus metadata.memory_id, then memory_smart_search. This validates stable IDs but is not the full running agentmemory server. If AGENTMEMORY_SOURCE_DIR is absent, agentmemory is marked not comparable. |
 | `mem0` | false | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0 | not comparable: Python package mem0/mem0ai is not installed in this environment |
 
 ## Setup notes
 
 - Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.
-- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Source inspected: `@agentmemory/agentmemory 0.9.20` from `docs/opensource-memory-systems/agentmemory/package.json`; no Python package is imported. Comparable only after a local adapter can reset state, insert caller-supplied `memory_id`, and return that same ID from retrieval.
+- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Comparable when `AGENTMEMORY_SOURCE_DIR` points at PR #583 / commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` with npm dependencies installed. This adapter uses the standalone InMemoryKV fallback, not the full running agentmemory server.
 - mem0 probe: `python3 scripts/bench_mem0_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Candidate install: `pip install mem0ai` plus upstream local vector-store dependencies. Comparable only after configured local retrieval can return caller-supplied `memory_id` without answer-generation scoring.
 
 ## Interpretation

@@ -63,7 +63,7 @@ LOCOMO contains duplicate and near-duplicate content, including repeated content
 | Goncho | local Go module | yes | Native `memory_id` mapping in harness | Local deterministic adapter. |
 | BM25 | local Go harness | yes | Native LOCOMO `memory_id` | Local deterministic lexical baseline. |
 | SQLite FTS5 | local Go SQLite FTS5 | yes | Native LOCOMO `memory_id` column | Local deterministic lexical baseline. |
-| agentmemory | `@agentmemory/agentmemory 0.9.20`, local source under `docs/opensource-memory-systems/agentmemory` | no | Tried public memory/search surfaces | `memory_save` generates internal `mem_*` IDs; public tool schema has no `external_id` or metadata passthrough that search returns. |
+| agentmemory | `@agentmemory/agentmemory 0.9.20`, PR #583 commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` | yes, standalone fallback | `memory_save.external_id` plus `metadata.memory_id` returned by `memory_smart_search` | Stable IDs work. LOCOMO full score is `0.0` for the standalone InMemoryKV fallback because it uses strict all-term substring matching; this is not the full running agentmemory server. |
 | mem0 | Python `3.12.3`; package not installed locally | no | Not executed | `mem0`/`mem0ai` is not installed in this environment; no stable-ID run can be produced. |
 
 ## Setup commands
@@ -71,10 +71,15 @@ LOCOMO contains duplicate and near-duplicate content, including repeated content
 agentmemory candidate setup:
 
 ```bash
-npm install -g @agentmemory/agentmemory@0.9.20
-agentmemory
-python3 scripts/bench_agentmemory_locomo.py --capability
-python3 scripts/bench_agentmemory_locomo.py --smoke
+git clone --branch feature/stable-external-memory-ids https://github.com/XelHaku/agentmemory.git
+cd agentmemory
+git checkout 9b18a80c9d2839b025279978d3f4b5e1f9bc6e74
+npm install --legacy-peer-deps
+export AGENTMEMORY_SOURCE_DIR=$PWD
+python3 /path/to/goncho/scripts/bench_agentmemory_locomo.py --capability
+python3 /path/to/goncho/scripts/bench_agentmemory_locomo.py --smoke
+cd /path/to/goncho
+AGENTMEMORY_SOURCE_DIR=$AGENTMEMORY_SOURCE_DIR make bench-locomo-backends
 ```
 
 mem0 candidate setup:
