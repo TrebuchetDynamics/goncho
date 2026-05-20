@@ -15,6 +15,37 @@ go get github.com/TrebuchetDynamics/goncho
 
 ---
 
+## At a Glance
+
+| Question | Answer |
+| --- | --- |
+| What is it? | A local-first memory kernel for Go agent hosts. |
+| Storage | SQLite by default. No required hosted service. |
+| Agent surface | Context, search, remember, review, handoff, and Honcho-compatible primitives. |
+| Core idea | Evidence and scoped beliefs, not untrusted chunks in a prompt. |
+| Trust model | Surface provenance, staleness, quarantine, review, and verification warnings. |
+| Best fit | Coding agents, private assistants, MCP hosts, and long-running local agents. |
+| Verification | Deterministic local E2E tests with temporary SQLite, local files, and `httptest`. |
+
+## Contents
+
+- [Why Goncho](#why-goncho)
+- [What Goncho Provides Today](#what-goncho-provides-today)
+- [When to Use Goncho](#when-to-use-goncho)
+- [Quick Start](#quick-start)
+- [Core API Shape](#core-api-shape)
+- [Trust-Preserving Memory Model](#trust-preserving-memory-model)
+- [Real Local E2E Proof](#real-local-e2e-proof)
+- [Proof Matrix](#proof-matrix)
+- [Architecture Data Flow](#architecture-data-flow)
+- [Honcho and MCP Compatibility](#honcho-and-mcp-compatibility)
+- [Research Grounding](#research-grounding)
+- [Current Status](#current-status)
+- [Roadmap](#roadmap)
+- [Repository Guide](#repository-guide)
+
+---
+
 ## Why Goncho
 
 Most agent memory systems start as retrieval systems:
@@ -74,6 +105,19 @@ Use Goncho when you are building:
 - systems where stale facts, prompt injection, or repeated failed fixes are unacceptable.
 
 Do not use Goncho if you only need a hosted vector search API. Goncho is a memory kernel for agents that care about trust, locality, provenance, and lifecycle.
+
+## Non-Goals
+
+Goncho intentionally avoids several common memory-system traps:
+
+- It is not a remote memory SaaS.
+- It is not a vector database wrapper.
+- It is not a dashboard-first knowledge base.
+- It is not trying to expose dozens of tools to the agent.
+- It does not treat imported text as trusted memory by default.
+- It does not collapse historical truth into current truth.
+
+The base workflow should stay local, auditable, and testable. Optional server, team, graph, and dashboard layers can grow around that kernel without becoming mandatory for a single developer agent.
 
 ## Quick Start
 
@@ -231,6 +275,35 @@ These tests prove that Goncho can:
 - quarantine prompt-injection-like imports,
 - verify stale code claims against live repo state,
 - warn before repeating known failed paths.
+
+## Proof Matrix
+
+The metaanalysis recommends evaluating memory quality with deterministic local tests before making benchmark claims. Goncho's README links claims to checks you can run locally.
+
+| Metaanalysis risk | Goncho behavior | Local proof |
+| --- | --- | --- |
+| Stale code facts | Verify remembered file/path claims against live repo state before trusting them. | `TestGonchoGoalStaleCodeClaimRequiresLiveVerificationE2E` |
+| Prompt-injection persistence | Preserve suspicious imports as skipped evidence and exclude them from trusted context/search. | `TestGonchoGoalPromptInjectionImportIsQuarantinedE2E` |
+| Repeated failed behavior | Match prompts against negative/dead-end memory and warn before repeating a failed path. | `TestGonchoGoalNegativeDriftAnchorWarnsBeforeRepeatedFailureE2E` |
+| Restart loss | Persist public tool memory across SQLite-backed service restarts. | `TestGonchoPublicToolsRestartE2E` |
+| HTTP/local service drift | Exercise Honcho-compatible HTTP lifecycle with local service handlers. | `TestHTTPServiceRestartE2E` |
+| API regression | Build profile, context, search, chat, and conclusion flows through exported APIs. | `TestLocalE2E_ServiceLifecycleBuildsContextFromPublicAPIs` |
+
+Planned features are listed as planned. Implemented claims should have a local test, a source file, or both.
+
+## Architecture Data Flow
+
+```text
+agent host / MCP host / HTTP route
+  -> Goncho service API
+  -> evidence capture and metadata normalization
+  -> SQLite persistence and FTS-backed lookup
+  -> conclusions, profiles, reviews, and memory tools
+  -> trust filters: scope, freshness, quarantine, stale-claim checks, negative anchors
+  -> compact context pack for the next agent action
+```
+
+This data flow is deliberately boring at the storage layer and strict at the trust layer. The goal is not to remember everything; the goal is to return the smallest useful context that can explain why it is safe to use.
 
 ## Honcho and MCP Compatibility
 
