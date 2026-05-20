@@ -2,8 +2,8 @@
   "benchmark_name": "LOCOMO smoke",
   "mode": "retrieval",
   "no_llm_judge": true,
-  "generated_at": "2026-05-20T19:33:22Z",
-  "repo_commit": "83f8bdfb469a153d7cf42095bb905dfdb4350f51",
+  "generated_at": "2026-05-20T19:48:29Z",
+  "repo_commit": "06aa5ba851c585439765d4293f64cb7b0911e0c4",
   "go_version": "go1.26.1",
   "goos": "linux",
   "goarch": "amd64",
@@ -15,13 +15,20 @@
   "memory_count": 17,
   "question_count": 8,
   "leakage_checks": {
-    "answer_hint_text_present_in_memory": 12,
+    "answer_text_in_memory_content": 12,
+    "gold_id_in_memory_content": 0,
+    "question_text_in_memory": 0,
     "examples": [
-      "locomo-smoke-q-001:locomo-smoke-memory-003",
-      "locomo-smoke-q-001:locomo-smoke-memory-004",
-      "locomo-smoke-q-002:locomo-smoke-memory-001",
-      "locomo-smoke-q-002:locomo-smoke-memory-002",
-      "locomo-smoke-q-002:locomo-smoke-memory-003"
+      "answer_text:locomo-smoke-q-001:locomo-smoke-memory-003",
+      "answer_text:locomo-smoke-q-001:locomo-smoke-memory-004",
+      "answer_text:locomo-smoke-q-002:locomo-smoke-memory-001",
+      "answer_text:locomo-smoke-q-002:locomo-smoke-memory-002",
+      "answer_text:locomo-smoke-q-002:locomo-smoke-memory-003",
+      "answer_text:locomo-smoke-q-003:locomo-smoke-memory-008",
+      "answer_text:locomo-smoke-q-004:locomo-smoke-memory-006",
+      "answer_text:locomo-smoke-q-005:locomo-smoke-memory-009",
+      "answer_text:locomo-smoke-q-005:locomo-smoke-memory-010",
+      "answer_text:locomo-smoke-q-006:locomo-smoke-memory-011"
     ]
   },
   "systems": [

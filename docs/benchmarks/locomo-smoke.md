@@ -1,4 +1,4 @@
-# LOCOMO Smoke Retrieval Report
+# LOCOMO smoke Retrieval Report
 
 LOCOMO smoke validates the benchmark harness. It is not a publishable full benchmark result.
 
@@ -89,6 +89,14 @@ This evaluates retrieval, not answer generation. It uses deterministic ID-based 
 | `multi_session_continuity` | 1 | 100.00% | 100.00% | 100.00% | 100.00% | 100.00% |
 | `speaker_attribution` | 1 | 100.00% | 100.00% | 100.00% | 100.00% | 100.00% |
 | `true_retrieval_failure` | 1 | 100.00% | 100.00% | 100.00% | 100.00% | 100.00% |
+
+## Leakage checks
+
+- Answer text present in memory content: `12`
+- Gold IDs present in memory content: `0`
+- Question text present in memory content: `0`
+
+`answer_hint` is not indexed or scored. Answer-text presence is reported because LOCOMO answers may be literal spans from the gold memories.
 
 ## Notes
 

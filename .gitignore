@@ -38,3 +38,4 @@ GONCHO_MEMORY.md
 
 # Benchmark datasets and local run artifacts
 artifacts/
+data/locomo/

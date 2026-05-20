@@ -34,6 +34,7 @@ type config struct {
 	LocomoMemoriesPath  string
 	LocomoQuestionsPath string
 	LocomoMarkdownOut   string
+	LocomoName          string
 }
 
 type dataset struct {
@@ -117,6 +118,7 @@ func main() {
 	flag.StringVar(&cfg.LocomoMemoriesPath, "locomo-memories", "", "LOCOMO-style memories JSONL path for retrieval-first benchmark")
 	flag.StringVar(&cfg.LocomoQuestionsPath, "locomo-questions", "", "LOCOMO-style questions JSONL path for retrieval-first benchmark")
 	flag.StringVar(&cfg.LocomoMarkdownOut, "locomo-md-out", "", "Markdown output path for LOCOMO benchmark report")
+	flag.StringVar(&cfg.LocomoName, "locomo-name", "", "LOCOMO benchmark display name; defaults to LOCOMO smoke")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
