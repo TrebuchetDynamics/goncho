@@ -13,6 +13,7 @@
 - BM25-style lexical conclusion ranking so search results are ordered by query/content token relevance before recency tie-breaks.
 - Benchmark roadmap covering LOCOMO, InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay as future scientific evaluations.
 - Retrieval benchmark documentation and a tiny deterministic fixture for harness validation.
+- Frozen LOCOMO candidate-generation milestone: Goncho recall_any@5 `0.5247 -> 0.6014`, recall_any@10 `0.5873 -> 0.6791`, MRR `0.4104 -> 0.4690`, and BM25-win `missing_candidate` failures `164 -> 2` without LLM judgment, answer scoring, gold-ID hacks, or ranking changes.
 
 ## v0.1.0 - 2026-05-19
 

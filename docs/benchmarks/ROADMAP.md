@@ -9,7 +9,7 @@ LongMemEval-S proved the first layer: deterministic retrieval sanity on long con
 | Phase | Benchmark | Purpose | Why it matters for Goncho | Status |
 | --- | --- | --- | --- | --- |
 | 1 | LongMemEval-S | Long conversational retrieval | Proves ID-based recall over many sessions without LLM judgment. | First scientific pass done. |
-| 2 | LOCOMO | Conversational long-term memory | Tests long conversations, evolving facts, temporal recall, contradictions, and relationship changes. | Next target. |
+| 2 | LOCOMO | Conversational long-term memory | Tests long conversations, evolving facts, temporal recall, contradictions, and relationship changes. | Candidate-generation milestone frozen. |
 | 3 | InfiniteBench / RULER | Scale and buried-fact stress | Tests whether retrieval survives very large memory, distractors, and long-context pressure. | Planned. |
 | 4 | BABILong | Controlled synthetic reasoning | Tests temporal/entity tracking and consistency under known-answer synthetic tasks. | Planned. |
 | 5 | BEIR | Standard IR credibility | Compares Goncho against classic retrieval systems beyond agent-memory-specific tasks. | Planned. |
@@ -18,6 +18,10 @@ LongMemEval-S proved the first layer: deterministic retrieval sanity on long con
 ## Phase 2: LOCOMO
 
 LOCOMO is the best next benchmark because it is closer to real agent memory than plain retrieval.
+
+Milestone: LOCOMO exposed a candidate-generation weakness in Goncho, not primarily a ranking-philosophy weakness. After widening lexical pre-rank candidates, Goncho recall_any@5 improved `0.5247 -> 0.6014`, recall_any@10 improved `0.5873 -> 0.6791`, MRR improved `0.4104 -> 0.4690`, and BM25-win `missing_candidate` failures dropped `164 -> 2`. LongMemEval-S stayed stable at recall_any@5 `0.968`, recall_any@10 `0.980`, MRR `0.9135`.
+
+The next LOCOMO step should not be immediate tuning. Freeze this result for historical comparability, then run external-backend comparisons with the same harness.
 
 It should test:
 
@@ -145,6 +149,23 @@ Do not report only “recall.” Report:
 - contradiction handling accuracy,
 - leakage counts,
 - failure categories.
+
+## External-backend comparison rule
+
+The benchmark harness must stay more trustworthy than any backend.
+
+For agentmemory, mem0, Goncho, BM25, SQLite FTS5, or future systems:
+
+- adapters stay isolated,
+- scoring stays centralized,
+- every backend uses the same JSONL,
+- every backend uses the same memory IDs,
+- every backend reports the same metrics,
+- every backend gets the same leakage checks,
+- every backend gets the same failure taxonomy,
+- no adapter may alter scoring semantics.
+
+This turns the harness into persistent-agent-memory evaluation infrastructure, not just a Goncho-specific benchmark script.
 
 ## Required scientific controls
 

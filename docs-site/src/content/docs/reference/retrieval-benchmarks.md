@@ -148,4 +148,19 @@ go run ./cmd/goncho-bench \
 
 Use this runner to compare Goncho versions, scoring changes, and dataset conversions.
 
-Next experiments are tracked in the [Benchmark Roadmap](/roadmap/benchmark-roadmap/): LOCOMO, InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay.
+## LOCOMO Candidate-Generation Milestone
+
+LOCOMO exposed a candidate-generation weakness in Goncho. After widening lexical pre-rank candidates, BM25-win `missing_candidate` failures dropped from `164` to `2`, and Goncho now essentially matches BM25 on full LOCOMO retrieval while preserving LongMemEval-S performance.
+
+| Metric | Before | After |
+| --- | ---: | ---: |
+| LOCOMO Goncho recall_any@5 | `0.5247` | `0.6014` |
+| LOCOMO Goncho recall_any@10 | `0.5873` | `0.6791` |
+| LOCOMO Goncho MRR | `0.4104` | `0.4690` |
+| BM25-win `missing_candidate` failures | `164` | `2` |
+
+This milestone used no LLM judge, no answer scoring, no benchmark-specific gold-ID hack, and no ranking change. LongMemEval-S remained stable at recall_any@5 `0.968`, recall_any@10 `0.980`, MRR `0.9135`.
+
+The next comparison phase should keep adapters isolated and keep scoring centralized so agentmemory, mem0, Goncho, BM25, and SQLite FTS5 all use the same JSONL, IDs, metrics, leakage checks, and failure taxonomy.
+
+Next experiments are tracked in the [Benchmark Roadmap](/roadmap/benchmark-roadmap/): LOCOMO external-backend comparisons, InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay.

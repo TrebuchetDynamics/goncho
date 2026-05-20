@@ -323,11 +323,14 @@ Pinned full run evidence:
 
 | Dataset | Questions | Memories | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| LOCOMO full | 1,982 | 5,882 | 52.47% | 58.73% | 44.80% | 49.95% | 41.04% |
+| LOCOMO full | 1,982 | 5,882 | 60.14% | 67.91% | 51.16% | 57.67% | 46.90% |
 | LOCOMO smoke | 8 | 17 | 100.00% | 100.00% | 100.00% | 100.00% | 85.42% |
+
+Candidate-generation milestone: LOCOMO exposed a candidate-generation weakness in Goncho. After widening lexical pre-rank candidates, BM25-win `missing_candidate` failures dropped from `164` to `2`, and Goncho now essentially matches BM25 on full LOCOMO retrieval while preserving LongMemEval-S performance. This was achieved without LLM judgment, answer scoring, benchmark-specific gold-ID hacks, or ranking changes.
 
 The full LOCOMO run compares random, recency, BM25, SQLite FTS5, and Goncho baselines against the pinned official LOCOMO source dataset.
 
+- Milestone note: [docs/benchmarks/MILESTONE-LOCOMO-CANDIDATE-GENERATION.md](docs/benchmarks/MILESTONE-LOCOMO-CANDIDATE-GENERATION.md)
 - Full report: [docs/benchmarks/locomo-2026-05-20.md](docs/benchmarks/locomo-2026-05-20.md)
 - Smoke report: [docs/benchmarks/locomo-smoke.md](docs/benchmarks/locomo-smoke.md)
 - Dataset notes: [docs/benchmarks/LOCOMO-DATASET.md](docs/benchmarks/LOCOMO-DATASET.md)
