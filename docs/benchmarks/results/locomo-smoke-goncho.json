@@ -1,0 +1,1366 @@
+{
+  "benchmark_name": "LOCOMO smoke",
+  "mode": "retrieval",
+  "no_llm_judge": true,
+  "generated_at": "2026-05-20T19:33:22Z",
+  "repo_commit": "83f8bdfb469a153d7cf42095bb905dfdb4350f51",
+  "go_version": "go1.26.1",
+  "goos": "linux",
+  "goarch": "amd64",
+  "cpu_count": 22,
+  "fixture_paths": {
+    "memories": "./cmd/goncho-bench/testdata/locomo-smoke/memories.jsonl",
+    "questions": "./cmd/goncho-bench/testdata/locomo-smoke/questions.jsonl"
+  },
+  "memory_count": 17,
+  "question_count": 8,
+  "leakage_checks": {
+    "answer_hint_text_present_in_memory": 12,
+    "examples": [
+      "locomo-smoke-q-001:locomo-smoke-memory-003",
+      "locomo-smoke-q-001:locomo-smoke-memory-004",
+      "locomo-smoke-q-002:locomo-smoke-memory-001",
+      "locomo-smoke-q-002:locomo-smoke-memory-002",
+      "locomo-smoke-q-002:locomo-smoke-memory-003"
+    ]
+  },
+  "systems": [
+    {
+      "system": "random",
+      "questions": 8,
+      "recall_any_at_5": 0.875,
+      "recall_any_at_10": 1,
+      "strict_recall_at_5": 0.875,
+      "strict_recall_at_10": 1,
+      "mrr": 0.5063,
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.25
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.2
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "mrr": 0.1
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        }
+      },
+      "question_results": [
+        {
+          "question_id": "locomo-smoke-q-001",
+          "conversation_id": "conv-001",
+          "category": "latest_state_retrieval",
+          "question": "What does Maya use now for local memory?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-003"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        {
+          "question_id": "locomo-smoke-q-002",
+          "conversation_id": "conv-001",
+          "category": "historical_retrieval",
+          "question": "What did Maya use before SQLite?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-001"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 5,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.2
+        },
+        {
+          "question_id": "locomo-smoke-q-003",
+          "conversation_id": "conv-001",
+          "category": "speaker_attribution",
+          "question": "Who dislikes chamomile tea according to Maya?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-008"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008"
+          ],
+          "rank": 10,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "mrr": 0.1
+        },
+        {
+          "question_id": "locomo-smoke-q-004",
+          "conversation_id": "conv-001",
+          "category": "contradiction_supersession",
+          "question": "What drink does Maya currently prefer in the morning?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-006"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 4,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.25
+        },
+        {
+          "question_id": "locomo-smoke-q-005",
+          "conversation_id": "conv-001",
+          "category": "multi_session_continuity",
+          "question": "What benchmark planning topic did Maya ask to revisit next week?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-006",
+          "conversation_id": "conv-002",
+          "category": "lexical_miss",
+          "question": "Where does Leo keep his portable journal?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-013",
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        {
+          "question_id": "locomo-smoke-q-007",
+          "conversation_id": "conv-003",
+          "category": "gold_ambiguity",
+          "question": "Who did Priya meet at the design review?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-008",
+          "conversation_id": "conv-004",
+          "category": "true_retrieval_failure",
+          "question": "Where is Quinn's emergency access token stored?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-017",
+            "locomo-smoke-memory-016"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        }
+      ]
+    },
+    {
+      "system": "recency",
+      "questions": 8,
+      "recall_any_at_5": 0.75,
+      "recall_any_at_10": 1,
+      "strict_recall_at_5": 0.75,
+      "strict_recall_at_10": 1,
+      "mrr": 0.4698,
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.2
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "mrr": 0.1
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "mrr": 0.125
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.3333
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        }
+      },
+      "question_results": [
+        {
+          "question_id": "locomo-smoke-q-001",
+          "conversation_id": "conv-001",
+          "category": "latest_state_retrieval",
+          "question": "What does Maya use now for local memory?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-003"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 8,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "mrr": 0.125
+        },
+        {
+          "question_id": "locomo-smoke-q-002",
+          "conversation_id": "conv-001",
+          "category": "historical_retrieval",
+          "question": "What did Maya use before SQLite?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-001"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 10,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "mrr": 0.1
+        },
+        {
+          "question_id": "locomo-smoke-q-003",
+          "conversation_id": "conv-001",
+          "category": "speaker_attribution",
+          "question": "Who dislikes chamomile tea according to Maya?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-008"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 3,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.3333
+        },
+        {
+          "question_id": "locomo-smoke-q-004",
+          "conversation_id": "conv-001",
+          "category": "contradiction_supersession",
+          "question": "What drink does Maya currently prefer in the morning?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-006"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 5,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.2
+        },
+        {
+          "question_id": "locomo-smoke-q-005",
+          "conversation_id": "conv-001",
+          "category": "multi_session_continuity",
+          "question": "What benchmark planning topic did Maya ask to revisit next week?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-006",
+          "conversation_id": "conv-002",
+          "category": "lexical_miss",
+          "question": "Where does Leo keep his portable journal?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-013",
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        {
+          "question_id": "locomo-smoke-q-007",
+          "conversation_id": "conv-003",
+          "category": "gold_ambiguity",
+          "question": "Who did Priya meet at the design review?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-015",
+            "locomo-smoke-memory-014"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-008",
+          "conversation_id": "conv-004",
+          "category": "true_retrieval_failure",
+          "question": "Where is Quinn's emergency access token stored?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-017",
+            "locomo-smoke-memory-016"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        }
+      ]
+    },
+    {
+      "system": "bm25",
+      "questions": 8,
+      "recall_any_at_5": 1,
+      "recall_any_at_10": 1,
+      "strict_recall_at_5": 1,
+      "strict_recall_at_10": 1,
+      "mrr": 0.8542,
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.3333
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        }
+      },
+      "question_results": [
+        {
+          "question_id": "locomo-smoke-q-001",
+          "conversation_id": "conv-001",
+          "category": "latest_state_retrieval",
+          "question": "What does Maya use now for local memory?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-003"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-007"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-002",
+          "conversation_id": "conv-001",
+          "category": "historical_retrieval",
+          "question": "What did Maya use before SQLite?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-001"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-007"
+          ],
+          "rank": 3,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.3333
+        },
+        {
+          "question_id": "locomo-smoke-q-003",
+          "conversation_id": "conv-001",
+          "category": "speaker_attribution",
+          "question": "Who dislikes chamomile tea according to Maya?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-008"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-004"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-004",
+          "conversation_id": "conv-001",
+          "category": "contradiction_supersession",
+          "question": "What drink does Maya currently prefer in the morning?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-006"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-007"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        {
+          "question_id": "locomo-smoke-q-005",
+          "conversation_id": "conv-001",
+          "category": "multi_session_continuity",
+          "question": "What benchmark planning topic did Maya ask to revisit next week?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-007"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-006",
+          "conversation_id": "conv-002",
+          "category": "lexical_miss",
+          "question": "Where does Leo keep his portable journal?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011",
+            "locomo-smoke-memory-013"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-007",
+          "conversation_id": "conv-003",
+          "category": "gold_ambiguity",
+          "question": "Who did Priya meet at the design review?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-008",
+          "conversation_id": "conv-004",
+          "category": "true_retrieval_failure",
+          "question": "Where is Quinn's emergency access token stored?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-016",
+            "locomo-smoke-memory-017"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        }
+      ]
+    },
+    {
+      "system": "sqlite-fts5",
+      "questions": 8,
+      "recall_any_at_5": 0.875,
+      "recall_any_at_10": 1,
+      "strict_recall_at_5": 0.875,
+      "strict_recall_at_10": 1,
+      "mrr": 0.75,
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "mrr": 0.1667
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.3333
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        }
+      },
+      "question_results": [
+        {
+          "question_id": "locomo-smoke-q-001",
+          "conversation_id": "conv-001",
+          "category": "latest_state_retrieval",
+          "question": "What does Maya use now for local memory?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-003"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-002",
+          "conversation_id": "conv-001",
+          "category": "historical_retrieval",
+          "question": "What did Maya use before SQLite?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-001"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 3,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.3333
+        },
+        {
+          "question_id": "locomo-smoke-q-003",
+          "conversation_id": "conv-001",
+          "category": "speaker_attribution",
+          "question": "Who dislikes chamomile tea according to Maya?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-008"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        {
+          "question_id": "locomo-smoke-q-004",
+          "conversation_id": "conv-001",
+          "category": "contradiction_supersession",
+          "question": "What drink does Maya currently prefer in the morning?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-006"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 6,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "mrr": 0.1667
+        },
+        {
+          "question_id": "locomo-smoke-q-005",
+          "conversation_id": "conv-001",
+          "category": "multi_session_continuity",
+          "question": "What benchmark planning topic did Maya ask to revisit next week?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-006"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-006",
+          "conversation_id": "conv-002",
+          "category": "lexical_miss",
+          "question": "Where does Leo keep his portable journal?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-007",
+          "conversation_id": "conv-003",
+          "category": "gold_ambiguity",
+          "question": "Who did Priya meet at the design review?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-008",
+          "conversation_id": "conv-004",
+          "category": "true_retrieval_failure",
+          "question": "Where is Quinn's emergency access token stored?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        }
+      ]
+    },
+    {
+      "system": "goncho",
+      "questions": 8,
+      "recall_any_at_5": 1,
+      "recall_any_at_10": 1,
+      "strict_recall_at_5": 1,
+      "strict_recall_at_10": 1,
+      "mrr": 0.8542,
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.3333
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        }
+      },
+      "question_results": [
+        {
+          "question_id": "locomo-smoke-q-001",
+          "conversation_id": "conv-001",
+          "category": "latest_state_retrieval",
+          "question": "What does Maya use now for local memory?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-003"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-002",
+          "conversation_id": "conv-001",
+          "category": "historical_retrieval",
+          "question": "What did Maya use before SQLite?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-001"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 3,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.3333
+        },
+        {
+          "question_id": "locomo-smoke-q-003",
+          "conversation_id": "conv-001",
+          "category": "speaker_attribution",
+          "question": "Who dislikes chamomile tea according to Maya?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-008"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-004",
+          "conversation_id": "conv-001",
+          "category": "contradiction_supersession",
+          "question": "What drink does Maya currently prefer in the morning?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-006"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-010"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 0.5
+        },
+        {
+          "question_id": "locomo-smoke-q-005",
+          "conversation_id": "conv-001",
+          "category": "multi_session_continuity",
+          "question": "What benchmark planning topic did Maya ask to revisit next week?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-001",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-008"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-006",
+          "conversation_id": "conv-002",
+          "category": "lexical_miss",
+          "question": "Where does Leo keep his portable journal?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-007",
+          "conversation_id": "conv-003",
+          "category": "gold_ambiguity",
+          "question": "Who did Priya meet at the design review?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        },
+        {
+          "question_id": "locomo-smoke-q-008",
+          "conversation_id": "conv-004",
+          "category": "true_retrieval_failure",
+          "question": "Where is Quinn's emergency access token stored?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "mrr": 1
+        }
+      ]
+    }
+  ]
+}

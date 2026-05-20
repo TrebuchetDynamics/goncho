@@ -3,8 +3,10 @@ LONGMEMEVAL_SHA256 := d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678
 LONGMEMEVAL_DATE := $(shell date -u +%Y-%m-%d)
 BENCH_SYSTEMS := random bm25 sqlite-fts5 goncho-no-rank goncho
 LONGMEMEVAL_RUNS ?= 20
+LOCOMO_SMOKE_MEMORIES := ./cmd/goncho-bench/testdata/locomo-smoke/memories.jsonl
+LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jsonl
 
-.PHONY: bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s
+.PHONY: bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo
 
 bench-longmemeval-s-smoke:
 	@mkdir -p artifacts/bench-smoke docs/benchmarks/results docs/benchmarks/failures
@@ -40,3 +42,16 @@ bench-longmemeval-s: prepare-longmemeval-s
 			--limit 10 \
 			--runs $(LONGMEMEVAL_RUNS); \
 	done
+
+bench-locomo-smoke:
+	@mkdir -p docs/benchmarks/results docs/benchmarks/failures
+	go run ./cmd/goncho-bench \
+		--locomo-memories $(LOCOMO_SMOKE_MEMORIES) \
+		--locomo-questions $(LOCOMO_SMOKE_QUESTIONS) \
+		--out ./docs/benchmarks/results/locomo-smoke-goncho.json \
+		--failures ./docs/benchmarks/failures/locomo-smoke-categories.jsonl \
+		--locomo-md-out ./docs/benchmarks/locomo-smoke.md
+
+bench-locomo:
+	@echo "Full LOCOMO benchmark requires pinned dataset preparation. Run the LOCOMO full dataset slice."
+	@exit 1
