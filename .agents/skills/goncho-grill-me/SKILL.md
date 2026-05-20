@@ -1,6 +1,6 @@
 ---
 name: goncho-grill-me
-description: Stress-tests Goncho plans against the metaanalysis, feature matrix, trust model, and TDD requirements. Use when user says grill me, stress-test this, challenge this plan, or asks whether a Goncho design is ready to implement.
+description: Use when stress-testing Goncho plans, challenging Goncho designs, checking readiness to implement, or responding to user requests to grill me.
 ---
 
 # Goncho Grill Me
@@ -23,7 +23,19 @@ Before grilling, identify:
 - public contract or API surface,
 - smallest TDD slice.
 
-Use `goncho-tdd-implementation` before turning answers into code.
+**REQUIRED SUB-SKILL:** Use `goncho-tdd-implementation` before turning answers into code.
+
+## Quick Reference
+
+| Need | Ask or inspect |
+| --- | --- |
+| Capability fit | Which metaanalysis gap or roadmap item this closes |
+| Trust model | Evidence, scope, time, confidence, authority, lifecycle state |
+| User-visible behavior | Search, context, review, audit, tool, or API change |
+| Failure mode | Stale, conflicting, leaking, noisy, or repeated-bad-memory case |
+| TDD proof | First failing test and why it fails now |
+| Minimal slice | Smallest shippable vertical behavior |
+| Non-goals | Architecture or phase work explicitly excluded |
 
 ## Grill Sequence
 
@@ -45,6 +57,14 @@ Recommended answer: <concrete answer or default>
 
 Stop when each answer produces a small implementation contract that can be tested.
 
+## Done Criteria
+
+- relevant code/docs were inspected before asking answerable questions,
+- each question is single-focus and includes a recommended answer,
+- final slice has one failing test name and likely touched files,
+- implementation is not started during grilling,
+- approval is requested before TDD begins.
+
 ## Approval Gate
 
 Do not implement during grilling. End with:
@@ -54,6 +74,15 @@ Do not implement during grilling. End with:
 - files likely touched,
 - risks,
 - explicit ask for approval to start TDD.
+
+## Common Mistakes
+
+| Mistake | Fix |
+| --- | --- |
+| Asking several broad questions at once | Ask one decision-driving question at a time |
+| Asking what the repo can answer | Inspect files/tests first and cite the evidence |
+| Treating schema as feature completion | Demand user-visible behavior and a failing contract test |
+| Letting one slice become a whole phase | Name non-goals and choose the smallest vertical proof |
 
 ## Avoid
 

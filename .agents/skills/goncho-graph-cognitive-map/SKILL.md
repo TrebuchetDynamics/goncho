@@ -11,13 +11,23 @@ Move Goncho beyond similar-text recall into relationship-aware orientation.
 
 ## Required TDD Shape
 
-Use `goncho-tdd-implementation` first. Every graph slice needs a failing test that proves one observable recall improvement:
+**REQUIRED SUB-SKILL:** Use `goncho-tdd-implementation` first. Every graph slice needs a failing test that proves one observable recall improvement:
 
 - entity extraction creates conservative nodes or relations,
 - relation candidates are pending until accepted,
 - graph expansion finds a multi-hop fact that lexical search alone would miss,
 - cognitive-map branch gating suppresses unrelated memories,
 - context packs cite the relation path used.
+
+## Quick Reference
+
+| Need | Prove with |
+| --- | --- |
+| Extract entities | Conservative nodes/relations are created with evidence IDs |
+| Review relation candidates | Candidate state stays pending until accepted |
+| Improve recall | Multi-hop graph path finds a fact lexical search misses |
+| Gate context | Low-activation or unrelated branches stay out of packs |
+| Explain retrieval | Result cites relation path and provenance |
 
 ## Minimal Contract Examples
 
@@ -43,6 +53,15 @@ Good test names:
 - relation provenance is visible,
 - unrelated branches stay out of context,
 - `go test ./...` passes.
+
+## Common Mistakes
+
+| Mistake | Fix |
+| --- | --- |
+| Building topology structs before recall uses them | Start from a failing recall/context test |
+| Extracting speculative relations as truth | Keep candidates pending and evidence-backed |
+| Returning graph-expanded memories without explanation | Include relation path citations in the result |
+| Making graph required for simple local recall | Keep lexical/local memory path working without graph data |
 
 ## Avoid
 

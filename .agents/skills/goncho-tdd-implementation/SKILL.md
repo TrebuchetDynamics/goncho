@@ -24,6 +24,17 @@ Before coding, identify:
 - the public API or internal contract that should prove it,
 - the smallest test that fails for the right reason.
 
+## Quick Reference
+
+| Step | Required evidence |
+| --- | --- |
+| Pick slice | Metaanalysis/roadmap gap and current implementation status |
+| RED | Narrow test fails for the expected missing behavior |
+| GREEN | Minimal implementation makes the narrow test pass |
+| Full verify | `go test ./...` passes or blocker is documented |
+| Docs/status | README/docs updated if public behavior changed |
+| Commit | One feature slice named in commit message |
+
 ## TDD Loop
 
 1. Add or update a test first.
@@ -56,6 +67,16 @@ A feature is done only when:
 - `go test ./...` passes,
 - docs or README status are updated if public behavior changed,
 - commit message names the feature slice.
+
+## Common Mistakes
+
+| Mistake | Fix |
+| --- | --- |
+| Writing schema or structs before a failing behavior test | Delete/ignore the draft and start from RED |
+| Testing only storage for a user-visible feature | Add API, search, context, tool, or lifecycle behavior proof |
+| Claiming a phase complete from one internal piece | Report the exact slice and remaining gaps |
+| Letting refactor expand behavior | Keep refactors green and add a new RED for new behavior |
+| Ignoring unrelated failing tests | Document blocker with exact output before claiming partial completion |
 
 ## Avoid
 
