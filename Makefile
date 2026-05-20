@@ -72,19 +72,27 @@ bench-locomo: prepare-locomo
 		--locomo-md-out ./docs/benchmarks/locomo-$(LOCOMO_DATE).md
 
 bench-locomo-backends-smoke:
-	@mkdir -p docs/benchmarks/results docs/benchmarks/failures
+	@mkdir -p artifacts/locomo-backends docs/benchmarks/results docs/benchmarks/failures
+	python3 ./scripts/bench_agentmemory_locomo.py --memories $(LOCOMO_SMOKE_MEMORIES) --questions $(LOCOMO_SMOKE_QUESTIONS) --out ./artifacts/locomo-backends/agentmemory-smoke.jsonl
+	python3 ./scripts/bench_mem0_locomo.py --memories $(LOCOMO_SMOKE_MEMORIES) --questions $(LOCOMO_SMOKE_QUESTIONS) --out ./artifacts/locomo-backends/mem0-smoke.jsonl
 	go run ./cmd/goncho-bench \
 		--locomo-memories $(LOCOMO_SMOKE_MEMORIES) \
 		--locomo-questions $(LOCOMO_SMOKE_QUESTIONS) \
+		--locomo-agentmemory-results ./artifacts/locomo-backends/agentmemory-smoke.jsonl \
+		--locomo-mem0-results ./artifacts/locomo-backends/mem0-smoke.jsonl \
 		--locomo-backend-comparison-json-out ./docs/benchmarks/results/locomo-backend-comparison-smoke.json \
 		--locomo-backend-comparison-failures-out ./docs/benchmarks/failures/locomo-backend-comparison-smoke.jsonl \
 		--locomo-backend-comparison-md-out ./docs/benchmarks/locomo-backend-comparison-smoke.md
 
 bench-locomo-backends: prepare-locomo
-	@mkdir -p docs/benchmarks/results docs/benchmarks/failures
+	@mkdir -p artifacts/locomo-backends docs/benchmarks/results docs/benchmarks/failures
+	python3 ./scripts/bench_agentmemory_locomo.py --memories $(LOCOMO_MEMORIES) --questions $(LOCOMO_QUESTIONS) --out ./artifacts/locomo-backends/agentmemory.jsonl
+	python3 ./scripts/bench_mem0_locomo.py --memories $(LOCOMO_MEMORIES) --questions $(LOCOMO_QUESTIONS) --out ./artifacts/locomo-backends/mem0.jsonl
 	go run ./cmd/goncho-bench \
 		--locomo-memories $(LOCOMO_MEMORIES) \
 		--locomo-questions $(LOCOMO_QUESTIONS) \
+		--locomo-agentmemory-results ./artifacts/locomo-backends/agentmemory.jsonl \
+		--locomo-mem0-results ./artifacts/locomo-backends/mem0.jsonl \
 		--locomo-backend-comparison-json-out ./docs/benchmarks/results/locomo-backend-comparison.json \
 		--locomo-backend-comparison-failures-out ./docs/benchmarks/failures/locomo-backend-comparison.jsonl \
 		--locomo-backend-comparison-md-out ./docs/benchmarks/locomo-backend-comparison.md

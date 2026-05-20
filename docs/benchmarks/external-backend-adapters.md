@@ -1,0 +1,115 @@
+# LOCOMO External Backend Adapters
+
+The LOCOMO backend harness keeps scoring centralized in Goncho's Go benchmark runner. External adapters may only supply retrieval results with stable memory IDs.
+
+## Contract
+
+Adapter input:
+
+- `data/locomo/memories.jsonl`
+- `data/locomo/questions.jsonl`
+
+Adapter output JSONL, one comparable row per question:
+
+```json
+{
+  "backend": "mem0",
+  "question_id": "locomo-conv-41-q-001",
+  "comparable": true,
+  "results": [
+    {
+      "memory_id": "locomo-conv-41-D1-1",
+      "score": 0.123,
+      "backend_raw_id": "backend-native-id",
+      "metadata": { "memory_id": "locomo-conv-41-D1-1" }
+    }
+  ]
+}
+```
+
+If the backend cannot preserve stable IDs, the adapter must fail closed:
+
+```json
+{
+  "backend": "agentmemory",
+  "comparable": false,
+  "reason": "not comparable: stable memory IDs unavailable"
+}
+```
+
+## Non-negotiable scoring rules
+
+- Retrieval only.
+- No LLM judge.
+- No answer scoring.
+- Same LOCOMO converted JSONL.
+- Same gold IDs.
+- Centralized Go scoring only.
+- No Goncho ranking changes.
+- No gold leakage.
+- No content-only matching unless collision-safe.
+
+LOCOMO contains duplicate and near-duplicate content, including repeated content across conversations. Stable IDs must come from returned metadata, an external ID field, or another verified collision-safe key.
+
+## Current adapter status
+
+| Backend | Version / source inspected | Comparable | ID strategy | Reason |
+| --- | --- | --- | --- | --- |
+| Goncho | local Go module | yes | Native `memory_id` mapping in harness | Local deterministic adapter. |
+| BM25 | local Go harness | yes | Native LOCOMO `memory_id` | Local deterministic lexical baseline. |
+| SQLite FTS5 | local Go SQLite FTS5 | yes | Native LOCOMO `memory_id` column | Local deterministic lexical baseline. |
+| agentmemory | `@agentmemory/agentmemory 0.9.20`, local source under `docs/opensource-memory-systems/agentmemory` | no | Tried public memory/search surfaces | `memory_save` generates internal `mem_*` IDs; public tool schema has no `external_id` or metadata passthrough that search returns. |
+| mem0 | Python `3.12.3`; package not installed locally | no | Not executed | `mem0`/`mem0ai` is not installed in this environment; no stable-ID run can be produced. |
+
+## Setup commands
+
+agentmemory candidate setup:
+
+```bash
+npm install -g @agentmemory/agentmemory@0.9.20
+agentmemory
+python3 scripts/bench_agentmemory_locomo.py --capability
+python3 scripts/bench_agentmemory_locomo.py --smoke
+```
+
+mem0 candidate setup:
+
+```bash
+pip install mem0ai
+# configure local vector store/embedder per upstream mem0 docs
+python3 scripts/bench_mem0_locomo.py --capability
+python3 scripts/bench_mem0_locomo.py --smoke
+```
+
+## Smoke fixtures
+
+Both adapter scripts include a duplicate-content smoke check:
+
+```bash
+python3 scripts/bench_agentmemory_locomo.py --smoke
+python3 scripts/bench_mem0_locomo.py --smoke
+```
+
+The smoke fixture includes the same content under different `memory_id` values. Content-only matching is therefore rejected; metadata/external-ID return is required.
+
+## Harness integration
+
+The Go harness can consume external adapter JSONL outputs:
+
+```bash
+go run ./cmd/goncho-bench \
+  --locomo-memories ./data/locomo/memories.jsonl \
+  --locomo-questions ./data/locomo/questions.jsonl \
+  --locomo-agentmemory-results ./artifacts/locomo-backends/agentmemory.jsonl \
+  --locomo-mem0-results ./artifacts/locomo-backends/mem0.jsonl \
+  --locomo-backend-comparison-json-out ./docs/benchmarks/results/locomo-backend-comparison.json \
+  --locomo-backend-comparison-failures-out ./docs/benchmarks/failures/locomo-backend-comparison.jsonl \
+  --locomo-backend-comparison-md-out ./docs/benchmarks/locomo-backend-comparison.md
+```
+
+Make targets run the probes first, then central scoring:
+
+```bash
+make bench-locomo-backends-smoke
+make bench-locomo-backends
+```

@@ -37,7 +37,7 @@ func TestLocomoBackendComparisonUsesStableMemoryIDs(t *testing.T) {
 			{QuestionID: "q1", ConversationID: "c1", Question: "Where is the orchid marker?", GoldMemoryIDs: []string{"m1"}, Category: "single_hop_retrieval"},
 		},
 	}
-	entry, err := evaluateLocomoBackend(ctx, data, "bm25", 10)
+	entry, err := evaluateLocomoBackend(ctx, data, "bm25", 10, config{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,6 +49,41 @@ func TestLocomoBackendComparisonUsesStableMemoryIDs(t *testing.T) {
 	}
 	if entry.RecallAnyAt5 != 1 || entry.StrictRecallAt5 != 1 || entry.MRR != 1 {
 		t.Fatalf("metrics = any5 %.2f strict5 %.2f mrr %.2f, want all 1", entry.RecallAnyAt5, entry.StrictRecallAt5, entry.MRR)
+	}
+}
+
+func TestLocomoBackendComparisonConsumesExternalStableIDJSONL(t *testing.T) {
+	ctx := context.Background()
+	data := locomoDataset{
+		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", Content: "duplicate"}, {MemoryID: "m2", ConversationID: "c2", Content: "duplicate"}},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "duplicate", GoldMemoryIDs: []string{"m1"}, Category: "single_hop_retrieval"}},
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "external.jsonl")
+	writeTestFile(t, path, `{"backend":"mem0","question_id":"q1","comparable":true,"results":[{"memory_id":"m1","score":0.9,"backend_raw_id":"raw-1","metadata":{"memory_id":"m1"}}]}
+`)
+	entry, err := evaluateLocomoBackend(ctx, data, "mem0", 10, config{LocomoMem0Results: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !entry.Comparable || entry.RecallAnyAt5 != 1 || entry.MRR != 1 {
+		t.Fatalf("entry = %+v, want comparable perfect stable-ID score", entry)
+	}
+}
+
+func TestLocomoBackendComparisonConsumesExternalNotComparableJSONL(t *testing.T) {
+	ctx := context.Background()
+	data := locomoDataset{Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "q", GoldMemoryIDs: []string{"m1"}}}}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "external.jsonl")
+	writeTestFile(t, path, `{"backend":"agentmemory","comparable":false,"reason":"no stable ids"}
+`)
+	entry, err := evaluateLocomoBackend(ctx, data, "agentmemory", 10, config{LocomoAgentMemoryResults: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry.Comparable || !strings.Contains(entry.NotComparableReason, "stable ids") {
+		t.Fatalf("entry = %+v, want not comparable reason", entry)
 	}
 }
 

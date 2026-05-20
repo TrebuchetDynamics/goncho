@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -69,6 +70,23 @@ type locomoBackendComparisonEntry struct {
 	SetupNotes          []string               `json:"setup_notes,omitempty"`
 }
 
+type externalLocomoAdapterRow struct {
+	Backend             string                 `json:"backend"`
+	QuestionID          string                 `json:"question_id,omitempty"`
+	Comparable          bool                   `json:"comparable"`
+	NotComparableReason string                 `json:"not_comparable_reason,omitempty"`
+	Reason              string                 `json:"reason,omitempty"`
+	Results             []externalLocomoResult `json:"results,omitempty"`
+	SetupNotes          []string               `json:"setup_notes,omitempty"`
+}
+
+type externalLocomoResult struct {
+	MemoryID     string         `json:"memory_id"`
+	Score        float64        `json:"score"`
+	BackendRawID string         `json:"backend_raw_id,omitempty"`
+	Metadata     map[string]any `json:"metadata,omitempty"`
+}
+
 func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	if strings.TrimSpace(cfg.LocomoMemoriesPath) == "" || strings.TrimSpace(cfg.LocomoQuestionsPath) == "" {
 		return fmt.Errorf("goncho-bench: --locomo-memories and --locomo-questions are required for backend comparison")
@@ -80,7 +98,7 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	backends := []string{"goncho", "bm25", "sqlite-fts5", "agentmemory", "mem0"}
 	entries := make([]locomoBackendComparisonEntry, 0, len(backends))
 	for _, name := range backends {
-		entry, err := evaluateLocomoBackend(ctx, data, name, 10)
+		entry, err := evaluateLocomoBackend(ctx, data, name, 10, cfg)
 		if err != nil {
 			return fmt.Errorf("goncho-bench: backend %s: %w", name, err)
 		}
@@ -115,7 +133,10 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	return writeLocomoBackendComparisonMarkdown(cfg.LocomoBackendComparisonMD, report, cfg.LocomoBackendComparisonJSON, cfg.LocomoBackendComparisonFailures)
 }
 
-func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string, topK int) (locomoBackendComparisonEntry, error) {
+func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string, topK int, cfg config) (locomoBackendComparisonEntry, error) {
+	if path := externalLocomoResultsPath(name, cfg); path != "" {
+		return evaluateExternalLocomoResults(data, name, path)
+	}
 	backend, unsupported, err := newLocomoBackend(name)
 	if err != nil {
 		return locomoBackendComparisonEntry{}, err
@@ -156,6 +177,95 @@ func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string,
 		InsertLatencyMs: insertLatency, SearchLatencyMs: searchLatency, RSSBytes: currentRSSBytes(),
 		FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotesForBackend(name),
 	}, nil
+}
+
+func externalLocomoResultsPath(name string, cfg config) string {
+	switch name {
+	case "agentmemory":
+		return strings.TrimSpace(cfg.LocomoAgentMemoryResults)
+	case "mem0":
+		return strings.TrimSpace(cfg.LocomoMem0Results)
+	default:
+		return ""
+	}
+}
+
+func evaluateExternalLocomoResults(data locomoDataset, name, path string) (locomoBackendComparisonEntry, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return locomoBackendComparisonEntry{}, fmt.Errorf("read external %s results: %w", name, err)
+	}
+	defer file.Close()
+	rowsByQuestion := map[string]externalLocomoAdapterRow{}
+	statusReason := ""
+	setupNotes := setupNotesForBackend(name)
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 1024*1024), 32*1024*1024)
+	lineNo := 0
+	for scanner.Scan() {
+		lineNo++
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		var row externalLocomoAdapterRow
+		if err := json.Unmarshal([]byte(line), &row); err != nil {
+			return locomoBackendComparisonEntry{}, fmt.Errorf("decode external %s results line %d: %w", name, lineNo, err)
+		}
+		if row.Backend != "" && row.Backend != name {
+			return locomoBackendComparisonEntry{}, fmt.Errorf("external results backend mismatch line %d: got %q want %q", lineNo, row.Backend, name)
+		}
+		if len(row.SetupNotes) > 0 {
+			setupNotes = row.SetupNotes
+		}
+		if !row.Comparable {
+			if row.NotComparableReason != "" {
+				statusReason = row.NotComparableReason
+			} else if row.Reason != "" {
+				statusReason = row.Reason
+			}
+			continue
+		}
+		if row.QuestionID == "" {
+			return locomoBackendComparisonEntry{}, fmt.Errorf("external %s comparable row line %d missing question_id", name, lineNo)
+		}
+		if _, exists := rowsByQuestion[row.QuestionID]; exists {
+			return locomoBackendComparisonEntry{}, fmt.Errorf("external %s duplicate question_id %q", name, row.QuestionID)
+		}
+		rowsByQuestion[row.QuestionID] = row
+	}
+	if err := scanner.Err(); err != nil {
+		return locomoBackendComparisonEntry{}, fmt.Errorf("scan external %s results: %w", name, err)
+	}
+	if len(rowsByQuestion) == 0 {
+		if statusReason == "" {
+			statusReason = externalBackendNotComparableReason(name)
+		}
+		return locomoBackendComparisonEntry{Backend: name, Comparable: false, NotComparableReason: statusReason, SetupNotes: setupNotes}, nil
+	}
+	results := make([]locomoQuestionResult, 0, len(data.Questions))
+	for _, q := range data.Questions {
+		row, ok := rowsByQuestion[q.QuestionID]
+		if !ok {
+			return locomoBackendComparisonEntry{}, fmt.Errorf("external %s missing question_id %q", name, q.QuestionID)
+		}
+		ids := make([]string, 0, len(row.Results))
+		seen := map[string]struct{}{}
+		for _, hit := range row.Results {
+			id := strings.TrimSpace(hit.MemoryID)
+			if id == "" {
+				return locomoBackendComparisonEntry{}, fmt.Errorf("external %s question %s returned empty memory_id", name, q.QuestionID)
+			}
+			if _, exists := seen[id]; exists {
+				continue
+			}
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
+		results = append(results, scoreLocomoQuestion(q, ids))
+	}
+	summary := summarizeLocomoSystem(name, results)
+	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, MRR: summary.MRR, FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotes}, nil
 }
 
 func newLocomoBackend(name string) (MemoryBackend, string, error) {
@@ -492,7 +602,7 @@ func locomoFailureCategories(results []locomoQuestionResult) map[string]int {
 func setupNotesForBackend(name string) []string {
 	switch name {
 	case "agentmemory":
-		return []string{"External Python probe: scripts/bench_agentmemory_locomo.py --capability.", "Exact package version used in this run: none; backend marked not comparable before scoring.", "Install candidate: package per upstream agentmemory docs; adapter is comparable only if retrieval returns caller-supplied memory_id unchanged.", "Current status: not comparable in this harness until a stable-ID local adapter is wired."}
+		return []string{"External Python probe: scripts/bench_agentmemory_locomo.py --capability.", "Source inspected: @agentmemory/agentmemory 0.9.20 from docs/opensource-memory-systems/agentmemory/package.json; no Python package is imported.", "Install candidate: npm install -g @agentmemory/agentmemory@0.9.20; adapter is comparable only if retrieval returns caller-supplied memory_id unchanged.", "Current status: not comparable because public memory_save/REST surfaces generate internal mem_* IDs and do not return external_id metadata from search."}
 	case "mem0":
 		return []string{"External Python probe: scripts/bench_mem0_locomo.py --capability.", "Exact package version used in this run: none; backend marked not comparable before scoring.", "Install candidate: pip install mem0ai, with local/vector dependencies configured by upstream mem0 docs.", "Current status: not comparable in this harness until search results return caller-supplied memory_id unchanged without LLM answer scoring."}
 	default:
@@ -602,7 +712,7 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	}
 	b.WriteString("\n## Setup notes\n\n")
 	b.WriteString("- Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")
-	b.WriteString("- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Comparable only after a local adapter can reset state, insert caller-supplied `memory_id`, and return that same ID from retrieval.\n")
+	b.WriteString("- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Source inspected: `@agentmemory/agentmemory 0.9.20` from `docs/opensource-memory-systems/agentmemory/package.json`; no Python package is imported. Comparable only after a local adapter can reset state, insert caller-supplied `memory_id`, and return that same ID from retrieval.\n")
 	b.WriteString("- mem0 probe: `python3 scripts/bench_mem0_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Candidate install: `pip install mem0ai` plus upstream local vector-store dependencies. Comparable only after configured local retrieval can return caller-supplied `memory_id` without answer-generation scoring.\n")
 	b.WriteString("\n## Interpretation\n\nBackends marked not comparable are excluded from score claims until they implement the `MemoryBackend` contract and return the same stable `memory_id` values that were inserted. This keeps the arena fair and prevents answer-generation or LLM-judge effects from leaking into retrieval metrics.\n")
 	return os.WriteFile(path, []byte(b.String()), 0o644)

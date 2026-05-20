@@ -41,6 +41,8 @@ type config struct {
 	LocomoBackendComparisonJSON     string
 	LocomoBackendComparisonMD       string
 	LocomoBackendComparisonFailures string
+	LocomoAgentMemoryResults        string
+	LocomoMem0Results               string
 }
 
 type dataset struct {
@@ -131,6 +133,8 @@ func main() {
 	flag.StringVar(&cfg.LocomoBackendComparisonJSON, "locomo-backend-comparison-json-out", "", "JSON output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoBackendComparisonMD, "locomo-backend-comparison-md-out", "", "Markdown output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoBackendComparisonFailures, "locomo-backend-comparison-failures-out", "", "JSONL failure output path for LOCOMO external-backend adapter comparison")
+	flag.StringVar(&cfg.LocomoAgentMemoryResults, "locomo-agentmemory-results", "", "optional JSONL results from scripts/bench_agentmemory_locomo.py")
+	flag.StringVar(&cfg.LocomoMem0Results, "locomo-mem0-results", "", "optional JSONL results from scripts/bench_mem0_locomo.py")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()

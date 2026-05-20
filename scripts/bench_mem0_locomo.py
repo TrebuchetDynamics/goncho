@@ -1,44 +1,153 @@
 #!/usr/bin/env python3
-"""Probe/placeholder for LOCOMO mem0 backend comparison.
+"""LOCOMO mem0 stable-ID adapter probe.
 
-The Go benchmark harness owns scoring. This script intentionally fails closed until
-a mem0 integration can prove it preserves caller-supplied memory_id values through
-retrieval results without answer-generation scoring.
+The Go benchmark harness owns scoring. This script emits comparable rows only if
+a local mem0 installation can return caller-supplied LOCOMO memory_id values from
+retrieval results. In this environment mem0 is not installed; the script fails
+closed with a reproducible not-comparable reason.
 """
+from __future__ import annotations
+
 import argparse
+import importlib.metadata
 import importlib.util
 import json
+import platform
+from collections import defaultdict
+from pathlib import Path
+from typing import Any
+
+BACKEND = "mem0"
+REASON_PACKAGE_MISSING = "not comparable: Python package mem0/mem0ai is not installed in this environment"
+REASON_STABLE_ID = (
+    "not comparable: mem0 adapter has not proven stable caller-supplied memory_id round-trip; "
+    "content-only matching is rejected because LOCOMO contains duplicate content"
+)
 
 
-def capability() -> dict:
-    installed = importlib.util.find_spec("mem0") is not None
+def installed_version() -> str | None:
+    for dist in ("mem0ai", "mem0"):
+        try:
+            return f"{dist} {importlib.metadata.version(dist)}"
+        except importlib.metadata.PackageNotFoundError:
+            continue
+    return None
+
+
+def package_status() -> dict[str, Any]:
     return {
-        "backend": "mem0",
-        "installed": installed,
+        "python_version": platform.python_version(),
+        "package_importable": importlib.util.find_spec("mem0") is not None,
+        "installed_version": installed_version(),
+        "install_commands": [
+            "pip install mem0ai",
+            "configure local vector store/embedder per upstream mem0 docs",
+        ],
+    }
+
+
+def capability() -> dict[str, Any]:
+    version = installed_version()
+    reason = REASON_STABLE_ID if version else REASON_PACKAGE_MISSING
+    return {
+        "backend": BACKEND,
         "comparable": False,
-        "reason": "not comparable: no stable-memory-id LOCOMO adapter is wired for mem0; scoring requires retrieval results to return the inserted memory_id exactly",
+        "reason": reason,
+        "package": package_status(),
+        "id_strategy": "metadata/external_id passthrough required; no successful local stable-ID run recorded",
         "required_contract": {
             "reset": "clear local benchmark state",
             "insert": "insert memory_id, content, metadata without rewriting memory_id",
             "search": "return ranked results containing the original memory_id and numeric score",
         },
-        "install_notes": [
-            "Candidate package: pip install mem0ai, plus local vector-store dependencies required by upstream mem0 docs.",
-            "Use retrieval APIs only; do not score generated answers.",
-            "Wire this script only after stable memory IDs are exposed in search results.",
-        ],
     }
+
+
+def load_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+
+def content_collision_report(memories: list[dict[str, Any]]) -> dict[str, Any]:
+    by_key: dict[tuple[str, str], list[str]] = defaultdict(list)
+    by_content: dict[str, list[str]] = defaultdict(list)
+    for m in memories:
+        mid = str(m.get("memory_id", ""))
+        content = str(m.get("content", ""))
+        conv = str(m.get("conversation_id", ""))
+        by_key[(conv, content)].append(mid)
+        by_content[content].append(mid)
+    duplicate_content = {k: v for k, v in by_content.items() if len(v) > 1}
+    duplicate_composite = {f"{k[0]}\u241f{k[1]}": v for k, v in by_key.items() if len(v) > 1}
+    return {
+        "duplicate_content_count": len(duplicate_content),
+        "duplicate_conversation_content_count": len(duplicate_composite),
+        "collision_safe_content_only": len(duplicate_content) == 0,
+        "collision_safe_conversation_content": len(duplicate_composite) == 0,
+    }
+
+
+def extract_memory_id_from_hit(hit: dict[str, Any]) -> str:
+    for key in ("memory_id", "external_id", "id"):
+        value = hit.get(key)
+        if isinstance(value, str) and value.startswith("locomo-"):
+            return value
+    metadata = hit.get("metadata") or {}
+    if isinstance(metadata, dict):
+        for key in ("memory_id", "external_id", "locomo_memory_id"):
+            value = metadata.get(key)
+            if isinstance(value, str):
+                return value
+    return ""
+
+
+def write_not_comparable(out: Path | None, memories: Path | None = None, questions: Path | None = None) -> None:
+    row = capability()
+    if memories and memories.exists():
+        row["collision_check"] = content_collision_report(load_jsonl(memories))
+    if questions and questions.exists():
+        row["question_count"] = len(load_jsonl(questions))
+    line = json.dumps(row, sort_keys=True)
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(line + "\n", encoding="utf-8")
+    else:
+        print(line)
+
+
+def smoke() -> int:
+    fixture = [
+        {"memory_id": "m1", "conversation_id": "c1", "content": "duplicate text"},
+        {"memory_id": "m2", "conversation_id": "c2", "content": "duplicate text"},
+        {"memory_id": "m3", "conversation_id": "c1", "content": "unique text"},
+    ]
+    report = content_collision_report(fixture)
+    metadata_hit = {"id": "backend-raw", "metadata": {"memory_id": "m1"}}
+    ok = report["collision_safe_content_only"] is False and extract_memory_id_from_hit(metadata_hit) == "m1"
+    print(json.dumps({"backend": BACKEND, "smoke": ok, "comparable": False, "reason": capability()["reason"], "collision_check": report, "package": package_status()}, indent=2, sort_keys=True))
+    return 0 if ok else 1
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--capability", action="store_true", help="emit adapter capability JSON")
+    parser.add_argument("--capability", action="store_true")
+    parser.add_argument("--smoke", action="store_true")
+    parser.add_argument("--memories", type=Path)
+    parser.add_argument("--questions", type=Path)
+    parser.add_argument("--out", type=Path)
     args = parser.parse_args()
+    if args.smoke:
+        return smoke()
     if args.capability:
         print(json.dumps(capability(), indent=2, sort_keys=True))
         return 0
-    print(json.dumps(capability(), indent=2, sort_keys=True))
-    return 2
+    write_not_comparable(args.out, args.memories, args.questions)
+    return 0
 
 
 if __name__ == "__main__":

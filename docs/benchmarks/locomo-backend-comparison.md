@@ -24,16 +24,16 @@ This is a benchmark adapter suite, not a marketing dunk. It compares retrieval b
 
 | Backend | Comparable | recall_any@5 | recall_any@10 | strict@5 | strict@10 | MRR | Search latency ms | Notes |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| `goncho` | true | 60.14% | 67.91% | 51.16% | 57.67% | 46.89% | 17777 | Local deterministic adapter in cmd/goncho-bench. |
-| `bm25` | true | 60.14% | 68.06% | 51.21% | 57.92% | 46.91% | 12084 | Local deterministic adapter in cmd/goncho-bench. |
-| `sqlite-fts5` | true | 49.24% | 56.31% | 42.03% | 48.28% | 38.17% | 7022 | Local deterministic adapter in cmd/goncho-bench. |
-| `agentmemory` | false | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0 | not comparable: no stable-memory-id LOCOMO adapter is wired for agentmemory; scoring requires search results to return the inserted memory_id exactly |
-| `mem0` | false | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0 | not comparable: no stable-memory-id LOCOMO adapter is wired for mem0; scoring requires search results to return the inserted memory_id exactly |
+| `goncho` | true | 60.14% | 67.91% | 51.16% | 57.67% | 46.89% | 18180 | Local deterministic adapter in cmd/goncho-bench. |
+| `bm25` | true | 60.14% | 68.11% | 51.21% | 57.97% | 46.91% | 12567 | Local deterministic adapter in cmd/goncho-bench. |
+| `sqlite-fts5` | true | 49.24% | 56.31% | 42.03% | 48.28% | 38.17% | 6792 | Local deterministic adapter in cmd/goncho-bench. |
+| `agentmemory` | false | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0 | not comparable: agentmemory memory_save/REST surfaces generate internal mem_* IDs and the public tool schema has no external_id or metadata passthrough that search returns; content-only matching is rejected because LOCOMO contains duplicate content |
+| `mem0` | false | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0 | not comparable: Python package mem0/mem0ai is not installed in this environment |
 
 ## Setup notes
 
 - Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.
-- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Comparable only after a local adapter can reset state, insert caller-supplied `memory_id`, and return that same ID from retrieval.
+- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Source inspected: `@agentmemory/agentmemory 0.9.20` from `docs/opensource-memory-systems/agentmemory/package.json`; no Python package is imported. Comparable only after a local adapter can reset state, insert caller-supplied `memory_id`, and return that same ID from retrieval.
 - mem0 probe: `python3 scripts/bench_mem0_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Candidate install: `pip install mem0ai` plus upstream local vector-store dependencies. Comparable only after configured local retrieval can return caller-supplied `memory_id` without answer-generation scoring.
 
 ## Interpretation
