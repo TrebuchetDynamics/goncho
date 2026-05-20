@@ -20,6 +20,7 @@ type config struct {
 	OutPath      string
 	DatabasePath string
 	Limit        int
+	Runs         int
 }
 
 type dataset struct {
@@ -59,6 +60,7 @@ type BenchmarkReport struct {
 	Dataset       string                    `json:"dataset"`
 	MemoryCount   int                       `json:"memory_count"`
 	QuestionCount int                       `json:"question_count"`
+	Runs          int                       `json:"runs"`
 	RecallAt5     float64                   `json:"recall_at_5"`
 	RecallAt10    float64                   `json:"recall_at_10"`
 	MRR           float64                   `json:"mrr"`
@@ -82,6 +84,7 @@ func main() {
 	flag.StringVar(&cfg.OutPath, "out", "", "JSON report output path")
 	flag.StringVar(&cfg.DatabasePath, "db", "", "SQLite database path; defaults to a temp file")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
+	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
 	if err := run(context.Background(), cfg); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -96,38 +99,70 @@ func run(ctx context.Context, cfg config) error {
 	if cfg.Limit <= 0 {
 		cfg.Limit = 10
 	}
+	if cfg.Runs <= 0 {
+		cfg.Runs = 1
+	}
 	data, err := loadDataset(cfg.DatasetPath)
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(cfg.DatabasePath) == "" {
-		dir, err := os.MkdirTemp("", "goncho-bench-*")
-		if err != nil {
-			return fmt.Errorf("goncho-bench: create temp db dir: %w", err)
+	reports := make([]BenchmarkReport, 0, cfg.Runs)
+	for i := 0; i < cfg.Runs; i++ {
+		runCfg := cfg
+		if strings.TrimSpace(runCfg.DatabasePath) == "" || cfg.Runs > 1 {
+			dir, err := os.MkdirTemp("", "goncho-bench-*")
+			if err != nil {
+				return fmt.Errorf("goncho-bench: create temp db dir: %w", err)
+			}
+			runCfg.DatabasePath = filepath.Join(dir, "bench.db")
 		}
-		cfg.DatabasePath = filepath.Join(dir, "bench.db")
+		report, err := evaluateOnce(ctx, data, runCfg)
+		if err != nil {
+			return err
+		}
+		reports = append(reports, report)
 	}
+	report := aggregateReports(reports)
+	raw, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("goncho-bench: encode report: %w", err)
+	}
+	raw = append(raw, '\n')
+	if strings.TrimSpace(cfg.OutPath) == "" {
+		_, err = os.Stdout.Write(raw)
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(cfg.OutPath), 0o755); err != nil {
+		return fmt.Errorf("goncho-bench: create report dir: %w", err)
+	}
+	if err := os.WriteFile(cfg.OutPath, raw, 0o644); err != nil {
+		return fmt.Errorf("goncho-bench: write report: %w", err)
+	}
+	return nil
+}
+
+func evaluateOnce(ctx context.Context, data dataset, cfg config) (BenchmarkReport, error) {
 	store, err := memory.OpenSqlite(cfg.DatabasePath, 0, nil)
 	if err != nil {
-		return fmt.Errorf("goncho-bench: open sqlite: %w", err)
+		return BenchmarkReport{}, fmt.Errorf("goncho-bench: open sqlite: %w", err)
 	}
 	defer store.Close(ctx)
 	if err := goncho.RunMigrations(store.DB()); err != nil {
-		return fmt.Errorf("goncho-bench: run migrations: %w", err)
+		return BenchmarkReport{}, fmt.Errorf("goncho-bench: run migrations: %w", err)
 	}
 	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-bench", ObserverPeerID: "goncho-bench", RecentMessages: 0}, nil)
 	contentIDs := map[string][]string{}
 	for _, mem := range data.Memories {
 		if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: mem.Peer, SessionKey: mem.SessionKey, Conclusion: mem.Content, Scope: "benchmark"}); err != nil {
-			return fmt.Errorf("goncho-bench: store memory %s: %w", mem.ID, err)
+			return BenchmarkReport{}, fmt.Errorf("goncho-bench: store memory %s: %w", mem.ID, err)
 		}
 		contentIDs[mem.Content] = append(contentIDs[mem.Content], mem.ID)
 	}
-	report := BenchmarkReport{System: "goncho", Dataset: data.Name, MemoryCount: len(data.Memories), QuestionCount: len(data.Questions), Questions: []BenchmarkQuestionReport{}}
+	report := BenchmarkReport{System: "goncho", Dataset: data.Name, MemoryCount: len(data.Memories), QuestionCount: len(data.Questions), Runs: 1, Questions: []BenchmarkQuestionReport{}}
 	for _, q := range data.Questions {
 		result, err := svc.Search(ctx, goncho.SearchParams{Peer: q.Peer, SessionKey: q.SessionKey, Query: q.Query, Limit: cfg.Limit, MaxTokens: 100_000})
 		if err != nil {
-			return fmt.Errorf("goncho-bench: search question %s: %w", q.ID, err)
+			return BenchmarkReport{}, fmt.Errorf("goncho-bench: search question %s: %w", q.ID, err)
 		}
 		retrievedIDs := make([]string, 0, len(result.Results))
 		seen := map[string]struct{}{}
@@ -148,22 +183,25 @@ func run(ctx context.Context, cfg config) error {
 		report.Questions = append(report.Questions, qr)
 	}
 	report.RecallAt5, report.RecallAt10, report.MRR = summarizeMetrics(report.Questions)
-	raw, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
-		return fmt.Errorf("goncho-bench: encode report: %w", err)
+	return report, nil
+}
+
+func aggregateReports(reports []BenchmarkReport) BenchmarkReport {
+	if len(reports) == 0 {
+		return BenchmarkReport{}
 	}
-	raw = append(raw, '\n')
-	if strings.TrimSpace(cfg.OutPath) == "" {
-		_, err = os.Stdout.Write(raw)
-		return err
+	out := reports[len(reports)-1]
+	out.Runs = len(reports)
+	var r5, r10, mrr float64
+	for _, report := range reports {
+		r5 += report.RecallAt5
+		r10 += report.RecallAt10
+		mrr += report.MRR
 	}
-	if err := os.MkdirAll(filepath.Dir(cfg.OutPath), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create report dir: %w", err)
-	}
-	if err := os.WriteFile(cfg.OutPath, raw, 0o644); err != nil {
-		return fmt.Errorf("goncho-bench: write report: %w", err)
-	}
-	return nil
+	out.RecallAt5 = roundMetric(r5 / float64(len(reports)))
+	out.RecallAt10 = roundMetric(r10 / float64(len(reports)))
+	out.MRR = roundMetric(mrr / float64(len(reports)))
+	return out
 }
 
 func loadDataset(path string) (dataset, error) {

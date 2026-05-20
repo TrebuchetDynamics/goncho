@@ -19,7 +19,8 @@ go run ./cmd/goncho-bench \
   --dataset ./cmd/goncho-bench/testdata/tiny-longmemeval.jsonl \
   --out ./artifacts/tiny-longmemeval-report.json \
   --db ./artifacts/tiny-longmemeval.db \
-  --limit 10
+  --limit 10 \
+  --runs 20
 ```
 
 For the full Go gate:
@@ -68,9 +69,10 @@ Each line is one JSON object.
   "dataset": "tiny-longmemeval",
   "memory_count": 3,
   "question_count": 3,
+  "runs": 20,
   "recall_at_5": 1,
   "recall_at_10": 1,
-  "mrr": 0.6111,
+  "mrr": 1,
   "questions": [
     {
       "id": "q-auth-owner",
@@ -82,7 +84,7 @@ Each line is one JSON object.
 }
 ```
 
-The tiny fixture intentionally reports the real rank order produced by Goncho's current search path. Do not treat it as a benchmark claim. It is a harness smoke test.
+The tiny fixture reports the real rank order produced by Goncho's current search path. It now reaches `R@5=1`, `R@10=1`, and `MRR=1` because lexical conclusion ranking puts each tiny gold memory at rank 1. Do not treat the tiny fixture as a benchmark claim. It is a harness smoke test.
 
 ## LongMemEval-S Use
 
@@ -101,7 +103,8 @@ go run ./cmd/goncho-bench \
   --dataset ./benchmarks/longmemeval-s.jsonl \
   --out ./artifacts/longmemeval-s-goncho-report.json \
   --db ./artifacts/longmemeval-s-goncho.db \
-  --limit 10
+  --limit 10 \
+  --runs 20
 ```
 
 ## Interpreting Results

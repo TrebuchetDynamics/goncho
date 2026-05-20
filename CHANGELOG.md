@@ -5,6 +5,8 @@
 ### Added
 
 - `cmd/goncho-bench`, a local LongMemEval-style retrieval benchmark runner that reports `R@5`, `R@10`, and `MRR` from JSONL memory/question fixtures.
+- `--runs` loop mode for repeated deterministic retrieval benchmark runs.
+- Lexical conclusion ranking so search results are ordered by query/content token overlap before recency tie-breaks.
 - Retrieval benchmark documentation and a tiny deterministic fixture for harness validation.
 
 ## v0.1.0 - 2026-05-19

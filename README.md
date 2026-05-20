@@ -286,10 +286,11 @@ go run ./cmd/goncho-bench \
   --dataset ./cmd/goncho-bench/testdata/tiny-longmemeval.jsonl \
   --out ./artifacts/tiny-longmemeval-report.json \
   --db ./artifacts/tiny-longmemeval.db \
-  --limit 10
+  --limit 10 \
+  --runs 20
 ```
 
-The bundled tiny fixture is a harness smoke test, not a leaderboard claim. To evaluate LongMemEval-S, convert the official dataset to the documented JSONL format and report the real generated numbers.
+The bundled tiny fixture is a harness smoke test, not a leaderboard claim. It currently reaches `R@5=1`, `R@10=1`, and `MRR=1` after lexical conclusion ranking. To evaluate LongMemEval-S, convert the official 500-question dataset to the documented JSONL format and report the real generated numbers.
 
 Docs: [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
 

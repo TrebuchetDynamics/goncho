@@ -512,12 +512,13 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, observer, pee
 		appendInClause(&b, "session_key", filter.SessionIDs, &args)
 		base += b.String()
 	}
-	if trimmed := strings.TrimSpace(query); trimmed != "" {
-		base += ` AND content LIKE ?`
-		args = append(args, "%"+trimmed+"%")
+	trimmedQuery := strings.TrimSpace(query)
+	queryLimit := limit
+	if trimmedQuery != "" && queryLimit < 500 {
+		queryLimit = 500
 	}
 	base += ` ORDER BY updated_at DESC LIMIT ?`
-	args = append(args, limit)
+	args = append(args, queryLimit)
 
 	rows, err := db.QueryContext(ctx, base, args...)
 	if err != nil {
@@ -536,6 +537,12 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, observer, pee
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("goncho: iterate conclusions: %w", err)
+	}
+	if trimmedQuery != "" {
+		hits = rankConclusionHitsByLexicalOverlap(trimmedQuery, hits)
+	}
+	if len(hits) > limit {
+		hits = hits[:limit]
 	}
 	return hits, nil
 }
