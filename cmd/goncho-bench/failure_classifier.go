@@ -22,6 +22,8 @@ const (
 	categoryTrueRetrievalFailure     = "true_retrieval_failure"
 )
 
+var benchmarkIDNumericSuffixPattern = regexp.MustCompile(`_[0-9]+$`)
+
 type failureCategoryRow struct {
 	ID           string   `json:"id"`
 	Query        string   `json:"query"`
@@ -209,7 +211,7 @@ func looksBenchmarkAmbiguous(q BenchmarkQuestionReport) bool {
 func normalizeBenchmarkIDBase(id string) string {
 	id = strings.TrimPrefix(id, "answer_")
 	id = strings.ReplaceAll(id, "_abs", "")
-	id = regexp.MustCompile(`_[0-9]+$`).ReplaceAllString(id, "")
+	id = benchmarkIDNumericSuffixPattern.ReplaceAllString(id, "")
 	return id
 }
 
