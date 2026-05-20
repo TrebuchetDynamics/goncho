@@ -2,8 +2,8 @@
   "benchmark_name": "LOCOMO smoke",
   "mode": "retrieval",
   "no_llm_judge": true,
-  "generated_at": "2026-05-20T19:48:29Z",
-  "repo_commit": "06aa5ba851c585439765d4293f64cb7b0911e0c4",
+  "generated_at": "2026-05-20T20:03:24Z",
+  "repo_commit": "bc245d68c10255d652ad1eb8114f853984ea5ff7",
   "go_version": "go1.26.1",
   "goos": "linux",
   "goarch": "amd64",
@@ -1200,8 +1200,8 @@
             "locomo-smoke-memory-001",
             "locomo-smoke-memory-005",
             "locomo-smoke-memory-009",
-            "locomo-smoke-memory-008",
-            "locomo-smoke-memory-010"
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-008"
           ],
           "rank": 1,
           "recall_any_at_5": 1,
@@ -1224,9 +1224,9 @@
             "locomo-smoke-memory-001",
             "locomo-smoke-memory-005",
             "locomo-smoke-memory-009",
-            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-010",
             "locomo-smoke-memory-008",
-            "locomo-smoke-memory-010"
+            "locomo-smoke-memory-006"
           ],
           "rank": 3,
           "recall_any_at_5": 1,
@@ -1249,8 +1249,8 @@
             "locomo-smoke-memory-006",
             "locomo-smoke-memory-001",
             "locomo-smoke-memory-005",
-            "locomo-smoke-memory-003",
             "locomo-smoke-memory-009",
+            "locomo-smoke-memory-003",
             "locomo-smoke-memory-010"
           ],
           "rank": 1,
@@ -1272,10 +1272,10 @@
             "locomo-smoke-memory-005",
             "locomo-smoke-memory-006",
             "locomo-smoke-memory-001",
-            "locomo-smoke-memory-003",
             "locomo-smoke-memory-009",
-            "locomo-smoke-memory-008",
-            "locomo-smoke-memory-010"
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-008"
           ],
           "rank": 2,
           "recall_any_at_5": 1,
@@ -1297,10 +1297,10 @@
             "locomo-smoke-memory-010",
             "locomo-smoke-memory-001",
             "locomo-smoke-memory-005",
-            "locomo-smoke-memory-003",
             "locomo-smoke-memory-009",
-            "locomo-smoke-memory-006",
-            "locomo-smoke-memory-008"
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-006"
           ],
           "rank": 1,
           "recall_any_at_5": 1,

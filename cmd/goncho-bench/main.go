@@ -35,6 +35,9 @@ type config struct {
 	LocomoQuestionsPath string
 	LocomoMarkdownOut   string
 	LocomoName          string
+	LocomoCompareReport string
+	LocomoCompareJSONL  string
+	LocomoCompareMD     string
 }
 
 type dataset struct {
@@ -119,6 +122,9 @@ func main() {
 	flag.StringVar(&cfg.LocomoQuestionsPath, "locomo-questions", "", "LOCOMO-style questions JSONL path for retrieval-first benchmark")
 	flag.StringVar(&cfg.LocomoMarkdownOut, "locomo-md-out", "", "Markdown output path for LOCOMO benchmark report")
 	flag.StringVar(&cfg.LocomoName, "locomo-name", "", "LOCOMO benchmark display name; defaults to LOCOMO smoke")
+	flag.StringVar(&cfg.LocomoCompareReport, "locomo-compare-report", "", "existing LOCOMO JSON report to compare BM25 vs Goncho")
+	flag.StringVar(&cfg.LocomoCompareJSONL, "locomo-compare-jsonl-out", "", "JSONL output path for LOCOMO BM25 vs Goncho comparison")
+	flag.StringVar(&cfg.LocomoCompareMD, "locomo-compare-md-out", "", "Markdown output path for LOCOMO BM25 vs Goncho comparison")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
@@ -129,6 +135,9 @@ func main() {
 }
 
 func run(ctx context.Context, cfg config) error {
+	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
+		return generateLocomoComparison(cfg.LocomoCompareReport, cfg.LocomoCompareJSONL, cfg.LocomoCompareMD)
+	}
 	if strings.TrimSpace(cfg.ClassifyReportPath) != "" {
 		return generateFailureCategoryReports(cfg.ClassifyReportPath, cfg.ClassifyFailurePath, cfg.ClassifyJSONLOut, cfg.ClassifyMarkdownOut)
 	}
