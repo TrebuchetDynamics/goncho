@@ -95,6 +95,21 @@ Conclusion: the first and safest way to increase reported MRR is to fix benchmar
 
 The highest-impact retrieval issue after the harness fix is no longer broad recall. It is **residual top-rank ordering among a much smaller set of hard cases**.
 
+Follow-up failure classification artifacts:
+
+- `docs/benchmarks/failures/longmemeval-s-2026-05-20-categories.jsonl`
+- `docs/benchmarks/longmemeval-s-2026-05-20-failure-categories.md`
+
+Current hard-case counts after classification:
+
+| Bucket | Count |
+| --- | ---: |
+| rank-2 cases | 25 |
+| rank-3 cases | 13 |
+| misses in top 10 | 10 |
+
+Largest category: `temporal_ambiguity` with 26 cases. Next optimization should target temporal/order/duration reranking before broad lexical tuning.
+
 Common pattern:
 
 ```text

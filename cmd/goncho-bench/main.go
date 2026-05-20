@@ -17,16 +17,20 @@ import (
 )
 
 type config struct {
-	DatasetPath     string
-	OutPath         string
-	FailurePath     string
-	DatabasePath    string
-	Limit           int
-	Runs            int
-	System          string
-	DatasetRevision string
-	DatasetSHA256   string
-	FailOnLeakage   bool
+	DatasetPath         string
+	OutPath             string
+	FailurePath         string
+	DatabasePath        string
+	Limit               int
+	Runs                int
+	System              string
+	DatasetRevision     string
+	DatasetSHA256       string
+	FailOnLeakage       bool
+	ClassifyReportPath  string
+	ClassifyFailurePath string
+	ClassifyJSONLOut    string
+	ClassifyMarkdownOut string
 }
 
 type dataset struct {
@@ -103,6 +107,10 @@ func main() {
 	flag.StringVar(&cfg.DatasetRevision, "dataset-revision", "", "dataset source revision for report metadata")
 	flag.StringVar(&cfg.DatasetSHA256, "dataset-sha256", "", "dataset source sha256 for report metadata")
 	flag.BoolVar(&cfg.FailOnLeakage, "fail-on-leakage", false, "exit non-zero if leakage checks find query/gold-id leakage")
+	flag.StringVar(&cfg.ClassifyReportPath, "classify-report", "", "existing benchmark JSON report to classify instead of running retrieval")
+	flag.StringVar(&cfg.ClassifyFailurePath, "classify-failures", "", "optional existing failure JSONL to validate as a top-10 miss audit reference; classification still uses the full report")
+	flag.StringVar(&cfg.ClassifyJSONLOut, "classify-jsonl-out", "", "JSONL output path for one failure-category row per hard case")
+	flag.StringVar(&cfg.ClassifyMarkdownOut, "classify-md-out", "", "Markdown output path for failure-category summary")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
@@ -113,6 +121,9 @@ func main() {
 }
 
 func run(ctx context.Context, cfg config) error {
+	if strings.TrimSpace(cfg.ClassifyReportPath) != "" {
+		return generateFailureCategoryReports(cfg.ClassifyReportPath, cfg.ClassifyFailurePath, cfg.ClassifyJSONLOut, cfg.ClassifyMarkdownOut)
+	}
 	if strings.TrimSpace(cfg.DatasetPath) == "" {
 		return errors.New("goncho-bench: --dataset is required")
 	}
