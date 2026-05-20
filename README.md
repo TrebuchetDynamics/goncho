@@ -301,7 +301,26 @@ These tests prove that Goncho can:
 
 ## Retrieval Accuracy Benchmarks
 
-Goncho includes a local LongMemEval-style benchmark runner. It loads a JSONL memory/question fixture into Goncho, runs retrieval, and reports strict `R@5`/`R@10`, LongMemEval-style `recall_any@5`/`recall_any@10`, and `MRR` without network or hosted services.
+Goncho is being evaluated as a long-term memory retrieval system for agents, not just a vector store. The defensible claim is **measurably strong long-memory retrieval**, not “solves memory.”
+
+On a pinned LongMemEval-S retrieval-only run, Goncho scored **96.40% recall_any@5**, **98.00% recall_any@10**, and **81.12% MRR** using deterministic ID-based scoring against gold evidence IDs.
+
+| System | recall_any@5 | recall_any@10 | MRR |
+| --- | ---: | ---: | ---: |
+| agentmemory BM25+Vector reference | 95.20% | 98.60% | 88.20% |
+| agentmemory BM25-only reference | 86.20% | 94.60% | 71.50% |
+| Goncho pinned run | 96.40% | 98.00% | 81.12% |
+
+The benchmark includes:
+
+- pinned Hugging Face dataset revision,
+- SHA256 verification,
+- deterministic evidence-ID scoring,
+- no LLM judge,
+- random, BM25, SQLite FTS5, Goncho no-rank, and Goncho baselines,
+- leakage checks,
+- failure-audit JSONL,
+- generated reports from machine-readable JSON.
 
 ```bash
 go test ./cmd/goncho-bench
@@ -314,11 +333,12 @@ Manual full run from a clean checkout:
 make bench-longmemeval-s
 ```
 
-The bundled tiny fixture is a harness smoke test, not a leaderboard claim. The full `make bench-longmemeval-s` target pins the Hugging Face dataset revision, verifies SHA256, converts the 500-question set, runs deterministic ID-based scoring, emits JSON reports, and writes failure-audit JSONL.
+Confidence note: the retrieval runner is deterministic, so repeated runs should reproduce the same scores for the same code, dataset revision, and conversion. Runtime and RSS vary by machine. One official dataset case contains the exact later query text inside the gold conversation; Goncho reports this leakage instead of hiding it.
 
 Docs:
 
 - [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
+- [LongMemEval-S generated report](docs/benchmarks/longmemeval-s-2026-05-20.md)
 - [Benchmark Roadmap](docs/benchmarks/ROADMAP.md)
 
 ## Proof Matrix
