@@ -11,63 +11,80 @@ Diagnosis only: no ranking changes, no LLM judge, no answer-generation scoring.
 | System | recall_any@5 | recall_any@10 | strict@5 | strict@10 | MRR |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | bm25 | 60.19% | 67.96% | 51.26% | 57.87% | 46.88% |
-| goncho | 52.47% | 58.73% | 44.80% | 49.95% | 41.04% |
+| goncho | 60.14% | 67.91% | 51.16% | 57.67% | 46.90% |
+
+## Candidate-generation slice result
+
+Before widening lexical candidate generation, BM25 led Goncho because many gold memories were excluded before ranking:
+
+| Metric | Before | After |
+| --- | ---: | ---: |
+| Goncho recall_any@5 | 52.47% | 60.14% |
+| Goncho recall_any@10 | 58.73% | 67.91% |
+| Goncho MRR | 41.04% | 46.90% |
+| BM25 wins over Goncho | 257 | 18 |
+| Goncho wins over BM25 | 162 | 14 |
+| Ties | 953 | 1316 |
+| Both miss | 610 | 634 |
+| BM25-win `missing_candidate` | 164 | 2 |
+
+LongMemEval-S stayed stable after the candidate-generation change: recall_any@5 `0.968`, recall_any@10 `0.980`, MRR `0.9135`.
 
 ## Winner counts
 
 | Winner | Count |
 | --- | ---: |
-| BM25 wins | 257 |
-| Goncho wins | 162 |
-| Ties | 953 |
-| Both miss | 610 |
+| BM25 wins | 18 |
+| Goncho wins | 14 |
+| Ties | 1316 |
+| Both miss | 634 |
 
 ## Category breakdown
 
 | Category | BM25 wins | Goncho wins | Ties | Both miss |
 | --- | ---: | ---: | ---: | ---: |
-| `adversarial_unanswerable` | 55 | 38 | 229 | 124 |
-| `multi_hop_retrieval` | 9 | 7 | 22 | 54 |
-| `open_domain_retrieval` | 98 | 73 | 434 | 236 |
-| `single_hop_retrieval` | 44 | 25 | 101 | 112 |
-| `temporal_retrieval` | 51 | 19 | 167 | 84 |
+| `adversarial_unanswerable` | 4 | 2 | 313 | 127 |
+| `multi_hop_retrieval` | 1 | 1 | 36 | 54 |
+| `open_domain_retrieval` | 3 | 4 | 584 | 250 |
+| `single_hop_retrieval` | 6 | 5 | 156 | 115 |
+| `temporal_retrieval` | 4 | 2 | 227 | 88 |
 
 ## BM25-win failure modes
 
 | Failure mode | Count |
 | --- | ---: |
-| `gold_ambiguity` | 61 |
-| `missing_candidate` | 164 |
-| `rerank_regression` | 32 |
+| `gold_ambiguity` | 8 |
+| `missing_candidate` | 2 |
+| `rerank_regression` | 8 |
 
 ## Worst BM25-over-Goncho cases
 
-- `locomo-conv-41-q-005` delta `999998` mode `missing_candidate`: When did John join the online support group?
-- `locomo-conv-41-q-012` delta `999998` mode `gold_ambiguity`: What people has Maria met and helped while volunteering?
-- `locomo-conv-41-q-014` delta `999998` mode `missing_candidate`: When did Maria's grandmother pass away?
-- `locomo-conv-41-q-069` delta `999998` mode `missing_candidate`: What type of workout class did Maria start doing in December 2023?
-- `locomo-conv-41-q-071` delta `999998` mode `missing_candidate`: What kind of meal did John and his family make together in the photo shared by John?
-- `locomo-conv-41-q-072` delta `999998` mode `missing_candidate`: What kind of online group did John join?
-- `locomo-conv-41-q-074` delta `999998` mode `missing_candidate`: Who inspired Maria to start volunteering?
-- `locomo-conv-41-q-078` delta `999998` mode `missing_candidate`: What activity did John's colleague, Rob, invite him to?
-- `locomo-conv-41-q-079` delta `999998` mode `missing_candidate`: What is the name of John's one-year-old child?
-- `locomo-conv-41-q-081` delta `999998` mode `missing_candidate`: What did Maria make for her home to remind her of a trip to England?
+- `locomo-conv-50-q-001` delta `999991` mode `missing_candidate`: When did Calvin first travel to Tokyo?
+- `locomo-conv-41-q-028` delta `999989` mode `missing_candidate`: When did John have a party with veterans?
+- `locomo-conv-42-q-017` delta `2` mode `gold_ambiguity`: What physical transformation did Nate undergo in April 2022?
+- `locomo-conv-26-q-041` delta `1` mode `gold_ambiguity`: How many times has Melanie gone to the beach in 2023?
+- `locomo-conv-26-q-052` delta `1` mode `gold_ambiguity`: What has Melanie painted?
+- `locomo-conv-30-q-049` delta `1` mode `rerank_regression`: What did Gina design for her store?
+- `locomo-conv-30-q-089` delta `1` mode `rerank_regression`: What did Jon design for his store?
+- `locomo-conv-41-q-048` delta `1` mode `gold_ambiguity`: What exercises has John done?
+- `locomo-conv-41-q-182` delta `1` mode `rerank_regression`: What did John take away from visiting the orphanage?
+- `locomo-conv-42-q-002` delta `1` mode `gold_ambiguity`: What kind of interests do Joanna and Nate share?
 
 ## Top Goncho-over-BM25 cases
 
-- `locomo-conv-48-q-196` delta `-999996` mode `temporal_evolution`: When did Deborah's parents give her first console?
-- `locomo-conv-48-q-140` delta `-999995` mode `lexical_grounding`: Why did Jolene decide to get a snake as a pet?
-- `locomo-conv-42-q-114` delta `-999994` mode `entity_exactness`: What is Nate's favorite genre of movies?
-- `locomo-conv-48-q-051` delta `-999994` mode `entity_exactness`: Which year did Jolene start practicing yoga?
-- `locomo-conv-44-q-048` delta `-999992` mode `gold_ambiguity`: How many months passed between Andrew adopting Buddy and Scout
-- `locomo-conv-50-q-094` delta `-999992` mode `entity_exactness`: What is Dave's advice to Calvin regarding his dreams?
-- `locomo-conv-44-q-035` delta `-999991` mode `gold_ambiguity`: How many months passed between Andrew adopting Toby and Buddy?
-- `locomo-conv-48-q-050` delta `-999991` mode `temporal_evolution`: How long has Jolene been doing yoga and meditation?
-- `locomo-conv-48-q-212` delta `-999991` mode `temporal_evolution`: For how long has Jolene had Lucifer as a pet?
-- `locomo-conv-42-q-031` delta `-999990` mode `gold_ambiguity`: What kind of writings does Joanna do?
+- `locomo-conv-50-q-021` delta `-999989` mode `gold_ambiguity`: Who inspired Dave's passion for car engineering?
+- `locomo-conv-26-q-057` delta `-2` mode `gold_ambiguity`: What symbols are important to Caroline?
+- `locomo-conv-42-q-060` delta `-2` mode `gold_ambiguity`: What does Joanna do to remember happy memories?
+- `locomo-conv-26-q-004` delta `-1` mode `entity_exactness`: What did Caroline research?
+- `locomo-conv-26-q-050` delta `-1` mode `temporal_evolution`: When did Caroline and Melanie go to a pride fesetival together?
+- `locomo-conv-42-q-085` delta `-1` mode `gold_ambiguity`: Was the first half of September 2022 a good month career-wise for Nate and Joanna? Answer yes or no.
+- `locomo-conv-42-q-096` delta `-1` mode `gold_ambiguity`: What is Nate's favorite video game?
+- `locomo-conv-42-q-123` delta `-1` mode `entity_exactness`: What did Nate do for Joanna on 25 May, 2022?
+- `locomo-conv-43-q-152` delta `-1` mode `gold_ambiguity`: What is the topic of discussion between John and Tim on 11 December, 2023?
+- `locomo-conv-47-q-177` delta `-1` mode `entity_exactness`: Where does John get his ideas from?
 
 ## Interpretation
 
-BM25's lead is primarily a lexical/candidate-ranking signal. The comparison separates missing candidates from reranking regressions: `missing_candidate` means BM25 retrieved a gold memory in top 10 while Goncho did not; `rerank_regression` means both found gold but Goncho ranked it lower. Optimize only after reviewing these buckets.
+The original BM25 lead was primarily candidate generation: Goncho searched too small a pre-rank conclusion window for LOCOMO-scale conversations. After widening lexical candidate generation before top-K truncation, `missing_candidate` nearly disappeared (`164 -> 2`) and Goncho now essentially matches BM25 overall.
 
-Recommended next slice: inspect BM25-win `missing_candidate` and `rerank_regression` rows side by side with memory content, then decide whether candidate generation, metadata/noise, or conservative reranking needs work.
+Remaining BM25 wins are now mostly `gold_ambiguity` and `rerank_regression`, not broad candidate loss. Recommended next slice: inspect the remaining 18 BM25-win rows manually before any further ranking changes.

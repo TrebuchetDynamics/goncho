@@ -531,8 +531,12 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 	}
 	trimmedQuery := strings.TrimSpace(query)
 	queryLimit := limit
-	if trimmedQuery != "" && queryLimit < 500 {
-		queryLimit = 500
+	if trimmedQuery != "" && queryLimit < 5000 {
+		// Candidate generation must happen before top-K truncation. LOCOMO-style
+		// conversations can exceed 500 memories; ranking only the most recent
+		// slice drops old but exact lexical matches before BM25-style scoring can
+		// recover them.
+		queryLimit = 5000
 	}
 	base += ` ORDER BY updated_at DESC LIMIT ?`
 	args = append(args, queryLimit)
