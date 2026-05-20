@@ -12,15 +12,27 @@ LongMemEval-S is the first layer: deterministic retrieval sanity on long convers
 | Phase | Benchmark | Purpose | Status |
 | --- | --- | --- | --- |
 | 1 | LongMemEval-S | Long conversational retrieval with ID-based evidence scoring. | First scientific pass done. |
-| 2 | LOCOMO | Conversational long-term memory: evolving facts, temporal recall, contradictions. | Next target. |
+| 2 | LOCOMO | Conversational long-term memory: evolving facts, temporal recall, contradictions. | Candidate-generation milestone and backend harness done. |
 | 3 | InfiniteBench / RULER | Scale, buried-fact, distractor, and long-context stress. | Planned. |
 | 4 | BABILong | Controlled synthetic temporal/entity tracking. | Planned. |
 | 5 | BEIR | Standard IR credibility against established retrieval baselines. | Planned. |
 | 6 | Real-world replay | Actual agent utility on real sessions, mistakes, preferences, and handoffs. | Planned. |
 
-## Best next target: LOCOMO
+## LOCOMO status
 
-LOCOMO is the best next benchmark because it is closer to real agent memory than plain retrieval.
+LOCOMO is the best benchmark after LongMemEval-S because it is closer to real agent memory than plain retrieval.
+
+Current milestone:
+
+- Goncho recall_any@5 improved `0.5247 -> 0.6014`.
+- Goncho recall_any@10 improved `0.5873 -> 0.6791`.
+- Goncho MRR improved `0.4104 -> 0.4690`.
+- BM25-win `missing_candidate` failures dropped `164 -> 2`.
+- LongMemEval-S stayed stable.
+
+The lesson: LOCOMO was not improved by clever reranking. It exposed a candidate-generation weakness, and the fix widened lexical pre-rank candidates before top-K truncation.
+
+The backend harness now compares Goncho, BM25, SQLite FTS5, agentmemory, and mem0 with the same LOCOMO data and centralized scoring. Backends that cannot return stable inserted memory IDs are marked `not comparable`.
 
 It tests:
 
@@ -61,6 +73,34 @@ BABILong is synthetic but useful for controlled checks:
 - repeated facts under distractors.
 
 It should not be the only benchmark, but it can isolate specific failure modes.
+
+## External backend credibility
+
+External comparisons must keep the harness more trustworthy than the backend.
+
+Rules:
+
+- adapters stay isolated,
+- scoring stays centralized,
+- every backend uses the same JSONL,
+- every backend uses the same gold IDs,
+- every backend gets the same metrics,
+- every backend gets the same leakage checks,
+- every backend gets the same failure taxonomy,
+- no adapter may rewrite scoring semantics,
+- no content-only matching unless collision-safe.
+
+Current LOCOMO backend status:
+
+| Backend | Comparable | Notes |
+| --- | --- | --- |
+| Goncho | yes | Local deterministic adapter. |
+| BM25 | yes | Local lexical baseline. |
+| SQLite FTS5 | yes | Local SQLite FTS baseline. |
+| agentmemory | no | Public surfaces do not return caller-supplied stable IDs. |
+| mem0 | no | Package not installed locally; no stable-ID run exists. |
+
+See `docs/benchmarks/external-backend-adapters.md` for the adapter contract and operator notes.
 
 ## IR credibility: BEIR
 

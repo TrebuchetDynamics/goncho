@@ -159,6 +159,58 @@ Operator expectation:
 - prompts that resemble known failures should produce `negative_drift_anchor` warnings;
 - unrelated prompts should not warn.
 
+## Benchmark Operations
+
+Use the LOCOMO benchmark targets when validating retrieval behavior or comparing backends.
+
+Smoke checks for normal local validation:
+
+```sh
+make bench-locomo-smoke
+make bench-locomo-backends-smoke
+```
+
+Full checks for release or research validation:
+
+```sh
+make bench-locomo
+make bench-locomo-backends
+```
+
+Operator rules:
+
+- Treat the Go benchmark harness as the source of truth for scoring.
+- Keep external backend adapters isolated; they may only emit retrieved `memory_id` values and scores.
+- Do not accept LLM judges or answer text as retrieval evidence.
+- Do not map external results by content unless the adapter proves the mapping is collision-safe.
+- If a backend cannot return stable inserted IDs, leave it `not comparable` and report the exact reason.
+
+Backend probe commands:
+
+```sh
+python3 scripts/bench_agentmemory_locomo.py --capability
+python3 scripts/bench_agentmemory_locomo.py --smoke
+python3 scripts/bench_mem0_locomo.py --capability
+python3 scripts/bench_mem0_locomo.py --smoke
+```
+
+Expected current status:
+
+| Backend | Status | Operator meaning |
+| --- | --- | --- |
+| Goncho | comparable | Local adapter returns stable IDs. |
+| BM25 | comparable | Local lexical baseline returns stable IDs. |
+| SQLite FTS5 | comparable | Local FTS baseline returns stable IDs. |
+| agentmemory | not comparable | Public surfaces generate internal `mem_*` IDs and do not return caller-supplied stable IDs. |
+| mem0 | not comparable | Package is not installed locally; no stable-ID run exists. |
+
+Primary outputs:
+
+- `docs/benchmarks/locomo-backend-comparison.md`
+- `docs/benchmarks/results/locomo-backend-comparison.json`
+- `docs/benchmarks/failures/locomo-backend-comparison.jsonl`
+- `docs/benchmarks/external-backend-adapters.md`
+
 ## Troubleshooting
 
 | Symptom | Check |
@@ -169,6 +221,8 @@ Operator expectation:
 | Imported text steers behavior | Check import status and quarantine evidence. Suspicious imports should be `skipped`. |
 | Agent repeats failed fix | Store a negative/dead-end memory and enable drift-anchor checks in the host loop. |
 | Review warnings keep appearing | List review items with `goncho_review`; resolve only after operator evidence review. |
+| External backend marked not comparable | Confirm it can return the exact inserted `memory_id` in search results. If not, keep it not comparable; do not use content-only matching. |
+| Backend comparison scores changed unexpectedly | Re-run `make bench-locomo-backends-smoke`, check `docs/benchmarks/failures/locomo-backend-comparison.jsonl`, and verify the same LOCOMO data files were used. |
 
 ## Release Checklist
 
@@ -179,6 +233,7 @@ Before upgrading Goncho in an operator environment:
 3. Run `go test ./...` in the repository.
 4. Run the restart persistence checks.
 5. Run trust checks for quarantine, stale code claims, and negative drift anchors.
-6. Deploy to a staging agent with a copied database.
-7. Confirm startup logs show the expected workspace, observer, DB path, and tools.
-8. Promote to production only after the staging agent builds a valid context pack.
+6. Run `make bench-locomo-backends-smoke` if retrieval/backend harness behavior changed.
+7. Deploy to a staging agent with a copied database.
+8. Confirm startup logs show the expected workspace, observer, DB path, and tools.
+9. Promote to production only after the staging agent builds a valid context pack.

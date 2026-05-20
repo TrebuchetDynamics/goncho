@@ -161,6 +161,55 @@ LOCOMO exposed a candidate-generation weakness in Goncho. After widening lexical
 
 This milestone used no LLM judge, no answer scoring, no benchmark-specific gold-ID hack, and no ranking change. LongMemEval-S remained stable at recall_any@5 `0.968`, recall_any@10 `0.980`, MRR `0.9135`.
 
-The next comparison phase should keep adapters isolated and keep scoring centralized so agentmemory, mem0, Goncho, BM25, and SQLite FTS5 all use the same JSONL, IDs, metrics, leakage checks, and failure taxonomy.
+## LOCOMO External Backend Comparison
+
+Use these targets to compare Goncho against other retrieval backends under the same LOCOMO scoring harness:
+
+```sh
+make bench-locomo-backends-smoke
+make bench-locomo-backends
+```
+
+The harness compares:
+
+- Goncho
+- BM25
+- SQLite FTS5
+- agentmemory
+- mem0
+
+The benchmark harness is more trusted than any backend. It keeps adapters isolated and scoring centralized so every backend uses the same JSONL, same gold IDs, same metrics, same leakage checks, and same failure taxonomy.
+
+Outputs:
+
+| File | Purpose |
+| --- | --- |
+| `docs/benchmarks/results/locomo-backend-comparison.json` | Machine-readable backend comparison report. |
+| `docs/benchmarks/locomo-backend-comparison.md` | Human-readable backend comparison report. |
+| `docs/benchmarks/failures/locomo-backend-comparison.jsonl` | Failure audit and not-comparable evidence. |
+| `docs/benchmarks/external-backend-adapters.md` | Adapter contract, setup notes, and current comparability status. |
+
+External adapters must return stable inserted `memory_id` values. Content-only matching is not accepted because LOCOMO contains duplicate and near-duplicate memories.
+
+Current status:
+
+| Backend | Comparable | Notes |
+| --- | --- | --- |
+| Goncho | yes | Local deterministic adapter. |
+| BM25 | yes | Local lexical baseline. |
+| SQLite FTS5 | yes | Local SQLite FTS baseline. |
+| agentmemory | no | `@agentmemory/agentmemory 0.9.20` public `memory_save`/REST surfaces generate internal `mem_*` IDs and do not return caller-supplied external IDs. |
+| mem0 | no | `mem0`/`mem0ai` is not installed in this environment; no stable-ID run was produced. |
+
+Probe commands:
+
+```sh
+python3 scripts/bench_agentmemory_locomo.py --capability
+python3 scripts/bench_agentmemory_locomo.py --smoke
+python3 scripts/bench_mem0_locomo.py --capability
+python3 scripts/bench_mem0_locomo.py --smoke
+```
+
+If a backend cannot preserve stable IDs, keep it marked `not comparable` and document the exact reason. Do not score generated answers, use an LLM judge, or map results by content unless a collision audit proves the mapping is safe.
 
 Next experiments are tracked in the [Benchmark Roadmap](/roadmap/benchmark-roadmap/): LOCOMO external-backend comparisons, InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay.

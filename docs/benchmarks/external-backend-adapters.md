@@ -2,6 +2,11 @@
 
 The LOCOMO backend harness keeps scoring centralized in Goncho's Go benchmark runner. External adapters may only supply retrieval results with stable memory IDs.
 
+User/operator docs:
+
+- Docs site reference: `docs-site/src/content/docs/reference/retrieval-benchmarks.md`
+- Operator runbook: `docs-site/src/content/docs/operators/runbook.md`
+
 ## Contract
 
 Adapter input:

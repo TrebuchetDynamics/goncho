@@ -313,6 +313,8 @@ go test ./cmd/goncho-bench
 make bench-longmemeval-s-smoke
 make bench-locomo-smoke
 make bench-locomo
+make bench-locomo-backends-smoke
+make bench-locomo-backends
 ```
 
 ### LOCOMO Retrieval Benchmark
@@ -330,11 +332,26 @@ Candidate-generation milestone: LOCOMO exposed a candidate-generation weakness i
 
 The full LOCOMO run compares random, recency, BM25, SQLite FTS5, and Goncho baselines against the pinned official LOCOMO source dataset.
 
+The backend comparison harness uses the same LOCOMO JSONL, same gold IDs, same centralized scoring, same leakage checks, and same failure taxonomy for Goncho, BM25, SQLite FTS5, agentmemory, and mem0. External backends are scored only if they return stable inserted `memory_id` values. If they cannot preserve IDs, they are marked `not comparable` instead of being scored by content matching or answer text.
+
+Current external-backend status:
+
+| Backend | Comparable | Reason |
+| --- | --- | --- |
+| Goncho | yes | Native local adapter with stable IDs. |
+| BM25 | yes | Local lexical baseline with stable LOCOMO IDs. |
+| SQLite FTS5 | yes | Local FTS baseline with stable LOCOMO IDs. |
+| agentmemory | no | Public `memory_save`/REST surfaces generate internal `mem_*` IDs and do not return caller-supplied external IDs. |
+| mem0 | no | `mem0`/`mem0ai` is not installed in the local benchmark environment; no stable-ID run was produced. |
+
 - Milestone note: [docs/benchmarks/MILESTONE-LOCOMO-CANDIDATE-GENERATION.md](docs/benchmarks/MILESTONE-LOCOMO-CANDIDATE-GENERATION.md)
 - Full report: [docs/benchmarks/locomo-2026-05-20.md](docs/benchmarks/locomo-2026-05-20.md)
 - Smoke report: [docs/benchmarks/locomo-smoke.md](docs/benchmarks/locomo-smoke.md)
 - Dataset notes: [docs/benchmarks/LOCOMO-DATASET.md](docs/benchmarks/LOCOMO-DATASET.md)
+- External backend adapter notes: [docs/benchmarks/external-backend-adapters.md](docs/benchmarks/external-backend-adapters.md)
+- Backend comparison report: [docs/benchmarks/locomo-backend-comparison.md](docs/benchmarks/locomo-backend-comparison.md)
 - JSON evidence: [docs/benchmarks/results/locomo-2026-05-20-goncho.json](docs/benchmarks/results/locomo-2026-05-20-goncho.json)
+- Backend comparison JSON: [docs/benchmarks/results/locomo-backend-comparison.json](docs/benchmarks/results/locomo-backend-comparison.json)
 
 Retrieval benchmark docs: [docs-site/src/content/docs/reference/retrieval-benchmarks.md](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
 
