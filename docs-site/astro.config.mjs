@@ -39,6 +39,14 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Operators',
+          items: [{ label: 'Operator Runbook', slug: 'operators/runbook' }],
+        },
+        {
+          label: 'Integrations',
+          items: [{ label: 'Gormes Agent', slug: 'integrations/gormes-agent' }],
+        },
+        {
           label: 'Roadmap',
           items: [{ label: 'Architecture Direction', slug: 'roadmap/architecture-direction' }],
         },

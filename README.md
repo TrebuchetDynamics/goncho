@@ -459,6 +459,11 @@ Goncho is pre-release software. The repository is actively building the local me
 
 The Starlight documentation site lives in [`docs-site/`](docs-site/). The default static deployment target is `https://trebuchetdynamics.github.io/goncho/`.
 
+Operator and integration entry points:
+
+- [Operator Runbook](docs-site/src/content/docs/operators/runbook.md) — deployment, backup, health checks, release checks, and troubleshooting.
+- [Gormes Agent Integration](docs-site/src/content/docs/integrations/gormes-agent.md) — recommended seam for plugging Goncho into a Gormes-style Go agent host.
+
 ```bash
 cd docs-site
 npm install

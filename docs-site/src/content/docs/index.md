@@ -29,7 +29,9 @@ Goncho treats memory as the state an agent carries forward: what it knows about 
 Goncho is pre-release. The current Go library supports local persistence, peer cards, search, context assembly, session summaries, local markdown memory, and compatibility surfaces. First-class claims, confidence, temporal validity, and review workflows are architecture direction.
 :::
 
-## Two Paths
+## Four Paths
 
 - Start with [Quick Start](/start/quick-start/) if you want the current Go integration shape.
 - Start with [Trust-Preserving Context](/concepts/trust-preserving-context/) if you want the architecture model first.
+- Start with [Operator Runbook](/operators/runbook/) if you need deployment, backup, health, and troubleshooting guidance.
+- Start with [Gormes Agent Integration](/integrations/gormes-agent/) if you want to plug Goncho into a Gormes-style agent host.
