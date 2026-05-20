@@ -1,8 +1,14 @@
 # Goncho
 
-**High-trust memory runtime for Go agents.**
+**High-trust local memory for Go-native AI agent runtimes.**
 
-Goncho gives agent hosts durable local memory with auditability, scoped recall, review warnings, and live-verification discipline. It is not a hosted memory API, a vector database wrapper, or a giant tool catalog.
+Goncho is the memory kernel for agent hosts that need durable local state, auditability, scoped recall, review warnings, and live-verification discipline without a Python service, Docker sidecar, hosted memory API, vector database wrapper, or giant tool catalog.
+
+It is designed for the Trebuchet local-first agent stack:
+
+- **Gormes** — a Go-native AI agent runtime for Linux, Windows, macOS, and Termux on Android. One binary runs providers, tools, skills, sessions, local memory, chat, and gateways with no Python or Docker required.
+- **Navivox** — an Android app in development that turns a phone into an AI agent server with local memory, chat, and gateways.
+- **Goncho** — the high-trust memory layer underneath: evidence, claims, scoped temporal beliefs, context packs, review queues, and live verification.
 
 Goncho's rule is simple:
 
@@ -26,11 +32,15 @@ go get github.com/TrebuchetDynamics/goncho
 
 Most agent memory systems optimize for breadth: more connectors, more tools, more autonomous behavior. Goncho optimizes for trust: memory correctness, bounded writes, reproducible retrieval, local state, and verification before action.
 
+Goncho exists because Gormes and Navivox need memory that can run anywhere the agent runs: a workstation, small server, Windows laptop, WSL2 shell, macOS terminal, or Android phone through Termux. The memory layer cannot assume Python packaging, Docker, Redis, hosted vector infrastructure, or always-online cloud services.
+
 Goncho is inspired by broad integration systems like [`agentmemory`](docs/opensource-memory-systems/agentmemory/README.md), but it makes a different product bet:
 
 ```text
 agentmemory: broad integration layer
-Goncho:      high-trust memory runtime
+Gormes:      Go-native agent runtime
+Navivox:     Android agent server
+Goncho:      high-trust local memory kernel
 ```
 
 The core abstraction is not “top-k chunks in a prompt.” It is:
@@ -45,6 +55,30 @@ raw evidence
 ```
 
 Vectors and search are useful. They are not the source of truth. Retrieval can suggest; verification decides.
+
+---
+
+## Where Goncho Fits
+
+```text
+Navivox Android app
+  -> Gormes Go runtime
+    -> Goncho local memory
+    -> chat gateways
+    -> providers, tools, skills
+```
+
+Gormes owns the agent runtime: provider turns, tools, skills, profiles, sessions, TUI, dashboard, and chat gateways. Goncho owns memory integrity: what was observed, what was concluded, which profile can read it, whether it may be stale, and what must be verified before action.
+
+Navivox brings that stack onto Android. The phone becomes a local agent server: chat interface, gateway hub, and memory-bearing runtime. Goncho's job in that environment is to keep memory useful without requiring a heavyweight server deployment.
+
+The boundary is intentional:
+
+| Layer | Responsibility |
+| --- | --- |
+| Navivox | Android app, mobile UX, phone-hosted agent server, local chat and gateway controls. |
+| Gormes | Go-native agent runtime, providers, tools, skills, profiles, sessions, TUI/dashboard, gateways. |
+| Goncho | Local memory kernel, scoped recall, evidence capture, review warnings, stale-claim verification, handoffs. |
 
 ---
 
@@ -159,6 +193,35 @@ write, err := svc.Conclude(ctx, goncho.ConcludeParams{
 ```
 
 Full API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
+
+---
+
+## Gormes And Navivox Integration
+
+If you are building on Gormes, use Goncho through the Gormes adapter instead of reaching into database internals. The adapter opens profile-local SQLite state, runs migrations, creates the service, and exposes the public memory tools.
+
+```go
+mem, err := gormesgoncho.Open(ctx, gormesgoncho.Config{
+    ProfilesDirectory: ".gormes/profiles",
+    ProfileID:         "mineru",
+    WorkspaceID:       "gormes-prod",
+    ObserverID:        "gormes",
+})
+```
+
+Register these with the Gormes tool registry:
+
+```text
+goncho_context
+goncho_search
+goncho_remember
+goncho_review
+goncho_handoff
+```
+
+For Navivox, the same boundary applies: the Android app should treat Goncho as the local memory kernel behind the phone-hosted Gormes runtime, not as a separate memory server users must operate.
+
+See: [Gormes Agent Integration](docs-site/src/content/docs/integrations/gormes-agent.md)
 
 ---
 
