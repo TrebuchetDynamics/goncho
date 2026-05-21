@@ -9,24 +9,22 @@ import (
 )
 
 type retrievalModule struct {
-	db              *sql.DB
-	workspaceID     string
-	observer        string
-	recentLimit     int
-	peerCardEnabled bool
-	dreamEnabled    bool
-	sessions        SessionDirectory
+	db           *sql.DB
+	workspaceID  string
+	observer     string
+	recentLimit  int
+	dreamEnabled bool
+	sessions     SessionDirectory
 }
 
 func (s *Service) retrieval() retrievalModule {
 	return retrievalModule{
-		db:              s.db,
-		workspaceID:     s.workspaceID,
-		observer:        s.observer,
-		recentLimit:     s.recentLimit,
-		peerCardEnabled: s.peerCardEnabled,
-		dreamEnabled:    s.dreamEnabled,
-		sessions:        s.sessions,
+		db:           s.db,
+		workspaceID:  s.workspaceID,
+		observer:     s.observer,
+		recentLimit:  s.recentLimit,
+		dreamEnabled: s.dreamEnabled,
+		sessions:     s.sessions,
 	}
 }
 
@@ -394,7 +392,7 @@ func (r retrievalModule) dreamContextUnavailableEvidence(ctx context.Context, pe
 }
 
 func (r retrievalModule) reviewContextUnavailableEvidence(ctx context.Context, peer string) ([]ContextUnavailableEvidence, error) {
-	items, err := ListReviewItems(ctx, r.db, ReviewQuery{PeerID: peer, Status: ReviewStatusOpen})
+	items, err := ListReviewItems(ctx, r.db, ReviewQuery{WorkspaceID: r.workspaceID, PeerID: peer, Status: ReviewStatusOpen})
 	if err != nil {
 		return nil, err
 	}
