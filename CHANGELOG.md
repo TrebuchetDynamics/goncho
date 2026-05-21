@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.1 - 2026-05-20
+
 ### Added
 
 - `cmd/goncho-bench`, a local LongMemEval-style retrieval benchmark runner that reports `R@5`, `R@10`, and `MRR` from JSONL memory/question fixtures.
@@ -14,6 +16,16 @@
 - Benchmark roadmap covering LOCOMO, InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay as future scientific evaluations.
 - Retrieval benchmark documentation and a tiny deterministic fixture for harness validation.
 - Frozen LOCOMO candidate-generation milestone: Goncho recall_any@5 `0.5247 -> 0.6014`, recall_any@10 `0.5873 -> 0.6791`, MRR `0.4104 -> 0.4690`, and BM25-win `missing_candidate` failures `164 -> 2` without LLM judgment, answer scoring, gold-ID hacks, or ranking changes.
+- Stable-ID LOCOMO external-backend adapter comparison harness for Goncho, BM25, SQLite FTS5, agentmemory, and mem0, with centralized ID scoring and not-comparable reporting.
+
+### Changed
+
+- Widened LOCOMO lexical candidate generation while preserving LongMemEval-S benchmark performance.
+- Deepened retrieval architecture by moving search/context orchestration behind an internal retrieval module without public API changes.
+
+### Documentation
+
+- Added benchmark operator guidance, backend-adapter rules, LOCOMO milestone notes, and architecture design/implementation plans for retrieval and lifecycle module deepening.
 
 ## v0.1.0 - 2026-05-19
 
