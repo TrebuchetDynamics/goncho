@@ -190,3 +190,230 @@ func (r retrievalModule) crossChatEvidenceMetadata(ctx context.Context, userID, 
 	})
 	return out, nil
 }
+
+func (r retrievalModule) Context(ctx context.Context, params ContextParams) (ContextResult, error) {
+	peer := strings.TrimSpace(params.Peer)
+	if peer == "" {
+		return ContextResult{}, fmt.Errorf("goncho: peer is required")
+	}
+	profileID := strings.TrimSpace(params.ProfileID)
+	sessionKey := strings.TrimSpace(params.SessionKey)
+	query := effectiveContextQuery(params)
+	tokenLimit := effectiveContextTokenLimit(params)
+	unavailable := contextUnavailableEvidence(params, r.observer, peer)
+	if includeDreamStatus(params) {
+		dreamEvidence, err := r.dreamContextUnavailableEvidence(ctx, peer)
+		if err != nil {
+			return ContextResult{}, err
+		}
+		unavailable = append(unavailable, dreamEvidence...)
+	}
+	reviewEvidence, err := r.reviewContextUnavailableEvidence(ctx, peer)
+	if err != nil {
+		return ContextResult{}, err
+	}
+	unavailable = append(unavailable, reviewEvidence...)
+	quarantineEvidence, err := promptInjectionQuarantineEvidenceForSession(ctx, r.db, sessionKey)
+	if err != nil {
+		return ContextResult{}, err
+	}
+	unavailable = append(unavailable, quarantineEvidence...)
+
+	card, err := getPeerCard(ctx, r.db, r.workspaceID, profileID, r.observer, peer)
+	if err != nil {
+		return ContextResult{}, err
+	}
+
+	searchResult := SearchResultSet{
+		WorkspaceID: r.workspaceID,
+		ProfileID:   profileID,
+		Peer:        peer,
+		Query:       query,
+	}
+	if limitToSession(params) && sessionKey == "" {
+		unavailable = append(unavailable, ContextUnavailableEvidence{
+			Field:      "limit_to_session",
+			Capability: "session_scoped_representation",
+			Reason:     "limit_to_session requires session_key; recall was not widened through scope=user",
+		})
+	} else {
+		scope := params.Scope
+		if limitToSession(params) {
+			scope = ""
+		}
+		searchResult, err = r.Search(ctx, SearchParams{
+			ProfileID:  profileID,
+			Peer:       peer,
+			Query:      query,
+			MaxTokens:  effectiveSearchTokenLimit(params),
+			SessionKey: sessionKey,
+			Scope:      scope,
+			Sources:    params.Sources,
+		})
+		if err != nil {
+			return ContextResult{}, err
+		}
+	}
+
+	var summary *SessionSummary
+	conclusions := make([]string, 0, len(searchResult.Results))
+	for _, hit := range searchResult.Results {
+		if hit.Source != "conclusion" {
+			continue
+		}
+		conclusions = append(conclusions, hit.Content)
+	}
+
+	recentMessages := []MessageSlice{}
+	if sessionKey != "" {
+		turnCount, err := r.refreshSessionSummaries(ctx, sessionKey)
+		if err != nil {
+			return ContextResult{}, err
+		}
+
+		messageBudget := tokenLimit
+		messageStartID := int64(0)
+		if includeSummaryComponent(params) {
+			var reason string
+			summary, reason, err = selectSessionContextSummary(ctx, r.db, r.workspaceID, sessionKey, tokenLimit)
+			if err != nil {
+				return ContextResult{}, err
+			}
+			if summary != nil {
+				messageStartID = summary.MessageID
+				if tokenLimit > 0 {
+					_, messageBudget = splitContextTokenBudget(tokenLimit)
+				}
+			} else if tokenLimit > 0 && turnCount > 0 {
+				unavailable = append(unavailable, summaryAbsentEvidence(reason))
+			}
+		}
+
+		if tokenLimit > 0 {
+			recentMessages, err = recentTurnsByTokenBudget(ctx, r.db, sessionKey, messageStartID, messageBudget)
+			if err != nil {
+				return ContextResult{}, err
+			}
+		} else {
+			recentMessages, err = recentTurnsAfter(ctx, r.db, sessionKey, messageStartID, r.recentLimit)
+			if err != nil {
+				return ContextResult{}, err
+			}
+		}
+	}
+
+	return ContextResult{
+		WorkspaceID:    r.workspaceID,
+		ProfileID:      profileID,
+		Peer:           peer,
+		ObserverPeerID: r.observer,
+		ObservedPeerID: peer,
+		SessionKey:     sessionKey,
+		PeerCard:       card,
+		Representation: buildRepresentation(peer, card, conclusions),
+		Summary:        summary,
+		Conclusions:    conclusions,
+		SearchResults:  searchResult.Results,
+		ScopeEvidence:  searchResult.ScopeEvidence,
+		RecentMessages: recentMessages,
+		Unavailable:    unavailable,
+	}, nil
+}
+
+func (r retrievalModule) refreshSessionSummaries(ctx context.Context, sessionKey string) (int, error) {
+	count, err := countReadySessionTurns(ctx, r.db, sessionKey)
+	if err != nil {
+		return 0, err
+	}
+	for _, cfg := range []struct {
+		summaryType string
+		cadence     int
+	}{
+		{summaryType: "short", cadence: defaultShortSummaryCadence},
+		{summaryType: "long", cadence: defaultLongSummaryCadence},
+	} {
+		if err := r.refreshSessionSummarySlot(ctx, sessionKey, cfg.summaryType, cfg.cadence, count); err != nil {
+			return 0, err
+		}
+	}
+	return count, nil
+}
+
+func (r retrievalModule) refreshSessionSummarySlot(ctx context.Context, sessionKey, summaryType string, cadence, turnCount int) error {
+	if cadence <= 0 || turnCount < cadence {
+		return nil
+	}
+	coveredCount := (turnCount / cadence) * cadence
+	messageID, err := readySessionTurnIDAtPosition(ctx, r.db, sessionKey, coveredCount)
+	if err != nil {
+		return err
+	}
+	if messageID == 0 {
+		return nil
+	}
+
+	existing, err := getSessionSummary(ctx, r.db, r.workspaceID, sessionKey, summaryType)
+	if err != nil {
+		return err
+	}
+	if existing != nil && existing.MessageID >= messageID {
+		return nil
+	}
+
+	content := deterministicSummaryContent(sessionKey, summaryType, coveredCount, messageID)
+	return upsertSessionSummary(ctx, r.db, sessionSummaryRow{
+		WorkspaceID: r.workspaceID,
+		SessionKey:  sessionKey,
+		SummaryType: summaryType,
+		Content:     content,
+		MessageID:   messageID,
+		TokenCount:  approxTokens(content),
+	})
+}
+
+func (r retrievalModule) dreamContextUnavailableEvidence(ctx context.Context, peer string) ([]ContextUnavailableEvidence, error) {
+	if !r.dreamEnabled {
+		return []ContextUnavailableEvidence{{
+			Field:      "dream",
+			Capability: "dream_disabled",
+			Reason:     "dreaming is disabled; no background dream reasoning is active",
+		}}, nil
+	}
+	present, err := sqliteTableExists(ctx, r.db, "goncho_dreams")
+	if err != nil {
+		return nil, err
+	}
+	if !present {
+		return []ContextUnavailableEvidence{{
+			Field:      "dream",
+			Capability: "dream_unavailable",
+			Reason:     "goncho_dreams scheduler table is unavailable; no background dream reasoning is active for " + peer,
+		}}, nil
+	}
+	return nil, nil
+}
+
+func (r retrievalModule) reviewContextUnavailableEvidence(ctx context.Context, peer string) ([]ContextUnavailableEvidence, error) {
+	items, err := ListReviewItems(ctx, r.db, ReviewQuery{PeerID: peer, Status: ReviewStatusOpen})
+	if err != nil {
+		return nil, err
+	}
+	if len(items.Items) == 0 {
+		return nil, nil
+	}
+	counts := map[ReviewKind]int{}
+	for _, item := range items.Items {
+		counts[item.Kind]++
+	}
+	parts := []string{}
+	for _, kind := range []ReviewKind{ReviewKindConflict, ReviewKindStale} {
+		if counts[kind] > 0 {
+			parts = append(parts, fmt.Sprintf("%s=%d", kind, counts[kind]))
+		}
+	}
+	return []ContextUnavailableEvidence{{
+		Field:      "review",
+		Capability: "review_required",
+		Reason:     fmt.Sprintf("%d open review items require adjudication: %s", len(items.Items), strings.Join(parts, " ")),
+	}}, nil
+}
