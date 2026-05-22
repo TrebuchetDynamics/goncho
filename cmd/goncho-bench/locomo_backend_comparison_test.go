@@ -335,6 +335,33 @@ func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing
 	}
 }
 
+func TestWriteLocomoBackendComparisonFailuresRejectsQuestionConversationMismatch(t *testing.T) {
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"},
+			{MemoryID: "m2", ConversationID: "c2", SessionID: "s2", Speaker: "Leo", TurnIndex: 1, Content: "wrong conversation memory"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "question", GoldMemoryIDs: []string{"m1"}, Category: "true_retrieval_failure"}},
+	}
+	report := locomoBackendComparisonReport{Backends: []locomoBackendComparisonEntry{{
+		Backend:    "mem0",
+		Comparable: true,
+		QuestionsDetail: []locomoQuestionResult{{
+			QuestionID:     "q1",
+			ConversationID: "c2",
+			Category:       "true_retrieval_failure",
+			Question:       "question",
+			GoldMemoryIDs:  []string{"m1"},
+			RetrievedIDs:   []string{"m2"},
+			Rank:           0,
+		}},
+	}}}
+	err := writeLocomoBackendComparisonFailures(filepath.Join(t.TempDir(), "failures.jsonl"), data, report)
+	if err == nil || !strings.Contains(err.Error(), `conversation_id "c2" does not match fixture conversation_id "c1"`) {
+		t.Fatalf("write backend comparison failures error = %v, want question conversation mismatch error", err)
+	}
+}
+
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownRetrievedID(t *testing.T) {
 	data := locomoDataset{
 		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"}},

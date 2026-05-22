@@ -645,9 +645,9 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 	for _, mem := range data.Memories {
 		memByID[mem.MemoryID] = mem
 	}
-	questionIDs := map[string]struct{}{}
+	questionsByID := map[string]locomoQuestionRow{}
 	for _, q := range data.Questions {
-		questionIDs[q.QuestionID] = struct{}{}
+		questionsByID[q.QuestionID] = q
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
@@ -661,9 +661,14 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 		if q.Rank == 1 {
 			continue
 		}
-		if _, ok := questionIDs[q.QuestionID]; !ok {
+		fixtureQuestion, ok := questionsByID[q.QuestionID]
+		if !ok {
 			_ = file.Close()
 			return fmt.Errorf("goncho-bench: LOCOMO failure audit unknown question_id %q", q.QuestionID)
+		}
+		if q.ConversationID != fixtureQuestion.ConversationID {
+			_ = file.Close()
+			return fmt.Errorf("goncho-bench: LOCOMO failure audit question_id %q conversation_id %q does not match fixture conversation_id %q", q.QuestionID, q.ConversationID, fixtureQuestion.ConversationID)
 		}
 		row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: q.Category, Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
 		for i, id := range q.RetrievedIDs[:min(10, len(q.RetrievedIDs))] {
