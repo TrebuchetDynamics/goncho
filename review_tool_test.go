@@ -169,6 +169,33 @@ func TestReviewToolResolveOutputIncludesScope(t *testing.T) {
 	}
 }
 
+func TestReviewToolResolveOutputIncludesEvidenceIDs(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:        ReviewKindConflict,
+		PeerID:      "peer-evidence",
+		SessionKey:  "session-evidence",
+		SubjectID:   "mem-evidence",
+		RelatedID:   "mem-conflict",
+		Reason:      "evidence identifiers should be audit-visible on resolve",
+		EvidenceIDs: []string{"obs-alpha", "obs-beta"},
+		CreatedAt:   time.Date(2026, 5, 22, 17, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	resolved := executeMemoryTool(t, ctx, tool, `{"action":"resolve","id":"`+item.ID+`","resolution":"verified","resolved_by":"agent:mineru","resolution_reason":"evidence reviewed"}`)
+	evidenceIDs, ok := resolved["evidence_ids"].([]any)
+	if !ok || len(evidenceIDs) != 2 || evidenceIDs[0] != "obs-alpha" || evidenceIDs[1] != "obs-beta" {
+		t.Fatalf("resolve output = %+v, want evidence IDs", resolved)
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
