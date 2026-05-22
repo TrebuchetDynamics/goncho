@@ -241,6 +241,8 @@ goncho_review
 goncho_handoff
 ```
 
+`goncho_context` has public E2E coverage for generated primer behavior under `max_tokens`: it preserves the newest in-budget turns and excludes older turns outside the budget while returning a representation for the target peer.
+
 For Navivox, the same boundary applies: the Android app should treat Goncho as the local memory kernel behind the phone-hosted Gormes runtime, not as a separate memory server users must operate.
 
 See: [Gormes Agent Integration](docs-site/src/content/docs/integrations/gormes-agent.md)
