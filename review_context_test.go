@@ -52,6 +52,19 @@ func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("CreateReviewItem other peer: %v", err)
 	}
+	otherSessionReview, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:        ReviewKindStale,
+		WorkspaceID: svc.workspaceID,
+		PeerID:      "peer-a",
+		SessionKey:  "session-b",
+		SubjectID:   "mem-other-session",
+		Reason:      "other session stale memory",
+		EvidenceIDs: []string{"obs-other-session"},
+		CreatedAt:   createdAt.Add(3 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem other session: %v", err)
+	}
 
 	got, err := svc.Context(ctx, ContextParams{Peer: "peer-a", SessionKey: "session-a"})
 	if err != nil {
@@ -79,6 +92,11 @@ func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 	for _, want := range reviewIDs {
 		if !strings.Contains(reviewEvidence.Reason, want) {
 			t.Fatalf("review evidence reason = %q, missing review item id %q", reviewEvidence.Reason, want)
+		}
+	}
+	for _, unwanted := range []string{otherSessionReview.ID, "mem-other-session", "obs-other-session"} {
+		if strings.Contains(reviewEvidence.Reason, unwanted) {
+			t.Fatalf("review evidence reason = %q, unexpectedly included other-session evidence %q", reviewEvidence.Reason, unwanted)
 		}
 	}
 }

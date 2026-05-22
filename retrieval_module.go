@@ -206,7 +206,7 @@ func (r retrievalModule) Context(ctx context.Context, params ContextParams) (Con
 		}
 		unavailable = append(unavailable, dreamEvidence...)
 	}
-	reviewEvidence, err := r.reviewContextUnavailableEvidence(ctx, peer)
+	reviewEvidence, err := r.reviewContextUnavailableEvidence(ctx, peer, sessionKey)
 	if err != nil {
 		return ContextResult{}, err
 	}
@@ -391,10 +391,10 @@ func (r retrievalModule) dreamContextUnavailableEvidence(ctx context.Context, pe
 	return nil, nil
 }
 
-func (r retrievalModule) reviewContextUnavailableEvidence(ctx context.Context, peer string) ([]ContextUnavailableEvidence, error) {
+func (r retrievalModule) reviewContextUnavailableEvidence(ctx context.Context, peer, sessionKey string) ([]ContextUnavailableEvidence, error) {
 	items, err := ListReviewItems(ctx, r.db, ReviewQuery{WorkspaceID: r.workspaceID, PeerID: peer, Status: ReviewStatusOpen})
 	if err != nil {
 		return nil, err
 	}
-	return reviewRequiredUnavailableEvidence(items.Items), nil
+	return reviewRequiredUnavailableEvidence(reviewItemsForContextSession(items.Items, sessionKey)), nil
 }

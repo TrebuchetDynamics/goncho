@@ -194,6 +194,21 @@ func (s *Service) reviewContextUnavailableEvidence(ctx context.Context, peer str
 	return reviewRequiredUnavailableEvidence(items.Items), nil
 }
 
+func reviewItemsForContextSession(items []ReviewItem, sessionKey string) []ReviewItem {
+	sessionKey = strings.TrimSpace(sessionKey)
+	if sessionKey == "" {
+		return items
+	}
+	filtered := make([]ReviewItem, 0, len(items))
+	for _, item := range items {
+		itemSession := strings.TrimSpace(item.SessionKey)
+		if itemSession == "" || itemSession == sessionKey {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}
+
 func reviewRequiredUnavailableEvidence(items []ReviewItem) []ContextUnavailableEvidence {
 	if len(items) == 0 {
 		return nil

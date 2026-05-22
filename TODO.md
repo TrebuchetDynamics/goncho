@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `review_required` context warnings are scoped to the requested session.
+  - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence excludes open review items from another session for the same peer while keeping same-session review counts, chains, item IDs, and evidence IDs.
+  - Result: lifecycle review warnings no longer let unrelated same-peer sessions steer the current session context.
+
 - 2026-05-22: `review_required` context warnings now include review item IDs.
   - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence surfaces bounded review item IDs alongside counts, subject chains, and evidence IDs.
   - Result: lifecycle review warnings are directly actionable because operators can resolve the listed review items without first running a separate list call.
