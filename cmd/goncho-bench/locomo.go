@@ -867,6 +867,7 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	fmt.Fprintf(&b, "- Mode: `%s`\n", report.Mode)
 	fmt.Fprintf(&b, "- Top-K: `%d`\n", report.TopK)
 	fmt.Fprintf(&b, "- no_llm_judge: `%t`\n", report.NoLLMJudge)
+	fmt.Fprintf(&b, "- Reproduce: `go run ./cmd/goncho-bench --locomo-memories %s --locomo-questions %s --out %s --failures %s --locomo-md-out %s --limit %d`\n", report.FixturePaths.Memories, report.FixturePaths.Questions, jsonPath, failurePath, path, report.TopK)
 	if len(report.Source) > 0 {
 		fmt.Fprintf(&b, "- Source: `%v` at `%v`\n", report.Source["source_url"], report.Source["source_revision"])
 		fmt.Fprintf(&b, "- Source SHA256: `%v`\n", report.Source["source_sha256"])

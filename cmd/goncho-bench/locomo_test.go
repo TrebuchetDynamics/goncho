@@ -571,3 +571,18 @@ func TestWriteLocomoMarkdownIncludesConvertedChecksums(t *testing.T) {
 	assertBenchFileContains(t, path, "- Converted memories SHA256: `memories-sha-test`")
 	assertBenchFileContains(t, path, "- Converted questions SHA256: `questions-sha-test`")
 }
+
+func TestWriteLocomoMarkdownIncludesReproductionCommand(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "report.md")
+	report := locomoReport{
+		BenchmarkName: "LOCOMO smoke",
+		Mode:          "retrieval",
+		TopK:          3,
+		NoLLMJudge:    true,
+		FixturePaths:  locomoFixturePaths{Memories: "memories.jsonl", Questions: "questions.jsonl"},
+	}
+	if err := writeLocomoMarkdown(path, report, "locomo.json", "failures.jsonl"); err != nil {
+		t.Fatalf("write LOCOMO markdown: %v", err)
+	}
+	assertBenchFileContains(t, path, "- Reproduce: `go run ./cmd/goncho-bench --locomo-memories memories.jsonl --locomo-questions questions.jsonl --out locomo.json --failures failures.jsonl --locomo-md-out "+path+" --limit 3`")
+}

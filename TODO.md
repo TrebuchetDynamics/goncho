@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO retrieval and backend-comparison markdown now include one-command reproduction lines.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomoMarkdownIncludesReproductionCommand|TestRunLocomoBackendComparisonWritesJSONAndMarkdown' -count=1` proves markdown summaries emit copy-pasteable `go run ./cmd/goncho-bench` commands with the same fixture, output, failure-audit, markdown, and limit paths.
+  - Result: benchmark markdown now satisfies the one-command reproduction scientific-control requirement without changing retrieval or stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval markdown now includes converted-artifact checksums when metadata is available.
   - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoMarkdownIncludesConvertedChecksums -count=1` proves markdown summaries include converted memories and questions SHA256 values from source metadata.
   - Result: retrieval markdown now surfaces the converted-artifact checksum scientific control already present in JSON metadata without changing retrieval or stable-ID scoring semantics.

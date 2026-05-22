@@ -812,7 +812,8 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 		}
 		fmt.Fprintf(&b, "- License note: `%v`\n", report.Source["license"])
 	}
-	fmt.Fprintf(&b, "- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.TopK, report.NoLLMJudge)
+	fmt.Fprintf(&b, "- Top-K: `%d`\n- no_llm_judge: `%t`\n", report.TopK, report.NoLLMJudge)
+	fmt.Fprintf(&b, "- Reproduce: `go run ./cmd/goncho-bench --locomo-memories %s --locomo-questions %s --locomo-backend-comparison-json-out %s --locomo-backend-comparison-md-out %s --locomo-backend-comparison-failures-out %s --limit %d`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, jsonPath, path, failuresPath, report.TopK)
 	b.WriteString("## Leakage checks\n\n")
 	fmt.Fprintf(&b, "- Answer text present in memory content: `%d`\n", report.LeakageChecks.AnswerTextInMemoryContent)
 	fmt.Fprintf(&b, "- Gold IDs present in memory content: `%d`\n", report.LeakageChecks.GoldIDInMemoryContent)

@@ -361,6 +361,7 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "- Converted questions SHA256: `questions-sha-test`")
 	assertBenchFileContains(t, mdOut, "- License note: `test license`")
 	assertBenchFileContains(t, mdOut, "- Top-K: `10`")
+	assertBenchFileContains(t, mdOut, "- Reproduce: `go run ./cmd/goncho-bench --locomo-memories "+memories+" --locomo-questions "+questions+" --locomo-backend-comparison-json-out "+jsonOut+" --locomo-backend-comparison-md-out "+mdOut+" --locomo-backend-comparison-failures-out "+failuresOut+" --limit 10`")
 	assertBenchFileContains(t, mdOut, "- Memory token estimate: `15`")
 	assertBenchFileContains(t, mdOut, "- Database size bytes:")
 	assertBenchFileContains(t, mdOut, "## Leakage checks")
