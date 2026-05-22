@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: unscoped `review_required` context warnings now report omitted session-key counts.
+  - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedSessionKeys|IncludesSessionKeysWhenUnscoped)' -count=1` proves peer-level review warnings include `session_keys_omitted=N` when more distinct affected sessions exist than the bounded preview shows.
+  - Result: lifecycle review warnings stay compact without hiding that additional sessions have open review work.
+
 - 2026-05-22: unscoped `review_required` context warnings now preview affected session keys.
   - Evidence target: `go test . -run 'TestContextReports(OpenReviewItemsAsUnavailableEvidence|ReviewWarningIncludesSessionKeysWhenUnscoped)' -count=1` proves peer-level context warnings include bounded `session_keys=...` detail while session-scoped warnings keep `session_key=<session>`.
   - Result: lifecycle review warnings are easier to triage when a peer has open review work spread across multiple sessions.

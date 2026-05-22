@@ -236,6 +236,9 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem, sessionKeys ...string
 		reason += "; session_key=" + sessionKey
 	} else if sessionKeys := reviewItemSessionKeys(items, detailLimit); len(sessionKeys) > 0 {
 		reason += "; session_keys=" + strings.Join(sessionKeys, " ")
+		if omitted := reviewItemSessionKeyCount(items) - len(sessionKeys); omitted > 0 {
+			reason += fmt.Sprintf("; session_keys_omitted=%d", omitted)
+		}
 	}
 	if reviewIDs := reviewItemIDs(items, detailLimit); len(reviewIDs) > 0 {
 		reason += "; items=" + strings.Join(reviewIDs, " ")
@@ -274,6 +277,18 @@ func reviewItemSessionKeys(items []ReviewItem, limit int) []string {
 		}
 	}
 	return sessionKeys
+}
+
+func reviewItemSessionKeyCount(items []ReviewItem) int {
+	seen := map[string]bool{}
+	for _, item := range items {
+		sessionKey := strings.TrimSpace(item.SessionKey)
+		if sessionKey == "" {
+			continue
+		}
+		seen[sessionKey] = true
+	}
+	return len(seen)
 }
 
 func reviewItemIDs(items []ReviewItem, limit int) []string {

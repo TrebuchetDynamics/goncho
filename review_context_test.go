@@ -95,6 +95,39 @@ func TestContextReportsReviewWarningIncludesSessionKeysWhenUnscoped(t *testing.T
 	}
 }
 
+func TestContextReportsReviewWarningMarksOmittedSessionKeys(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	createdAt := time.Date(2026, 5, 19, 17, 0, 0, 0, time.UTC)
+	for i, sessionKey := range []string{"session-a", "session-b", "session-c", "session-d"} {
+		if _, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+			Kind:        ReviewKindStale,
+			PeerID:      "peer-session-omitted",
+			SessionKey:  sessionKey,
+			SubjectID:   "mem-" + sessionKey,
+			Reason:      "session memory requires lifecycle review",
+			EvidenceIDs: []string{"obs-" + sessionKey},
+			CreatedAt:   createdAt.Add(time.Duration(i) * time.Second),
+		}); err != nil {
+			t.Fatalf("CreateReviewItem %s: %v", sessionKey, err)
+		}
+	}
+
+	got, err := svc.Context(ctx, ContextParams{Peer: "peer-session-omitted"})
+	if err != nil {
+		t.Fatalf("Context: %v", err)
+	}
+
+	reviewEvidence := reviewRequiredEvidenceFromContext(t, got)
+	for _, want := range []string{"4 open review items", "session_keys_omitted=1"} {
+		if !strings.Contains(reviewEvidence.Reason, want) {
+			t.Fatalf("review evidence reason = %q, missing %q", reviewEvidence.Reason, want)
+		}
+	}
+}
+
 func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
