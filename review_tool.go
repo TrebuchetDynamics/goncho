@@ -113,6 +113,7 @@ func (t *ReviewTool) executeResolve(ctx context.Context, id, resolution, resolve
 		"action":            "resolve",
 		"id":                item.ID,
 		"kind":              item.Kind,
+		"workspace_id":      item.WorkspaceID,
 		"peer_id":           item.PeerID,
 		"session_key":       item.SessionKey,
 		"subject_id":        item.SubjectID,

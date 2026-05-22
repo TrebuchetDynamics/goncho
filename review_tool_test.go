@@ -252,6 +252,32 @@ func TestReviewToolResolveOutputIncludesCreatedAt(t *testing.T) {
 	}
 }
 
+func TestReviewToolResolveOutputIncludesWorkspaceID(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:        ReviewKindConflict,
+		WorkspaceID: "workspace-review-audit",
+		PeerID:      "peer-workspace",
+		SessionKey:  "session-workspace",
+		SubjectID:   "mem-workspace",
+		RelatedID:   "mem-prior-workspace",
+		Reason:      "workspace should be audit-visible on resolve",
+		CreatedAt:   time.Date(2026, 5, 22, 20, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	resolved := executeMemoryTool(t, ctx, tool, `{"action":"resolve","id":"`+item.ID+`","resolution":"verified","resolved_by":"agent:mineru","resolution_reason":"workspace reviewed"}`)
+	if stringField(t, resolved, "workspace_id") != "workspace-review-audit" {
+		t.Fatalf("resolve output = %+v, want workspace_id %q", resolved, "workspace-review-audit")
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
