@@ -748,9 +748,9 @@ func sortedLocomoCategories(metrics map[string]locomoCategoryMetrics) []string {
 
 func checkLocomoLeakage(data locomoDataset) locomoLeakageChecks {
 	checks := locomoLeakageChecks{}
-	byConversation := map[string][]locomoMemoryRow{}
-	for _, mem := range data.Memories {
-		byConversation[mem.ConversationID] = append(byConversation[mem.ConversationID], mem)
+	byConversation := data.memoriesByConversation
+	if byConversation == nil {
+		byConversation = indexLocomoMemoriesByConversation(data.Memories)
 	}
 	for _, q := range data.Questions {
 		answer := strings.TrimSpace(strings.ToLower(q.AnswerHint))

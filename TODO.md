@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO leakage checks now reuse the conversation index.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestCheckLocomoLeakageUsesConversationIndex -count=1` proves leakage auditing reads the precomputed per-conversation LOCOMO memory index when available.
+  - Result: LOCOMO report generation avoids rebuilding a duplicate conversation map for leakage checks while preserving conversation-scoped answer/gold/question leakage accounting.
+
 - 2026-05-22: LOCOMO direct retrieval now rejects non-positive limits before backend work.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits -count=1` proves direct calls with zero or negative limits return no IDs across random, recency, BM25, SQLite FTS5, and Goncho retrieval paths.
   - Result: internal LOCOMO retrieval now treats non-positive top-K windows as empty instead of panicking in slice helpers or letting SQLite FTS5 return all rows for `LIMIT -1`.

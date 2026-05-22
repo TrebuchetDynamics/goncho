@@ -30,6 +30,26 @@ func TestLoadLocomoDatasetParsesSchema(t *testing.T) {
 	}
 }
 
+func TestCheckLocomoLeakageUsesConversationIndex(t *testing.T) {
+	data := locomoDataset{
+		Questions: []locomoQuestionRow{{
+			QuestionID:     "q1",
+			ConversationID: "c1",
+			Question:       "What phrase should not appear?",
+			GoldMemoryIDs:  []string{"gold-id"},
+			Category:       "leakage_guard",
+			AnswerHint:     "secret answer",
+		}},
+		memoriesByConversation: map[string][]locomoMemoryRow{
+			"c1": {{MemoryID: "m1", ConversationID: "c1", Content: "The secret answer mentions gold-id and asks What phrase should not appear?"}},
+		},
+	}
+	checks := checkLocomoLeakage(data)
+	if checks.AnswerTextInMemoryContent != 1 || checks.GoldIDInMemoryContent != 1 || checks.QuestionTextInMemory != 1 {
+		t.Fatalf("leakage checks = %+v, want one answer, gold ID, and question-text leak from indexed memories", checks)
+	}
+}
+
 func TestLoadLocomoDatasetRejectsDuplicateStableIDs(t *testing.T) {
 	t.Run("memory_id", func(t *testing.T) {
 		dir := t.TempDir()
