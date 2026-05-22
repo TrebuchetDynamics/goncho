@@ -46,6 +46,8 @@ Verify public module resolution, package documentation, external importability, 
 make ecosystem-smoke
 ```
 
+For the narrower external import proof only, run `make public-module-smoke`.
+
 Use `go get` to depend on the library package. For the command-line benchmark runner, use `make install-smoke` or `go install ./cmd/goncho-bench` from this checkout until the next v0.1.x tag includes the CLI.
 
 ---
