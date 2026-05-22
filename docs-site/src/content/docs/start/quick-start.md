@@ -21,7 +21,7 @@ The root module is a library package; `goncho-bench` is the installable command.
 
 :::note[Pre-1.0 note]
 Goncho is pre-1.0. The setup flow is intentionally small, and operators should pin the module version or commit they deploy against.
-::: 
+:::
 
 ## Minimal Service Shape
 
