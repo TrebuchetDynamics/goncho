@@ -234,6 +234,8 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem, sessionKeys ...string
 	reason := fmt.Sprintf("%d open review items require adjudication: %s", len(items), strings.Join(parts, " "))
 	if sessionKey != "" {
 		reason += "; session_key=" + sessionKey
+	} else if sessionKeys := reviewItemSessionKeys(items, detailLimit); len(sessionKeys) > 0 {
+		reason += "; session_keys=" + strings.Join(sessionKeys, " ")
 	}
 	if reviewIDs := reviewItemIDs(items, detailLimit); len(reviewIDs) > 0 {
 		reason += "; items=" + strings.Join(reviewIDs, " ")
@@ -252,6 +254,26 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem, sessionKeys ...string
 		Capability: "review_required",
 		Reason:     reason,
 	}}
+}
+
+func reviewItemSessionKeys(items []ReviewItem, limit int) []string {
+	if limit <= 0 {
+		return nil
+	}
+	sessionKeys := []string{}
+	seen := map[string]bool{}
+	for _, item := range items {
+		sessionKey := strings.TrimSpace(item.SessionKey)
+		if sessionKey == "" || seen[sessionKey] {
+			continue
+		}
+		seen[sessionKey] = true
+		sessionKeys = append(sessionKeys, sessionKey)
+		if len(sessionKeys) >= limit {
+			break
+		}
+	}
+	return sessionKeys
 }
 
 func reviewItemIDs(items []ReviewItem, limit int) []string {

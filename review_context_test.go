@@ -51,6 +51,50 @@ func reviewRequiredEvidenceFromContext(t *testing.T, got ContextResult) ContextU
 	return ContextUnavailableEvidence{}
 }
 
+func TestContextReportsReviewWarningIncludesSessionKeysWhenUnscoped(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	createdAt := time.Date(2026, 5, 19, 16, 0, 0, 0, time.UTC)
+	for _, item := range []ReviewItemCreateParams{
+		{
+			Kind:        ReviewKindStale,
+			PeerID:      "peer-session-preview",
+			SessionKey:  "session-b",
+			SubjectID:   "mem-b",
+			Reason:      "session b memory requires lifecycle review",
+			EvidenceIDs: []string{"obs-b"},
+			CreatedAt:   createdAt,
+		},
+		{
+			Kind:        ReviewKindConflict,
+			PeerID:      "peer-session-preview",
+			SessionKey:  "session-a",
+			SubjectID:   "mem-a",
+			Reason:      "session a memory conflicts with older truth",
+			EvidenceIDs: []string{"obs-a"},
+			CreatedAt:   createdAt.Add(time.Second),
+		},
+	} {
+		if _, err := svc.CreateReviewItem(ctx, item); err != nil {
+			t.Fatalf("CreateReviewItem: %v", err)
+		}
+	}
+
+	got, err := svc.Context(ctx, ContextParams{Peer: "peer-session-preview"})
+	if err != nil {
+		t.Fatalf("Context: %v", err)
+	}
+
+	reviewEvidence := reviewRequiredEvidenceFromContext(t, got)
+	for _, want := range []string{"2 open review items", "session_keys=session-a session-b"} {
+		if !strings.Contains(reviewEvidence.Reason, want) {
+			t.Fatalf("review evidence reason = %q, missing %q", reviewEvidence.Reason, want)
+		}
+	}
+}
+
 func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

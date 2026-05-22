@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: unscoped `review_required` context warnings now preview affected session keys.
+  - Evidence target: `go test . -run 'TestContextReports(OpenReviewItemsAsUnavailableEvidence|ReviewWarningIncludesSessionKeysWhenUnscoped)' -count=1` proves peer-level context warnings include bounded `session_keys=...` detail while session-scoped warnings keep `session_key=<session>`.
+  - Result: lifecycle review warnings are easier to triage when a peer has open review work spread across multiple sessions.
+
 - 2026-05-22: session-scoped `review_required` context warnings now name their session key.
   - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence includes `session_key=<session>` while keeping same-session counts, review item IDs, chains, and evidence IDs.
   - Result: lifecycle review warnings are easier to audit because the compact warning states the scope used to filter open review items.
