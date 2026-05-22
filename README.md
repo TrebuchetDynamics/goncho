@@ -46,7 +46,7 @@ Verify public release metadata, package documentation, external importability, a
 make ecosystem-smoke
 ```
 
-For the narrower public release metadata proof only, run `make public-release-smoke`; it checks the public `@latest` version and published time from `go list -m -json`. For the narrower external import proof only, run `make public-module-smoke`.
+For the narrower public release metadata proof only, run `make public-release-smoke`; it checks the public `@latest` version and published time from `go list -m -json`. For the narrower external import proof only, run `make public-module-smoke`. For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke`.
 
 Use `go get github.com/TrebuchetDynamics/goncho@latest` to depend on the library package. For the command-line benchmark runner, use `make install-smoke` or `go install ./cmd/goncho-bench` from this checkout until the next v0.1.x tag includes the CLI.
 

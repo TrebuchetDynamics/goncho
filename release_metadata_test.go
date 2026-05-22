@@ -159,6 +159,26 @@ func TestPublicDocsSurfaceExternalAdapterContract(t *testing.T) {
 	}
 }
 
+func TestPublicDocsMentionBackendComparisonSmoke(t *testing.T) {
+	const smokeCommand = "make bench-locomo-backends-smoke"
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), smokeCommand) {
+				t.Fatalf("%s does not mention external backend comparison smoke command %q", path, smokeCommand)
+			}
+		})
+	}
+}
+
 func TestPublicAdoptionDocsMentionPublicModuleSmoke(t *testing.T) {
 	for _, path := range []string{
 		"README.md",

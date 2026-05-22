@@ -34,7 +34,7 @@ The root module is a library package, not a CLI binary and not a root `go instal
 
 Local ecosystem smoke: `make ecosystem-smoke` verifies public release metadata, package docs, external importability, and checkout-local benchmark CLI installation. For the narrower public release metadata proof, run `make public-release-smoke`; for the narrower external import proof, run `make public-module-smoke`.
 
-Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](/reference/retrieval-benchmarks/).
+Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](/reference/retrieval-benchmarks/). For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke` from a checkout.
 :::
 
 ## Four Paths

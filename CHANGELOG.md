@@ -21,6 +21,7 @@
 
 ### Documentation
 
+- Surfaced the external backend comparison smoke command from first-touch public docs.
 - Surfaced the external adapter contract and agentmemory PR #583 stable-ID status from first-touch public docs.
 - Linked first-touch public docs to the Retrieval Benchmarks methodology and stable-ID backend comparison reference.
 - Clarified first-touch public docs that the root module is not a root `go install` target.

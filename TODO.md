@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: first-touch public docs now surface the external backend comparison smoke.
+  - Evidence target: `go test . -run TestPublicDocsMentionBackendComparisonSmoke -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `make bench-locomo-backends-smoke`.
+  - Result: ecosystem-readiness docs now expose the CI-safe local proof command for external adapter comparison without rerunning or changing frozen benchmark artifacts.
+
 - 2026-05-22: first-touch public docs now surface the external adapter contract.
   - Evidence target: `go test . -run TestPublicDocsSurfaceExternalAdapterContract -count=1` proves README, docs home, current-capabilities, and quick-start docs mention the external adapter contract and current agentmemory PR #583 stable-ID status.
   - Result: ecosystem-readiness docs now expose adapter/upstream credibility at adoption time without overstating backend scores or root CLI installability.
