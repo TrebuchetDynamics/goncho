@@ -115,6 +115,18 @@ func main() {
 
 Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.1 release published May 22, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
 
+### go.dev Signal Map
+
+| go.dev signal | Current state | Local proof |
+| --- | --- | --- |
+| Version | `v0.1.1 / Latest`, published May 22, 2026 | `make public-release-smoke` checks public `@latest` metadata with `go list -m -json`. |
+| Valid go.mod file | Module path is `github.com/TrebuchetDynamics/goncho` | `make local-module-smoke` checks `go list -m -json` for module path and Go version. |
+| Redistributable license | `MIT` | License file is checked in and pkg.go.dev marks it redistributable. |
+| Package documentation | Root package docs render with examples | `make package-doc-smoke` checks `go doc .`; compiled examples run in `go test ./...`. |
+| External importability | Public module can be imported from a temporary module | `make public-module-smoke` runs `go get github.com/TrebuchetDynamics/goncho@latest` and compiles a minimal service import. |
+| Command install path | Root is a library; `cmd/goncho-bench` is the command | `make install-smoke` installs checkout-local `./cmd/goncho-bench` and starts `--help`. |
+| Imported by | Imported by count is an adoption signal, not a local correctness gate | Prefer the smoke commands above for reproducible package-readiness evidence. |
+
 Verify public release metadata, local Go module metadata, package documentation, public docs site build, external importability, and the checkout-local benchmark CLI without editing another project:
 
 ```bash

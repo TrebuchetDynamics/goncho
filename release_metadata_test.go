@@ -341,6 +341,28 @@ func TestReadmeSurfacesPkgGoDevAPIMap(t *testing.T) {
 	}
 }
 
+func TestReadmeSurfacesGoDevSignalMap(t *testing.T) {
+	raw, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("ReadFile README.md: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"### go.dev Signal Map",
+		"Valid go.mod file",
+		"Redistributable license",
+		"v0.1.1 / Latest",
+		"published May 22, 2026",
+		"make package-doc-smoke",
+		"make public-module-smoke",
+		"Imported by count is an adoption signal",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("README.md does not surface go.dev signal map marker %q", want)
+		}
+	}
+}
+
 func TestReadmeSurfacesMinimalEmbeddedSkeleton(t *testing.T) {
 	raw, err := os.ReadFile("README.md")
 	if err != nil {
@@ -452,6 +474,22 @@ func TestReleaseMetadataSmokeIncludesReadmeAPIMapGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include README API map guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesReadmeGoDevSignalGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"ReadmeSurfacesGoDevSignalMap",
+		"ReleaseMetadataSmokeIncludesReadmeGoDevSignalGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include README go.dev signal guard %q", want)
 		}
 	}
 }

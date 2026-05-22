@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: README now maps go.dev package signals to local proof commands.
+  - Evidence target: `go test . -run 'Test(ReadmeSurfacesGoDevSignalMap|ReleaseMetadataSmokeIncludesReadmeGoDevSignalGuard)' -count=1` proves the README includes go.dev version, published date, go.mod, license, package-doc, external-import, install-path, and Imported by guidance while release metadata smoke keeps the guard wired.
+  - Result: readers can connect the pkg.go.dev metadata panel to reproducible local checks instead of trusting badges alone.
+
 - 2026-05-22: README now gives pkg.go.dev readers a minimal embedded host skeleton.
   - Evidence target: `go test . -run 'Test(ReadmeSurfacesMinimalEmbeddedSkeleton|ReleaseMetadataSmokeIncludesReadmeMinimalSkeletonGuard)' -count=1` proves the README includes a copy-paste local SQLite service skeleton and release metadata smoke keeps the guard wired.
   - Result: readers can start a Go module around Goncho without confusing the library package with the benchmark CLI.
