@@ -17,7 +17,7 @@ From a checkout, verify the public module, local package docs, external import p
 make ecosystem-smoke
 ```
 
-For a narrower external-import-only check, run `make public-module-smoke`.
+For a narrower external-import-only check, run `make public-module-smoke`. For a broader local pre-tag gate, run `make release-smoke`; it wraps ecosystem smoke with Go tests, vet, race tests, and the docs-site build.
 
 From a checkout, verify the benchmark CLI only when you need reproducible local retrieval reports:
 
