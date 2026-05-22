@@ -61,6 +61,56 @@ func TestReviewToolListsAndResolvesReviewItems(t *testing.T) {
 	}
 }
 
+func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	openItem, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindConflict,
+		PeerID:    "peer-a",
+		SubjectID: "mem-open",
+		RelatedID: "mem-old",
+		Reason:    "open memory conflict needs review",
+		CreatedAt: time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem open: %v", err)
+	}
+	resolvedItem, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindStale,
+		PeerID:    "peer-a",
+		SubjectID: "mem-resolved",
+		Reason:    "resolved stale memory was already reviewed",
+		CreatedAt: time.Date(2026, 5, 22, 11, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem resolved: %v", err)
+	}
+	if _, err := svc.ResolveReviewItem(ctx, ReviewResolutionParams{
+		ID:               resolvedItem.ID,
+		Resolution:       ReviewResolutionVerified,
+		ResolvedBy:       "agent:mineru",
+		ResolutionReason: "resolved before default-list check",
+	}); err != nil {
+		t.Fatalf("ResolveReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	listed := executeMemoryTool(t, ctx, tool, `{"action":"list","peer_id":"peer-a","status":"   "}`)
+	if intField(t, listed, "count") != 1 {
+		t.Fatalf("blank-status list output = %+v, want only open review item", listed)
+	}
+	items, ok := listed["items"].([]any)
+	if !ok || len(items) != 1 {
+		t.Fatalf("items = %#v, want one item", listed["items"])
+	}
+	listedItem, ok := items[0].(map[string]any)
+	if !ok || listedItem["id"] != openItem.ID || listedItem["status"] != string(ReviewStatusOpen) {
+		t.Fatalf("listed item = %#v, want open item %s", items[0], openItem.ID)
+	}
+}
+
 func TestReviewToolRejectsInvalidListFilters(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

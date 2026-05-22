@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: blank `goncho_review` list status values now default to open review items.
+  - Evidence target: `go test . -run TestReviewToolTreatsBlankStatusAsOpenDefault -count=1` proves whitespace-only `status` behaves like omitted `status` and does not leak resolved items into the default review queue.
+  - Result: review queue inspection is safer when host/tool callers pass blank form values instead of omitting optional fields.
+
 - 2026-05-22: invalid `goncho_review` resolve resolution values now return enum-specific guidance.
   - Evidence target: `go test . -run TestReviewToolRejectsInvalidResolveResolution -count=1` proves an invalid `resolution` value is rejected without closing the open review item.
   - Result: lifecycle review queues are safer when host/tool callers bypass schema enum validation.

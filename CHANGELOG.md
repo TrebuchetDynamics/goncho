@@ -12,6 +12,7 @@
 
 ### Changed
 
+- `goncho_review` list requests now treat blank `status` values like omitted status and default to open review items.
 - `goncho_review` resolve requests now return enum-specific guidance for invalid `resolution` values.
 - Review item IDs now include a deterministic field fingerprint so distinct same-timestamp review items do not collide.
 - `goncho_review` list requests now reject invalid `status` and `kind` filters instead of silently returning an empty queue.

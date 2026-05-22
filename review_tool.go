@@ -74,6 +74,7 @@ func (t *ReviewTool) Execute(ctx context.Context, args json.RawMessage) (json.Ra
 }
 
 func (t *ReviewTool) executeList(ctx context.Context, peerID, sessionKey, subjectID, relatedID, status, kind string, limit int) (json.RawMessage, error) {
+	status = strings.TrimSpace(status)
 	if status == "" {
 		status = string(ReviewStatusOpen)
 	}
