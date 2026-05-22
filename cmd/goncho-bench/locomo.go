@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -86,6 +87,8 @@ type locomoSystemReport struct {
 	RecallAnyAt10     float64                          `json:"recall_any_at_10"`
 	StrictRecallAt5   float64                          `json:"strict_recall_at_5"`
 	StrictRecallAt10  float64                          `json:"strict_recall_at_10"`
+	NDCGAt5           float64                          `json:"ndcg_at_5"`
+	NDCGAt10          float64                          `json:"ndcg_at_10"`
 	MRR               float64                          `json:"mrr"`
 	SearchLatencyMs   int64                            `json:"search_latency_ms"`
 	LatencyMs         locomoLatencyStats               `json:"latency_ms"`
@@ -108,6 +111,8 @@ type locomoCategoryMetrics struct {
 	RecallAnyAt10    float64 `json:"recall_any_at_10"`
 	StrictRecallAt5  float64 `json:"strict_recall_at_5"`
 	StrictRecallAt10 float64 `json:"strict_recall_at_10"`
+	NDCGAt5          float64 `json:"ndcg_at_5"`
+	NDCGAt10         float64 `json:"ndcg_at_10"`
 	MRR              float64 `json:"mrr"`
 }
 
@@ -123,6 +128,8 @@ type locomoQuestionResult struct {
 	RecallAnyAt10      float64  `json:"recall_any_at_10"`
 	StrictRecallAt5    float64  `json:"strict_recall_at_5"`
 	StrictRecallAt10   float64  `json:"strict_recall_at_10"`
+	NDCGAt5            float64  `json:"ndcg_at_5"`
+	NDCGAt10           float64  `json:"ndcg_at_10"`
 	MRR                float64  `json:"mrr"`
 	RetrievalLatencyMs int64    `json:"retrieval_latency_ms"`
 }
@@ -574,6 +581,8 @@ func scoreLocomoQuestion(q locomoQuestionRow, retrieved []string) locomoQuestion
 		RecallAnyAt10:    locomoRecallAny(retrieved, q.GoldMemoryIDs, 10),
 		StrictRecallAt5:  locomoStrictRecall(retrieved, q.GoldMemoryIDs, 5),
 		StrictRecallAt10: locomoStrictRecall(retrieved, q.GoldMemoryIDs, 10),
+		NDCGAt5:          locomoNDCG(retrieved, q.GoldMemoryIDs, 5),
+		NDCGAt10:         locomoNDCG(retrieved, q.GoldMemoryIDs, 10),
 		MRR:              mrr,
 	}
 }
@@ -604,18 +613,51 @@ func locomoStrictRecall(retrieved, gold []string, k int) float64 {
 	return 1
 }
 
+func locomoNDCG(retrieved, gold []string, k int) float64 {
+	if k <= 0 || len(gold) == 0 {
+		return 0
+	}
+	goldSet := map[string]struct{}{}
+	for _, id := range gold {
+		goldSet[id] = struct{}{}
+	}
+	seenRelevant := map[string]struct{}{}
+	dcg := 0.0
+	for i, id := range retrieved[:min(k, len(retrieved))] {
+		if _, ok := goldSet[id]; !ok {
+			continue
+		}
+		if _, ok := seenRelevant[id]; ok {
+			continue
+		}
+		seenRelevant[id] = struct{}{}
+		dcg += 1 / math.Log2(float64(i+2))
+	}
+	idealCount := min(k, len(goldSet))
+	idcg := 0.0
+	for i := 0; i < idealCount; i++ {
+		idcg += 1 / math.Log2(float64(i+2))
+	}
+	if idcg == 0 {
+		return 0
+	}
+	return roundMetric(dcg / idcg)
+}
+
 func summarizeLocomoSystem(system string, results []locomoQuestionResult) locomoSystemReport {
 	out := locomoSystemReport{System: system, Questions: len(results), FailureCategories: locomoFailureCategories(results), CategoryMetrics: map[string]locomoCategoryMetrics{}, QuestionsDetail: results}
 	if len(results) == 0 {
 		return out
 	}
-	var any5, any10, strict5, strict10, mrr float64
+	var any5, any10, strict5, strict10, ndcg5, ndcg10, mrr float64
 	byCategory := map[string][]locomoQuestionResult{}
 	for _, q := range results {
 		any5 += q.RecallAnyAt5
 		any10 += q.RecallAnyAt10
 		strict5 += q.StrictRecallAt5
 		strict10 += q.StrictRecallAt10
+		ndcg5 += q.NDCGAt5
+		ndcg10 += q.NDCGAt10
 		mrr += q.MRR
 		byCategory[q.Category] = append(byCategory[q.Category], q)
 	}
@@ -623,6 +665,8 @@ func summarizeLocomoSystem(system string, results []locomoQuestionResult) locomo
 	out.RecallAnyAt10 = roundMetric(any10 / float64(len(results)))
 	out.StrictRecallAt5 = roundMetric(strict5 / float64(len(results)))
 	out.StrictRecallAt10 = roundMetric(strict10 / float64(len(results)))
+	out.NDCGAt5 = roundMetric(ndcg5 / float64(len(results)))
+	out.NDCGAt10 = roundMetric(ndcg10 / float64(len(results)))
 	out.MRR = roundMetric(mrr / float64(len(results)))
 	out.LatencyMs = summarizeLocomoLatency(results)
 	for category, items := range byCategory {
@@ -632,16 +676,18 @@ func summarizeLocomoSystem(system string, results []locomoQuestionResult) locomo
 }
 
 func summarizeLocomoCategory(results []locomoQuestionResult) locomoCategoryMetrics {
-	var any5, any10, strict5, strict10, mrr float64
+	var any5, any10, strict5, strict10, ndcg5, ndcg10, mrr float64
 	for _, q := range results {
 		any5 += q.RecallAnyAt5
 		any10 += q.RecallAnyAt10
 		strict5 += q.StrictRecallAt5
 		strict10 += q.StrictRecallAt10
+		ndcg5 += q.NDCGAt5
+		ndcg10 += q.NDCGAt10
 		mrr += q.MRR
 	}
 	n := float64(len(results))
-	return locomoCategoryMetrics{Questions: len(results), RecallAnyAt5: roundMetric(any5 / n), RecallAnyAt10: roundMetric(any10 / n), StrictRecallAt5: roundMetric(strict5 / n), StrictRecallAt10: roundMetric(strict10 / n), MRR: roundMetric(mrr / n)}
+	return locomoCategoryMetrics{Questions: len(results), RecallAnyAt5: roundMetric(any5 / n), RecallAnyAt10: roundMetric(any10 / n), StrictRecallAt5: roundMetric(strict5 / n), StrictRecallAt10: roundMetric(strict10 / n), NDCGAt5: roundMetric(ndcg5 / n), NDCGAt10: roundMetric(ndcg10 / n), MRR: roundMetric(mrr / n)}
 }
 
 func summarizeLocomoLatency(results []locomoQuestionResult) locomoLatencyStats {
@@ -808,9 +854,9 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 		fmt.Fprintf(&b, "- License note: `%v`\n", report.Source["license"])
 	}
 	b.WriteString("\n")
-	b.WriteString("## Systems\n\n| System | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR | Search latency ms | Latency min ms | Latency p50 ms | Latency p95 ms | Latency max ms | RSS bytes |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+	b.WriteString("## Systems\n\n| System | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | NDCG@5 | NDCG@10 | MRR | Search latency ms | Latency min ms | Latency p50 ms | Latency p95 ms | Latency max ms | RSS bytes |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
 	for _, system := range report.Systems {
-		fmt.Fprintf(&b, "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d | %d | %d | %d | %d |\n", system.System, system.RecallAnyAt5*100, system.RecallAnyAt10*100, system.StrictRecallAt5*100, system.StrictRecallAt10*100, system.MRR*100, system.SearchLatencyMs, system.LatencyMs.Min, system.LatencyMs.P50, system.LatencyMs.P95, system.LatencyMs.Max, system.RSSBytes)
+		fmt.Fprintf(&b, "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d | %d | %d | %d | %d |\n", system.System, system.RecallAnyAt5*100, system.RecallAnyAt10*100, system.StrictRecallAt5*100, system.StrictRecallAt10*100, system.NDCGAt5*100, system.NDCGAt10*100, system.MRR*100, system.SearchLatencyMs, system.LatencyMs.Min, system.LatencyMs.P50, system.LatencyMs.P95, system.LatencyMs.Max, system.RSSBytes)
 	}
 	b.WriteString("\n## Failure categories\n\n| System | Category | Questions |\n| --- | --- | ---: |\n")
 	for _, system := range report.Systems {
@@ -820,10 +866,10 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	}
 	b.WriteString("\n## Category metrics\n\n")
 	for _, system := range report.Systems {
-		fmt.Fprintf(&b, "### %s\n\n| Category | Questions | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n", system.System)
+		fmt.Fprintf(&b, "### %s\n\n| Category | Questions | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | NDCG@5 | NDCG@10 | MRR |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n", system.System)
 		for _, category := range sortedLocomoCategories(system.CategoryMetrics) {
 			m := system.CategoryMetrics[category]
-			fmt.Fprintf(&b, "| `%s` | %d | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% |\n", category, m.Questions, m.RecallAnyAt5*100, m.RecallAnyAt10*100, m.StrictRecallAt5*100, m.StrictRecallAt10*100, m.MRR*100)
+			fmt.Fprintf(&b, "| `%s` | %d | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% |\n", category, m.Questions, m.RecallAnyAt5*100, m.RecallAnyAt10*100, m.StrictRecallAt5*100, m.StrictRecallAt10*100, m.NDCGAt5*100, m.NDCGAt10*100, m.MRR*100)
 		}
 		b.WriteString("\n")
 	}

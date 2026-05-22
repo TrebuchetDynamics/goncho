@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO retrieval reports now record per-system NDCG@5 and NDCG@10 metrics.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoScoringStrictAnyAndMRR|TestLocomoCategoryMetricAggregation|TestRunLocomoSmokeProducesReport' -count=1` proves ID-based NDCG scoring, system/category aggregation, JSON fields, and markdown columns.
+  - Result: retrieval artifacts now satisfy the roadmap's NDCG reporting requirement without changing retrieval or stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval reports now record per-system latency distribution stats.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoLatencyMetricAggregation|TestRunLocomoSmokeProducesReport' -count=1` proves JSON system rows emit `latency_ms` min/p50/p95/max and markdown summaries include latency distribution columns.
   - Result: retrieval artifacts now satisfy the roadmap's latency min/p50/p95/max reporting requirement without changing scoring semantics.

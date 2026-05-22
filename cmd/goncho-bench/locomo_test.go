@@ -134,6 +134,9 @@ func TestLocomoScoringStrictAnyAndMRR(t *testing.T) {
 	if got.RecallAnyAt5 != 1 || got.StrictRecallAt5 != 1 {
 		t.Fatalf("@5 any/strict = %f/%f, want 1/1", got.RecallAnyAt5, got.StrictRecallAt5)
 	}
+	if got.NDCGAt5 != 0.6509 || got.NDCGAt10 != 0.6509 {
+		t.Fatalf("ndcg@5/@10 = %f/%f, want 0.6509/0.6509", got.NDCGAt5, got.NDCGAt10)
+	}
 	got = scoreLocomoQuestion(q, []string{"m1", "m2", "m3"})
 	if got.RecallAnyAt5 != 1 || got.StrictRecallAt5 != 0 {
 		t.Fatalf("partial @5 any/strict = %f/%f, want 1/0", got.RecallAnyAt5, got.StrictRecallAt5)
@@ -142,13 +145,16 @@ func TestLocomoScoringStrictAnyAndMRR(t *testing.T) {
 
 func TestLocomoCategoryMetricAggregation(t *testing.T) {
 	report := summarizeLocomoSystem("test", []locomoQuestionResult{
-		{Category: "latest_state_retrieval", RecallAnyAt5: 1, RecallAnyAt10: 1, StrictRecallAt5: 1, StrictRecallAt10: 1, MRR: 1},
-		{Category: "latest_state_retrieval", RecallAnyAt5: 0, RecallAnyAt10: 1, StrictRecallAt5: 0, StrictRecallAt10: 1, MRR: 0.5},
-		{Category: "speaker_attribution", RecallAnyAt5: 1, RecallAnyAt10: 1, StrictRecallAt5: 1, StrictRecallAt10: 1, MRR: 1},
+		{Category: "latest_state_retrieval", RecallAnyAt5: 1, RecallAnyAt10: 1, StrictRecallAt5: 1, StrictRecallAt10: 1, MRR: 1, NDCGAt5: 1, NDCGAt10: 1},
+		{Category: "latest_state_retrieval", RecallAnyAt5: 0, RecallAnyAt10: 1, StrictRecallAt5: 0, StrictRecallAt10: 1, MRR: 0.5, NDCGAt5: 0.5, NDCGAt10: 0.5},
+		{Category: "speaker_attribution", RecallAnyAt5: 1, RecallAnyAt10: 1, StrictRecallAt5: 1, StrictRecallAt10: 1, MRR: 1, NDCGAt5: 1, NDCGAt10: 1},
 	})
+	if report.NDCGAt5 != 0.8333 || report.NDCGAt10 != 0.8333 {
+		t.Fatalf("system ndcg@5/@10 = %f/%f, want .8333/.8333", report.NDCGAt5, report.NDCGAt10)
+	}
 	m := report.CategoryMetrics["latest_state_retrieval"]
-	if m.Questions != 2 || m.RecallAnyAt5 != 0.5 || m.MRR != 0.75 {
-		t.Fatalf("latest category metrics = %+v, want n=2 any5=.5 mrr=.75", m)
+	if m.Questions != 2 || m.RecallAnyAt5 != 0.5 || m.MRR != 0.75 || m.NDCGAt5 != 0.75 || m.NDCGAt10 != 0.75 {
+		t.Fatalf("latest category metrics = %+v, want n=2 any5=.5 mrr=.75 ndcg=.75", m)
 	}
 }
 
@@ -483,6 +489,12 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 		if _, ok := system["rss_bytes"]; !ok {
 			t.Fatalf("raw system %v missing rss_bytes", system["system"])
 		}
+		if _, ok := system["ndcg_at_5"]; !ok {
+			t.Fatalf("raw system %v missing ndcg_at_5", system["system"])
+		}
+		if _, ok := system["ndcg_at_10"]; !ok {
+			t.Fatalf("raw system %v missing ndcg_at_10", system["system"])
+		}
 		failureCategories, ok := system["failure_categories"].(map[string]any)
 		if !ok || len(failureCategories) == 0 {
 			t.Fatalf("raw system %v failure_categories = %#v, want non-empty metric counts", system["system"], system["failure_categories"])
@@ -517,6 +529,9 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "Search latency ms") || !strings.Contains(string(mdRaw), "RSS bytes") {
 		t.Fatalf("markdown missing resource metric columns:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "NDCG@5") || !strings.Contains(string(mdRaw), "NDCG@10") {
+		t.Fatalf("markdown missing NDCG metric columns:\n%s", mdRaw)
 	}
 	if !strings.Contains(string(mdRaw), "## Failure categories") {
 		t.Fatalf("markdown missing failure-category summary:\n%s", mdRaw)
