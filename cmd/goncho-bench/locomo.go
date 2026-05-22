@@ -350,6 +350,9 @@ func retrieveLocomo(ctx context.Context, svc *goncho.Service, data locomoDataset
 	case "sqlite-fts5":
 		return retrieveLocomoSQLiteFTS(ctx, items, q, limit)
 	case "goncho":
+		if limit <= 0 {
+			return nil, nil
+		}
 		result, err := svc.Search(ctx, goncho.SearchParams{Peer: q.ConversationID, Query: q.Question, Limit: limit, MaxTokens: 100_000})
 		if err != nil {
 			return nil, err
@@ -361,6 +364,9 @@ func retrieveLocomo(ctx context.Context, svc *goncho.Service, data locomoDataset
 				if _, ok := seen[id]; !ok {
 					seen[id] = struct{}{}
 					out = append(out, id)
+					if len(out) >= limit {
+						return out, nil
+					}
 				}
 			}
 		}

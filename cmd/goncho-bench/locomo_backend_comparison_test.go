@@ -54,6 +54,33 @@ func TestLocomoInMemoryBackendScopedSearchUsesConversationIndex(t *testing.T) {
 	}
 }
 
+func TestGonchoBackendScopedSearchCapsStableIDFanoutToTopK(t *testing.T) {
+	ctx := context.Background()
+	backend, unsupported, err := newLocomoBackend("goncho")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unsupported != "" {
+		t.Fatalf("goncho backend unsupported: %s", unsupported)
+	}
+	defer backend.Close(ctx)
+	if err := backend.Reset(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"m1", "m2"} {
+		if err := backend.Insert(ctx, id, "orchid marker duplicate", map[string]any{"conversation_id": "c1"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	hits, err := searchLocomoBackend(ctx, backend, locomoQuestionRow{QuestionID: "q1", ConversationID: "c1", Question: "orchid marker"}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 {
+		t.Fatalf("goncho hits = %+v, want duplicate content fan-out capped to topK 1", hits)
+	}
+}
+
 func TestLocomoBackendComparisonUsesStableMemoryIDs(t *testing.T) {
 	ctx := context.Background()
 	data := locomoDataset{

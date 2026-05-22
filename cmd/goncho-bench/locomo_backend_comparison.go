@@ -548,6 +548,9 @@ func (b *gonchoBackend) Insert(ctx context.Context, id, content string, metadata
 	return nil
 }
 func (b *gonchoBackend) Search(ctx context.Context, question string, topK int) ([]BackendResult, error) {
+	if topK <= 0 {
+		return nil, nil
+	}
 	result, err := b.svc.Search(ctx, goncho.SearchParams{Peer: "locomo", Query: question, Limit: topK, MaxTokens: 100_000})
 	if err != nil {
 		return nil, err
@@ -561,11 +564,17 @@ func (b *gonchoBackend) Search(ctx context.Context, question string, topK int) (
 			}
 			seen[id] = struct{}{}
 			out = append(out, BackendResult{MemoryID: id, Score: float64(topK - rank)})
+			if len(out) >= topK {
+				return out, nil
+			}
 		}
 	}
 	return out, nil
 }
 func (b *gonchoBackend) SearchScoped(ctx context.Context, conversationID, question string, topK int) ([]BackendResult, error) {
+	if topK <= 0 {
+		return nil, nil
+	}
 	result, err := b.svc.Search(ctx, goncho.SearchParams{Peer: conversationID, Query: question, Limit: topK, MaxTokens: 100_000})
 	if err != nil {
 		return nil, err
@@ -579,6 +588,9 @@ func (b *gonchoBackend) SearchScoped(ctx context.Context, conversationID, questi
 			}
 			seen[id] = struct{}{}
 			out = append(out, BackendResult{MemoryID: id, Score: float64(topK - rank)})
+			if len(out) >= topK {
+				return out, nil
+			}
 		}
 	}
 	return out, nil
