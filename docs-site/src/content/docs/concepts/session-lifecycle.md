@@ -17,7 +17,7 @@ session start -> messages and tools -> compaction pressure -> session end -> con
 - Compaction is a pressure point where working memory can be lost.
 - Session end is a consolidation boundary.
 
-Current Goncho exposes session-aware APIs such as `CreateMessages`, `OnSessionEnd`, summaries, and `Context`.
+Current Goncho exposes session-aware APIs such as [`CreateMessages`, `OnSessionEnd`, and `Context`](/reference/core-api/), plus deterministic summaries.
 
 :::note[Architecture direction]
 Hooks such as `SessionStart`, `PostToolUse`, `PreCompact`, and `Stop` are cognitive transition boundaries. They are concept language here, not stable public hook APIs in this package.
