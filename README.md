@@ -330,7 +330,7 @@ go test ./... -run TestGonchoGoalStaleCodeClaimRequiresLiveVerificationE2E
 go test ./... -run TestGonchoGoalNegativeDriftAnchorWarnsBeforeRepeatedFailureE2E
 ```
 
-Benchmarks and public package smoke checks:
+Release, benchmark, and public package smoke checks:
 
 ```bash
 make release-smoke
