@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package examples now give pkg.go.dev readers a compiled `Service.Context` orientation-pack path.
+  - Evidence target: `go test . -run 'Test(PackageDocsIncludeCompiledContextExample|ReleaseMetadataSmokeIncludesContextExampleGuard)' -count=1` plus `go test . -run ExampleService_Context -count=1` proves the example is present, release-smoke guarded, and executable.
+  - Result: pkg.go.dev can render the first useful orientation call after SQLite setup, profile facts, and a stored conclusion.
+
 - 2026-05-22: Root package examples now give pkg.go.dev readers a compiled `NewService` setup path.
   - Evidence target: `go test . -run 'Test(PackageDocsIncludeCompiledNewServiceExample|ReleaseMetadataSmokeIncludesPackageExampleGuard)' -count=1` plus `go test . -run ExampleNewService -count=1` proves the example is present, release-smoke guarded, and executable.
   - Result: pkg.go.dev can render an example that opens SQLite, runs migrations, creates `goncho.NewService`, writes a profile fact, and reads it back.

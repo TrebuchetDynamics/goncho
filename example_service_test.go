@@ -48,3 +48,58 @@ func ExampleNewService() {
 	// Output:
 	// Prefers SQLite-backed local memory.
 }
+
+func ExampleService_Context() {
+	ctx := context.Background()
+	dir, err := os.MkdirTemp("", "goncho-context-example-*")
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = os.RemoveAll(dir) }()
+
+	store, err := memory.OpenSqlite(filepath.Join(dir, "memory.db"), 0, nil)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = store.Close(ctx) }()
+
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		panic(err)
+	}
+
+	svc := goncho.NewService(store.DB(), goncho.Config{
+		WorkspaceID:    "example-agent",
+		ObserverPeerID: "assistant",
+	}, nil)
+
+	if err := svc.SetProfile(ctx, "user:juan", []string{
+		"Prefers verification before action.",
+	}); err != nil {
+		panic(err)
+	}
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{
+		Peer:       "user:juan",
+		Conclusion: "Use SQLite local memory for agent handoffs.",
+	}); err != nil {
+		panic(err)
+	}
+
+	orientation, err := svc.Context(ctx, goncho.ContextParams{
+		Peer:      "user:juan",
+		Query:     "handoffs",
+		MaxTokens: 2000,
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(orientation.Representation)
+
+	// Output:
+	// Representation for user:juan:
+	//
+	// Profile facts:
+	// - Prefers verification before action.
+	//
+	// Current conclusions:
+	// - Use SQLite local memory for agent handoffs.
+}
