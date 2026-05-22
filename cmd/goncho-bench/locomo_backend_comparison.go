@@ -800,7 +800,19 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	if strings.TrimSpace(failuresPath) != "" {
 		fmt.Fprintf(&b, "- Failure JSONL: `%s`\n", failuresPath)
 	}
-	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- Memory token estimate: `%d`\n- Database size bytes: `%d`\n- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.MemoryTokenEstimate, report.DatabaseSizeBytes, report.TopK, report.NoLLMJudge)
+	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- Memory token estimate: `%d`\n- Database size bytes: `%d`\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.MemoryTokenEstimate, report.DatabaseSizeBytes)
+	if len(report.Source) > 0 {
+		fmt.Fprintf(&b, "- Source: `%v` at `%v`\n", report.Source["source_url"], report.Source["source_revision"])
+		fmt.Fprintf(&b, "- Source SHA256: `%v`\n", report.Source["source_sha256"])
+		if value, ok := report.Source["converted_memories_sha256"]; ok {
+			fmt.Fprintf(&b, "- Converted memories SHA256: `%v`\n", value)
+		}
+		if value, ok := report.Source["converted_questions_sha256"]; ok {
+			fmt.Fprintf(&b, "- Converted questions SHA256: `%v`\n", value)
+		}
+		fmt.Fprintf(&b, "- License note: `%v`\n", report.Source["license"])
+	}
+	fmt.Fprintf(&b, "- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.TopK, report.NoLLMJudge)
 	b.WriteString("## Leakage checks\n\n")
 	fmt.Fprintf(&b, "- Answer text present in memory content: `%d`\n", report.LeakageChecks.AnswerTextInMemoryContent)
 	fmt.Fprintf(&b, "- Gold IDs present in memory content: `%d`\n", report.LeakageChecks.GoldIDInMemoryContent)

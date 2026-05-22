@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO backend-comparison markdown now includes dataset provenance when metadata is available.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves markdown summaries include source URL, source revision, source checksum, converted fixture checksums, and license note.
+  - Result: backend-comparison markdown now surfaces the scientific controls already present in JSON metadata without changing retrieval or stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO backend-comparison reports now include per-backend category metrics.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves JSON artifacts emit `category_metrics` and markdown summaries include per-backend category metric tables.
   - Result: backend-comparison artifacts now mirror LOCOMO retrieval category-metric reporting without changing retrieval or stable-ID scoring semantics.
