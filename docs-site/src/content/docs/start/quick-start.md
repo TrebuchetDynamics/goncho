@@ -21,7 +21,7 @@ make ecosystem-smoke
 
 For a narrower public-release-metadata-only check, run `make public-release-smoke`. For a narrower external-import-only check, run `make public-module-smoke`. For a broader local pre-tag gate, run `make release-smoke`; it wraps release metadata checks and ecosystem smoke with Go tests, vet, race tests, and the docs-site build.
 
-Benchmark methodology and stable-ID backend comparison artifacts are documented in [Retrieval Benchmarks](/reference/retrieval-benchmarks/).
+Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status are documented in [Retrieval Benchmarks](/reference/retrieval-benchmarks/).
 
 From a checkout, verify the benchmark CLI only when you need reproducible local retrieval reports:
 
