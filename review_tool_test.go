@@ -121,6 +121,29 @@ func TestReviewToolResolveOutputIncludesReviewChain(t *testing.T) {
 	}
 }
 
+func TestReviewToolResolveOutputIncludesKind(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindStale,
+		PeerID:    "peer-kind",
+		SubjectID: "mem-stale-kind",
+		Reason:    "stale memory kind should be audit-visible on resolve",
+		CreatedAt: time.Date(2026, 5, 22, 15, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	resolved := executeMemoryTool(t, ctx, tool, `{"action":"resolve","id":"`+item.ID+`","resolution":"verified","resolved_by":"agent:mineru","resolution_reason":"stale kind reviewed"}`)
+	if stringField(t, resolved, "kind") != string(ReviewKindStale) {
+		t.Fatalf("resolve output = %+v, want review kind %q", resolved, ReviewKindStale)
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

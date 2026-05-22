@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `goncho_review` resolve output now includes review kind.
+  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `kind`.
+  - Result: operators can audit whether a closed review item was conflict or stale without issuing a second list call.
+
 - 2026-05-22: `goncho_review` resolve output now includes review-chain identifiers.
   - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the `subject_id` and `related_id` for the adjudicated review item.
   - Result: operators can audit which memory/review chain was adjudicated without issuing a second list call.
