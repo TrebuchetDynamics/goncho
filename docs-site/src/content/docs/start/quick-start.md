@@ -1,6 +1,6 @@
 ---
 title: Quick Start
-description: Install Goncho and wire the current Go service API.
+description: Use Goncho as a Go module and wire the current service API.
 ---
 
 Goncho is a Go library for local-first agent memory and context assembly.
