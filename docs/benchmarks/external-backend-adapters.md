@@ -66,6 +66,7 @@ LOCOMO contains duplicate and near-duplicate content, including repeated content
 | Backend | Version / source inspected | Comparable | ID strategy | Reason |
 | --- | --- | --- | --- | --- |
 | Goncho | local Go module | yes | Native `memory_id` mapping in harness | Local deterministic adapter. |
+| Goncho no-rank | local Go harness | yes | Native LOCOMO `memory_id` | Local deterministic no-ranking baseline that uses recency order before current Goncho ranking. |
 | BM25 | local Go harness | yes | Native LOCOMO `memory_id` | Local deterministic lexical baseline. |
 | SQLite FTS5 | local Go SQLite FTS5 | yes | Native LOCOMO `memory_id` column | Local deterministic lexical baseline. |
 | agentmemory | `@agentmemory/agentmemory 0.9.20`, PR #583 commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` | yes, standalone fallback | `memory_save.external_id` plus `metadata.memory_id` returned by `memory_smart_search` | Stable IDs work. LOCOMO full score is `0.0` for the standalone InMemoryKV fallback because it uses strict all-term substring matching; this is not the full running agentmemory server. |

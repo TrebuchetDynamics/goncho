@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO backend-comparison reports now include a `goncho-no-rank` no-ranking baseline alongside current Goncho.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves backend-comparison JSON and markdown include `goncho-no-rank` as a comparable local no-ranking baseline.
+  - Result: backend-comparison artifacts now satisfy the roadmap baseline requirement for Goncho without current ranking while preserving centralized stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval reports now include a `goncho-no-rank` no-ranking baseline alongside current Goncho.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomoSmokeProducesReport|TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits' -count=1` proves the smoke JSON includes `goncho-no-rank`, the markdown baseline note names Goncho no-rank, and non-positive limits remain safe for the new baseline.
   - Result: retrieval benchmark artifacts now satisfy the roadmap baseline requirement for Goncho without current ranking while preserving deterministic stable-ID scoring semantics.

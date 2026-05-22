@@ -347,6 +347,7 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 		t.Fatal("bm25 backend missing from report")
 	}
 	assertBenchFileContains(t, jsonOut, `"backend": "goncho"`)
+	assertBenchFileContains(t, jsonOut, `"backend": "goncho-no-rank"`)
 	assertBenchFileContains(t, jsonOut, `"backend": "agentmemory"`)
 	assertBenchFileContains(t, jsonOut, `"comparable": false`)
 	assertBenchFileNotContains(t, jsonOut, `"backend": "random"`)
@@ -372,6 +373,7 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "Latency p50 ms")
 	assertBenchFileContains(t, mdOut, "RSS bytes")
 	assertBenchFileContains(t, mdOut, "## Failure categories")
+	assertBenchFileContains(t, mdOut, "| `goncho-no-rank` | true |")
 	assertBenchFileContains(t, mdOut, "| `bm25` | `gold_rank_1` | 1 |")
 	assertBenchFileContains(t, jsonOut, `"category_metrics"`)
 	assertBenchFileContains(t, mdOut, "## Category metrics")

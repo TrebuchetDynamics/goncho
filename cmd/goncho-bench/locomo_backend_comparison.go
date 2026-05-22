@@ -111,7 +111,7 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	if err != nil {
 		return err
 	}
-	backends := []string{"goncho", "bm25", "sqlite-fts5", "agentmemory", "mem0"}
+	backends := []string{"goncho", "goncho-no-rank", "bm25", "sqlite-fts5", "agentmemory", "mem0"}
 	entries := make([]locomoBackendComparisonEntry, 0, len(backends))
 	for _, name := range backends {
 		entry, err := evaluateLocomoBackend(ctx, data, name, topK, cfg)
@@ -315,7 +315,7 @@ func newLocomoBackend(name string) (MemoryBackend, string, error) {
 	switch name {
 	case "random":
 		return &randomBackend{items: map[string]backendMemory{}, byConversation: map[string][]backendMemory{}}, "", nil
-	case "recency":
+	case "goncho-no-rank", "recency":
 		return &recencyBackend{items: map[string]backendMemory{}, byConversation: map[string][]backendMemory{}}, "", nil
 	case "bm25":
 		return &bm25Backend{items: map[string]backendMemory{}, byConversation: map[string][]backendMemory{}}, "", nil
@@ -672,6 +672,8 @@ func locomoFailureCategories(results []locomoQuestionResult) map[string]int {
 }
 func setupNotesForBackend(name string) []string {
 	switch name {
+	case "goncho-no-rank":
+		return []string{"Local deterministic no-ranking baseline in cmd/goncho-bench; uses the recency order before current Goncho ranking."}
 	case "agentmemory":
 		return []string{"External Python probe: scripts/bench_agentmemory_locomo.py --capability.", "Comparable when AGENTMEMORY_SOURCE_DIR points at PR #583 / commit 9b18a80c9d2839b025279978d3f4b5e1f9bc6e74 with npm dependencies installed.", "Adapter path uses standalone InMemoryKV fallback: memory_save external_id plus metadata.memory_id, then memory_smart_search. This validates stable IDs but is not the full running agentmemory server.", "If AGENTMEMORY_SOURCE_DIR is absent, agentmemory is marked not comparable."}
 	case "mem0":
@@ -849,7 +851,7 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 		b.WriteString("\n")
 	}
 	b.WriteString("## Setup notes\n\n")
-	b.WriteString("- Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")
+	b.WriteString("- Goncho, Goncho no-rank, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")
 	b.WriteString("- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Comparable when `AGENTMEMORY_SOURCE_DIR` points at PR #583 / commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` with npm dependencies installed. This adapter uses the standalone InMemoryKV fallback, not the full running agentmemory server.\n")
 	b.WriteString("- mem0 probe: `python3 scripts/bench_mem0_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Candidate install: `pip install mem0ai` plus upstream local vector-store dependencies. Comparable only after configured local retrieval can return caller-supplied `memory_id` without answer-generation scoring.\n")
 	b.WriteString("\n## Interpretation\n\nBackends marked not comparable are excluded from score claims until they implement the `MemoryBackend` contract and return the same stable `memory_id` values that were inserted. This keeps the arena fair and prevents answer-generation or LLM-judge effects from leaking into retrieval metrics.\n")
