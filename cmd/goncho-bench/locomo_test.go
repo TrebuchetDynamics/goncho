@@ -549,3 +549,25 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 		t.Fatalf("markdown missing latency distribution columns:\n%s", mdRaw)
 	}
 }
+
+func TestWriteLocomoMarkdownIncludesConvertedChecksums(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "report.md")
+	report := locomoReport{
+		BenchmarkName: "LOCOMO smoke",
+		Mode:          "retrieval",
+		NoLLMJudge:    true,
+		Source: map[string]any{
+			"source_url":                 "https://example.test/locomo",
+			"source_revision":            "rev-test",
+			"source_sha256":              "source-sha-test",
+			"license":                    "test license",
+			"converted_memories_sha256":  "memories-sha-test",
+			"converted_questions_sha256": "questions-sha-test",
+		},
+	}
+	if err := writeLocomoMarkdown(path, report, "report.json", "failures.jsonl"); err != nil {
+		t.Fatalf("write LOCOMO markdown: %v", err)
+	}
+	assertBenchFileContains(t, path, "- Converted memories SHA256: `memories-sha-test`")
+	assertBenchFileContains(t, path, "- Converted questions SHA256: `questions-sha-test`")
+}

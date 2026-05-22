@@ -870,6 +870,12 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	if len(report.Source) > 0 {
 		fmt.Fprintf(&b, "- Source: `%v` at `%v`\n", report.Source["source_url"], report.Source["source_revision"])
 		fmt.Fprintf(&b, "- Source SHA256: `%v`\n", report.Source["source_sha256"])
+		if value, ok := report.Source["converted_memories_sha256"]; ok {
+			fmt.Fprintf(&b, "- Converted memories SHA256: `%v`\n", value)
+		}
+		if value, ok := report.Source["converted_questions_sha256"]; ok {
+			fmt.Fprintf(&b, "- Converted questions SHA256: `%v`\n", value)
+		}
 		fmt.Fprintf(&b, "- License note: `%v`\n", report.Source["license"])
 	}
 	b.WriteString("\n")

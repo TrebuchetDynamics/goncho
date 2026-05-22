@@ -19,6 +19,7 @@
 
 ### Changed
 
+- LOCOMO retrieval markdown now includes converted-artifact checksums when metadata is available.
 - LOCOMO backend-comparison markdown now includes dataset source, checksum, converted-artifact checksum, and license provenance when metadata is available.
 - LOCOMO backend-comparison reports now include per-backend category metrics.
 - LOCOMO backend-comparison markdown now includes per-backend failure-category counts.
