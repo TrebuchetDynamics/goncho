@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package examples now give pkg.go.dev readers a compiled `NewService` setup path.
+  - Evidence target: `go test . -run 'Test(PackageDocsIncludeCompiledNewServiceExample|ReleaseMetadataSmokeIncludesPackageExampleGuard)' -count=1` plus `go test . -run ExampleNewService -count=1` proves the example is present, release-smoke guarded, and executable.
+  - Result: pkg.go.dev can render an example that opens SQLite, runs migrations, creates `goncho.NewService`, writes a profile fact, and reads it back.
+
 - 2026-05-22: README now gives pkg.go.dev readers a concise `At a Glance` evaluation path.
   - Evidence target: `go test . -run TestReadmeSurfacesPkgGoDevEvaluationPath -count=1` proves the README includes pkg.go.dev evaluation, first-call, and next-reading markers.
   - Result: README readers can quickly identify install command, use cases, non-goals, first useful service call, and trust boundary.

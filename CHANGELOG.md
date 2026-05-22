@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added a compiled `NewService` package example for pkg.go.dev readers evaluating embedded service setup.
 - Added a README `At a Glance` section for pkg.go.dev readers evaluating installation, use cases, first calls, and trust boundaries.
 - Expanded the root package documentation shown by `go doc` and pkg.go.dev with use cases, quick start, and trust-boundary guidance.
 - Updated public `@latest` release metadata docs and smoke guards after v0.1.1 tag publication.

@@ -307,10 +307,32 @@ func TestReadmeSurfacesPkgGoDevEvaluationPath(t *testing.T) {
 		"## At a Glance",
 		"If you are evaluating Goncho on pkg.go.dev",
 		"First useful call",
+		"compiled `NewService` example",
 		"What to read next",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("README.md does not surface pkg.go.dev evaluation marker %q", want)
+		}
+	}
+}
+
+func TestPackageDocsIncludeCompiledNewServiceExample(t *testing.T) {
+	raw, err := os.ReadFile("example_service_test.go")
+	if err != nil {
+		t.Fatalf("ReadFile example_service_test.go: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"func ExampleNewService()",
+		"memory.OpenSqlite",
+		"goncho.RunMigrations",
+		"goncho.NewService",
+		"svc.SetProfile",
+		"svc.Profile",
+		"// Output:",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("example_service_test.go does not include pkg.go.dev example marker %q", want)
 		}
 	}
 }
@@ -327,6 +349,22 @@ func TestReleaseMetadataSmokeIncludesReadmePkgGoDevGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include README pkg.go.dev guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesPackageExampleGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocsIncludeCompiledNewServiceExample",
+		"ReleaseMetadataSmokeIncludesPackageExampleGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include package example guard %q", want)
 		}
 	}
 }
