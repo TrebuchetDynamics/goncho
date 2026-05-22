@@ -49,6 +49,7 @@ If the backend cannot preserve stable IDs, the adapter must fail closed:
 - No answer scoring.
 - Same LOCOMO converted JSONL.
 - Same gold IDs.
+- Gold IDs must reference known `memory_id` values from the same conversation as the question.
 - Unique `memory_id` and `question_id` values in the converted LOCOMO fixtures.
 - Conversation-scoped backend comparison before stable-ID scoring.
 - Centralized Go scoring only.

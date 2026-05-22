@@ -61,6 +61,36 @@ func TestLoadLocomoDatasetRejectsDuplicateStableIDs(t *testing.T) {
 	})
 }
 
+func TestLoadLocomoDatasetRejectsInvalidGoldStableIDs(t *testing.T) {
+	t.Run("unknown memory_id", func(t *testing.T) {
+		dir := t.TempDir()
+		memories := filepath.Join(dir, "memories.jsonl")
+		questions := filepath.Join(dir, "questions.jsonl")
+		writeTestFile(t, memories, `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"stable fact"}
+`)
+		writeTestFile(t, questions, `{"question_id":"q1","conversation_id":"c1","question":"what fact?","gold_memory_ids":["missing"],"category":"single_hop_retrieval"}
+`)
+		_, err := loadLocomoDataset(memories, questions)
+		if err == nil || !strings.Contains(err.Error(), `unknown gold_memory_id "missing"`) {
+			t.Fatalf("load unknown gold_memory_id error = %v, want unknown stable ID error", err)
+		}
+	})
+	t.Run("out of conversation memory_id", func(t *testing.T) {
+		dir := t.TempDir()
+		memories := filepath.Join(dir, "memories.jsonl")
+		questions := filepath.Join(dir, "questions.jsonl")
+		writeTestFile(t, memories, `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"first stable fact"}
+{"memory_id":"m2","conversation_id":"c2","session_id":"s1","speaker":"Noah","turn_index":1,"content":"second stable fact"}
+`)
+		writeTestFile(t, questions, `{"question_id":"q1","conversation_id":"c1","question":"what fact?","gold_memory_ids":["m2"],"category":"single_hop_retrieval"}
+`)
+		_, err := loadLocomoDataset(memories, questions)
+		if err == nil || !strings.Contains(err.Error(), `out-of-conversation gold_memory_id "m2"`) {
+			t.Fatalf("load out-of-conversation gold_memory_id error = %v, want scoped stable ID error", err)
+		}
+	})
+}
+
 func TestLocomoScoringStrictAnyAndMRR(t *testing.T) {
 	q := locomoQuestionRow{QuestionID: "q", ConversationID: "c", Category: "gold_ambiguity", Question: "who", GoldMemoryIDs: []string{"m2", "m4"}}
 	got := scoreLocomoQuestion(q, []string{"m1", "m2", "m3", "m4"})

@@ -196,7 +196,29 @@ func loadLocomoDataset(memoriesPath, questionsPath string) (locomoDataset, error
 	if err != nil {
 		return locomoDataset{}, err
 	}
+	if err := validateLocomoGoldMemoryIDs(memories, questions); err != nil {
+		return locomoDataset{}, err
+	}
 	return locomoDataset{Memories: memories, Questions: questions, memoriesByConversation: indexLocomoMemoriesByConversation(memories)}, nil
+}
+
+func validateLocomoGoldMemoryIDs(memories []locomoMemoryRow, questions []locomoQuestionRow) error {
+	memoryConversationIDs := make(map[string]string, len(memories))
+	for _, mem := range memories {
+		memoryConversationIDs[mem.MemoryID] = mem.ConversationID
+	}
+	for _, q := range questions {
+		for _, id := range q.GoldMemoryIDs {
+			conversationID, exists := memoryConversationIDs[id]
+			if !exists {
+				return fmt.Errorf("goncho-bench: LOCOMO question %q unknown gold_memory_id %q", q.QuestionID, id)
+			}
+			if conversationID != q.ConversationID {
+				return fmt.Errorf("goncho-bench: LOCOMO question %q out-of-conversation gold_memory_id %q", q.QuestionID, id)
+			}
+		}
+	}
+	return nil
 }
 
 func loadLocomoMemories(path string) ([]locomoMemoryRow, error) {
