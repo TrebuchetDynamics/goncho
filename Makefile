@@ -9,7 +9,13 @@ LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jso
 LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
 
-.PHONY: bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
+.PHONY: install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
+
+install-smoke:
+	@tmp=$$(mktemp -d); \
+	echo "installing ./cmd/goncho-bench to $$tmp"; \
+	GOBIN="$$tmp" go install ./cmd/goncho-bench; \
+	"$$tmp/goncho-bench" --help >/dev/null
 
 bench-longmemeval-s-smoke:
 	@mkdir -p artifacts/bench-smoke docs/benchmarks/results docs/benchmarks/failures

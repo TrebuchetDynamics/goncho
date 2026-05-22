@@ -17,9 +17,10 @@ The runner itself does not download datasets. It consumes a local JSONL file, lo
 
 ## Scientific Validation Targets
 
-Use the smoke target in normal CI and the full target manually from a clean checkout.
+Use the install smoke to prove the benchmark CLI builds from the current checkout, the smoke target in normal CI, and the full target manually from a clean checkout.
 
 ```sh
+make install-smoke
 make bench-longmemeval-s-smoke
 ```
 

@@ -25,13 +25,13 @@ Use Goncho as an embedded Go module:
 go get github.com/TrebuchetDynamics/goncho
 ```
 
-Install the reproducible benchmark CLI when you need local retrieval reports:
+From a checkout, verify the reproducible benchmark CLI builds and starts when you need local retrieval reports:
 
 ```bash
-go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest
+make install-smoke
 ```
 
-The root module is a library package; `goncho-bench` is the installable command.
+The root module is a library package; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.0, so use the checkout-local command until the next v0.1.x tag contains the benchmark CLI.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho.svg)](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -46,7 +46,7 @@ Verify public module resolution without editing a project:
 go list -m github.com/TrebuchetDynamics/goncho@latest
 ```
 
-Use `go get` to depend on the library package, and install `cmd/goncho-bench` when you need a command-line benchmark runner.
+Use `go get` to depend on the library package. For the command-line benchmark runner, use `make install-smoke` or `go install ./cmd/goncho-bench` from this checkout until the next v0.1.x tag includes the CLI.
 
 ---
 
@@ -333,6 +333,7 @@ go test ./... -run TestGonchoGoalNegativeDriftAnchorWarnsBeforeRepeatedFailureE2
 Benchmarks:
 
 ```bash
+make install-smoke
 go test ./cmd/goncho-bench
 make bench-longmemeval-s-smoke
 make bench-locomo-smoke

@@ -11,13 +11,13 @@ Use the module in an embedded Go runtime:
 go get github.com/TrebuchetDynamics/goncho
 ```
 
-Install the benchmark CLI only when you need reproducible local retrieval reports:
+From a checkout, verify the benchmark CLI only when you need reproducible local retrieval reports:
 
 ```sh
-go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest
+make install-smoke
 ```
 
-The root module is a library package; `goncho-bench` is the installable command.
+The root module is a library package; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.0, so use the checkout-local command until the next v0.1.x tag contains the benchmark CLI.
 
 :::note[Pre-1.0 note]
 Goncho is pre-1.0. The setup flow is intentionally small, and operators should pin the module version or commit they deploy against.

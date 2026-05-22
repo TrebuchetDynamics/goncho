@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: public `@latest` still resolves to v0.1.0, so `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` does not work yet.
+  - Evidence: public install reports module `github.com/TrebuchetDynamics/goncho@latest` found at `v0.1.0`, but it does not contain `cmd/goncho-bench`.
+  - Result: docs now point benchmark CLI users at checkout-local `make install-smoke` / `go install ./cmd/goncho-bench` until the next v0.1.x tag contains the command.
+
 - 2026-05-22: generated primer/token-budget E2E coverage added for the public `goncho_context` tool.
   - Focused evidence: `go test . -run TestGonchoGoalPublicContextToolGeneratesPrimerWithinTokenBudgetE2E -count=1` passed.
   - Result: public context-tool coverage now proves generated orientation output preserves the newest in-budget turns and excludes older turns outside `max_tokens`.

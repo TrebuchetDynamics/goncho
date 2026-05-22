@@ -2,8 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- Added `make install-smoke` to verify the checkout-local `cmd/goncho-bench` install path without touching a developer's normal `GOBIN`.
+
 ### Documentation
 
+- Corrected benchmark CLI install guidance so public docs no longer claim `cmd/goncho-bench@latest` before a tag contains the command.
 - Documented public `goncho_context` generated-primer token-budget E2E coverage in the README and current-capabilities docs.
 - Added root package documentation so pkg.go.dev exposes Goncho's public memory-kernel purpose and evidence-before-belief rule.
 - Added README package-status framing with public module verification and benchmark-methodology signals.
