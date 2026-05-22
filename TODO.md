@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `goncho_review` resolve output now includes original review reasons.
+  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesReason|ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `reason`.
+  - Result: operators can audit why the review item existed without issuing a second list call.
+
 - 2026-05-22: `goncho_review` resolve output now includes evidence IDs.
   - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `evidence_ids`.
   - Result: operators can audit which proof identifiers were reviewed without issuing a second list call.

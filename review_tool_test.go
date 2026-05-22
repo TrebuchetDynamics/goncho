@@ -196,6 +196,32 @@ func TestReviewToolResolveOutputIncludesEvidenceIDs(t *testing.T) {
 	}
 }
 
+func TestReviewToolResolveOutputIncludesReason(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	const reviewReason = "conflict reason should be audit-visible on resolve"
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:       ReviewKindConflict,
+		PeerID:     "peer-reason",
+		SessionKey: "session-reason",
+		SubjectID:  "mem-reason",
+		RelatedID:  "mem-prior",
+		Reason:     reviewReason,
+		CreatedAt:  time.Date(2026, 5, 22, 18, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	resolved := executeMemoryTool(t, ctx, tool, `{"action":"resolve","id":"`+item.ID+`","resolution":"verified","resolved_by":"agent:mineru","resolution_reason":"reason reviewed"}`)
+	if stringField(t, resolved, "reason") != reviewReason {
+		t.Fatalf("resolve output = %+v, want review reason %q", resolved, reviewReason)
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
