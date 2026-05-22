@@ -2,8 +2,57 @@ package goncho
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 )
+
+func TestGonchoGoalPublicContextToolGeneratesPrimerWithinTokenBudgetE2E(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+	peer := "peer-primer-budget"
+	sessionKey := "session-primer-budget"
+
+	if err := svc.SetProfile(ctx, peer, []string{"Prefers compact token-budgeted primers"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       peer,
+		Conclusion: "Generated primers should keep local-first recall compact under max_tokens.",
+		SessionKey: sessionKey,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	seedSummaryContextTurns(t, ctx, svc, sessionKey, 3, 2)
+
+	contextTool := NewGonchoContextTool(svc)
+	primer := executeMemoryTool(t, ctx, contextTool, `{"peer_id":"`+peer+`","query":"token-budgeted primer","session_key":"`+sessionKey+`","max_tokens":4}`)
+
+	if representation := stringField(t, primer, "representation"); !strings.Contains(representation, "Representation for "+peer) {
+		t.Fatalf("representation = %q, want generated primer for peer", representation)
+	}
+	recent, ok := primer["recent_messages"].([]any)
+	if !ok {
+		t.Fatalf("recent_messages = %#v, want JSON array", primer["recent_messages"])
+	}
+	if len(recent) != 2 {
+		t.Fatalf("recent_messages len = %d, want 2 messages inside 4-token budget", len(recent))
+	}
+	raw, err := json.Marshal(primer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	for _, want := range []string{"turn-02 word", "turn-03 word"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("primer output missing %q: %s", want, text)
+		}
+	}
+	if strings.Contains(text, "turn-01 word") {
+		t.Fatalf("primer output included oldest message outside token budget: %s", text)
+	}
+}
 
 func TestGonchoGoalMetaanalysisPublicToolSurfaceWorksEndToEnd(t *testing.T) {
 	svc, cleanup := newTestService(t)
