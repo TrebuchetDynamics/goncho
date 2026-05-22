@@ -20,6 +20,7 @@
 
 ### Documentation
 
+- Surfaced docs-home `v0.1.0` public latest status and guarded first-touch release-version docs.
 - Surfaced README and docs-home guidance for the narrower public module smoke and guarded public adoption docs.
 - Surfaced ecosystem smoke from docs home and guarded public ecosystem-smoke mentions in release metadata checks.
 - Linked the public Go reference from docs home and quick-start docs, guarded by release metadata smoke checks.

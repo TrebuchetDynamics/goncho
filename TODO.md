@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: docs home now names the current public `@latest` release as v0.1.0.
+  - Evidence target: `go test . -run TestPublicDocsMentionLatestReleaseVersion -count=1` proves README, docs home, current-capabilities, and quick-start docs mention v0.1.0.
+  - Result: first-touch public docs show the official tagged release signal without implying checkout-local benchmark CLI availability at `@latest`.
+
 - 2026-05-22: README and docs home now expose the narrower public module smoke.
   - Evidence target: `go test . -run TestPublicAdoptionDocsMentionPublicModuleSmoke -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `make public-module-smoke`.
   - Result: public adoption docs separate the broad ecosystem smoke from the external-import-only proof for `github.com/TrebuchetDynamics/goncho@latest`.

@@ -120,3 +120,22 @@ func TestPublicAdoptionDocsMentionPublicModuleSmoke(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicDocsMentionLatestReleaseVersion(t *testing.T) {
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), "v0.1.0") {
+				t.Fatalf("%s does not mention current public release v0.1.0", path)
+			}
+		})
+	}
+}
