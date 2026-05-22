@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: bounded `review_required` context warnings now report omitted detail counts.
+  - Evidence target: `go test . -run 'TestContextReports(OpenReviewItemsAsUnavailableEvidence|ReviewWarningMarksOmittedDetails)' -count=1` proves context unavailable evidence says `item_details_omitted=N` when more open review items exist than the bounded item/chains/evidence preview shows.
+  - Result: lifecycle review warnings stay compact without hiding that additional open review items need adjudication.
+
 - 2026-05-22: `review_required` context warnings are scoped to the requested session.
   - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence excludes open review items from another session for the same peer while keeping same-session review counts, chains, item IDs, and evidence IDs.
   - Result: lifecycle review warnings no longer let unrelated same-peer sessions steer the current session context.

@@ -7,6 +7,50 @@ import (
 	"time"
 )
 
+func TestContextReportsReviewWarningMarksOmittedDetails(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	createdAt := time.Date(2026, 5, 19, 15, 0, 0, 0, time.UTC)
+	for i, subjectID := range []string{"mem-a", "mem-b", "mem-c", "mem-d"} {
+		if _, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+			Kind:        ReviewKindStale,
+			PeerID:      "peer-omitted",
+			SessionKey:  "session-omitted",
+			SubjectID:   subjectID,
+			Reason:      "memory requires lifecycle review",
+			EvidenceIDs: []string{"obs-" + subjectID},
+			CreatedAt:   createdAt.Add(time.Duration(i) * time.Second),
+		}); err != nil {
+			t.Fatalf("CreateReviewItem %s: %v", subjectID, err)
+		}
+	}
+
+	got, err := svc.Context(ctx, ContextParams{Peer: "peer-omitted", SessionKey: "session-omitted"})
+	if err != nil {
+		t.Fatalf("Context: %v", err)
+	}
+
+	reviewEvidence := reviewRequiredEvidenceFromContext(t, got)
+	for _, want := range []string{"4 open review items", "item_details_omitted=1"} {
+		if !strings.Contains(reviewEvidence.Reason, want) {
+			t.Fatalf("review evidence reason = %q, missing %q", reviewEvidence.Reason, want)
+		}
+	}
+}
+
+func reviewRequiredEvidenceFromContext(t *testing.T, got ContextResult) ContextUnavailableEvidence {
+	t.Helper()
+	for i := range got.Unavailable {
+		if got.Unavailable[i].Capability == "review_required" {
+			return got.Unavailable[i]
+		}
+	}
+	t.Fatalf("Unavailable = %#v, want review_required evidence", got.Unavailable)
+	return ContextUnavailableEvidence{}
+}
+
 func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

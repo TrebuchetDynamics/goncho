@@ -223,15 +223,19 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem) []ContextUnavailableE
 			parts = append(parts, fmt.Sprintf("%s=%d", kind, counts[kind]))
 		}
 	}
+	const detailLimit = 3
 	reason := fmt.Sprintf("%d open review items require adjudication: %s", len(items), strings.Join(parts, " "))
-	if reviewIDs := reviewItemIDs(items, 3); len(reviewIDs) > 0 {
+	if reviewIDs := reviewItemIDs(items, detailLimit); len(reviewIDs) > 0 {
 		reason += "; items=" + strings.Join(reviewIDs, " ")
 	}
-	if chains := reviewItemChainEvidence(items, 3); len(chains) > 0 {
+	if chains := reviewItemChainEvidence(items, detailLimit); len(chains) > 0 {
 		reason += "; chains=" + strings.Join(chains, " ")
 	}
-	if evidenceIDs := reviewItemEvidenceIDs(items, 3); len(evidenceIDs) > 0 {
+	if evidenceIDs := reviewItemEvidenceIDs(items, detailLimit); len(evidenceIDs) > 0 {
 		reason += "; evidence=" + strings.Join(evidenceIDs, " ")
+	}
+	if omitted := len(items) - detailLimit; omitted > 0 {
+		reason += fmt.Sprintf("; item_details_omitted=%d", omitted)
 	}
 	return []ContextUnavailableEvidence{{
 		Field:      "review",
