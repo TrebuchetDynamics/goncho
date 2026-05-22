@@ -127,6 +127,12 @@ Goncho is pre-1.0, but it has the public release signals needed to evaluate it a
 | Command install path | Root is a library; `cmd/goncho-bench` is the command | `make install-smoke` installs checkout-local `./cmd/goncho-bench` and starts `--help`. |
 | Imported by | Imported by count is an adoption signal, not a local correctness gate | Prefer the smoke commands above for reproducible package-readiness evidence. |
 
+### Versioning and Adoption Notes
+
+- **Pin production dependencies:** Goncho is pre-1.0 stability software. For reproducible builds, use `go get github.com/TrebuchetDynamics/goncho@v0.1.1` or a reviewed commit; do not treat `@latest` as a deployment lock.
+- **Read adoption counters carefully:** pkg.go.dev currently shows Imported by 0. That reverse-dependency count is not a correctness gate; use it as adoption context, then rely on the smoke checks below for package readiness.
+- **Upgrade by evidence:** before changing the pinned version, run `make ecosystem-smoke` from a checkout and keep host-side live verification in place.
+
 Verify public release metadata, local Go module metadata, package documentation, public docs site build, external importability, and the checkout-local benchmark CLI without editing another project:
 
 ```bash

@@ -363,6 +363,27 @@ func TestReadmeSurfacesGoDevSignalMap(t *testing.T) {
 	}
 }
 
+func TestReadmeSurfacesVersioningAndAdoptionNotes(t *testing.T) {
+	raw, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("ReadFile README.md: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"### Versioning and Adoption Notes",
+		"pre-1.0 stability",
+		"go get github.com/TrebuchetDynamics/goncho@v0.1.1",
+		"do not treat `@latest` as a deployment lock",
+		"Imported by 0",
+		"reverse-dependency count is not a correctness gate",
+		"make ecosystem-smoke",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("README.md does not surface versioning and adoption marker %q", want)
+		}
+	}
+}
+
 func TestReadmeSurfacesMinimalEmbeddedSkeleton(t *testing.T) {
 	raw, err := os.ReadFile("README.md")
 	if err != nil {
@@ -490,6 +511,22 @@ func TestReleaseMetadataSmokeIncludesReadmeGoDevSignalGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include README go.dev signal guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesReadmeVersioningGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"ReadmeSurfacesVersioningAndAdoptionNotes",
+		"ReleaseMetadataSmokeIncludesReadmeVersioningGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include README versioning guard %q", want)
 		}
 	}
 }
