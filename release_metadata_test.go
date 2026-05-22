@@ -360,6 +360,34 @@ func TestBenchmarkDocsLinkLocomoCandidateFailureComparisonAudit(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsStateLocomoRetrievalOnlyScope(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO benchmark scope",
+		"retrieval-only",
+		"no answer generation",
+		"no LLM judge",
+		"ID-based scoring",
+		"`answer_hint` fields are never indexed or scored",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not state LOCOMO retrieval-only scope marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -373,6 +401,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsLinkLocomoFailureAuditArtifacts",
 		"BenchmarkDocsLabelSmokeFailureAuditArtifacts",
 		"BenchmarkDocsLinkLocomoCandidateFailureComparisonAudit",
+		"BenchmarkDocsStateLocomoRetrievalOnlyScope",
 		"ReleaseMetadataSmokeIncludesLocomoResultDocsGuards",
 	} {
 		if !strings.Contains(text, want) {

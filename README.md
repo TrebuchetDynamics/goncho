@@ -475,6 +475,8 @@ make bench-locomo-backends
 
 Goncho includes a deterministic LOCOMO retrieval harness. This evaluates retrieval only, not answer generation. It uses ID-based scoring with no LLM judge, and `answer_hint` fields are never indexed or scored.
 
+LOCOMO benchmark scope: retrieval-only; no answer generation, no LLM judge, ID-based scoring, and `answer_hint` fields are never indexed or scored.
+
 Pinned full run evidence:
 
 | Dataset | Questions | Memories | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR |

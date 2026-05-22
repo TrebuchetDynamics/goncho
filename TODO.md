@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now state the LOCOMO benchmark scope explicitly.
+  - Evidence target: `go test . -run TestBenchmarkDocsStateLocomoRetrievalOnlyScope -count=1` proves README and Retrieval Benchmarks docs say LOCOMO is retrieval-only, uses no answer generation, no LLM judge, ID-based scoring, and never indexes or scores `answer_hint` fields.
+  - Result: LOCOMO readers can distinguish deterministic retrieval evidence from answer-generation or judge-based benchmark claims.
+
 - 2026-05-22: Public benchmark docs now link the LOCOMO BM25-vs-Goncho candidate-generation failure comparison audit.
   - Evidence target: `go test . -run TestBenchmarkDocsLinkLocomoCandidateFailureComparisonAudit -count=1` proves README and Retrieval Benchmarks docs link `docs/benchmarks/failures/locomo-2026-05-20-bm25-vs-goncho.jsonl` and name the BM25-win `missing_candidate` diagnosis.
   - Result: LOCOMO readers can trace the candidate-generation milestone back to the failure-comparison audit instead of trusting the summary alone.
