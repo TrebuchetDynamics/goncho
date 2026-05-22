@@ -699,6 +699,10 @@ func writeLocomoBackendComparisonFailures(path string, data locomoDataset, repor
 	for _, mem := range data.Memories {
 		memByID[mem.MemoryID] = mem
 	}
+	questionIDs := map[string]struct{}{}
+	for _, q := range data.Questions {
+		questionIDs[q.QuestionID] = struct{}{}
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -719,6 +723,10 @@ func writeLocomoBackendComparisonFailures(path string, data locomoDataset, repor
 		for _, q := range backend.QuestionsDetail {
 			if q.Rank == 1 {
 				continue
+			}
+			if _, ok := questionIDs[q.QuestionID]; !ok {
+				_ = file.Close()
+				return fmt.Errorf("goncho-bench: LOCOMO backend comparison failure audit backend %q unknown question_id %q", backend.Backend, q.QuestionID)
 			}
 			row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: backend.Backend + ":" + locomoFailureNotes(q), Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
 			for i, id := range q.RetrievedIDs[:min(10, len(q.RetrievedIDs))] {
