@@ -1,6 +1,6 @@
 ---
 title: Retrieval Benchmarks
-description: Run LongMemEval-style retrieval accuracy checks for Goncho.
+description: Run deterministic LongMemEval and LOCOMO retrieval accuracy checks for Goncho.
 ---
 
 Goncho includes a local benchmark runner for LongMemEval-style retrieval accuracy checks.
@@ -212,4 +212,4 @@ python3 scripts/bench_mem0_locomo.py --smoke
 
 If a backend cannot preserve stable IDs, keep it marked `not comparable` and document the exact reason. Do not score generated answers, use an LLM judge, or map results by content unless a collision audit proves the mapping is safe.
 
-Next experiments are tracked in the [Benchmark Roadmap](/roadmap/benchmark-roadmap/): LOCOMO external-backend comparisons, InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay.
+Next experiments are tracked in the [Benchmark Roadmap](/roadmap/benchmark-roadmap/). Preserve the frozen LOCOMO backend-comparison artifacts before adding contradiction/staleness audits, making more external backends comparable, or moving on to InfiniteBench, RULER, BABILong, BEIR, and real-world agent replay.
