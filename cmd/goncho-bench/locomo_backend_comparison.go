@@ -271,11 +271,11 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string) (locom
 func newLocomoBackend(name string) (MemoryBackend, string, error) {
 	switch name {
 	case "random":
-		return &randomBackend{items: map[string]backendMemory{}}, "", nil
+		return &randomBackend{items: map[string]backendMemory{}, byConversation: map[string][]backendMemory{}}, "", nil
 	case "recency":
-		return &recencyBackend{items: map[string]backendMemory{}}, "", nil
+		return &recencyBackend{items: map[string]backendMemory{}, byConversation: map[string][]backendMemory{}}, "", nil
 	case "bm25":
-		return &bm25Backend{items: map[string]backendMemory{}}, "", nil
+		return &bm25Backend{items: map[string]backendMemory{}, byConversation: map[string][]backendMemory{}}, "", nil
 	case "sqlite-fts5":
 		return newSQLiteFTSBackend()
 	case "goncho":
@@ -304,22 +304,28 @@ type backendMemory struct {
 	Seq            int
 }
 
-type randomBackend struct{ items map[string]backendMemory }
+type randomBackend struct {
+	items          map[string]backendMemory
+	byConversation map[string][]backendMemory
+}
 
 func (b *randomBackend) Name() string { return "random" }
 func (b *randomBackend) Reset(context.Context) error {
 	b.items = map[string]backendMemory{}
+	b.byConversation = map[string][]backendMemory{}
 	return nil
 }
 func (b *randomBackend) Insert(_ context.Context, id, content string, metadata map[string]any) error {
-	b.items[id] = backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
+	item := backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
+	b.items[id] = item
+	b.byConversation[item.ConversationID] = append(b.byConversation[item.ConversationID], item)
 	return nil
 }
 func (b *randomBackend) Search(_ context.Context, question string, topK int) ([]BackendResult, error) {
 	return b.searchItems(question, topK, backendSortedItems(b.items)), nil
 }
 func (b *randomBackend) SearchScoped(_ context.Context, conversationID, question string, topK int) ([]BackendResult, error) {
-	return b.searchItems(question, topK, backendItemsForConversation(b.items, conversationID)), nil
+	return b.searchItems(question, topK, backendItemsForConversation(b.byConversation, conversationID)), nil
 }
 func (b *randomBackend) searchItems(question string, topK int, items []backendMemory) []BackendResult {
 	sort.SliceStable(items, func(i, j int) bool {
@@ -329,22 +335,28 @@ func (b *randomBackend) searchItems(question string, topK int, items []backendMe
 }
 func (b *randomBackend) Close(context.Context) error { return nil }
 
-type recencyBackend struct{ items map[string]backendMemory }
+type recencyBackend struct {
+	items          map[string]backendMemory
+	byConversation map[string][]backendMemory
+}
 
 func (b *recencyBackend) Name() string { return "recency" }
 func (b *recencyBackend) Reset(context.Context) error {
 	b.items = map[string]backendMemory{}
+	b.byConversation = map[string][]backendMemory{}
 	return nil
 }
 func (b *recencyBackend) Insert(_ context.Context, id, content string, metadata map[string]any) error {
-	b.items[id] = backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
+	item := backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
+	b.items[id] = item
+	b.byConversation[item.ConversationID] = append(b.byConversation[item.ConversationID], item)
 	return nil
 }
 func (b *recencyBackend) Search(_ context.Context, _ string, topK int) ([]BackendResult, error) {
 	return b.searchItems(topK, backendSortedItems(b.items)), nil
 }
 func (b *recencyBackend) SearchScoped(_ context.Context, conversationID, _ string, topK int) ([]BackendResult, error) {
-	return b.searchItems(topK, backendItemsForConversation(b.items, conversationID)), nil
+	return b.searchItems(topK, backendItemsForConversation(b.byConversation, conversationID)), nil
 }
 func (b *recencyBackend) searchItems(topK int, items []backendMemory) []BackendResult {
 	sort.SliceStable(items, func(i, j int) bool { return items[i].Seq > items[j].Seq })
@@ -352,19 +364,28 @@ func (b *recencyBackend) searchItems(topK int, items []backendMemory) []BackendR
 }
 func (b *recencyBackend) Close(context.Context) error { return nil }
 
-type bm25Backend struct{ items map[string]backendMemory }
+type bm25Backend struct {
+	items          map[string]backendMemory
+	byConversation map[string][]backendMemory
+}
 
-func (b *bm25Backend) Name() string                { return "bm25" }
-func (b *bm25Backend) Reset(context.Context) error { b.items = map[string]backendMemory{}; return nil }
+func (b *bm25Backend) Name() string { return "bm25" }
+func (b *bm25Backend) Reset(context.Context) error {
+	b.items = map[string]backendMemory{}
+	b.byConversation = map[string][]backendMemory{}
+	return nil
+}
 func (b *bm25Backend) Insert(_ context.Context, id, content string, metadata map[string]any) error {
-	b.items[id] = backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
+	item := backendMemory{ID: id, Content: content, ConversationID: metadataString(metadata, "conversation_id"), Metadata: metadata, Seq: len(b.items)}
+	b.items[id] = item
+	b.byConversation[item.ConversationID] = append(b.byConversation[item.ConversationID], item)
 	return nil
 }
 func (b *bm25Backend) Search(_ context.Context, question string, topK int) ([]BackendResult, error) {
 	return b.searchItems(question, topK, backendSortedItems(b.items)), nil
 }
 func (b *bm25Backend) SearchScoped(_ context.Context, conversationID, question string, topK int) ([]BackendResult, error) {
-	return b.searchItems(question, topK, backendItemsForConversation(b.items, conversationID)), nil
+	return b.searchItems(question, topK, backendItemsForConversation(b.byConversation, conversationID)), nil
 }
 func (b *bm25Backend) searchItems(question string, topK int, items []backendMemory) []BackendResult {
 	records := make([]MemoryRecord, 0, len(items))
@@ -558,13 +579,8 @@ func metadataString(metadata map[string]any, key string) string {
 	}
 	return ""
 }
-func backendItemsForConversation(m map[string]backendMemory, conversationID string) []backendMemory {
-	out := make([]backendMemory, 0)
-	for _, item := range m {
-		if item.ConversationID == conversationID {
-			out = append(out, item)
-		}
-	}
+func backendItemsForConversation(index map[string][]backendMemory, conversationID string) []backendMemory {
+	out := append([]backendMemory(nil), index[conversationID]...)
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }

@@ -25,6 +25,34 @@ func TestLocomoBackendComparisonMarksExternalBackendsNotComparable(t *testing.T)
 	}
 }
 
+func TestLocomoInMemoryBackendScopedSearchUsesConversationIndex(t *testing.T) {
+	ctx := context.Background()
+	backend := &bm25Backend{}
+	if err := backend.Reset(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := backend.Insert(ctx, "m1", "orchid marker lives in c1", map[string]any{"conversation_id": "c1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := backend.Insert(ctx, "m2", "orchid marker lives in c2", map[string]any{"conversation_id": "c2"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(backend.byConversation["c1"]); got != 1 {
+		t.Fatalf("c1 indexed items = %d, want 1", got)
+	}
+
+	backend.items["poison"] = backendMemory{ID: "poison", Content: "orchid marker poison", ConversationID: "c1", Seq: 999}
+	hits, err := backend.SearchScoped(ctx, "c1", "orchid marker", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, hit := range hits {
+		if hit.MemoryID == "poison" {
+			t.Fatalf("scoped search used all-items scan instead of conversation index: %+v", hits)
+		}
+	}
+}
+
 func TestLocomoBackendComparisonUsesStableMemoryIDs(t *testing.T) {
 	ctx := context.Background()
 	data := locomoDataset{
