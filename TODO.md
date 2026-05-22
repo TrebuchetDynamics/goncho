@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO failure audits now reject unknown gold stable IDs.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsUnknownGoldMemoryID|BackendComparisonFailuresRejectsUnknownGoldMemoryID)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a report row carries a `gold_memory_id` absent from the loaded LOCOMO fixture.
+  - Result: failure reports preserve known evidence IDs for both expected and retrieved memory rows.
+
 - 2026-05-22: LOCOMO failure audits now reject question conversation mismatches.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsQuestionConversationMismatch|BackendComparisonFailuresRejectsQuestionConversationMismatch)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a report row's `question_id` exists but its `conversation_id` disagrees with the loaded LOCOMO fixture.
   - Result: failure reports preserve fixture-scoped question identity before evaluating retrieved stable IDs.

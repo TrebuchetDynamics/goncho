@@ -169,7 +169,7 @@ func TestLocomoRecencyBaselineOrdering(t *testing.T) {
 }
 
 func TestLocomoFailureJSONLGeneration(t *testing.T) {
-	data := locomoDataset{Memories: []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c", SessionID: "s", Speaker: "user", TurnIndex: 1, Content: "wrong"}}, Questions: []locomoQuestionRow{{QuestionID: "q", ConversationID: "c", Question: "question", GoldMemoryIDs: []string{"gold"}, Category: "true_retrieval_failure"}}}
+	data := locomoDataset{Memories: []locomoMemoryRow{{MemoryID: "gold", ConversationID: "c", SessionID: "s", Speaker: "user", TurnIndex: 0, Content: "expected"}, {MemoryID: "m1", ConversationID: "c", SessionID: "s", Speaker: "user", TurnIndex: 1, Content: "wrong"}}, Questions: []locomoQuestionRow{{QuestionID: "q", ConversationID: "c", Question: "question", GoldMemoryIDs: []string{"gold"}, Category: "true_retrieval_failure"}}}
 	report := locomoSystemReport{System: "goncho", QuestionsDetail: []locomoQuestionResult{{QuestionID: "q", ConversationID: "c", Category: "true_retrieval_failure", Question: "question", GoldMemoryIDs: []string{"gold"}, RetrievedIDs: []string{"m1"}, Rank: 0}}}
 	path := filepath.Join(t.TempDir(), "failures.jsonl")
 	if err := writeLocomoFailureAudit(path, data, []locomoSystemReport{report}); err != nil {
@@ -212,6 +212,18 @@ func TestWriteLocomoFailureAuditRejectsQuestionConversationMismatch(t *testing.T
 	err := writeLocomoFailureAudit(filepath.Join(t.TempDir(), "failures.jsonl"), data, []locomoSystemReport{report})
 	if err == nil || !strings.Contains(err.Error(), `conversation_id "c2" does not match fixture conversation_id "c1"`) {
 		t.Fatalf("write failure audit error = %v, want question conversation mismatch error", err)
+	}
+}
+
+func TestWriteLocomoFailureAuditRejectsUnknownGoldMemoryID(t *testing.T) {
+	data := locomoDataset{
+		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"}},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "question", GoldMemoryIDs: []string{"m1"}, Category: "true_retrieval_failure"}},
+	}
+	report := locomoSystemReport{System: "goncho", QuestionsDetail: []locomoQuestionResult{{QuestionID: "q1", ConversationID: "c1", Category: "true_retrieval_failure", Question: "question", GoldMemoryIDs: []string{"missing-gold"}, RetrievedIDs: []string{"m1"}, Rank: 0}}}
+	err := writeLocomoFailureAudit(filepath.Join(t.TempDir(), "failures.jsonl"), data, []locomoSystemReport{report})
+	if err == nil || !strings.Contains(err.Error(), `unknown gold_memory_id "missing-gold"`) {
+		t.Fatalf("write failure audit error = %v, want unknown gold stable ID error", err)
 	}
 }
 

@@ -733,6 +733,12 @@ func writeLocomoBackendComparisonFailures(path string, data locomoDataset, repor
 				_ = file.Close()
 				return fmt.Errorf("goncho-bench: LOCOMO backend comparison failure audit backend %q question_id %q conversation_id %q does not match fixture conversation_id %q", backend.Backend, q.QuestionID, q.ConversationID, fixtureQuestion.ConversationID)
 			}
+			for _, id := range q.GoldMemoryIDs {
+				if _, ok := memByID[id]; !ok {
+					_ = file.Close()
+					return fmt.Errorf("goncho-bench: LOCOMO backend comparison failure audit backend %q question %q unknown gold_memory_id %q", backend.Backend, q.QuestionID, id)
+				}
+			}
 			row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: backend.Backend + ":" + locomoFailureNotes(q), Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
 			for i, id := range q.RetrievedIDs[:min(10, len(q.RetrievedIDs))] {
 				mem, ok := memByID[id]

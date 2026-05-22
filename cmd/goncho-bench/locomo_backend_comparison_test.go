@@ -362,6 +362,30 @@ func TestWriteLocomoBackendComparisonFailuresRejectsQuestionConversationMismatch
 	}
 }
 
+func TestWriteLocomoBackendComparisonFailuresRejectsUnknownGoldMemoryID(t *testing.T) {
+	data := locomoDataset{
+		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"}},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "question", GoldMemoryIDs: []string{"m1"}, Category: "true_retrieval_failure"}},
+	}
+	report := locomoBackendComparisonReport{Backends: []locomoBackendComparisonEntry{{
+		Backend:    "mem0",
+		Comparable: true,
+		QuestionsDetail: []locomoQuestionResult{{
+			QuestionID:     "q1",
+			ConversationID: "c1",
+			Category:       "true_retrieval_failure",
+			Question:       "question",
+			GoldMemoryIDs:  []string{"missing-gold"},
+			RetrievedIDs:   []string{"m1"},
+			Rank:           0,
+		}},
+	}}}
+	err := writeLocomoBackendComparisonFailures(filepath.Join(t.TempDir(), "failures.jsonl"), data, report)
+	if err == nil || !strings.Contains(err.Error(), `unknown gold_memory_id "missing-gold"`) {
+		t.Fatalf("write backend comparison failures error = %v, want unknown gold stable ID error", err)
+	}
+}
+
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownRetrievedID(t *testing.T) {
 	data := locomoDataset{
 		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"}},
