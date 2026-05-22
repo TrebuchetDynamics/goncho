@@ -803,13 +803,13 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	for _, rule := range report.Rules {
 		fmt.Fprintf(&b, "- %s\n", rule)
 	}
-	b.WriteString("\n## Results\n\n| Backend | Comparable | recall_any@5 | recall_any@10 | strict@5 | strict@10 | NDCG@5 | NDCG@10 | MRR | Search latency ms | Notes |\n| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
+	b.WriteString("\n## Results\n\n| Backend | Comparable | recall_any@5 | recall_any@10 | strict@5 | strict@10 | NDCG@5 | NDCG@10 | MRR | Insert latency ms | Search latency ms | RSS bytes | Notes |\n| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
 	for _, e := range report.Backends {
 		note := e.NotComparableReason
 		if note == "" && len(e.SetupNotes) > 0 {
 			note = strings.Join(e.SetupNotes, " ")
 		}
-		fmt.Fprintf(&b, "| `%s` | %t | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %s |\n", e.Backend, e.Comparable, e.RecallAnyAt5*100, e.RecallAnyAt10*100, e.StrictRecallAt5*100, e.StrictRecallAt10*100, e.NDCGAt5*100, e.NDCGAt10*100, e.MRR*100, e.SearchLatencyMs, strings.ReplaceAll(note, "|", "/"))
+		fmt.Fprintf(&b, "| `%s` | %t | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d | %d | %s |\n", e.Backend, e.Comparable, e.RecallAnyAt5*100, e.RecallAnyAt10*100, e.StrictRecallAt5*100, e.StrictRecallAt10*100, e.NDCGAt5*100, e.NDCGAt10*100, e.MRR*100, e.InsertLatencyMs, e.SearchLatencyMs, e.RSSBytes, strings.ReplaceAll(note, "|", "/"))
 	}
 	b.WriteString("\n## Setup notes\n\n")
 	b.WriteString("- Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")

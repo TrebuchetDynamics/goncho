@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO backend-comparison markdown now includes per-backend insert latency and RSS metrics.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves markdown summaries include `Insert latency ms` and `RSS bytes` columns alongside existing search latency.
+  - Result: backend-comparison markdown now surfaces the resource metrics already emitted in JSON without changing retrieval or stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO backend-comparison reports now record per-backend NDCG@5 and NDCG@10 metrics.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoBackendComparisonUsesStableMemoryIDs|TestRunLocomoBackendComparisonWritesJSONAndMarkdown' -count=1` proves backend-comparison entries aggregate ID-based NDCG metrics and markdown summaries include `NDCG@5`/`NDCG@10` columns.
   - Result: backend-comparison artifacts now satisfy the roadmap's NDCG reporting requirement without changing retrieval or stable-ID scoring semantics.
