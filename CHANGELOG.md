@@ -20,7 +20,7 @@
 
 ### Documentation
 
-- Linked the public Go reference from quick-start docs and added it to release metadata smoke checks.
+- Linked the public Go reference from docs home and quick-start docs, guarded by release metadata smoke checks.
 - Clarified README, quick-start, and operator runbook release-smoke guidance so it includes the release metadata guard.
 - Added a release-metadata guard so changelog release headings must match local git tags.
 - Corrected benchmark CLI install guidance so public docs no longer claim `cmd/goncho-bench@latest` before a tag contains the command.

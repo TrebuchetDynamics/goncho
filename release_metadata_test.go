@@ -66,6 +66,7 @@ func TestPublicDocsLinkGoReference(t *testing.T) {
 	const goReferenceURL = "https://pkg.go.dev/github.com/TrebuchetDynamics/goncho"
 	for _, path := range []string{
 		"README.md",
+		"docs-site/src/content/docs/index.md",
 		"docs-site/src/content/docs/start/current-capabilities.md",
 		"docs-site/src/content/docs/start/quick-start.md",
 	} {
