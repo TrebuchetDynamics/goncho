@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `goncho_review` resolve output now includes `resolved_at` audit timestamps.
+  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses include a parseable `resolved_at` timestamp matching the persisted resolved review item.
+  - Result: operators can audit when a review item was adjudicated without issuing a second list call.
+
 - 2026-05-22: single-item `review_required` context warnings now use singular wording.
   - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedEvidenceIDs|MarksOmittedDetails)' -count=1` proves one open review item says `1 open review item requires adjudication` while multi-item warnings keep plural wording.
   - Result: lifecycle review warnings read cleanly for both single-item and multi-item review queues.

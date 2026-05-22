@@ -108,7 +108,7 @@ func (t *ReviewTool) executeResolve(ctx context.Context, id, resolution, resolve
 	if err != nil {
 		return nil, fmt.Errorf("goncho_review resolve: %w", err)
 	}
-	return json.Marshal(map[string]any{
+	out := map[string]any{
 		"success":           true,
 		"action":            "resolve",
 		"id":                item.ID,
@@ -116,5 +116,9 @@ func (t *ReviewTool) executeResolve(ctx context.Context, id, resolution, resolve
 		"resolution":        item.Resolution,
 		"resolved_by":       item.ResolvedBy,
 		"resolution_reason": item.ResolutionReason,
-	})
+	}
+	if item.ResolvedAt != nil {
+		out["resolved_at"] = item.ResolvedAt.UTC().Format(time.RFC3339Nano)
+	}
+	return json.Marshal(out)
 }

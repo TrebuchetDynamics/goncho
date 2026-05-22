@@ -61,6 +61,42 @@ func TestReviewToolListsAndResolvesReviewItems(t *testing.T) {
 	}
 }
 
+func TestReviewToolResolveOutputIncludesResolvedAt(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindStale,
+		PeerID:    "peer-audit",
+		SubjectID: "mem-stale",
+		Reason:    "stale memory requires review audit visibility",
+		CreatedAt: time.Date(2026, 5, 22, 13, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	resolved := executeMemoryTool(t, ctx, tool, `{"action":"resolve","id":"`+item.ID+`","resolution":"verified","resolved_by":"agent:mineru","resolution_reason":"audit timestamp checked"}`)
+	resolvedAtText := stringField(t, resolved, "resolved_at")
+	resolvedAt, err := time.Parse(time.RFC3339Nano, resolvedAtText)
+	if err != nil {
+		t.Fatalf("resolved_at = %q, want RFC3339Nano timestamp: %v", resolvedAtText, err)
+	}
+
+	listed, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-audit", Status: ReviewStatusResolved})
+	if err != nil {
+		t.Fatalf("ListReviewItems: %v", err)
+	}
+	if listed.Count != 1 || listed.Items[0].ID != item.ID || listed.Items[0].ResolvedAt == nil {
+		t.Fatalf("resolved review items = %+v, want persisted resolved item %s", listed, item.ID)
+	}
+	if !listed.Items[0].ResolvedAt.Equal(resolvedAt) {
+		t.Fatalf("resolved_at output = %s, persisted resolved_at = %s", resolvedAt.Format(time.RFC3339Nano), listed.Items[0].ResolvedAt.Format(time.RFC3339Nano))
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
