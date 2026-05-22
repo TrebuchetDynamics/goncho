@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Checked-in LOCOMO smoke benchmark artifacts now include `goncho-no-rank` retrieval and backend-comparison baselines.
+  - Evidence target: `make bench-locomo-smoke` plus `AGENTMEMORY_SOURCE_DIR=/home/xel/git/sages-openclaw/workspace-mineru/goncho/docs/opensource-memory-systems/agentmemory make bench-locomo-backends-smoke` regenerates the tracked smoke JSON, markdown, and failure-audit artifacts with `goncho-no-rank`; `python3 -m json.tool` validates the regenerated JSON artifacts.
+  - Result: CI-safe smoke evidence now matches the current benchmark harness and documents the no-ranking baseline in checked-in artifacts.
+
 - 2026-05-22: LOCOMO backend-comparison reports now include a `goncho-no-rank` no-ranking baseline alongside current Goncho.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves backend-comparison JSON and markdown include `goncho-no-rank` as a comparable local no-ranking baseline.
   - Result: backend-comparison artifacts now satisfy the roadmap baseline requirement for Goncho without current ranking while preserving centralized stable-ID scoring semantics.

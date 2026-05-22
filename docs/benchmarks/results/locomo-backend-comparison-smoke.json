@@ -1,9 +1,10 @@
 {
   "benchmark_name": "LOCOMO backend comparison",
   "mode": "retrieval_backend_adapter",
+  "top_k": 10,
   "no_llm_judge": true,
-  "generated_at": "2026-05-20T21:41:58Z",
-  "repo_commit": "94416072e20296ac84fddac0d8cd9d2df8d76263",
+  "generated_at": "2026-05-22T18:01:57Z",
+  "repo_commit": "619d5223468e9098e77c7fe750a03980a8b87f66",
   "go_version": "go1.26.1",
   "goos": "linux",
   "goarch": "amd64",
@@ -22,7 +23,26 @@
     "if stable memory IDs are unavailable, mark backend not comparable"
   ],
   "memory_count": 17,
+  "memory_token_estimate": 143,
+  "database_size_bytes": 7314,
   "question_count": 8,
+  "leakage_checks": {
+    "answer_text_in_memory_content": 12,
+    "gold_id_in_memory_content": 0,
+    "question_text_in_memory": 0,
+    "examples": [
+      "answer_text:locomo-smoke-q-001:locomo-smoke-memory-003",
+      "answer_text:locomo-smoke-q-001:locomo-smoke-memory-004",
+      "answer_text:locomo-smoke-q-002:locomo-smoke-memory-001",
+      "answer_text:locomo-smoke-q-002:locomo-smoke-memory-002",
+      "answer_text:locomo-smoke-q-002:locomo-smoke-memory-003",
+      "answer_text:locomo-smoke-q-003:locomo-smoke-memory-008",
+      "answer_text:locomo-smoke-q-004:locomo-smoke-memory-006",
+      "answer_text:locomo-smoke-q-005:locomo-smoke-memory-009",
+      "answer_text:locomo-smoke-q-005:locomo-smoke-memory-010",
+      "answer_text:locomo-smoke-q-006:locomo-smoke-memory-011"
+    ]
+  },
   "backends": [
     {
       "backend": "goncho",
@@ -32,13 +52,103 @@
       "recall_any_at_10": 1,
       "strict_recall_at_5": 1,
       "strict_recall_at_10": 1,
+      "ndcg_at_5": 0.876,
+      "ndcg_at_10": 0.876,
       "mrr": 0.8542,
-      "insert_latency_ms": 2,
+      "insert_latency_ms": 3,
       "search_latency_ms": 1,
-      "rss_bytes": 12540168,
+      "latency_ms": {
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rss_bytes": 12278024,
       "failure_categories": {
         "gold_not_rank_1": 2,
         "gold_rank_1": 6
+      },
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.6309,
+          "ndcg_at_10": 0.6309,
+          "mrr": 0.5
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "mrr": 0.3333
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.8772,
+          "ndcg_at_10": 0.8772,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        }
       },
       "question_results": [
         {
@@ -64,7 +174,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-002",
@@ -89,7 +202,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 0.3333
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "mrr": 0.3333,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-003",
@@ -114,7 +230,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-004",
@@ -138,7 +257,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 0.5
+          "ndcg_at_5": 0.6309,
+          "ndcg_at_10": 0.6309,
+          "mrr": 0.5,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-005",
@@ -163,7 +285,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 0.8772,
+          "ndcg_at_10": 0.8772,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-006",
@@ -183,7 +308,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-007",
@@ -203,7 +331,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-008",
@@ -221,11 +352,344 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         }
       ],
       "setup_notes": [
         "Local deterministic adapter in cmd/goncho-bench."
+      ]
+    },
+    {
+      "backend": "goncho-no-rank",
+      "comparable": true,
+      "questions": 8,
+      "recall_any_at_5": 0.75,
+      "recall_any_at_10": 1,
+      "strict_recall_at_5": 0.75,
+      "strict_recall_at_10": 1,
+      "ndcg_at_5": 0.5264,
+      "ndcg_at_10": 0.602,
+      "mrr": 0.4698,
+      "latency_ms": {
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rss_bytes": 12278024,
+      "failure_categories": {
+        "gold_not_rank_1": 6,
+        "gold_rank_1": 2
+      },
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.3869,
+          "ndcg_at_10": 0.3869,
+          "mrr": 0.2
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0.2891,
+          "mrr": 0.1
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0.3155,
+          "mrr": 0.125
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.6934,
+          "ndcg_at_10": 0.6934,
+          "mrr": 0.5
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "mrr": 0.3333
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.6309,
+          "ndcg_at_10": 0.6309,
+          "mrr": 0.5
+        }
+      },
+      "question_results": [
+        {
+          "question_id": "locomo-smoke-q-001",
+          "conversation_id": "conv-001",
+          "category": "latest_state_retrieval",
+          "question": "What does Maya use now for local memory?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-003"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 8,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0.3155,
+          "mrr": 0.125,
+          "retrieval_latency_ms": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-002",
+          "conversation_id": "conv-001",
+          "category": "historical_retrieval",
+          "question": "What did Maya use before SQLite?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-001"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 10,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0.2891,
+          "mrr": 0.1,
+          "retrieval_latency_ms": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-003",
+          "conversation_id": "conv-001",
+          "category": "speaker_attribution",
+          "question": "Who dislikes chamomile tea according to Maya?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-008"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 3,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "mrr": 0.3333,
+          "retrieval_latency_ms": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-004",
+          "conversation_id": "conv-001",
+          "category": "contradiction_supersession",
+          "question": "What drink does Maya currently prefer in the morning?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-006"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 5,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.3869,
+          "ndcg_at_10": 0.3869,
+          "mrr": 0.2,
+          "retrieval_latency_ms": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-005",
+          "conversation_id": "conv-001",
+          "category": "multi_session_continuity",
+          "question": "What benchmark planning topic did Maya ask to revisit next week?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-010"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-010",
+            "locomo-smoke-memory-009",
+            "locomo-smoke-memory-008",
+            "locomo-smoke-memory-007",
+            "locomo-smoke-memory-006",
+            "locomo-smoke-memory-005",
+            "locomo-smoke-memory-004",
+            "locomo-smoke-memory-003",
+            "locomo-smoke-memory-002",
+            "locomo-smoke-memory-001"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-006",
+          "conversation_id": "conv-002",
+          "category": "lexical_miss",
+          "question": "Where does Leo keep his portable journal?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-013",
+            "locomo-smoke-memory-012",
+            "locomo-smoke-memory-011"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.6934,
+          "ndcg_at_10": 0.6934,
+          "mrr": 0.5,
+          "retrieval_latency_ms": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-007",
+          "conversation_id": "conv-003",
+          "category": "gold_ambiguity",
+          "question": "Who did Priya meet at the design review?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-014",
+            "locomo-smoke-memory-015"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-015",
+            "locomo-smoke-memory-014"
+          ],
+          "rank": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
+        },
+        {
+          "question_id": "locomo-smoke-q-008",
+          "conversation_id": "conv-004",
+          "category": "true_retrieval_failure",
+          "question": "Where is Quinn's emergency access token stored?",
+          "gold_memory_ids": [
+            "locomo-smoke-memory-016"
+          ],
+          "retrieved_ids": [
+            "locomo-smoke-memory-017",
+            "locomo-smoke-memory-016"
+          ],
+          "rank": 2,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.6309,
+          "ndcg_at_10": 0.6309,
+          "mrr": 0.5,
+          "retrieval_latency_ms": 0
+        }
+      ],
+      "setup_notes": [
+        "Local deterministic no-ranking baseline in cmd/goncho-bench; uses the recency order before current Goncho ranking."
       ]
     },
     {
@@ -236,11 +700,101 @@
       "recall_any_at_10": 1,
       "strict_recall_at_5": 1,
       "strict_recall_at_10": 1,
+      "ndcg_at_5": 0.8727,
+      "ndcg_at_10": 0.8727,
       "mrr": 0.8542,
-      "rss_bytes": 12802312,
+      "latency_ms": {
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rss_bytes": 12278024,
       "failure_categories": {
         "gold_not_rank_1": 2,
         "gold_rank_1": 6
+      },
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.6309,
+          "ndcg_at_10": 0.6309,
+          "mrr": 0.5
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "mrr": 0.3333
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.8503,
+          "ndcg_at_10": 0.8503,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        }
       },
       "question_results": [
         {
@@ -268,7 +822,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-002",
@@ -295,7 +852,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 0.3333
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "mrr": 0.3333,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-003",
@@ -322,7 +882,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-004",
@@ -349,7 +912,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 0.5
+          "ndcg_at_5": 0.6309,
+          "ndcg_at_10": 0.6309,
+          "mrr": 0.5,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-005",
@@ -377,7 +943,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 0.8503,
+          "ndcg_at_10": 0.8503,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-006",
@@ -398,7 +967,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-007",
@@ -418,7 +990,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-008",
@@ -437,7 +1012,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         }
       ],
       "setup_notes": [
@@ -452,13 +1030,103 @@
       "recall_any_at_10": 1,
       "strict_recall_at_5": 0.875,
       "strict_recall_at_10": 1,
+      "ndcg_at_5": 0.8025,
+      "ndcg_at_10": 0.847,
       "mrr": 0.8125,
-      "insert_latency_ms": 1,
-      "search_latency_ms": 1,
-      "rss_bytes": 12802312,
+      "insert_latency_ms": 3,
+      "search_latency_ms": 2,
+      "latency_ms": {
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rss_bytes": 12278024,
       "failure_categories": {
         "gold_not_rank_1": 2,
         "gold_rank_1": 6
+      },
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0.3562,
+          "mrr": 0.1667
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "mrr": 0.3333
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 0.9197,
+          "ndcg_at_10": 0.9197,
+          "mrr": 1
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 1,
+          "recall_any_at_10": 1,
+          "strict_recall_at_5": 1,
+          "strict_recall_at_10": 1,
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1
+        }
       },
       "question_results": [
         {
@@ -484,7 +1152,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-002",
@@ -509,7 +1180,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 0.3333
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "mrr": 0.3333,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-003",
@@ -534,7 +1208,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-004",
@@ -558,7 +1235,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 1,
-          "mrr": 0.1667
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0.3562,
+          "mrr": 0.1667,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-005",
@@ -583,7 +1263,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 0.9197,
+          "ndcg_at_10": 0.9197,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-006",
@@ -603,7 +1286,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-007",
@@ -623,7 +1309,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-008",
@@ -641,7 +1330,10 @@
           "recall_any_at_10": 1,
           "strict_recall_at_5": 1,
           "strict_recall_at_10": 1,
-          "mrr": 1
+          "ndcg_at_5": 1,
+          "ndcg_at_10": 1,
+          "mrr": 1,
+          "retrieval_latency_ms": 0
         }
       ],
       "setup_notes": [
@@ -652,8 +1344,96 @@
       "backend": "agentmemory",
       "comparable": true,
       "questions": 8,
+      "latency_ms": {
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
       "failure_categories": {
         "miss_top_10": 8
+      },
+      "category_metrics": {
+        "contradiction_supersession": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0
+        },
+        "gold_ambiguity": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0
+        },
+        "historical_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0
+        },
+        "latest_state_retrieval": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0
+        },
+        "lexical_miss": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0
+        },
+        "multi_session_continuity": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0
+        },
+        "speaker_attribution": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0
+        },
+        "true_retrieval_failure": {
+          "questions": 1,
+          "recall_any_at_5": 0,
+          "recall_any_at_10": 0,
+          "strict_recall_at_5": 0,
+          "strict_recall_at_10": 0,
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0
+        }
       },
       "question_results": [
         {
@@ -670,7 +1450,10 @@
           "recall_any_at_10": 0,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 0,
-          "mrr": 0
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-002",
@@ -686,7 +1469,10 @@
           "recall_any_at_10": 0,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 0,
-          "mrr": 0
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-003",
@@ -702,7 +1488,10 @@
           "recall_any_at_10": 0,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 0,
-          "mrr": 0
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-004",
@@ -718,7 +1507,10 @@
           "recall_any_at_10": 0,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 0,
-          "mrr": 0
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-005",
@@ -735,7 +1527,10 @@
           "recall_any_at_10": 0,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 0,
-          "mrr": 0
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-006",
@@ -752,7 +1547,10 @@
           "recall_any_at_10": 0,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 0,
-          "mrr": 0
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-007",
@@ -769,7 +1567,10 @@
           "recall_any_at_10": 0,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 0,
-          "mrr": 0
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0,
+          "retrieval_latency_ms": 0
         },
         {
           "question_id": "locomo-smoke-q-008",
@@ -785,7 +1586,10 @@
           "recall_any_at_10": 0,
           "strict_recall_at_5": 0,
           "strict_recall_at_10": 0,
-          "mrr": 0
+          "ndcg_at_5": 0,
+          "ndcg_at_10": 0,
+          "mrr": 0,
+          "retrieval_latency_ms": 0
         }
       ],
       "setup_notes": [
@@ -799,6 +1603,12 @@
       "backend": "mem0",
       "comparable": false,
       "not_comparable_reason": "not comparable: Python package mem0/mem0ai is not installed in this environment",
+      "latency_ms": {
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
       "setup_notes": [
         "External Python probe: scripts/bench_mem0_locomo.py --capability.",
         "Exact package version used in this run: none; backend marked not comparable before scoring.",

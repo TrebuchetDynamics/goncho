@@ -19,6 +19,7 @@
 
 ### Changed
 
+- Checked-in LOCOMO smoke benchmark artifacts now include `goncho-no-rank` retrieval and backend-comparison baselines.
 - LOCOMO backend-comparison reports now include a `goncho-no-rank` no-ranking baseline alongside current Goncho.
 - LOCOMO retrieval reports now include a `goncho-no-rank` no-ranking baseline alongside current Goncho.
 - LOCOMO retrieval and backend-comparison markdown now include one-command reproduction lines.
