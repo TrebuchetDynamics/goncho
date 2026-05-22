@@ -95,10 +95,14 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	if err != nil {
 		return err
 	}
+	topK := cfg.Limit
+	if topK <= 0 {
+		topK = 10
+	}
 	backends := []string{"goncho", "bm25", "sqlite-fts5", "agentmemory", "mem0"}
 	entries := make([]locomoBackendComparisonEntry, 0, len(backends))
 	for _, name := range backends {
-		entry, err := evaluateLocomoBackend(ctx, data, name, 10, cfg)
+		entry, err := evaluateLocomoBackend(ctx, data, name, topK, cfg)
 		if err != nil {
 			return fmt.Errorf("goncho-bench: backend %s: %w", name, err)
 		}
@@ -264,7 +268,7 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 		}
 		ids := make([]string, 0, min(topK, len(row.Results)))
 		seen := map[string]struct{}{}
-		for _, hit := range row.Results {
+		for i, hit := range row.Results {
 			id := strings.TrimSpace(hit.MemoryID)
 			if id == "" {
 				return locomoBackendComparisonEntry{}, fmt.Errorf("external %s question %s returned empty memory_id", name, q.QuestionID)
@@ -275,13 +279,14 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 			if memConversationID := memoryConversationIDs[id]; memConversationID != "" && q.ConversationID != "" && memConversationID != q.ConversationID {
 				return locomoBackendComparisonEntry{}, fmt.Errorf("external %s question %s returned out-of-conversation memory_id %q", name, q.QuestionID, id)
 			}
+			if i >= topK {
+				continue
+			}
 			if _, exists := seen[id]; exists {
 				continue
 			}
 			seen[id] = struct{}{}
-			if len(ids) < topK {
-				ids = append(ids, id)
-			}
+			ids = append(ids, id)
 		}
 		results = append(results, scoreLocomoQuestion(q, ids))
 	}

@@ -17,6 +17,7 @@
 
 ### Changed
 
+- LOCOMO backend comparison now honors the configured retrieval limit when scoring every backend, including external adapter rows, and duplicate external rows no longer expand the top-K window.
 - LOCOMO external backend comparison now clamps comparable external rows to the requested top-K window and rejects stable memory IDs from a different conversation than the question.
 - `make public-release-smoke` now checks the documented public `@latest` version and published date, not just the presence of release metadata fields.
 - `goncho_review` list requests now treat blank `status` values like omitted status and default to open review items.

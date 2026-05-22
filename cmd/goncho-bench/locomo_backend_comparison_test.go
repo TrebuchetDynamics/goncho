@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -124,6 +125,31 @@ func TestLocomoBackendComparisonLimitsExternalRowsToTopK(t *testing.T) {
 	}
 }
 
+func TestLocomoBackendComparisonDuplicateExternalRowsDoNotExpandTopK(t *testing.T) {
+	ctx := context.Background()
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", Content: "distractor marker"},
+			{MemoryID: "m2", ConversationID: "c1", Content: "orchid marker"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "orchid marker", GoldMemoryIDs: []string{"m2"}, Category: "single_hop_retrieval"}},
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "external.jsonl")
+	writeTestFile(t, path, `{"backend":"mem0","question_id":"q1","comparable":true,"results":[{"memory_id":"m1","score":0.9},{"memory_id":"m1","score":0.8},{"memory_id":"m2","score":0.7}]}
+`)
+	entry, err := evaluateLocomoBackend(ctx, data, "mem0", 2, config{LocomoMem0Results: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entry.QuestionsDetail) != 1 || strings.Join(entry.QuestionsDetail[0].RetrievedIDs, ",") != "m1" {
+		t.Fatalf("retrieved ids = %+v, want duplicate rows to consume the top-K window", entry.QuestionsDetail)
+	}
+	if entry.RecallAnyAt5 != 0 || entry.MRR != 0 {
+		t.Fatalf("metrics = any5 %.2f mrr %.2f, want miss when gold appears after duplicate-expanded topK", entry.RecallAnyAt5, entry.MRR)
+	}
+}
+
 func TestLocomoBackendComparisonRejectsExternalUnknownQuestionID(t *testing.T) {
 	ctx := context.Background()
 	data := locomoDataset{
@@ -190,6 +216,45 @@ func TestLocomoBackendComparisonConsumesExternalNotComparableJSONL(t *testing.T)
 	if entry.Comparable || !strings.Contains(entry.NotComparableReason, "stable ids") {
 		t.Fatalf("entry = %+v, want not comparable reason", entry)
 	}
+}
+
+func TestRunLocomoBackendComparisonHonorsConfiguredLimitForExternalRows(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	memories := filepath.Join(dir, "memories.jsonl")
+	questions := filepath.Join(dir, "questions.jsonl")
+	mem0Results := filepath.Join(dir, "mem0.jsonl")
+	jsonOut := filepath.Join(dir, "locomo-backend-comparison.json")
+	writeTestFile(t, memories, `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"distractor marker"}
+{"memory_id":"m2","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":2,"content":"orchid marker"}
+`)
+	writeTestFile(t, questions, `{"question_id":"q1","conversation_id":"c1","question":"orchid marker","gold_memory_ids":["m2"],"category":"single_hop_retrieval"}
+`)
+	writeTestFile(t, mem0Results, `{"backend":"mem0","question_id":"q1","comparable":true,"results":[{"memory_id":"m1","score":0.9},{"memory_id":"m2","score":0.8}]}
+`)
+
+	err := runLocomoBackendComparison(ctx, config{LocomoMemoriesPath: memories, LocomoQuestionsPath: questions, LocomoMem0Results: mem0Results, LocomoBackendComparisonJSON: jsonOut, Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(jsonOut)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report locomoBackendComparisonReport
+	if err := json.Unmarshal(raw, &report); err != nil {
+		t.Fatal(err)
+	}
+	for _, backend := range report.Backends {
+		if backend.Backend != "mem0" {
+			continue
+		}
+		if len(backend.QuestionsDetail) != 1 || strings.Join(backend.QuestionsDetail[0].RetrievedIDs, ",") != "m1" {
+			t.Fatalf("mem0 retrieved ids = %+v, want configured limit to keep only m1", backend.QuestionsDetail)
+		}
+		return
+	}
+	t.Fatal("mem0 backend missing from report")
 }
 
 func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
