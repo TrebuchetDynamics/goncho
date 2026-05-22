@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `make release-metadata-smoke` now runs the LOCOMO benchmark-result docs guards.
+  - Evidence target: `go test . -run TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards -count=1` proves the release metadata smoke regex includes the LOCOMO metric-surface, frozen-artifact, and reproduction-command guards.
+  - Result: the narrow release gate keeps the public LOCOMO benchmark-result claims wired after future docs edits.
+
 - 2026-05-22: Public benchmark docs now name exact LOCOMO reproduction commands for full, smoke, backend-smoke, and full-backend runs.
   - Evidence target: `go test . -run TestBenchmarkDocsNameLocomoReproductionCommands -count=1` proves README and Retrieval Benchmarks docs label `make bench-locomo`, `make bench-locomo-smoke`, `make bench-locomo-backends-smoke`, and `make bench-locomo-backends` with their reproduction roles.
   - Result: LOCOMO operators can pick the right command without confusing CI-safe smoke regeneration with manual full-result reproduction.

@@ -284,6 +284,24 @@ func TestBenchmarkDocsNameLocomoReproductionCommands(t *testing.T) {
 	}
 }
 
+func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"BenchmarkDocsSurfaceLocomoResultMetricSet",
+		"BenchmarkDocsDistinguishFrozenLocomoResultArtifacts",
+		"BenchmarkDocsNameLocomoReproductionCommands",
+		"ReleaseMetadataSmokeIncludesLocomoResultDocsGuards",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include LOCOMO result docs guard %q", want)
+		}
+	}
+}
+
 func TestPublicAdoptionDocsMentionPublicModuleSmoke(t *testing.T) {
 	for _, path := range []string{
 		"README.md",
