@@ -334,6 +334,43 @@ func TestLocalModuleSmokeChecksGoModMetadata(t *testing.T) {
 	}
 }
 
+func TestPackageDocSmokeChecksLocalGoDoc(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"package-doc-smoke:",
+		"$(MAKE) package-doc-smoke",
+		"go doc . >/dev/null",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("Makefile does not include package documentation smoke marker %q", want)
+		}
+	}
+}
+
+func TestPublicDocsMentionPackageDocSmoke(t *testing.T) {
+	const smokeCommand = "make package-doc-smoke"
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), smokeCommand) {
+				t.Fatalf("%s does not mention package documentation smoke command %q", path, smokeCommand)
+			}
+		})
+	}
+}
+
 func TestPublicDocsMentionLocalModuleSmoke(t *testing.T) {
 	const smokeCommand = "make local-module-smoke"
 	for _, path := range []string{

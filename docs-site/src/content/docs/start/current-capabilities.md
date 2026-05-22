@@ -16,6 +16,7 @@ Current public package signals:
 - Ecosystem smoke: `make ecosystem-smoke` verifies public release metadata, local Go module metadata, local package documentation, a temporary external Go module import, and checkout-local benchmark CLI installation.
 - Public release metadata smoke: `make public-release-smoke` checks the public `@latest` version and published time from `go list -m -json github.com/TrebuchetDynamics/goncho@latest`.
 - Local module metadata smoke: `make local-module-smoke` checks the checkout `go.mod` module path and Go version from `go list -m -json`.
+- Package documentation smoke: `make package-doc-smoke` checks that local package docs render through `go doc .`.
 - Public import smoke: `make public-module-smoke` creates a temporary external Go module, runs `go get github.com/TrebuchetDynamics/goncho@latest`, and compiles a minimal import of the public service API.
 - Installable command source: `./cmd/goncho-bench`; `make install-smoke` verifies the checkout-local benchmark CLI while public `@latest` still resolves to v0.1.0.
 - Public tool proof: `goncho_context` has E2E coverage for generated primer behavior under `max_tokens`, preserving newest in-budget turns and excluding older out-of-budget turns.
