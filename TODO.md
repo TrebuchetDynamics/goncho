@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO retrieval and backend-comparison reports now record converted fixture database byte sizes.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomoBenchmarkHonorsConfiguredLimit|TestRunLocomoSmokeProducesReport|TestRunLocomoBackendComparisonWritesJSONAndMarkdown' -count=1` proves JSON artifacts emit `database_size_bytes` and markdown summaries print `Database size bytes`.
+  - Result: benchmark artifacts now satisfy the roadmap's database-size reporting requirement without changing retrieval or stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval reports now record per-system NDCG@5 and NDCG@10 metrics.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoScoringStrictAnyAndMRR|TestLocomoCategoryMetricAggregation|TestRunLocomoSmokeProducesReport' -count=1` proves ID-based NDCG scoring, system/category aggregation, JSON fields, and markdown columns.
   - Result: retrieval artifacts now satisfy the roadmap's NDCG reporting requirement without changing retrieval or stable-ID scoring semantics.

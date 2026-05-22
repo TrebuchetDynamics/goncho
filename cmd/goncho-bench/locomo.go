@@ -63,6 +63,7 @@ type locomoReport struct {
 	Source              map[string]any       `json:"source,omitempty"`
 	MemoryCount         int                  `json:"memory_count"`
 	MemoryTokenEstimate int                  `json:"memory_token_estimate"`
+	DatabaseSizeBytes   int64                `json:"database_size_bytes"`
 	QuestionCount       int                  `json:"question_count"`
 	LeakageChecks       locomoLeakageChecks  `json:"leakage_checks"`
 	Systems             []locomoSystemReport `json:"systems"`
@@ -167,6 +168,10 @@ func runLocomoBenchmark(ctx context.Context, cfg config) error {
 		limit = 10
 	}
 	systems := []string{"random", "recency", "bm25", "sqlite-fts5", "goncho"}
+	databaseSizeBytes, err := locomoDatabaseSizeBytes(cfg.LocomoMemoriesPath, cfg.LocomoQuestionsPath)
+	if err != nil {
+		return err
+	}
 	reports := make([]locomoSystemReport, 0, len(systems))
 	for _, system := range systems {
 		systemReport, err := evaluateLocomoSystem(ctx, data, system, limit)
@@ -194,6 +199,7 @@ func runLocomoBenchmark(ctx context.Context, cfg config) error {
 		Source:              loadLocomoSourceMetadata(cfg.LocomoMemoriesPath),
 		MemoryCount:         len(data.Memories),
 		MemoryTokenEstimate: locomoMemoryTokenEstimate(data.Memories),
+		DatabaseSizeBytes:   databaseSizeBytes,
 		QuestionCount:       len(data.Questions),
 		LeakageChecks:       checkLocomoLeakage(data),
 		Systems:             reports,
@@ -563,6 +569,18 @@ func locomoMemoryTokenEstimate(memories []locomoMemoryRow) int {
 	return total
 }
 
+func locomoDatabaseSizeBytes(paths ...string) (int64, error) {
+	var total int64
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			return 0, fmt.Errorf("goncho-bench: stat LOCOMO fixture %q: %w", path, err)
+		}
+		total += info.Size()
+	}
+	return total, nil
+}
+
 func scoreLocomoQuestion(q locomoQuestionRow, retrieved []string) locomoQuestionResult {
 	rank := firstRelevantRank(retrieved, q.GoldMemoryIDs)
 	mrr := 0.0
@@ -845,6 +863,7 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	fmt.Fprintf(&b, "- Questions: `%d`\n", report.QuestionCount)
 	fmt.Fprintf(&b, "- Memories: `%d`\n", report.MemoryCount)
 	fmt.Fprintf(&b, "- Memory token estimate: `%d`\n", report.MemoryTokenEstimate)
+	fmt.Fprintf(&b, "- Database size bytes: `%d`\n", report.DatabaseSizeBytes)
 	fmt.Fprintf(&b, "- Mode: `%s`\n", report.Mode)
 	fmt.Fprintf(&b, "- Top-K: `%d`\n", report.TopK)
 	fmt.Fprintf(&b, "- no_llm_judge: `%t`\n", report.NoLLMJudge)

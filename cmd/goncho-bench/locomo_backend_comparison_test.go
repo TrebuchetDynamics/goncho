@@ -296,11 +296,13 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	dir := t.TempDir()
 	memories := filepath.Join(dir, "memories.jsonl")
 	questions := filepath.Join(dir, "questions.jsonl")
-	writeTestFile(t, memories, `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"Maya keeps the orchid marker in the archive cabinet."}
+	memoriesRaw := `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"Maya keeps the orchid marker in the archive cabinet."}
 {"memory_id":"m2","conversation_id":"c1","session_id":"s1","speaker":"Leo","turn_index":2,"content":"Leo talked about unrelated dashboard notes."}
-`)
-	writeTestFile(t, questions, `{"question_id":"q1","conversation_id":"c1","question":"Where is the orchid marker?","gold_memory_ids":["m1"],"category":"single_hop_retrieval"}
-`)
+`
+	questionsRaw := `{"question_id":"q1","conversation_id":"c1","question":"Where is the orchid marker?","gold_memory_ids":["m1"],"category":"single_hop_retrieval"}
+`
+	writeTestFile(t, memories, memoriesRaw)
+	writeTestFile(t, questions, questionsRaw)
 	jsonOut := filepath.Join(dir, "locomo-backend-comparison.json")
 	mdOut := filepath.Join(dir, "locomo-backend-comparison.md")
 	failuresOut := filepath.Join(dir, "locomo-backend-comparison.jsonl")
@@ -318,6 +320,10 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	if rawReport["memory_token_estimate"] != float64(15) {
 		t.Fatalf("backend comparison memory_token_estimate = %v, want deterministic content token estimate 15", rawReport["memory_token_estimate"])
 	}
+	wantDatabaseSize := float64(len(memoriesRaw) + len(questionsRaw))
+	if rawReport["database_size_bytes"] != wantDatabaseSize {
+		t.Fatalf("backend comparison database_size_bytes = %v, want fixture byte size %.0f", rawReport["database_size_bytes"], wantDatabaseSize)
+	}
 	assertBenchFileContains(t, jsonOut, `"backend": "goncho"`)
 	assertBenchFileContains(t, jsonOut, `"backend": "agentmemory"`)
 	assertBenchFileContains(t, jsonOut, `"comparable": false`)
@@ -329,6 +335,7 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "Failure JSONL")
 	assertBenchFileContains(t, mdOut, "- Top-K: `10`")
 	assertBenchFileContains(t, mdOut, "- Memory token estimate: `15`")
+	assertBenchFileContains(t, mdOut, "- Database size bytes:")
 }
 
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing.T) {

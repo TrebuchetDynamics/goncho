@@ -50,6 +50,7 @@ type locomoBackendComparisonReport struct {
 	Rules               []string                       `json:"rules"`
 	MemoryCount         int                            `json:"memory_count"`
 	MemoryTokenEstimate int                            `json:"memory_token_estimate"`
+	DatabaseSizeBytes   int64                          `json:"database_size_bytes"`
 	QuestionCount       int                            `json:"question_count"`
 	Backends            []locomoBackendComparisonEntry `json:"backends"`
 }
@@ -101,6 +102,10 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	if topK <= 0 {
 		topK = 10
 	}
+	databaseSizeBytes, err := locomoDatabaseSizeBytes(cfg.LocomoMemoriesPath, cfg.LocomoQuestionsPath)
+	if err != nil {
+		return err
+	}
 	backends := []string{"goncho", "bm25", "sqlite-fts5", "agentmemory", "mem0"}
 	entries := make([]locomoBackendComparisonEntry, 0, len(backends))
 	for _, name := range backends {
@@ -129,7 +134,7 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 			"same top-K scoring",
 			"if stable memory IDs are unavailable, mark backend not comparable",
 		},
-		MemoryCount: len(data.Memories), MemoryTokenEstimate: locomoMemoryTokenEstimate(data.Memories), QuestionCount: len(data.Questions), Backends: entries,
+		MemoryCount: len(data.Memories), MemoryTokenEstimate: locomoMemoryTokenEstimate(data.Memories), DatabaseSizeBytes: databaseSizeBytes, QuestionCount: len(data.Questions), Backends: entries,
 	}
 	if err := writeLocomoBackendComparisonJSON(cfg.LocomoBackendComparisonJSON, report); err != nil {
 		return err
@@ -786,7 +791,7 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	if strings.TrimSpace(failuresPath) != "" {
 		fmt.Fprintf(&b, "- Failure JSONL: `%s`\n", failuresPath)
 	}
-	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- Memory token estimate: `%d`\n- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.MemoryTokenEstimate, report.TopK, report.NoLLMJudge)
+	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- Memory token estimate: `%d`\n- Database size bytes: `%d`\n- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.MemoryTokenEstimate, report.DatabaseSizeBytes, report.TopK, report.NoLLMJudge)
 	b.WriteString("## Rules\n\n")
 	for _, rule := range report.Rules {
 		fmt.Fprintf(&b, "- %s\n", rule)

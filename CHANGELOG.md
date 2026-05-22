@@ -19,6 +19,7 @@
 
 ### Changed
 
+- LOCOMO retrieval and backend-comparison reports now record converted fixture database byte sizes in JSON and markdown artifacts.
 - LOCOMO retrieval reports now record per-system NDCG@5 and NDCG@10 metrics in JSON and markdown artifacts.
 - LOCOMO retrieval reports now record per-system latency distribution stats in JSON and markdown artifacts.
 - LOCOMO retrieval reports now record per-system failure-category counts in JSON and markdown artifacts.

@@ -386,11 +386,13 @@ func TestRunLocomoBenchmarkHonorsConfiguredLimit(t *testing.T) {
 	memories := filepath.Join(dir, "memories.jsonl")
 	questions := filepath.Join(dir, "questions.jsonl")
 	out := filepath.Join(dir, "locomo.json")
-	writeTestFile(t, memories, `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"orchid marker primary"}
+	memoriesRaw := `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"orchid marker primary"}
 {"memory_id":"m2","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":2,"content":"orchid marker secondary"}
-`)
-	writeTestFile(t, questions, `{"question_id":"q1","conversation_id":"c1","question":"orchid marker","gold_memory_ids":["m2"],"category":"single_hop_retrieval"}
-`)
+`
+	questionsRaw := `{"question_id":"q1","conversation_id":"c1","question":"orchid marker","gold_memory_ids":["m2"],"category":"single_hop_retrieval"}
+`
+	writeTestFile(t, memories, memoriesRaw)
+	writeTestFile(t, questions, questionsRaw)
 	if err := runLocomoBenchmark(context.Background(), config{LocomoMemoriesPath: memories, LocomoQuestionsPath: questions, OutPath: out, Limit: 1}); err != nil {
 		t.Fatalf("run LOCOMO limit smoke: %v", err)
 	}
@@ -407,6 +409,10 @@ func TestRunLocomoBenchmarkHonorsConfiguredLimit(t *testing.T) {
 	}
 	if rawReport["memory_token_estimate"] != float64(6) {
 		t.Fatalf("report memory_token_estimate = %v, want deterministic content token estimate 6", rawReport["memory_token_estimate"])
+	}
+	wantDatabaseSize := float64(len(memoriesRaw) + len(questionsRaw))
+	if rawReport["database_size_bytes"] != wantDatabaseSize {
+		t.Fatalf("report database_size_bytes = %v, want fixture byte size %.0f", rawReport["database_size_bytes"], wantDatabaseSize)
 	}
 	var report locomoReport
 	if err := json.Unmarshal(raw, &report); err != nil {
@@ -526,6 +532,9 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "Memory token estimate") {
 		t.Fatalf("markdown missing memory token estimate:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "Database size bytes") {
+		t.Fatalf("markdown missing database size bytes:\n%s", mdRaw)
 	}
 	if !strings.Contains(string(mdRaw), "Search latency ms") || !strings.Contains(string(mdRaw), "RSS bytes") {
 		t.Fatalf("markdown missing resource metric columns:\n%s", mdRaw)
