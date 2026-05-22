@@ -258,6 +258,32 @@ func TestBenchmarkDocsDistinguishFrozenLocomoResultArtifacts(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsNameLocomoReproductionCommands(t *testing.T) {
+	wantMarkers := []string{
+		"Full LOCOMO reproduction: `make bench-locomo`",
+		"Retrieval smoke reproduction: `make bench-locomo-smoke`",
+		"Backend smoke reproduction: `make bench-locomo-backends-smoke`",
+		"Full backend comparison reproduction: `make bench-locomo-backends`",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not name LOCOMO reproduction command marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestPublicAdoptionDocsMentionPublicModuleSmoke(t *testing.T) {
 	for _, path := range []string{
 		"README.md",
