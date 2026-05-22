@@ -18,6 +18,16 @@ honcho_conclude
 
 The goal is to let existing agent integrations move toward local-first memory without rewriting every tool call first.
 
+For new local-first tool surfaces, prefer the Goncho-native public tools:
+
+```text
+goncho_context
+goncho_search
+goncho_remember
+goncho_review
+goncho_handoff
+```
+
 ## Where Compatibility Ends
 
 Goncho is not hosted Honcho. It is a Go library that runs locally, stores memory in local persistence, and is evolving toward trust-preserving context architecture.
