@@ -17,9 +17,12 @@ The runner itself does not download datasets. It consumes a local JSONL file, lo
 
 ## Scientific Validation Targets
 
-Use the install smoke to prove the benchmark CLI builds from the current checkout, the smoke target in normal CI, and the full target manually from a clean checkout.
+Use `make ecosystem-smoke` when checking public module resolution, package docs, external importability, and the checkout-local benchmark CLI together.
+
+For benchmark-only validation, use the install smoke to prove the benchmark CLI builds from the current checkout, the smoke target in normal CI, and the full target manually from a clean checkout.
 
 ```sh
+make ecosystem-smoke
 make install-smoke
 make bench-longmemeval-s-smoke
 ```
