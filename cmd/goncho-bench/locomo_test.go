@@ -242,6 +242,28 @@ func TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits(t *testing.T) {
 	}
 }
 
+func TestRetrieveLocomoSQLiteFTSSkipsStoreForTokenlessQuery(t *testing.T) {
+	dir := t.TempDir()
+	badTemp := filepath.Join(dir, "not-dir")
+	if err := os.WriteFile(badTemp, []byte("not a directory"), 0o644); err != nil {
+		t.Fatalf("create bad temp path: %v", err)
+	}
+	t.Setenv("TMPDIR", badTemp)
+
+	items := []locomoMemoryRow{
+		{MemoryID: "m1", ConversationID: "c1", TurnIndex: 1, Content: "older memory"},
+		{MemoryID: "m2", ConversationID: "c1", TurnIndex: 2, Content: "newer memory"},
+	}
+	q := locomoQuestionRow{QuestionID: "q1", ConversationID: "c1", Question: "the and what"}
+	got, err := retrieveLocomoSQLiteFTS(context.Background(), items, q, 1)
+	if err != nil {
+		t.Fatalf("tokenless SQLite FTS retrieval: %v", err)
+	}
+	if strings.Join(got, ",") != "m2" {
+		t.Fatalf("tokenless SQLite FTS retrieval = %v, want recency fallback without temp SQLite store", got)
+	}
+}
+
 func TestRunLocomoBenchmarkHonorsConfiguredLimit(t *testing.T) {
 	dir := t.TempDir()
 	memories := filepath.Join(dir, "memories.jsonl")

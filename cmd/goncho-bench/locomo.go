@@ -454,6 +454,11 @@ func rankLocomoBM25(query string, items []locomoMemoryRow) []locomoMemoryRow {
 }
 
 func retrieveLocomoSQLiteFTS(ctx context.Context, items []locomoMemoryRow, q locomoQuestionRow, limit int) ([]string, error) {
+	query := ftsQuery(q.Question)
+	if query == "" {
+		sortLocomoRecency(items)
+		return locomoFirstIDs(items, limit), nil
+	}
 	dir, err := os.MkdirTemp("", "goncho-locomo-fts-*")
 	if err != nil {
 		return nil, err
@@ -470,11 +475,6 @@ func retrieveLocomoSQLiteFTS(ctx context.Context, items []locomoMemoryRow, q loc
 	}
 	if err := insertLocomoFTSRows(ctx, db, items); err != nil {
 		return nil, err
-	}
-	query := ftsQuery(q.Question)
-	if query == "" {
-		sortLocomoRecency(items)
-		return locomoFirstIDs(items, limit), nil
 	}
 	rows, err := db.QueryContext(ctx, `SELECT id FROM locomo_fts WHERE locomo_fts MATCH ? ORDER BY bm25(locomo_fts) LIMIT ?`, query, limit)
 	if err != nil {

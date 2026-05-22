@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO SQLite FTS retrieval now skips temporary database setup for tokenless queries.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRetrieveLocomoSQLiteFTSSkipsStoreForTokenlessQuery -count=1` proves stopword-only LOCOMO questions use the recency fallback without creating a temporary SQLite FTS store.
+  - Result: report generation avoids wasted temp DB creation/population for questions with no indexable FTS tokens while preserving fallback ordering.
+
 - 2026-05-22: LOCOMO failure audits now reject unknown retrieved stable IDs.
   - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoFailureAuditRejectsUnknownRetrievedID -count=1` proves Goncho failure-audit output fails closed when a top-hit `memory_id` is not present in the loaded LOCOMO fixture.
   - Result: failure JSONL no longer hides retrieval/stable-ID drift behind blank memory metadata rows.
