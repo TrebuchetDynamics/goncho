@@ -27,6 +27,30 @@ func TestServiceLifecycleModuleSeamUsesServiceConfig(t *testing.T) {
 	}
 }
 
+func TestLifecycleModuleCreateMessagesPreservesServiceContract(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	got, err := svc.lifecycle().CreateMessages(ctx, CreateMessagesParams{
+		SessionKey: "lifecycle-create",
+		Messages: []CreateMessage{{
+			Peer:    "peer-lifecycle",
+			Role:    "user",
+			Content: "lifecycle module preserves create-message orchestration",
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.WorkspaceID != svc.workspaceID || got.SessionKey != "lifecycle-create" {
+		t.Fatalf("create scope = %+v, want workspace %q session lifecycle-create", got, svc.workspaceID)
+	}
+	if len(got.Messages) != 1 || got.Messages[0].Content != "lifecycle module preserves create-message orchestration" {
+		t.Fatalf("created messages = %+v, want one persisted lifecycle message", got.Messages)
+	}
+}
+
 func TestService_ProfileRoundTrip(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

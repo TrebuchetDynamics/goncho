@@ -30,7 +30,7 @@
 
 **Files:** none
 
-- [ ] **Step 1: Run targeted lifecycle tests**
+- [x] **Step 1: Run targeted lifecycle tests**
 
 Run:
 
@@ -41,7 +41,7 @@ go test . -run 'Test.*Create|Test.*Delete|Test.*CRUD|Test.*Lifecycle|Test.*Strea
 
 Expected: PASS.
 
-- [ ] **Step 2: Capture dirty baseline**
+- [x] **Step 2: Capture dirty baseline**
 
 Run:
 
@@ -119,7 +119,7 @@ Expected: commit succeeds. Do not stage `docs/opensource-memory-systems/agentmem
 - Modify: `service.go`
 - Modify: `lifecycle_module.go`
 
-- [ ] **Step 1: Replace `Service.CreateMessages` with delegation**
+- [x] **Step 1: Replace `Service.CreateMessages` with delegation**
 
 In `service.go`, replace current `Service.CreateMessages` body with:
 
@@ -129,7 +129,7 @@ func (s *Service) CreateMessages(ctx context.Context, params CreateMessagesParam
 }
 ```
 
-- [ ] **Step 2: Add `lifecycleModule.CreateMessages`**
+- [x] **Step 2: Add `lifecycleModule.CreateMessages`**
 
 In `lifecycle_module.go`, add:
 
@@ -143,7 +143,7 @@ Use exact old `Service.CreateMessages` body with receiver edit:
 s.createMessagesOnce(...) -> l.createMessagesOnce(...)
 ```
 
-- [ ] **Step 3: Move private create helpers**
+- [x] **Step 3: Move private create helpers**
 
 Move these from `service.go` to `lifecycle_module.go`:
 
@@ -164,7 +164,7 @@ s.maxMessageSize -> l.maxMessageSize
 
 Pure helper funcs keep same names and bodies.
 
-- [ ] **Step 4: Run create-message tests**
+- [x] **Step 4: Run create-message tests**
 
 Run:
 
@@ -174,7 +174,7 @@ go test . -run 'Test.*Create|Test.*CRUD|Test.*Streaming|Test.*LocalE2E' -count=1
 
 Expected: PASS.
 
-- [ ] **Step 5: Run package test**
+- [x] **Step 5: Run package test**
 
 Run:
 
@@ -184,7 +184,7 @@ go test . -count=1
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit create extraction**
+- [x] **Step 6: Commit create extraction**
 
 Run:
 
