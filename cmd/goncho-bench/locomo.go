@@ -671,9 +671,14 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 			return fmt.Errorf("goncho-bench: LOCOMO failure audit question_id %q conversation_id %q does not match fixture conversation_id %q", q.QuestionID, q.ConversationID, fixtureQuestion.ConversationID)
 		}
 		for _, id := range q.GoldMemoryIDs {
-			if _, ok := memByID[id]; !ok {
+			mem, ok := memByID[id]
+			if !ok {
 				_ = file.Close()
 				return fmt.Errorf("goncho-bench: LOCOMO failure audit question %q unknown gold_memory_id %q", q.QuestionID, id)
+			}
+			if mem.ConversationID != q.ConversationID {
+				_ = file.Close()
+				return fmt.Errorf("goncho-bench: LOCOMO failure audit question %q out-of-conversation gold_memory_id %q", q.QuestionID, id)
 			}
 		}
 		row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: q.Category, Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}

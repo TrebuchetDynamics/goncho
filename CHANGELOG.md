@@ -17,6 +17,7 @@
 
 ### Changed
 
+- LOCOMO failure audits now reject out-of-conversation gold stable IDs before writing failure rows.
 - LOCOMO failure audits now reject unknown gold stable IDs before writing failure rows.
 - LOCOMO failure audits now reject question conversation mismatches before writing failure rows.
 - LOCOMO failure audits now reject unknown question IDs before writing failure rows.

@@ -227,6 +227,21 @@ func TestWriteLocomoFailureAuditRejectsUnknownGoldMemoryID(t *testing.T) {
 	}
 }
 
+func TestWriteLocomoFailureAuditRejectsOutOfConversationGoldMemoryID(t *testing.T) {
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"},
+			{MemoryID: "m2", ConversationID: "c2", SessionID: "s2", Speaker: "Leo", TurnIndex: 1, Content: "wrong conversation memory"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "question", GoldMemoryIDs: []string{"m1"}, Category: "true_retrieval_failure"}},
+	}
+	report := locomoSystemReport{System: "goncho", QuestionsDetail: []locomoQuestionResult{{QuestionID: "q1", ConversationID: "c1", Category: "true_retrieval_failure", Question: "question", GoldMemoryIDs: []string{"m2"}, RetrievedIDs: []string{"m1"}, Rank: 0}}}
+	err := writeLocomoFailureAudit(filepath.Join(t.TempDir(), "failures.jsonl"), data, []locomoSystemReport{report})
+	if err == nil || !strings.Contains(err.Error(), `out-of-conversation gold_memory_id "m2"`) {
+		t.Fatalf("write failure audit error = %v, want out-of-conversation gold stable ID error", err)
+	}
+}
+
 func TestWriteLocomoFailureAuditRejectsUnknownRetrievedID(t *testing.T) {
 	data := locomoDataset{
 		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c", SessionID: "s", Speaker: "user", TurnIndex: 1, Content: "known memory"}},
