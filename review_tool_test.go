@@ -222,6 +222,36 @@ func TestReviewToolResolveOutputIncludesReason(t *testing.T) {
 	}
 }
 
+func TestReviewToolResolveOutputIncludesCreatedAt(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	createdAt := time.Date(2026, 5, 22, 19, 0, 0, 123, time.UTC)
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:       ReviewKindStale,
+		PeerID:     "peer-created",
+		SessionKey: "session-created",
+		SubjectID:  "mem-created",
+		Reason:     "created timestamp should be audit-visible on resolve",
+		CreatedAt:  createdAt,
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	resolved := executeMemoryTool(t, ctx, tool, `{"action":"resolve","id":"`+item.ID+`","resolution":"verified","resolved_by":"agent:mineru","resolution_reason":"created time reviewed"}`)
+	createdAtText := stringField(t, resolved, "created_at")
+	gotCreatedAt, err := time.Parse(time.RFC3339Nano, createdAtText)
+	if err != nil {
+		t.Fatalf("created_at = %q, want RFC3339Nano timestamp: %v", createdAtText, err)
+	}
+	if !gotCreatedAt.Equal(createdAt) {
+		t.Fatalf("created_at output = %s, want %s", gotCreatedAt.Format(time.RFC3339Nano), createdAt.Format(time.RFC3339Nano))
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

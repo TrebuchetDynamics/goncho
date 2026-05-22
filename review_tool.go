@@ -119,6 +119,7 @@ func (t *ReviewTool) executeResolve(ctx context.Context, id, resolution, resolve
 		"related_id":        item.RelatedID,
 		"reason":            item.Reason,
 		"evidence_ids":      item.EvidenceIDs,
+		"created_at":        item.CreatedAt.UTC().Format(time.RFC3339Nano),
 		"status":            item.Status,
 		"resolution":        item.Resolution,
 		"resolved_by":       item.ResolvedBy,
