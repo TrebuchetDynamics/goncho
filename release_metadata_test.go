@@ -341,6 +341,28 @@ func TestReadmeSurfacesPkgGoDevAPIMap(t *testing.T) {
 	}
 }
 
+func TestReadmeSurfacesMinimalEmbeddedSkeleton(t *testing.T) {
+	raw, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("ReadFile README.md: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"## Minimal Embedded Skeleton",
+		"Copy this skeleton into a new Go module",
+		"package main",
+		"memory.OpenSqlite",
+		"goncho.RunMigrations",
+		"goncho.NewService",
+		"svc.Context",
+		"orientation pack",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("README.md does not surface minimal embedded skeleton marker %q", want)
+		}
+	}
+}
+
 func TestPackageDocsIncludeCompiledNewServiceExample(t *testing.T) {
 	raw, err := os.ReadFile("example_service_test.go")
 	if err != nil {
@@ -430,6 +452,22 @@ func TestReleaseMetadataSmokeIncludesReadmeAPIMapGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include README API map guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesReadmeMinimalSkeletonGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"ReadmeSurfacesMinimalEmbeddedSkeleton",
+		"ReleaseMetadataSmokeIncludesReadmeMinimalSkeletonGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include README minimal skeleton guard %q", want)
 		}
 	}
 }

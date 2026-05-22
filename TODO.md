@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: README now gives pkg.go.dev readers a minimal embedded host skeleton.
+  - Evidence target: `go test . -run 'Test(ReadmeSurfacesMinimalEmbeddedSkeleton|ReleaseMetadataSmokeIncludesReadmeMinimalSkeletonGuard)' -count=1` proves the README includes a copy-paste local SQLite service skeleton and release metadata smoke keeps the guard wired.
+  - Result: readers can start a Go module around Goncho without confusing the library package with the benchmark CLI.
+
 - 2026-05-22: Root package documentation now maps pkg.go.dev readers to the primary API path.
   - Evidence target: `go test . -run 'Test(PackageDocSurfacesPrimaryAPIPath|ReleaseMetadataSmokeIncludesPackageDocAPIPathGuard)' -count=1` proves `go doc .` names `Service.Conclude`, `Service.Search`, `Service.Context`, the public tool constructors, and the database-internals boundary while release metadata smoke keeps the guard wired.
   - Result: readers can orient on the service/tool entry points before scanning the large API index.

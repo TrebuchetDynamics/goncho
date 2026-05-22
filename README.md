@@ -60,6 +60,57 @@ If you are evaluating Goncho on pkg.go.dev, start here:
 | Expose agent tools | `NewGonchoContextTool`, `NewGonchoSearchTool`, `NewGonchoRememberTool`, `NewReviewTool`, `NewGonchoHandoffTool` | Keeps host integrations on the public tool boundary instead of database internals. |
 | Reproduce retrieval evidence | `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` | Installs the benchmark CLI shipped with the public module. |
 
+## Minimal Embedded Skeleton
+
+Copy this skeleton into a new Go module when you want the shortest local-memory host shape rather than the benchmark CLI:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    "path/filepath"
+
+    "github.com/TrebuchetDynamics/goncho"
+    "github.com/TrebuchetDynamics/goncho/memory"
+)
+
+func main() {
+    ctx := context.Background()
+    dir := "."
+    if len(os.Args) > 1 {
+        dir = os.Args[1]
+    }
+
+    store, err := memory.OpenSqlite(filepath.Join(dir, "goncho.db"), 0, nil)
+    if err != nil {
+        panic(err)
+    }
+    defer func() { _ = store.Close(ctx) }()
+
+    if err := goncho.RunMigrations(store.DB()); err != nil {
+        panic(err)
+    }
+
+    svc := goncho.NewService(store.DB(), goncho.Config{
+        WorkspaceID:    "local-agent",
+        ObserverPeerID: "assistant",
+    }, nil)
+
+    pack, err := svc.Context(ctx, goncho.ContextParams{
+        Peer:      "local-user",
+        Query:     "what should I verify before acting?",
+        MaxTokens: 2000,
+    })
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(pack.Representation) // orientation pack, not permission to skip live checks
+}
+```
+
 ## Package Status
 
 Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.1 release published May 22, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
