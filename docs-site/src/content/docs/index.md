@@ -30,6 +30,8 @@ Goncho is pre-1.0. Public `@latest` currently resolves to v0.1.0, and the v0.1.x
 
 Public API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
 
+The root module is a library package, not a CLI binary. Use `go get github.com/TrebuchetDynamics/goncho` for the library; use checkout-local benchmark commands until a v0.1.x tag includes `goncho-bench`.
+
 Local ecosystem smoke: `make ecosystem-smoke` verifies public module resolution, package docs, external importability, and checkout-local benchmark CLI installation. For the narrower external import proof, run `make public-module-smoke`.
 :::
 

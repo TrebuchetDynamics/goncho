@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: docs home now frames the root module as a library package.
+  - Evidence target: `go test . -run TestPublicDocsFrameRootModuleAsLibrary -count=1` proves README, docs home, current-capabilities, and quick-start docs say the root module is a library package.
+  - Result: first-touch public docs preserve `go get` library semantics and avoid implying root-level CLI installability.
+
 - 2026-05-22: docs home now names the current public `@latest` release as v0.1.0.
   - Evidence target: `go test . -run TestPublicDocsMentionLatestReleaseVersion -count=1` proves README, docs home, current-capabilities, and quick-start docs mention v0.1.0.
   - Result: first-touch public docs show the official tagged release signal without implying checkout-local benchmark CLI availability at `@latest`.
