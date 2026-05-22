@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added package documentation trust-boundary guidance for pkg.go.dev readers embedding Goncho in host agents.
 - Added a README trust-boundary guide for pkg.go.dev readers embedding Goncho in host agents.
 - Added package documentation host integration checklist guidance for pkg.go.dev readers embedding Goncho in an agent host.
 - Added a README host integration checklist for pkg.go.dev readers embedding Goncho in an agent host.

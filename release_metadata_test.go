@@ -876,6 +876,27 @@ func TestPackageDocSurfacesImportPathGuide(t *testing.T) {
 	}
 }
 
+func TestPackageDocSurfacesTrustBoundaryGuide(t *testing.T) {
+	out, err := exec.Command("go", "doc", ".").Output()
+	if err != nil {
+		t.Fatalf("go doc .: %v", err)
+	}
+	text := strings.Join(strings.Fields(string(out)), " ")
+	for _, want := range []string{
+		"Trust boundary for host agents",
+		"Goncho can orient the agent",
+		"host remains authoritative",
+		"Authorization and policy decisions",
+		"Live filesystem, API, deployment, and credential state",
+		"Money movement, destructive writes, and external side effects",
+		"Treat retrieved memory as evidence to check",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("go doc . output does not surface trust boundary guide marker %q\n%s", want, text)
+		}
+	}
+}
+
 func TestPackageDocSurfacesHostIntegrationChecklist(t *testing.T) {
 	out, err := exec.Command("go", "doc", ".").Output()
 	if err != nil {
@@ -1006,6 +1027,22 @@ func TestReleaseMetadataSmokeIncludesPackageDocImportPathGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include package doc import path guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesPackageDocTrustBoundaryGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocSurfacesTrustBoundaryGuide",
+		"ReleaseMetadataSmokeIncludesPackageDocTrustBoundaryGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include package doc trust boundary guard %q", want)
 		}
 	}
 }

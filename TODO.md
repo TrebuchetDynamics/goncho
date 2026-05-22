@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package documentation now includes a trust-boundary guide for pkg.go.dev readers embedding Goncho in host agents.
+  - Evidence target: `go test . -run 'Test(PackageDocSurfacesTrustBoundaryGuide|ReleaseMetadataSmokeIncludesPackageDocTrustBoundaryGuard)' -count=1` proves `go doc .` distinguishes Goncho orientation from host authority over authorization, live filesystem/API/deployment/credential state, money movement, destructive writes, external side effects, and live verification.
+  - Result: readers landing directly on pkg.go.dev can adopt Goncho without mistaking memory retrieval for permission to skip host-side gates.
+
 - 2026-05-22: README now includes a trust-boundary guide for pkg.go.dev readers embedding Goncho in host agents.
   - Evidence target: `go test . -run 'Test(ReadmeSurfacesTrustBoundaryGuide|ReleaseMetadataSmokeIncludesReadmeTrustBoundaryGuard)' -count=1` proves the README distinguishes Goncho orientation from host authority over authorization, live filesystem/API/deployment/credential state, money movement, destructive writes, external side effects, and live verification.
   - Result: readers can adopt Goncho without mistaking memory retrieval for permission to skip host-side gates.

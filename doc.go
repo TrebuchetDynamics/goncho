@@ -34,6 +34,22 @@
 // When in doubt, stay on public service and tool APIs before reaching for
 // lower-level storage or benchmark internals.
 //
+// Trust boundary for host agents:
+//
+// Goncho can orient the agent by storing evidence, ranking scoped memory,
+// assembling context packs, and warning when remembered claims may be stale.
+// The host remains authoritative for decisions that require current state or
+// external authority.
+//
+//   - Authorization and policy decisions still belong to the host runtime,
+//     gateway, or operator.
+//   - Live filesystem, API, deployment, and credential state must be checked
+//     at action time.
+//   - Money movement, destructive writes, and external side effects require
+//     explicit host-side gates.
+//   - Treat retrieved memory as evidence to check, not as permission to skip
+//     live verification.
+//
 // Quick start:
 //
 //	store, err := memory.OpenSqlite("goncho.db", 0, nil)
