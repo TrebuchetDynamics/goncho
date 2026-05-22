@@ -12,7 +12,7 @@
   - `go test ./...`
   - `cd docs-site && npm run build`
 
-## Next after v0.1.0
+## Next roadmap items
 
 - Add a generated primer/token-budget E2E.
 - Continue lifecycle trust work: temporal validity, supersession chains, and confidence/freshness scoring.
