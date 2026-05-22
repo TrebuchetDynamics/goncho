@@ -5,6 +5,8 @@ description: How to plug Goncho into a Gormes-style Go agent runtime.
 
 This guide shows the recommended seam for plugging Goncho into a Gormes agent host.
 
+Use this page with the [Core API](/reference/core-api/), [Memory Tools](/reference/memory-tools/), and [Local Markdown Memory](/reference/local-markdown-memory/) references when wiring a host integration.
+
 The goal is not to make Gormes depend on Goncho internals. The goal is to mount Goncho as a local memory kernel behind a small tool surface:
 
 ```text
