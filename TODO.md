@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `review_required` context warnings now include review evidence IDs.
+  - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence surfaces bounded `evidence_ids` alongside review counts and subject chains.
+  - Result: lifecycle review warnings are easier to audit from context output without silently dropping proof identifiers.
+
 - 2026-05-22: LOCOMO failure audits now reject out-of-conversation gold stable IDs.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsOutOfConversationGoldMemoryID|BackendComparisonFailuresRejectsOutOfConversationGoldMemoryID)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a report row carries a `gold_memory_id` from a different `conversation_id` than the question.
   - Result: failure reports preserve conversation-scoped evidence IDs for expected and retrieved memory rows.

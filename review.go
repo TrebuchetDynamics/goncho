@@ -212,6 +212,9 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem) []ContextUnavailableE
 	if chains := reviewItemChainEvidence(items, 3); len(chains) > 0 {
 		reason += "; chains=" + strings.Join(chains, " ")
 	}
+	if evidenceIDs := reviewItemEvidenceIDs(items, 3); len(evidenceIDs) > 0 {
+		reason += "; evidence=" + strings.Join(evidenceIDs, " ")
+	}
 	return []ContextUnavailableEvidence{{
 		Field:      "review",
 		Capability: "review_required",
@@ -239,6 +242,31 @@ func reviewItemChainEvidence(items []ReviewItem, limit int) []string {
 		}
 	}
 	return chains
+}
+
+func reviewItemEvidenceIDs(items []ReviewItem, limit int) []string {
+	if limit <= 0 {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	evidenceIDs := []string{}
+	for _, item := range items {
+		for _, evidenceID := range item.EvidenceIDs {
+			evidenceID = strings.TrimSpace(evidenceID)
+			if evidenceID == "" {
+				continue
+			}
+			if _, ok := seen[evidenceID]; ok {
+				continue
+			}
+			seen[evidenceID] = struct{}{}
+			evidenceIDs = append(evidenceIDs, evidenceID)
+			if len(evidenceIDs) >= limit {
+				return evidenceIDs
+			}
+		}
+	}
+	return evidenceIDs
 }
 
 func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList, error) {

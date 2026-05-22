@@ -68,7 +68,7 @@ func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 	if reviewEvidence.Field != "review" {
 		t.Fatalf("review evidence field = %q, want review", reviewEvidence.Field)
 	}
-	for _, want := range []string{"2 open review items", "conflict=1", "stale=1", "mem-new->mem-old", "mem-stale"} {
+	for _, want := range []string{"2 open review items", "conflict=1", "stale=1", "mem-new->mem-old", "mem-stale", "obs-conflict", "obs-stale"} {
 		if !strings.Contains(reviewEvidence.Reason, want) {
 			t.Fatalf("review evidence reason = %q, missing %q", reviewEvidence.Reason, want)
 		}
