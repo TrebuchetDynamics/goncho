@@ -21,6 +21,7 @@
 
 ### Documentation
 
+- Clarified first-touch public docs that the root module is not a root `go install` target.
 - Surfaced the public v0.1.0 published date in first-touch package docs.
 - Clarified first-touch public adoption docs to use `go get github.com/TrebuchetDynamics/goncho@latest` for the library package.
 - Surfaced public release metadata smoke guidance and guarded first-touch docs for version/published-time proof.

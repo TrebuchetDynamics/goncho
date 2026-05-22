@@ -180,6 +180,26 @@ func TestPublicDocsMentionPublishedReleaseDate(t *testing.T) {
 	}
 }
 
+func TestPublicDocsWarnRootGoInstallIsUnsupported(t *testing.T) {
+	const rootInstallWarning = "not a root `go install` target"
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), rootInstallWarning) {
+				t.Fatalf("%s does not warn that the public module is %q", path, rootInstallWarning)
+			}
+		})
+	}
+}
+
 func TestPublicDocsFrameRootModuleAsLibrary(t *testing.T) {
 	for _, path := range []string{
 		"README.md",

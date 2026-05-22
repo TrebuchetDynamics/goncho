@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: public docs now warn against root-level `go install` overclaims.
+  - Evidence target: `go test . -run TestPublicDocsWarnRootGoInstallIsUnsupported -count=1` proves README, docs home, current-capabilities, and quick-start docs say the root module is not a root `go install` target.
+  - Result: first-touch docs preserve the `go get github.com/TrebuchetDynamics/goncho@latest` library path without implying an unavailable root CLI install.
+
 - 2026-05-22: public docs now surface the v0.1.0 published date.
   - Evidence target: `go test . -run TestPublicDocsMentionPublishedReleaseDate -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `published May 20, 2026`.
   - Result: first-touch docs now show both public version and published-date signals from the official module metadata without implying a newer tag.
