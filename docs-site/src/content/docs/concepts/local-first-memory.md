@@ -9,7 +9,7 @@ Goncho is designed to run inside a Go binary with local persistence. No hosted m
 
 - Memory can stay in the host process and local filesystem.
 - SQLite gives the agent one portable database file.
-- Local markdown memory gives humans an editable repair surface.
+- [Local markdown memory](/reference/local-markdown-memory/) gives humans an editable repair surface.
 - Optional adapters should improve recall or consolidation without becoming mandatory infrastructure.
 
 ## Privacy Boundary
