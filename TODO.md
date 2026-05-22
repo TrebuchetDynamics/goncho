@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: quick-start docs now link the public Go reference.
+  - Evidence target: `go test . -run TestPublicDocsLinkGoReference -count=1` proves README, current-capabilities, and quick-start docs link `https://pkg.go.dev/github.com/TrebuchetDynamics/goncho`.
+  - Result: public adoption docs surface pkg.go.dev API reference at first use instead of hiding it in status pages.
+
 - 2026-05-21: operator-facing release smoke docs now mention the release metadata guard.
   - Evidence target: `go test . -run TestReleaseSmokeDocsMentionMetadataGuard -count=1` proves README, quick-start, and runbook release-smoke guidance mention release metadata checks.
   - Result: public docs stay aligned with the local pre-tag gate instead of describing only ecosystem smoke plus Go/docs checks.

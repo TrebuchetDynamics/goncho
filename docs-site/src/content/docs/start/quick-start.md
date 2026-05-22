@@ -11,6 +11,8 @@ Use the module in an embedded Go runtime:
 go get github.com/TrebuchetDynamics/goncho
 ```
 
+API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
+
 From a checkout, verify the public module, local package docs, external import path, and benchmark CLI together:
 
 ```sh

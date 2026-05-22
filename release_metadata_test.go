@@ -61,3 +61,22 @@ func TestReleaseSmokeDocsMentionMetadataGuard(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicDocsLinkGoReference(t *testing.T) {
+	const goReferenceURL = "https://pkg.go.dev/github.com/TrebuchetDynamics/goncho"
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), goReferenceURL) {
+				t.Fatalf("%s does not link the public Go reference at %s", path, goReferenceURL)
+			}
+		})
+	}
+}
