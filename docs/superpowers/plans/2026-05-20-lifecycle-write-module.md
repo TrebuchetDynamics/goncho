@@ -286,7 +286,7 @@ Expected: commit succeeds.
 
 **Files:** none unless import cleanup required.
 
-- [ ] **Step 1: Run targeted lifecycle tests**
+- [x] **Step 1: Run targeted lifecycle tests**
 
 Run:
 
@@ -296,7 +296,7 @@ go test . -run 'Test.*Create|Test.*Delete|Test.*CRUD|Test.*Lifecycle|Test.*Strea
 
 Expected: PASS.
 
-- [ ] **Step 2: Run full tests**
+- [x] **Step 2: Run full tests**
 
 Run:
 
@@ -306,7 +306,7 @@ go test ./...
 
 Expected: PASS.
 
-- [ ] **Step 3: Run race tests**
+- [x] **Step 3: Run race tests**
 
 Run:
 
@@ -316,7 +316,7 @@ go test -race ./...
 
 Expected: PASS.
 
-- [ ] **Step 4: Run vet**
+- [x] **Step 4: Run vet**
 
 Run:
 
@@ -326,7 +326,7 @@ go vet ./...
 
 Expected: PASS.
 
-- [ ] **Step 5: Check public interface unchanged**
+- [x] **Step 5: Check public interface unchanged**
 
 Run:
 
@@ -336,7 +336,7 @@ git diff HEAD~2..HEAD -- service.go types.go | rg '^[-+]func \(s \*Service\) (Cr
 
 Expected: only `Service` method bodies changed; no exported method signature or exported type change.
 
-- [ ] **Step 6: Push commits**
+- [x] **Step 6: Push commits**
 
 Run:
 
@@ -346,7 +346,7 @@ git push origin main
 
 Expected: push succeeds.
 
-- [ ] **Step 7: Final report**
+- [x] **Step 7: Final report**
 
 Report:
 
