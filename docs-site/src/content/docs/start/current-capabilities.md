@@ -12,6 +12,7 @@ Current public package signals:
 - Module path: `github.com/TrebuchetDynamics/goncho`.
 - API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
 - Tagged release stream: v0.1.x establishes the importable service and Gormes adapter surface.
+- Public import smoke: `make public-module-smoke` creates a temporary external Go module, runs `go get github.com/TrebuchetDynamics/goncho@latest`, and compiles a minimal import of the public service API.
 - Installable command source: `./cmd/goncho-bench`; `make install-smoke` verifies the checkout-local benchmark CLI while public `@latest` still resolves to v0.1.0.
 - Public tool proof: `goncho_context` has E2E coverage for generated primer behavior under `max_tokens`, preserving newest in-budget turns and excluding older out-of-budget turns.
 - Benchmark evidence: LongMemEval-S and LOCOMO reports use deterministic ID scoring, leakage checks, failure audits, reproducible smoke targets, and stable-ID backend comparison artifacts.

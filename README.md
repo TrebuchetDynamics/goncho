@@ -40,10 +40,11 @@ The root module is a library package; `goncho-bench` is the installable command 
 
 Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: tagged v0.1.x releases, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts.
 
-Verify public module resolution without editing a project:
+Verify public module resolution and external importability without editing a project:
 
 ```bash
 go list -m github.com/TrebuchetDynamics/goncho@latest
+make public-module-smoke
 ```
 
 Use `go get` to depend on the library package. For the command-line benchmark runner, use `make install-smoke` or `go install ./cmd/goncho-bench` from this checkout until the next v0.1.x tag includes the CLI.
@@ -330,9 +331,10 @@ go test ./... -run TestGonchoGoalStaleCodeClaimRequiresLiveVerificationE2E
 go test ./... -run TestGonchoGoalNegativeDriftAnchorWarnsBeforeRepeatedFailureE2E
 ```
 
-Benchmarks:
+Benchmarks and public package smoke checks:
 
 ```bash
+make public-module-smoke
 make install-smoke
 go test ./cmd/goncho-bench
 make bench-longmemeval-s-smoke

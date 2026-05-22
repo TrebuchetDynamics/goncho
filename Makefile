@@ -9,7 +9,31 @@ LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jso
 LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
 
-.PHONY: install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
+.PHONY: public-module-smoke install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
+
+public-module-smoke:
+	@tmp=$$(mktemp -d); \
+	echo "verifying public github.com/TrebuchetDynamics/goncho@latest import in $$tmp"; \
+	cd "$$tmp"; \
+	go mod init goncho-public-module-smoke >/dev/null; \
+	go get github.com/TrebuchetDynamics/goncho@latest; \
+	printf '%s\n' \
+		'package main' \
+		'' \
+		'import (' \
+		'    "database/sql"' \
+		'    "fmt"' \
+		'    "github.com/TrebuchetDynamics/goncho"' \
+		')' \
+		'' \
+		'func main() {' \
+		'    var db *sql.DB' \
+		'    if goncho.NewService(db, goncho.Config{}, nil) == nil {' \
+		'        panic("nil service")' \
+		'    }' \
+		'    fmt.Println("goncho public module import ok")' \
+		'}' > main.go; \
+	go run .
 
 install-smoke:
 	@tmp=$$(mktemp -d); \

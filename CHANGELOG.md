@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `make public-module-smoke` to verify `github.com/TrebuchetDynamics/goncho@latest` imports and compiles from a fresh external Go module.
 - Added `make install-smoke` to verify the checkout-local `cmd/goncho-bench` install path without touching a developer's normal `GOBIN`.
 
 ### Documentation
