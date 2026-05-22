@@ -4,7 +4,7 @@
 
 ### Added
 
-- Added `make release-metadata-smoke` as an explicit guard for changelog release headings and local git tags.
+- Added `make release-metadata-smoke` as an explicit guard for changelog release headings, local git tags, and release-smoke docs.
 - Added `make release-smoke` as a local pre-tag gate for release metadata, ecosystem smoke, Go tests, vet, race tests, and docs build.
 - Added `subject_id` and `related_id` filters to `goncho_review` list requests so operators can inspect review and supersession chains.
 - Added `make ecosystem-smoke` to run the core public module, package-doc, external-import, and checkout-local benchmark CLI readiness checks together.
@@ -20,6 +20,7 @@
 
 ### Documentation
 
+- Clarified quick-start and operator runbook release-smoke guidance so it includes the release metadata guard.
 - Added a release-metadata guard so changelog release headings must match local git tags.
 - Corrected benchmark CLI install guidance so public docs no longer claim `cmd/goncho-bench@latest` before a tag contains the command.
 - Documented public `goncho_context` generated-primer token-budget E2E coverage in the README and current-capabilities docs.

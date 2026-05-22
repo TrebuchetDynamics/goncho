@@ -20,7 +20,7 @@ release-smoke:
 	cd docs-site && npm run build
 
 release-metadata-smoke:
-	go test . -run TestChangelogReleaseHeadingsHaveMatchingTags -count=1
+	go test . -run 'Test(ChangelogReleaseHeadingsHaveMatchingTags|ReleaseSmokeDocsMentionMetadataGuard)' -count=1
 
 ecosystem-smoke:
 	go list -m github.com/TrebuchetDynamics/goncho@latest

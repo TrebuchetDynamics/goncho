@@ -93,9 +93,10 @@ Prefer `goncho_context`, `goncho_search`, `goncho_remember`, `goncho_review`, an
 make release-smoke
 ```
 
-`make release-smoke` runs ecosystem smoke, `go test ./...`, `go vet ./...`, `go test -race ./...`, and the docs-site build. For narrower checks, run:
+`make release-smoke` runs release metadata checks, ecosystem smoke, `go test ./...`, `go vet ./...`, `go test -race ./...`, and the docs-site build. For narrower checks, run:
 
 ```sh
+make release-metadata-smoke
 make ecosystem-smoke
 go test ./integration/gormes
 go test ./...

@@ -39,3 +39,24 @@ func TestChangelogReleaseHeadingsHaveMatchingTags(t *testing.T) {
 		t.Fatalf("CHANGELOG.md release headings without matching git tags: %s", strings.Join(missing, ", "))
 	}
 }
+
+func TestReleaseSmokeDocsMentionMetadataGuard(t *testing.T) {
+	for _, path := range []string{
+		"docs-site/src/content/docs/start/quick-start.md",
+		"docs-site/src/content/docs/operators/runbook.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			if !strings.Contains(text, "make release-smoke") {
+				t.Fatalf("%s does not mention make release-smoke", path)
+			}
+			if !strings.Contains(strings.ToLower(text), "release metadata") {
+				t.Fatalf("%s does not mention release metadata checks in release-smoke guidance", path)
+			}
+		})
+	}
+}

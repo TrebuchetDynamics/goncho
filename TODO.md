@@ -2,9 +2,13 @@
 
 ## Release state
 
+- 2026-05-21: operator-facing release smoke docs now mention the release metadata guard.
+  - Evidence target: `go test . -run TestReleaseSmokeDocsMentionMetadataGuard -count=1` proves quick-start and runbook release-smoke guidance mention release metadata checks.
+  - Result: public docs stay aligned with the local pre-tag gate instead of describing only ecosystem smoke plus Go/docs checks.
+
 - 2026-05-22: release metadata now has an explicit smoke target.
-  - Evidence target: `make release-metadata-smoke` runs `go test . -run TestChangelogReleaseHeadingsHaveMatchingTags -count=1` before broader release checks.
-  - Result: operators can check changelog/tag consistency directly, and `make release-smoke` includes that guard before ecosystem validation.
+  - Evidence target: `make release-metadata-smoke` runs tag/changelog consistency and release-smoke docs drift tests before broader release checks.
+  - Result: operators can check changelog/tag consistency and release-smoke docs directly, and `make release-smoke` includes that guard before ecosystem validation.
 
 - 2026-05-22: changelog release headings are now guarded against untagged version overclaims.
   - Evidence target: `go test . -run TestChangelogReleaseHeadingsHaveMatchingTags -count=1` proves each `## vX.Y.Z - ...` changelog release heading has a matching local git tag.
