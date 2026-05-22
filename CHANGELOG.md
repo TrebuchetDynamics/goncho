@@ -25,6 +25,7 @@
 
 ### Documentation
 
+- Clarified benchmark docs that LOCOMO backend comparison is conversation-scoped before stable-ID scoring.
 - Clarified first-touch public docs that public release metadata smoke checks the documented public `@latest` version and published date.
 - Surfaced the public docs site smoke command from first-touch public docs.
 - Surfaced the package documentation smoke command from first-touch public docs.

@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: benchmark docs now surface conversation-scoped backend comparison.
+  - Evidence target: `go test . -run TestBenchmarkDocsMentionConversationScopedBackendComparison -count=1` proves README, Retrieval Benchmarks, operator runbook, and external adapter docs say LOCOMO backend comparison is conversation-scoped.
+  - Result: public benchmark methodology now explains why duplicate or near-duplicate content in another conversation cannot win by content-only matching before stable-ID scoring.
+
 - 2026-05-22: public release metadata smoke now checks documented latest metadata.
   - Evidence target: `go test . -run 'Test(PublicReleaseSmokeChecksDocumentedLatestMetadata|PublicDocsExplainDocumentedLatestPublicReleaseSmoke)' -count=1` proves `make public-release-smoke` checks the documented public `@latest` version and published date, and first-touch public docs explain that guard.
   - Result: ecosystem-readiness smoke now catches drift between official public module metadata and the documented v0.1.0 / May 20, 2026 milestone instead of accepting any `Version`/`Time` fields.

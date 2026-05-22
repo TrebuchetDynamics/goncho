@@ -49,6 +49,7 @@ If the backend cannot preserve stable IDs, the adapter must fail closed:
 - No answer scoring.
 - Same LOCOMO converted JSONL.
 - Same gold IDs.
+- Conversation-scoped backend comparison before stable-ID scoring.
 - Centralized Go scoring only.
 - No Goncho ranking changes.
 - No gold leakage.

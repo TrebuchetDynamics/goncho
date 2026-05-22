@@ -191,6 +191,7 @@ Operator rules:
 
 - Treat the Go benchmark harness as the source of truth for scoring.
 - Keep external backend adapters isolated; they may only emit retrieved `memory_id` values and scores.
+- Keep LOCOMO backend comparison conversation-scoped before scoring so duplicate content in another conversation cannot win by content alone.
 - Do not accept LLM judges or answer text as retrieval evidence.
 - Do not map external results by content unless the adapter proves the mapping is collision-safe.
 - If a backend cannot return stable inserted IDs, leave it `not comparable` and report the exact reason.

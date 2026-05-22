@@ -179,6 +179,26 @@ func TestPublicDocsMentionBackendComparisonSmoke(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsMentionConversationScopedBackendComparison(t *testing.T) {
+	const marker = "conversation-scoped"
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+		"docs-site/src/content/docs/operators/runbook.md",
+		"docs/benchmarks/external-backend-adapters.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(strings.ToLower(string(raw)), marker) {
+				t.Fatalf("%s does not mention %q backend comparison", path, marker)
+			}
+		})
+	}
+}
+
 func TestPublicAdoptionDocsMentionPublicModuleSmoke(t *testing.T) {
 	for _, path := range []string{
 		"README.md",

@@ -38,7 +38,7 @@ The root module is a library package, not a root `go install` target; `goncho-be
 
 ## Package Status
 
-Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.0 release published May 20, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
+Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.0 release published May 20, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
 
 Verify public release metadata, local Go module metadata, package documentation, public docs site build, external importability, and the checkout-local benchmark CLI without editing another project:
 

@@ -193,7 +193,7 @@ Outputs:
 | `docs/benchmarks/failures/locomo-backend-comparison.jsonl` | Failure audit and not-comparable evidence. |
 | `docs/benchmarks/external-backend-adapters.md` | Adapter contract, setup notes, and current comparability status. |
 
-External adapters must return stable inserted `memory_id` values. Content-only matching is not accepted because LOCOMO contains duplicate and near-duplicate memories.
+External adapters must return stable inserted `memory_id` values. Content-only matching is not accepted because LOCOMO contains duplicate and near-duplicate memories. Backend comparison is conversation-scoped before scoring so duplicate content from another conversation cannot beat the correct stable ID.
 
 Current status:
 
