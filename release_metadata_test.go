@@ -839,6 +839,28 @@ func TestPackageDocSurfacesImportPathGuide(t *testing.T) {
 	}
 }
 
+func TestPackageDocSurfacesHostIntegrationChecklist(t *testing.T) {
+	out, err := exec.Command("go", "doc", ".").Output()
+	if err != nil {
+		t.Fatalf("go doc .: %v", err)
+	}
+	text := strings.Join(strings.Fields(string(out)), " ")
+	for _, want := range []string{
+		"Host integration checklist",
+		"memory.OpenSqlite",
+		"RunMigrations before NewService",
+		"WorkspaceID and ObserverPeerID",
+		"ProfileID, Peer, and SessionKey",
+		"Service.Context before tool execution",
+		"evidence-backed conclusions",
+		"Verify live state before acting",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("go doc . output does not surface host integration checklist marker %q\n%s", want, text)
+		}
+	}
+}
+
 func TestPackageDocSurfacesPrimaryAPIPath(t *testing.T) {
 	out, err := exec.Command("go", "doc", ".").Output()
 	if err != nil {
@@ -947,6 +969,22 @@ func TestReleaseMetadataSmokeIncludesPackageDocImportPathGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include package doc import path guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesPackageDocHostIntegrationGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocSurfacesHostIntegrationChecklist",
+		"ReleaseMetadataSmokeIncludesPackageDocHostIntegrationGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include package doc host integration guard %q", want)
 		}
 	}
 }

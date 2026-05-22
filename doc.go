@@ -51,6 +51,16 @@
 //		ObserverPeerID: "agent",
 //	}, nil)
 //
+// Host integration checklist:
+//
+//   - Open local SQLite with memory.OpenSqlite and close the store during host shutdown.
+//   - RunMigrations before NewService on every boot so the database matches the service schema.
+//   - Set WorkspaceID and ObserverPeerID so memory, reviews, and audits are attributable.
+//   - Pass ProfileID, Peer, and SessionKey explicitly when the host has profile or session routing.
+//   - Call Service.Context before tool execution to build orientation, then let the host verify live state.
+//   - Store evidence-backed conclusions after observations, user-visible decisions, or verified tool results.
+//   - Verify live state before acting: paths, APIs, credentials, deployments, and services still need current proof.
+//
 // Primary API path:
 //
 //   - Service.Conclude records evidence-backed conclusions.

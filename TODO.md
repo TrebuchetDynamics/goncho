@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package documentation now includes a host integration checklist for pkg.go.dev readers embedding Goncho.
+  - Evidence target: `go test . -run 'Test(PackageDocSurfacesHostIntegrationChecklist|ReleaseMetadataSmokeIncludesPackageDocHostIntegrationGuard)' -count=1` proves `go doc .` walks host integrators through SQLite opening, migrations before service construction, attribution config, explicit profile/peer/session scoping, context-before-tools, evidence-backed conclusions, and live verification.
+  - Result: readers landing directly on pkg.go.dev can wire a safe host integration path without opening the README first.
+
 - 2026-05-22: README now includes a host integration checklist for pkg.go.dev readers embedding Goncho.
   - Evidence target: `go test . -run 'Test(ReadmeSurfacesHostIntegrationChecklist|ReleaseMetadataSmokeIncludesReadmeHostIntegrationGuard)' -count=1` proves the README walks host integrators through SQLite opening, migrations, service construction, explicit profile/peer/session scoping, context-before-tools, evidence-backed conclusions, and live verification.
   - Result: readers can move from install/import guidance to a safe host wiring checklist without inferring operational boundaries from examples alone.
