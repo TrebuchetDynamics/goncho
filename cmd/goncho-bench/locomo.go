@@ -167,7 +167,7 @@ func runLocomoBenchmark(ctx context.Context, cfg config) error {
 	if limit <= 0 {
 		limit = 10
 	}
-	systems := []string{"random", "recency", "bm25", "sqlite-fts5", "goncho"}
+	systems := []string{"random", "goncho-no-rank", "recency", "bm25", "sqlite-fts5", "goncho"}
 	databaseSizeBytes, err := locomoDatabaseSizeBytes(cfg.LocomoMemoriesPath, cfg.LocomoQuestionsPath)
 	if err != nil {
 		return err
@@ -387,7 +387,7 @@ func retrieveLocomo(ctx context.Context, svc *goncho.Service, data locomoDataset
 			return stableHash(q.QuestionID+"/"+items[i].MemoryID) < stableHash(q.QuestionID+"/"+items[j].MemoryID)
 		})
 		return locomoFirstIDs(items, limit), nil
-	case "recency":
+	case "goncho-no-rank", "recency":
 		sortLocomoRecency(items)
 		return locomoFirstIDs(items, limit), nil
 	case "bm25":
@@ -904,7 +904,7 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	fmt.Fprintf(&b, "- Gold IDs present in memory content: `%d`\n", report.LeakageChecks.GoldIDInMemoryContent)
 	fmt.Fprintf(&b, "- Question text present in memory content: `%d`\n\n", report.LeakageChecks.QuestionTextInMemory)
 	b.WriteString("`answer_hint` is not indexed or scored. Answer-text presence is reported because LOCOMO answers may be literal spans from the gold memories.\n\n")
-	b.WriteString("## Notes\n\n- Retrieval-first only.\n- No answer generation.\n- No LLM judge.\n- Baselines included: random, recency, BM25, SQLite FTS5, Goncho.\n")
+	b.WriteString("## Notes\n\n- Retrieval-first only.\n- No answer generation.\n- No LLM judge.\n- Baselines included: random, Goncho no-rank, recency, BM25, SQLite FTS5, Goncho current.\n")
 	if strings.Contains(strings.ToLower(report.BenchmarkName), "smoke") {
 		b.WriteString("- The smoke fixture intentionally includes latest-state, historical, speaker-attribution, contradiction/supersession, multi-session, lexical miss, gold ambiguity, and true retrieval failure categories.\n")
 	} else {

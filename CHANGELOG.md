@@ -19,6 +19,7 @@
 
 ### Changed
 
+- LOCOMO retrieval reports now include a `goncho-no-rank` no-ranking baseline alongside current Goncho.
 - LOCOMO retrieval and backend-comparison markdown now include one-command reproduction lines.
 - LOCOMO retrieval markdown now includes converted-artifact checksums when metadata is available.
 - LOCOMO backend-comparison markdown now includes dataset source, checksum, converted-artifact checksum, and license provenance when metadata is available.

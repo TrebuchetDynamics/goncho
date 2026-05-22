@@ -339,7 +339,7 @@ func TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits(t *testing.T) {
 		},
 		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "orchid marker", GoldMemoryIDs: []string{"m2"}, Category: "single_hop_retrieval"}},
 	}
-	for _, system := range []string{"random", "recency", "bm25", "sqlite-fts5", "goncho"} {
+	for _, system := range []string{"random", "goncho-no-rank", "recency", "bm25", "sqlite-fts5", "goncho"} {
 		for _, limit := range []int{0, -1} {
 			t.Run(system+"/limit", func(t *testing.T) {
 				defer func() {
@@ -514,8 +514,11 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	if err := json.Unmarshal(raw, &report); err != nil {
 		t.Fatalf("decode report: %v", err)
 	}
-	if report.Mode != "retrieval" || !report.NoLLMJudge || len(report.Systems) != 5 {
+	if report.Mode != "retrieval" || !report.NoLLMJudge || len(report.Systems) != 6 {
 		t.Fatalf("report mode/judge/systems = %+v", report)
+	}
+	if !locomoReportIncludesSystem(report, "goncho-no-rank") {
+		t.Fatalf("report systems = %+v, want goncho-no-rank baseline", report.Systems)
 	}
 	if _, err := os.Stat(failures); err != nil {
 		t.Fatalf("failure JSONL missing: %v", err)
@@ -526,6 +529,9 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "LOCOMO smoke validates the benchmark harness") || !strings.Contains(string(mdRaw), "No answer generation") {
 		t.Fatalf("markdown missing required wording:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "Goncho no-rank") {
+		t.Fatalf("markdown missing goncho-no-rank baseline note:\n%s", mdRaw)
 	}
 	if !strings.Contains(string(mdRaw), "- Top-K: `10`") {
 		t.Fatalf("markdown missing effective top-K provenance:\n%s", mdRaw)
@@ -548,6 +554,15 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	if !strings.Contains(string(mdRaw), "Latency p95 ms") {
 		t.Fatalf("markdown missing latency distribution columns:\n%s", mdRaw)
 	}
+}
+
+func locomoReportIncludesSystem(report locomoReport, name string) bool {
+	for _, system := range report.Systems {
+		if system.System == name {
+			return true
+		}
+	}
+	return false
 }
 
 func TestWriteLocomoMarkdownIncludesConvertedChecksums(t *testing.T) {
