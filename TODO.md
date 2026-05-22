@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: public docs now surface the v0.1.0 published date.
+  - Evidence target: `go test . -run TestPublicDocsMentionPublishedReleaseDate -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `published May 20, 2026`.
+  - Result: first-touch docs now show both public version and published-date signals from the official module metadata without implying a newer tag.
+
 - 2026-05-22: public adoption docs now use version-qualified `go get`.
   - Evidence target: `go test . -run TestPublicDocsUseLatestQualifiedGoGet -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `go get github.com/TrebuchetDynamics/goncho@latest`.
   - Result: first-touch setup guidance matches the public `@latest` release signal while keeping the root module framed as a library package.

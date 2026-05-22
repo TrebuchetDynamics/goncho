@@ -160,6 +160,26 @@ func TestPublicDocsUseLatestQualifiedGoGet(t *testing.T) {
 	}
 }
 
+func TestPublicDocsMentionPublishedReleaseDate(t *testing.T) {
+	const publishedDate = "published May 20, 2026"
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), publishedDate) {
+				t.Fatalf("%s does not mention public release date %q", path, publishedDate)
+			}
+		})
+	}
+}
+
 func TestPublicDocsFrameRootModuleAsLibrary(t *testing.T) {
 	for _, path := range []string{
 		"README.md",

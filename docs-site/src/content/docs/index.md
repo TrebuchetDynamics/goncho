@@ -26,7 +26,7 @@ Vector search can help find relevant text. It does not decide what an agent shou
 Goncho treats memory as the state an agent carries forward: what it knows about peers, what it has concluded from prior sessions, what failed before, and what should be surfaced now.
 
 :::note[Current status]
-Goncho is pre-1.0. Public `@latest` currently resolves to v0.1.0, and the v0.1.x Go library supports local persistence, peer cards, search, context assembly, session summaries, local markdown memory, public tools, trust checks, and compatibility surfaces. Deeper graph/cognitive-map layers remain architecture direction.
+Goncho is pre-1.0. Public `@latest` currently resolves to v0.1.0, published May 20, 2026, and the v0.1.x Go library supports local persistence, peer cards, search, context assembly, session summaries, local markdown memory, public tools, trust checks, and compatibility surfaces. Deeper graph/cognitive-map layers remain architecture direction.
 
 Public API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
 

@@ -31,14 +31,14 @@ From a checkout, verify the reproducible benchmark CLI builds and starts when yo
 make install-smoke
 ```
 
-The root module is a library package; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.0, so use the checkout-local command until the next v0.1.x tag contains the benchmark CLI.
+The root module is a library package; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.0, published May 20, 2026, so use the checkout-local command until the next v0.1.x tag contains the benchmark CLI.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho.svg)](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Package Status
 
-Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.0 release, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts.
+Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.0 release published May 20, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts.
 
 Verify public release metadata, package documentation, external importability, and the checkout-local benchmark CLI without editing another project:
 
