@@ -59,6 +59,67 @@ func TestReviewToolListsAndResolvesReviewItems(t *testing.T) {
 	}
 }
 
+func TestReviewToolFiltersReviewChainsBySubjectAndRelatedID(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	createdAt := time.Date(2026, 5, 22, 10, 0, 0, 0, time.UTC)
+	wanted, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:        ReviewKindConflict,
+		PeerID:      "peer-a",
+		SessionKey:  "session-a",
+		SubjectID:   "mem-current",
+		RelatedID:   "mem-old",
+		Reason:      "newer memory supersedes old memory after evidence review",
+		EvidenceIDs: []string{"obs-current", "obs-old"},
+		CreatedAt:   createdAt,
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem wanted: %v", err)
+	}
+	for _, item := range []ReviewItemCreateParams{
+		{
+			Kind:        ReviewKindConflict,
+			PeerID:      "peer-a",
+			SessionKey:  "session-a",
+			SubjectID:   "mem-current",
+			RelatedID:   "mem-other",
+			Reason:      "same subject but different superseded memory",
+			EvidenceIDs: []string{"obs-other"},
+			CreatedAt:   createdAt.Add(time.Second),
+		},
+		{
+			Kind:        ReviewKindStale,
+			PeerID:      "peer-a",
+			SessionKey:  "session-a",
+			SubjectID:   "mem-stale",
+			RelatedID:   "mem-old",
+			Reason:      "same related memory but different subject",
+			EvidenceIDs: []string{"obs-stale"},
+			CreatedAt:   createdAt.Add(2 * time.Second),
+		},
+	} {
+		if _, err := svc.CreateReviewItem(ctx, item); err != nil {
+			t.Fatalf("CreateReviewItem distractor: %v", err)
+		}
+	}
+
+	tool := NewReviewTool(svc)
+	listed := executeMemoryTool(t, ctx, tool, `{"action":"list","peer_id":"peer-a","status":"open","subject_id":"mem-current","related_id":"mem-old"}`)
+	if intField(t, listed, "count") != 1 {
+		t.Fatalf("filtered list output = %+v, want one matching review-chain item", listed)
+	}
+	items, ok := listed["items"].([]any)
+	if !ok || len(items) != 1 {
+		t.Fatalf("items = %#v, want one item", listed["items"])
+	}
+	listedItem, ok := items[0].(map[string]any)
+	if !ok || listedItem["id"] != wanted.ID || listedItem["subject_id"] != "mem-current" || listedItem["related_id"] != "mem-old" {
+		t.Fatalf("listed item = %#v, want review-chain item %s", items[0], wanted.ID)
+	}
+}
+
 func intField(t *testing.T, m map[string]any, key string) int {
 	t.Helper()
 	value, ok := m[key]

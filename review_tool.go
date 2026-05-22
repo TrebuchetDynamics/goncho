@@ -28,7 +28,7 @@ func (t *ReviewTool) Description() string {
 }
 
 func (t *ReviewTool) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"action":{"type":"string","enum":["list","resolve"]},"peer_id":{"type":"string"},"session_key":{"type":"string"},"status":{"type":"string","enum":["open","resolved"]},"kind":{"type":"string","enum":["conflict","stale"]},"limit":{"type":"integer"},"id":{"type":"string"},"resolution":{"type":"string","enum":["accepted","rejected","superseded","verified"]},"resolved_by":{"type":"string"},"resolution_reason":{"type":"string"}},"required":["action"]}`)
+	return json.RawMessage(`{"type":"object","properties":{"action":{"type":"string","enum":["list","resolve"]},"peer_id":{"type":"string"},"session_key":{"type":"string"},"subject_id":{"type":"string"},"related_id":{"type":"string"},"status":{"type":"string","enum":["open","resolved"]},"kind":{"type":"string","enum":["conflict","stale"]},"limit":{"type":"integer"},"id":{"type":"string"},"resolution":{"type":"string","enum":["accepted","rejected","superseded","verified"]},"resolved_by":{"type":"string"},"resolution_reason":{"type":"string"}},"required":["action"]}`)
 }
 
 func (t *ReviewTool) Spec() toolmeta.OperationSpec {
@@ -50,6 +50,8 @@ func (t *ReviewTool) Execute(ctx context.Context, args json.RawMessage) (json.Ra
 		Action           string `json:"action"`
 		PeerID           string `json:"peer_id"`
 		SessionKey       string `json:"session_key"`
+		SubjectID        string `json:"subject_id"`
+		RelatedID        string `json:"related_id"`
 		Status           string `json:"status"`
 		Kind             string `json:"kind"`
 		Limit            int    `json:"limit"`
@@ -63,7 +65,7 @@ func (t *ReviewTool) Execute(ctx context.Context, args json.RawMessage) (json.Ra
 	}
 	switch strings.TrimSpace(in.Action) {
 	case "list":
-		return t.executeList(ctx, in.PeerID, in.SessionKey, in.Status, in.Kind, in.Limit)
+		return t.executeList(ctx, in.PeerID, in.SessionKey, in.SubjectID, in.RelatedID, in.Status, in.Kind, in.Limit)
 	case "resolve":
 		return t.executeResolve(ctx, in.ID, in.Resolution, in.ResolvedBy, in.ResolutionReason)
 	default:
@@ -71,13 +73,15 @@ func (t *ReviewTool) Execute(ctx context.Context, args json.RawMessage) (json.Ra
 	}
 }
 
-func (t *ReviewTool) executeList(ctx context.Context, peerID, sessionKey, status, kind string, limit int) (json.RawMessage, error) {
+func (t *ReviewTool) executeList(ctx context.Context, peerID, sessionKey, subjectID, relatedID, status, kind string, limit int) (json.RawMessage, error) {
 	if status == "" {
 		status = string(ReviewStatusOpen)
 	}
 	items, err := t.svc.ListReviewItems(ctx, ReviewQuery{
 		PeerID:     peerID,
 		SessionKey: sessionKey,
+		SubjectID:  subjectID,
+		RelatedID:  relatedID,
 		Status:     ReviewStatus(status),
 		Kind:       ReviewKind(kind),
 		Limit:      limit,

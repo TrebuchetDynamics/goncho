@@ -74,6 +74,8 @@ type ReviewQuery struct {
 	WorkspaceID string       `json:"workspace_id,omitempty"`
 	PeerID      string       `json:"peer_id,omitempty"`
 	SessionKey  string       `json:"session_key,omitempty"`
+	SubjectID   string       `json:"subject_id,omitempty"`
+	RelatedID   string       `json:"related_id,omitempty"`
 	Kind        ReviewKind   `json:"kind,omitempty"`
 	Status      ReviewStatus `json:"status,omitempty"`
 	Limit       int          `json:"limit,omitempty"`
@@ -226,6 +228,8 @@ func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList
 	appendFilter("workspace_id", q.WorkspaceID)
 	appendFilter("peer_id", q.PeerID)
 	appendFilter("session_key", q.SessionKey)
+	appendFilter("subject_id", q.SubjectID)
+	appendFilter("related_id", q.RelatedID)
 	appendFilter("kind", string(q.Kind))
 	appendFilter("status", string(q.Status))
 	query := `SELECT id, kind, status, workspace_id, peer_id, session_key, subject_id, related_id, reason, evidence_ids_json, created_at, resolution, resolved_by, resolution_reason, resolved_at FROM goncho_review_items`
