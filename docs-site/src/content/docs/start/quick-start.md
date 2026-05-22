@@ -8,7 +8,7 @@ Goncho is a Go library for local-first agent memory and context assembly.
 Use the module in an embedded Go runtime:
 
 ```sh
-go get github.com/TrebuchetDynamics/goncho
+go get github.com/TrebuchetDynamics/goncho@latest
 ```
 
 API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).

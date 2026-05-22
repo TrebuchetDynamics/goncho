@@ -21,6 +21,7 @@
 
 ### Documentation
 
+- Clarified first-touch public adoption docs to use `go get github.com/TrebuchetDynamics/goncho@latest` for the library package.
 - Surfaced public release metadata smoke guidance and guarded first-touch docs for version/published-time proof.
 - Surfaced docs-home root-library framing and guarded first-touch public install semantics.
 - Surfaced docs-home `v0.1.0` public latest status and guarded first-touch release-version docs.

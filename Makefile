@@ -20,7 +20,7 @@ release-smoke:
 	cd docs-site && npm run build
 
 release-metadata-smoke:
-	go test . -run 'Test(ChangelogReleaseHeadingsHaveMatchingTags|ReleaseSmokeDocsMentionMetadataGuard|PublicDocsLinkGoReference|PublicDocsMentionEcosystemSmoke|PublicAdoptionDocsMentionPublicModuleSmoke|PublicDocsMentionLatestReleaseVersion|PublicDocsFrameRootModuleAsLibrary|EcosystemSmokeIncludesPublicReleaseMetadata|PublicDocsMentionPublicReleaseSmoke)' -count=1
+	go test . -run 'Test(ChangelogReleaseHeadingsHaveMatchingTags|ReleaseSmokeDocsMentionMetadataGuard|PublicDocsLinkGoReference|PublicDocsMentionEcosystemSmoke|PublicAdoptionDocsMentionPublicModuleSmoke|PublicDocsMentionLatestReleaseVersion|PublicDocsUseLatestQualifiedGoGet|PublicDocsFrameRootModuleAsLibrary|EcosystemSmokeIncludesPublicReleaseMetadata|PublicDocsMentionPublicReleaseSmoke)' -count=1
 
 ecosystem-smoke:
 	$(MAKE) public-release-smoke

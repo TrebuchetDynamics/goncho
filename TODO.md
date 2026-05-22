@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: public adoption docs now use version-qualified `go get`.
+  - Evidence target: `go test . -run TestPublicDocsUseLatestQualifiedGoGet -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `go get github.com/TrebuchetDynamics/goncho@latest`.
+  - Result: first-touch setup guidance matches the public `@latest` release signal while keeping the root module framed as a library package.
+
 - 2026-05-22: public release metadata smoke added.
   - Evidence target: `make public-release-smoke` checks `go list -m -json github.com/TrebuchetDynamics/goncho@latest` for public version and published-time metadata.
   - Result: the pkg.go.dev-style `Version` and `Published` signal is locally checkable before broader ecosystem smoke and release decisions.

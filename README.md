@@ -22,7 +22,7 @@ If memory says a file exists, verify it. If memory says a migration was approved
 Use Goncho as an embedded Go module:
 
 ```bash
-go get github.com/TrebuchetDynamics/goncho
+go get github.com/TrebuchetDynamics/goncho@latest
 ```
 
 From a checkout, verify the reproducible benchmark CLI builds and starts when you need local retrieval reports:
@@ -48,7 +48,7 @@ make ecosystem-smoke
 
 For the narrower public release metadata proof only, run `make public-release-smoke`; it checks the public `@latest` version and published time from `go list -m -json`. For the narrower external import proof only, run `make public-module-smoke`.
 
-Use `go get` to depend on the library package. For the command-line benchmark runner, use `make install-smoke` or `go install ./cmd/goncho-bench` from this checkout until the next v0.1.x tag includes the CLI.
+Use `go get github.com/TrebuchetDynamics/goncho@latest` to depend on the library package. For the command-line benchmark runner, use `make install-smoke` or `go install ./cmd/goncho-bench` from this checkout until the next v0.1.x tag includes the CLI.
 
 ---
 
