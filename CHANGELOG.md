@@ -19,6 +19,7 @@
 
 ### Changed
 
+- LOCOMO failure-audit miss notes now report the actual retrieved top-K window instead of hard-coding top 10.
 - LOCOMO failure audits now reject out-of-conversation gold stable IDs before writing failure rows.
 - LOCOMO failure audits now reject unknown gold stable IDs before writing failure rows.
 - LOCOMO failure audits now reject question conversation mismatches before writing failure rows.

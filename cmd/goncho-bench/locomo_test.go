@@ -188,6 +188,32 @@ func TestLocomoFailureJSONLGeneration(t *testing.T) {
 	}
 }
 
+func TestLocomoFailureJSONLNotesUseRetrievedWindow(t *testing.T) {
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "gold", ConversationID: "c", SessionID: "s", Speaker: "user", TurnIndex: 0, Content: "expected"},
+			{MemoryID: "m1", ConversationID: "c", SessionID: "s", Speaker: "user", TurnIndex: 1, Content: "wrong"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q", ConversationID: "c", Question: "question", GoldMemoryIDs: []string{"gold"}, Category: "true_retrieval_failure"}},
+	}
+	report := locomoSystemReport{System: "goncho", QuestionsDetail: []locomoQuestionResult{{QuestionID: "q", ConversationID: "c", Category: "true_retrieval_failure", Question: "question", GoldMemoryIDs: []string{"gold"}, RetrievedIDs: []string{"m1"}, Rank: 0}}}
+	path := filepath.Join(t.TempDir(), "failures.jsonl")
+	if err := writeLocomoFailureAudit(path, data, []locomoSystemReport{report}); err != nil {
+		t.Fatalf("write failures: %v", err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read failures: %v", err)
+	}
+	var row locomoFailureRow
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(raw))), &row); err != nil {
+		t.Fatalf("decode failure row: %v", err)
+	}
+	if row.Notes != "no gold memory ID appeared in top 1" {
+		t.Fatalf("failure notes = %q, want configured retrieved top-K window", row.Notes)
+	}
+}
+
 func TestWriteLocomoFailureAuditRejectsUnknownQuestionID(t *testing.T) {
 	data := locomoDataset{
 		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"}},

@@ -704,7 +704,7 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 
 func locomoFailureNotes(q locomoQuestionResult) string {
 	if q.Rank == 0 {
-		return "no gold memory ID appeared in top 10"
+		return fmt.Sprintf("no gold memory ID appeared in top %d", len(q.RetrievedIDs))
 	}
 	return fmt.Sprintf("first gold memory ID appeared at rank %d", q.Rank)
 }

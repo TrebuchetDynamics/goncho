@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO failure-audit notes now report the actual retrieved top-K window.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoFailureJSONL(Generation|NotesUseRetrievedWindow)|TestWriteLocomoBackendComparisonFailuresRejectsUnknownRetrievedID' -count=1` proves failure JSONL says `top 1` for a top-1 miss instead of hard-coding `top 10`.
+  - Result: benchmark miss notes remain accurate when LOCOMO reports run with non-default retrieval limits.
+
 - 2026-05-22: `goncho_review` list output now echoes the effective status filter.
   - Evidence target: `go test . -run 'TestReviewTool(ListOutputIncludesEffectiveStatus|TreatsBlankStatusAsOpenDefault|ListFiltersByWorkspaceID|FiltersReviewChainsBySubjectAndRelatedID|ListsAndResolvesReviewItems)' -count=1` proves blank status requests default to `open` and the list response reports that effective status.
   - Result: operators can audit which review queue status was listed without inferring silent defaults from item rows.
