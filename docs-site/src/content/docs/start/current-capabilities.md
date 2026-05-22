@@ -5,6 +5,18 @@ description: What Goncho supports today and what remains architecture direction.
 
 Goncho is usable as a pre-1.0 Go library, with v0.1.x focused on the importable local memory kernel, compatibility surfaces, and deterministic local E2E proof.
 
+## Public Package Surface
+
+Current public package signals:
+
+- Module path: `github.com/TrebuchetDynamics/goncho`.
+- API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
+- Tagged release stream: v0.1.x establishes the importable service and Gormes adapter surface.
+- Installable command: `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` for local retrieval reports.
+- Benchmark evidence: LongMemEval-S and LOCOMO reports use deterministic ID scoring, leakage checks, failure audits, reproducible smoke targets, and stable-ID backend comparison artifacts.
+
+The root module is a library package, not a CLI binary. Treat the public package as an ecosystem component with reproducible evidence, while still treating deeper graph, lifecycle, and team-memory features as roadmap direction until their APIs are explicit.
+
 | Capability | Today | Direction |
 | --- | --- | --- |
 | SQLite persistence | `memory.OpenSqlite` initializes service tables; `RunMigrations` initializes observation and audit tables | Clearer operational migration docs and lifecycle guidance |

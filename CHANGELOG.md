@@ -4,6 +4,7 @@
 
 ### Documentation
 
+- Added public package/status framing to the current-capabilities docs, including pkg.go.dev, v0.1.x, benchmark evidence, and stable-ID backend comparison signals.
 - Clarified library install guidance versus the installable `goncho-bench` benchmark CLI in the README and quick-start docs.
 - Clarified current benchmark roadmap and backlog status after the LOCOMO stable-ID backend comparison freeze and stale benchmark blocker resolution.
 
