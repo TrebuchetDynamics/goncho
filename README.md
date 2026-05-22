@@ -514,6 +514,7 @@ Current external-backend status:
 - JSON evidence: [docs/benchmarks/results/locomo-2026-05-20-goncho.json](docs/benchmarks/results/locomo-2026-05-20-goncho.json)
 - Backend comparison JSON: [docs/benchmarks/results/locomo-backend-comparison.json](docs/benchmarks/results/locomo-backend-comparison.json)
 - Failure audit evidence: [docs/benchmarks/failures/locomo-2026-05-20-categories.jsonl](docs/benchmarks/failures/locomo-2026-05-20-categories.jsonl) and [docs/benchmarks/failures/locomo-backend-comparison.jsonl](docs/benchmarks/failures/locomo-backend-comparison.jsonl) for retrieval-miss categories and not-comparable backend evidence.
+- Smoke-only failure audit evidence: [docs/benchmarks/failures/locomo-smoke-categories.jsonl](docs/benchmarks/failures/locomo-smoke-categories.jsonl) and [docs/benchmarks/failures/locomo-backend-comparison-smoke.jsonl](docs/benchmarks/failures/locomo-backend-comparison-smoke.jsonl) are harness smoke outputs, not historical full-run evidence.
 
 Retrieval benchmark docs: [docs-site/src/content/docs/reference/retrieval-benchmarks.md](docs-site/src/content/docs/reference/retrieval-benchmarks.md)
 
