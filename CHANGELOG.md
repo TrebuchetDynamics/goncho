@@ -4,7 +4,6 @@
 
 ### Documentation
 
-- Clarified library install guidance versus the installable `goncho-bench` benchmark CLI in the README and quick-start docs.
 - Clarified current benchmark roadmap and backlog status after the LOCOMO stable-ID backend comparison freeze and stale benchmark blocker resolution.
 
 ## v0.1.1 - 2026-05-20

@@ -5,19 +5,9 @@ description: Install Goncho and wire the current Go service API.
 
 Goncho is a Go library for local-first agent memory and context assembly.
 
-Use the module in an embedded Go runtime:
-
 ```sh
 go get github.com/TrebuchetDynamics/goncho
 ```
-
-Install the benchmark CLI only when you need reproducible local retrieval reports:
-
-```sh
-go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest
-```
-
-The root module is a library package; `goncho-bench` is the installable command.
 
 :::note[Pre-1.0 note]
 Goncho is pre-1.0. The setup flow is intentionally small, and operators should pin the module version or commit they deploy against.
