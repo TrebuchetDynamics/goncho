@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `make docs-site-smoke` to verify the public documentation site builds locally with `npm run build`.
 - Added `make package-doc-smoke` to verify checkout-local package documentation renders through `go doc .`.
 - Added `make local-module-smoke` to verify checkout-local go.mod module path and Go version metadata from `go list -m -json`.
 - Added `make public-release-smoke` to verify public `@latest` version and published-time metadata from `go list -m -json`.
@@ -23,6 +24,7 @@
 
 ### Documentation
 
+- Surfaced the public docs site smoke command from first-touch public docs.
 - Surfaced the package documentation smoke command from first-touch public docs.
 - Surfaced the local go.mod metadata smoke command from first-touch public docs.
 - Surfaced the external backend comparison smoke command from first-touch public docs.

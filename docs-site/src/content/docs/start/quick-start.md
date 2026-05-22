@@ -13,13 +13,13 @@ go get github.com/TrebuchetDynamics/goncho@latest
 
 API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
 
-From a checkout, verify the public module, local go.mod metadata, local package docs, external import path, and benchmark CLI together:
+From a checkout, verify the public module, local go.mod metadata, local package docs, public docs site build, external import path, and benchmark CLI together:
 
 ```sh
 make ecosystem-smoke
 ```
 
-For a narrower public-release-metadata-only check, run `make public-release-smoke`. For a narrower local-go.mod-metadata-only check, run `make local-module-smoke`. For a narrower package-documentation-only check, run `make package-doc-smoke`. For a narrower external-import-only check, run `make public-module-smoke`. For a broader local pre-tag gate, run `make release-smoke`; it wraps release metadata checks and ecosystem smoke with Go tests, vet, race tests, and the docs-site build.
+For a narrower public-release-metadata-only check, run `make public-release-smoke`. For a narrower local-go.mod-metadata-only check, run `make local-module-smoke`. For a narrower package-documentation-only check, run `make package-doc-smoke`. For a narrower public-docs-site-only check, run `make docs-site-smoke`. For a narrower external-import-only check, run `make public-module-smoke`. For a broader local pre-tag gate, run `make release-smoke`; it wraps release metadata checks and ecosystem smoke with Go tests, vet, race tests, and the docs-site build.
 
 Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status are documented in [Retrieval Benchmarks](/reference/retrieval-benchmarks/). For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke` from a checkout.
 

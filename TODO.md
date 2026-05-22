@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: first-touch public docs now surface the public docs site smoke.
+  - Evidence target: `go test . -run 'Test(DocsSiteSmokeBuildsPublicDocs|PublicDocsMentionDocsSiteSmoke)' -count=1` proves `make docs-site-smoke` checks the local docs-site build with `npm run build`, and first-touch public docs mention the command.
+  - Result: ecosystem-readiness docs now expose a narrow proof for the public docs site signal without claiming local smoke proves remote hosting or indexing.
+
 - 2026-05-22: first-touch public docs now surface the package documentation smoke.
   - Evidence target: `go test . -run 'Test(PackageDocSmokeChecksLocalGoDoc|PublicDocsMentionPackageDocSmoke)' -count=1` proves `make package-doc-smoke` checks local package docs with `go doc .`, and first-touch public docs mention the command.
   - Result: ecosystem-readiness docs now expose a narrow proof for the package documentation signal without claiming that local smoke proves remote pkg.go.dev indexing.

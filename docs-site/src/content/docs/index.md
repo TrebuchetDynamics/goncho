@@ -32,7 +32,7 @@ Public API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://p
 
 The root module is a library package, not a CLI binary and not a root `go install` target. Use `go get github.com/TrebuchetDynamics/goncho@latest` for the library; use checkout-local benchmark commands until a v0.1.x tag includes `goncho-bench`.
 
-Local ecosystem smoke: `make ecosystem-smoke` verifies public release metadata, local Go module metadata, package docs, external importability, and checkout-local benchmark CLI installation. For the narrower public release metadata proof, run `make public-release-smoke`; for the narrower local go.mod metadata proof, run `make local-module-smoke`; for the narrower package documentation proof, run `make package-doc-smoke`; for the narrower external import proof, run `make public-module-smoke`.
+Local ecosystem smoke: `make ecosystem-smoke` verifies public release metadata, local Go module metadata, package docs, public docs site build, external importability, and checkout-local benchmark CLI installation. For the narrower public release metadata proof, run `make public-release-smoke`; for the narrower local go.mod metadata proof, run `make local-module-smoke`; for the narrower package documentation proof, run `make package-doc-smoke`; for the narrower public docs site proof, run `make docs-site-smoke`; for the narrower external import proof, run `make public-module-smoke`.
 
 Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](/reference/retrieval-benchmarks/). For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke` from a checkout.
 :::
