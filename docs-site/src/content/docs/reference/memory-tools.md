@@ -14,7 +14,7 @@ Goncho exposes generic memory tools around `MemoryToolStore`.
 | `forget_memory` | Soft-delete an active memory entry. |
 | `goncho_review` | List and resolve conflict/stale review items, with enum-validated `status`/`kind` filters plus `subject_id` and `related_id` filters for inspecting review or supersession chains. |
 
-For `goncho_review` list requests, use `open` or `resolved` for `status` and `conflict` or `stale` for `kind`; invalid values return an error instead of an empty queue.
+For `goncho_review` list requests, use `open` or `resolved` for `status` and `conflict` or `stale` for `kind`; invalid values return an error instead of an empty queue. For resolve requests, use `accepted`, `rejected`, `superseded`, or `verified` for `resolution`; invalid values return enum-specific guidance and leave the review item open.
 
 These tools are a small integration surface, not the whole memory model. Internally, Goncho can preserve richer state than it exposes to an agent prompt.
 

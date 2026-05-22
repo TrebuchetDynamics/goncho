@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: invalid `goncho_review` resolve resolution values now return enum-specific guidance.
+  - Evidence target: `go test . -run TestReviewToolRejectsInvalidResolveResolution -count=1` proves an invalid `resolution` value is rejected without closing the open review item.
+  - Result: lifecycle review queues are safer when host/tool callers bypass schema enum validation.
+
 - 2026-05-22: same-timestamp review item ID collision fixed.
   - Evidence target: `go test . -run TestCreateReviewItemAllowsDistinctItemsWithSameCreatedAt -count=1` proves two distinct review items sharing one `CreatedAt` get distinct IDs and remain listable.
   - Result: review queues are safer when lifecycle scanners create multiple findings in the same timestamp bucket.

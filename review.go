@@ -152,8 +152,17 @@ func ResolveReviewItem(ctx context.Context, db *sql.DB, p ReviewResolutionParams
 	resolution := ReviewResolution(strings.TrimSpace(string(p.Resolution)))
 	resolvedBy := strings.TrimSpace(p.ResolvedBy)
 	resolutionReason := strings.TrimSpace(p.ResolutionReason)
-	if id == "" || !validReviewResolution(resolution) || resolvedBy == "" || resolutionReason == "" {
-		return ReviewItem{}, fmt.Errorf("goncho: resolve review item requires id, valid resolution, resolved_by, and resolution_reason")
+	if id == "" {
+		return ReviewItem{}, fmt.Errorf("goncho: resolve review item requires id")
+	}
+	if !validReviewResolution(resolution) {
+		return ReviewItem{}, fmt.Errorf("goncho: review resolution must be accepted, rejected, superseded, or verified")
+	}
+	if resolvedBy == "" {
+		return ReviewItem{}, fmt.Errorf("goncho: resolve review item requires resolved_by")
+	}
+	if resolutionReason == "" {
+		return ReviewItem{}, fmt.Errorf("goncho: resolve review item requires resolution_reason")
 	}
 	resolvedAt := p.ResolvedAt.UTC()
 	if resolvedAt.IsZero() {

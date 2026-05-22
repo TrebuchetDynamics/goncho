@@ -102,6 +102,37 @@ func TestReviewToolRejectsInvalidListFilters(t *testing.T) {
 	}
 }
 
+func TestReviewToolRejectsInvalidResolveResolution(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindConflict,
+		PeerID:    "peer-a",
+		SubjectID: "mem-new",
+		RelatedID: "mem-old",
+		Reason:    "new memory conflicts with old memory",
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	_, err = tool.Execute(ctx, json.RawMessage(`{"action":"resolve","id":"`+item.ID+`","resolution":"archived","resolved_by":"agent:mineru","resolution_reason":"operator typo"}`))
+	if err == nil || !strings.Contains(err.Error(), "resolution must be accepted, rejected, superseded, or verified") {
+		t.Fatalf("Execute error = %v, want resolution enum guidance", err)
+	}
+
+	open, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-a", Status: ReviewStatusOpen})
+	if err != nil {
+		t.Fatalf("ListReviewItems: %v", err)
+	}
+	if open.Count != 1 || open.Items[0].ID != item.ID {
+		t.Fatalf("open reviews after invalid resolve = %+v, want original item still open", open)
+	}
+}
+
 func TestReviewToolFiltersReviewChainsBySubjectAndRelatedID(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
