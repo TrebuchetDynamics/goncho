@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: public release metadata smoke added.
+  - Evidence target: `make public-release-smoke` checks `go list -m -json github.com/TrebuchetDynamics/goncho@latest` for public version and published-time metadata.
+  - Result: the pkg.go.dev-style `Version` and `Published` signal is locally checkable before broader ecosystem smoke and release decisions.
+
 - 2026-05-22: docs home now frames the root module as a library package.
   - Evidence target: `go test . -run TestPublicDocsFrameRootModuleAsLibrary -count=1` proves README, docs home, current-capabilities, and quick-start docs say the root module is a library package.
   - Result: first-touch public docs preserve `go get` library semantics and avoid implying root-level CLI installability.

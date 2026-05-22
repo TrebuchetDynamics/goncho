@@ -32,7 +32,7 @@ Public API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://p
 
 The root module is a library package, not a CLI binary. Use `go get github.com/TrebuchetDynamics/goncho` for the library; use checkout-local benchmark commands until a v0.1.x tag includes `goncho-bench`.
 
-Local ecosystem smoke: `make ecosystem-smoke` verifies public module resolution, package docs, external importability, and checkout-local benchmark CLI installation. For the narrower external import proof, run `make public-module-smoke`.
+Local ecosystem smoke: `make ecosystem-smoke` verifies public release metadata, package docs, external importability, and checkout-local benchmark CLI installation. For the narrower public release metadata proof, run `make public-release-smoke`; for the narrower external import proof, run `make public-module-smoke`.
 :::
 
 ## Four Paths

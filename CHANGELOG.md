@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `make public-release-smoke` to verify public `@latest` version and published-time metadata from `go list -m -json`.
 - Added `make release-metadata-smoke` as an explicit guard for changelog release headings, local git tags, and release-smoke docs.
 - Added `make release-smoke` as a local pre-tag gate for release metadata, ecosystem smoke, Go tests, vet, race tests, and docs build.
 - Added `subject_id` and `related_id` filters to `goncho_review` list requests so operators can inspect review and supersession chains.
@@ -20,6 +21,7 @@
 
 ### Documentation
 
+- Surfaced public release metadata smoke guidance and guarded first-touch docs for version/published-time proof.
 - Surfaced docs-home root-library framing and guarded first-touch public install semantics.
 - Surfaced docs-home `v0.1.0` public latest status and guarded first-touch release-version docs.
 - Surfaced README and docs-home guidance for the narrower public module smoke and guarded public adoption docs.

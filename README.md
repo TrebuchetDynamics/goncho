@@ -40,13 +40,13 @@ The root module is a library package; `goncho-bench` is the installable command 
 
 Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.0 release, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts.
 
-Verify public module resolution, package documentation, external importability, and the checkout-local benchmark CLI without editing another project:
+Verify public release metadata, package documentation, external importability, and the checkout-local benchmark CLI without editing another project:
 
 ```bash
 make ecosystem-smoke
 ```
 
-For the narrower external import proof only, run `make public-module-smoke`.
+For the narrower public release metadata proof only, run `make public-release-smoke`; it checks the public `@latest` version and published time from `go list -m -json`. For the narrower external import proof only, run `make public-module-smoke`.
 
 Use `go get` to depend on the library package. For the command-line benchmark runner, use `make install-smoke` or `go install ./cmd/goncho-bench` from this checkout until the next v0.1.x tag includes the CLI.
 

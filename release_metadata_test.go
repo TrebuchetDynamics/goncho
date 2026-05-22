@@ -158,3 +158,41 @@ func TestPublicDocsFrameRootModuleAsLibrary(t *testing.T) {
 		})
 	}
 }
+
+func TestEcosystemSmokeIncludesPublicReleaseMetadata(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"public-release-smoke:",
+		"$(MAKE) public-release-smoke",
+		"go list -m -json github.com/TrebuchetDynamics/goncho@latest",
+		`"Version":`,
+		`"Time":`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("Makefile does not include public release metadata smoke marker %q", want)
+		}
+	}
+}
+
+func TestPublicDocsMentionPublicReleaseSmoke(t *testing.T) {
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), "make public-release-smoke") {
+				t.Fatalf("%s does not mention make public-release-smoke", path)
+			}
+		})
+	}
+}
