@@ -278,6 +278,49 @@ func TestReviewToolResolveOutputIncludesWorkspaceID(t *testing.T) {
 	}
 }
 
+func TestReviewToolListFiltersByWorkspaceID(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	defaultItem, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindConflict,
+		PeerID:    "peer-workspace-filter",
+		SubjectID: "mem-default-workspace",
+		RelatedID: "mem-default-prior",
+		Reason:    "default workspace item should be filtered out",
+		CreatedAt: time.Date(2026, 5, 22, 21, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem default workspace: %v", err)
+	}
+	workspaceItem, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:        ReviewKindStale,
+		WorkspaceID: "workspace-review-filter",
+		PeerID:      "peer-workspace-filter",
+		SubjectID:   "mem-filtered-workspace",
+		Reason:      "workspace-specific item should be listed",
+		CreatedAt:   time.Date(2026, 5, 22, 21, 1, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem filtered workspace: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	listed := executeMemoryTool(t, ctx, tool, `{"action":"list","peer_id":"peer-workspace-filter","workspace_id":"workspace-review-filter"}`)
+	if intField(t, listed, "count") != 1 {
+		t.Fatalf("list output = %+v, want one workspace-scoped review item", listed)
+	}
+	items, ok := listed["items"].([]any)
+	if !ok || len(items) != 1 {
+		t.Fatalf("items = %#v, want one item", listed["items"])
+	}
+	listedItem, ok := items[0].(map[string]any)
+	if !ok || listedItem["id"] != workspaceItem.ID || listedItem["id"] == defaultItem.ID || listedItem["workspace_id"] != "workspace-review-filter" {
+		t.Fatalf("listed item = %#v, want workspace item %s in workspace-review-filter", items[0], workspaceItem.ID)
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

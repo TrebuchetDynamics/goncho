@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `goncho_review` list requests now support workspace ID filters.
+  - Evidence target: `go test . -run 'TestReviewTool(ListFiltersByWorkspaceID|ResolveOutputIncludesWorkspaceID|ResolveOutputIncludesCreatedAt|ResolveOutputIncludesReason|ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves list responses honor `workspace_id` filters instead of falling back to the service default workspace.
+  - Result: operators can inspect a workspace-specific review queue through the public review tool.
+
 - 2026-05-22: `goncho_review` resolve output now includes workspace IDs.
   - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesWorkspaceID|ResolveOutputIncludesCreatedAt|ResolveOutputIncludesReason|ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `workspace_id`.
   - Result: operators can audit which workspace owned the closed review item without issuing a second list call.
