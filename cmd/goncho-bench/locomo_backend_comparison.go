@@ -199,6 +199,10 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string) (locom
 	rowsByQuestion := map[string]externalLocomoAdapterRow{}
 	statusReason := ""
 	setupNotes := setupNotesForBackend(name)
+	validQuestionIDs := make(map[string]struct{}, len(data.Questions))
+	for _, q := range data.Questions {
+		validQuestionIDs[q.QuestionID] = struct{}{}
+	}
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 1024*1024), 32*1024*1024)
 	lineNo := 0
@@ -228,6 +232,9 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string) (locom
 		}
 		if row.QuestionID == "" {
 			return locomoBackendComparisonEntry{}, fmt.Errorf("external %s comparable row line %d missing question_id", name, lineNo)
+		}
+		if _, exists := validQuestionIDs[row.QuestionID]; !exists {
+			return locomoBackendComparisonEntry{}, fmt.Errorf("external %s comparable row line %d unknown question_id %q", name, lineNo, row.QuestionID)
 		}
 		if _, exists := rowsByQuestion[row.QuestionID]; exists {
 			return locomoBackendComparisonEntry{}, fmt.Errorf("external %s duplicate question_id %q", name, row.QuestionID)

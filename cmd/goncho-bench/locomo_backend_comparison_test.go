@@ -99,6 +99,23 @@ func TestLocomoBackendComparisonConsumesExternalStableIDJSONL(t *testing.T) {
 	}
 }
 
+func TestLocomoBackendComparisonRejectsExternalUnknownQuestionID(t *testing.T) {
+	ctx := context.Background()
+	data := locomoDataset{
+		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", Content: "orchid marker"}},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "orchid marker", GoldMemoryIDs: []string{"m1"}, Category: "single_hop_retrieval"}},
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "external.jsonl")
+	writeTestFile(t, path, `{"backend":"mem0","question_id":"q1","comparable":true,"results":[{"memory_id":"m1","score":0.9}]}
+{"backend":"mem0","question_id":"q2","comparable":true,"results":[{"memory_id":"m1","score":0.8}]}
+`)
+	_, err := evaluateLocomoBackend(ctx, data, "mem0", 10, config{LocomoMem0Results: path})
+	if err == nil || !strings.Contains(err.Error(), `unknown question_id "q2"`) {
+		t.Fatalf("err = %v, want unknown question_id rejection", err)
+	}
+}
+
 func TestLocomoBackendComparisonRejectsExternalUnknownMemoryID(t *testing.T) {
 	ctx := context.Background()
 	data := locomoDataset{
