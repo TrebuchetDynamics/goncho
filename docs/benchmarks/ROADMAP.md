@@ -9,7 +9,7 @@ LongMemEval-S proved the first layer: deterministic retrieval sanity on long con
 | Phase | Benchmark | Purpose | Why it matters for Goncho | Status |
 | --- | --- | --- | --- | --- |
 | 1 | LongMemEval-S | Long conversational retrieval | Proves ID-based recall over many sessions without LLM judgment. | First scientific pass done. |
-| 2 | LOCOMO | Conversational long-term memory | Tests long conversations, evolving facts, temporal recall, contradictions, and relationship changes. | Candidate-generation milestone frozen. |
+| 2 | LOCOMO | Conversational long-term memory | Tests long conversations, evolving facts, temporal recall, contradictions, and relationship changes. | Candidate-generation milestone and stable-ID backend comparison frozen. |
 | 3 | InfiniteBench / RULER | Scale and buried-fact stress | Tests whether retrieval survives very large memory, distractors, and long-context pressure. | Planned. |
 | 4 | BABILong | Controlled synthetic reasoning | Tests temporal/entity tracking and consistency under known-answer synthetic tasks. | Planned. |
 | 5 | BEIR | Standard IR credibility | Compares Goncho against classic retrieval systems beyond agent-memory-specific tasks. | Planned. |
@@ -21,7 +21,7 @@ LOCOMO is the best next benchmark because it is closer to real agent memory than
 
 Milestone: LOCOMO exposed a candidate-generation weakness in Goncho, not primarily a ranking-philosophy weakness. After widening lexical pre-rank candidates, Goncho recall_any@5 improved `0.5247 -> 0.6014`, recall_any@10 improved `0.5873 -> 0.6791`, MRR improved `0.4104 -> 0.4690`, and BM25-win `missing_candidate` failures dropped `164 -> 2`. LongMemEval-S stayed stable at recall_any@5 `0.968`, recall_any@10 `0.980`, MRR `0.9135`.
 
-The next LOCOMO step should not be immediate tuning. Freeze this result for historical comparability, then run external-backend comparisons with the same harness.
+The next LOCOMO step should not be immediate tuning. The candidate-generation result and stable-ID backend comparison are frozen for historical comparability. Future LOCOMO work should preserve those artifacts while either making more external backends comparable or adding contradiction/staleness audits on top of the same harness.
 
 It should test:
 
