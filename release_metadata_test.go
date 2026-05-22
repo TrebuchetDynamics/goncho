@@ -392,6 +392,24 @@ func TestLocalModuleSmokeChecksGoModMetadata(t *testing.T) {
 	}
 }
 
+func TestPackageDocSurfacesPkgGoDevLandingContent(t *testing.T) {
+	out, err := exec.Command("go", "doc", ".").Output()
+	if err != nil {
+		t.Fatalf("go doc .: %v", err)
+	}
+	text := strings.Join(strings.Fields(string(out)), " ")
+	for _, want := range []string{
+		"Use Goncho when",
+		"Quick start",
+		"verification before action",
+		"goncho.NewService",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("go doc . output does not include pkg.go.dev landing marker %q\n%s", want, text)
+		}
+	}
+}
+
 func TestPackageDocSmokeChecksLocalGoDoc(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {

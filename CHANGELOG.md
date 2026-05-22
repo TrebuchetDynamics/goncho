@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Expanded the root package documentation shown by `go doc` and pkg.go.dev with use cases, quick start, and trust-boundary guidance.
 - Updated public `@latest` release metadata docs and smoke guards after v0.1.1 tag publication.
 
 ## v0.1.1 - 2026-05-22
