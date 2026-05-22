@@ -56,6 +56,12 @@
 // shows orientation-pack assembly, and ExampleService_Search shows scoped
 // retrieval against stored conclusions.
 //
+// go.dev package signals to check before adopting: the public module is
+// currently v0.1.1, has a valid go.mod, a redistributable MIT license, and
+// package documentation. Use make package-doc-smoke for this overview and its
+// examples, make public-module-smoke for external imports, and make
+// install-smoke for the cmd/goncho-bench command path.
+//
 // Goncho is pre-1.0. Pin the module version or commit you deploy against, keep
 // live verification in the host, and treat retrieved memory as orientation
 // until current evidence confirms it.

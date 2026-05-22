@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added package documentation that maps go.dev package signals to local smoke checks.
 - Added a README go.dev signal map that ties public package metadata to local smoke checks.
 - Added a README minimal embedded skeleton for pkg.go.dev readers who want the shortest host setup shape.
 - Added package documentation that maps pkg.go.dev readers to the primary service methods and public tool constructors.

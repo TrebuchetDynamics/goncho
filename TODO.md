@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package documentation now maps go.dev package signals to local proof commands.
+  - Evidence target: `go test . -run 'Test(PackageDocSurfacesGoDevPackageSignals|ReleaseMetadataSmokeIncludesPackageDocGoDevSignalGuard)' -count=1` proves `go doc .` includes public version, go.mod, MIT license, package-doc, external-import, and command-install smoke guidance while release metadata smoke keeps the guard wired.
+  - Result: pkg.go.dev readers can connect the package page metadata to reproducible local checks without leaving the API overview.
+
 - 2026-05-22: README now maps go.dev package signals to local proof commands.
   - Evidence target: `go test . -run 'Test(ReadmeSurfacesGoDevSignalMap|ReleaseMetadataSmokeIncludesReadmeGoDevSignalGuard)' -count=1` proves the README includes go.dev version, published date, go.mod, license, package-doc, external-import, install-path, and Imported by guidance while release metadata smoke keeps the guard wired.
   - Result: readers can connect the pkg.go.dev metadata panel to reproducible local checks instead of trusting badges alone.

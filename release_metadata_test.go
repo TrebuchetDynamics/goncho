@@ -728,6 +728,26 @@ func TestPackageDocSurfacesPrimaryAPIPath(t *testing.T) {
 	}
 }
 
+func TestPackageDocSurfacesGoDevPackageSignals(t *testing.T) {
+	out, err := exec.Command("go", "doc", ".").Output()
+	if err != nil {
+		t.Fatalf("go doc .: %v", err)
+	}
+	text := strings.Join(strings.Fields(string(out)), " ")
+	for _, want := range []string{
+		"go.dev package signals",
+		"v0.1.1",
+		"valid go.mod",
+		"redistributable MIT license",
+		"make package-doc-smoke",
+		"make public-module-smoke",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("go doc . output does not surface go.dev package signal marker %q\n%s", want, text)
+		}
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesPackageDocExamplesGuard(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -772,6 +792,22 @@ func TestReleaseMetadataSmokeIncludesPackageDocAPIPathGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include package doc API path guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesPackageDocGoDevSignalGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocSurfacesGoDevPackageSignals",
+		"ReleaseMetadataSmokeIncludesPackageDocGoDevSignalGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include package doc go.dev signal guard %q", want)
 		}
 	}
 }
