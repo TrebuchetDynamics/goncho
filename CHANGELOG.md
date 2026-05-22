@@ -19,6 +19,7 @@
 
 ### Documentation
 
+- Added a release-metadata guard so changelog release headings must match local git tags.
 - Corrected benchmark CLI install guidance so public docs no longer claim `cmd/goncho-bench@latest` before a tag contains the command.
 - Documented public `goncho_context` generated-primer token-budget E2E coverage in the README and current-capabilities docs.
 - Added root package documentation so pkg.go.dev exposes Goncho's public memory-kernel purpose and evidence-before-belief rule.
@@ -27,7 +28,7 @@
 - Clarified library install guidance versus the installable `goncho-bench` benchmark CLI in the README and quick-start docs.
 - Clarified current benchmark roadmap and backlog status after the LOCOMO stable-ID backend comparison freeze and stale benchmark blocker resolution.
 
-## v0.1.1 - 2026-05-20
+## v0.1.1 candidate notes - 2026-05-20
 
 ### Added
 

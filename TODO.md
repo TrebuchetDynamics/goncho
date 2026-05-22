@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: changelog release headings are now guarded against untagged version overclaims.
+  - Evidence target: `go test . -run TestChangelogReleaseHeadingsHaveMatchingTags -count=1` proves each `## vX.Y.Z - ...` changelog release heading has a matching local git tag.
+  - Result: public release notes can keep candidate notes without implying that untagged versions are already published.
+
 - 2026-05-22: blank `goncho_review` list status values now default to open review items.
   - Evidence target: `go test . -run TestReviewToolTreatsBlankStatusAsOpenDefault -count=1` proves whitespace-only `status` behaves like omitted `status` and does not leak resolved items into the default review queue.
   - Result: review queue inspection is safer when host/tool callers pass blank form values instead of omitting optional fields.

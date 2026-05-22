@@ -38,7 +38,7 @@ The root module is a library package; `goncho-bench` is the installable command 
 
 ## Package Status
 
-Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: tagged v0.1.x releases, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts.
+Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.0 release, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts.
 
 Verify public module resolution, package documentation, external importability, and the checkout-local benchmark CLI without editing another project:
 
