@@ -251,8 +251,10 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 		return locomoBackendComparisonEntry{Backend: name, Comparable: false, NotComparableReason: statusReason, SetupNotes: setupNotes}, nil
 	}
 	validMemoryIDs := make(map[string]struct{}, len(data.Memories))
+	memoryConversationIDs := make(map[string]string, len(data.Memories))
 	for _, mem := range data.Memories {
 		validMemoryIDs[mem.MemoryID] = struct{}{}
+		memoryConversationIDs[mem.MemoryID] = mem.ConversationID
 	}
 	results := make([]locomoQuestionResult, 0, len(data.Questions))
 	for _, q := range data.Questions {
@@ -269,6 +271,9 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 			}
 			if _, exists := validMemoryIDs[id]; !exists {
 				return locomoBackendComparisonEntry{}, fmt.Errorf("external %s question %s returned unknown memory_id %q", name, q.QuestionID, id)
+			}
+			if memConversationID := memoryConversationIDs[id]; memConversationID != "" && q.ConversationID != "" && memConversationID != q.ConversationID {
+				return locomoBackendComparisonEntry{}, fmt.Errorf("external %s question %s returned out-of-conversation memory_id %q", name, q.QuestionID, id)
 			}
 			if _, exists := seen[id]; exists {
 				continue

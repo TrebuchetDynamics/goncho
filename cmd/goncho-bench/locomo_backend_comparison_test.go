@@ -141,6 +141,25 @@ func TestLocomoBackendComparisonRejectsExternalUnknownQuestionID(t *testing.T) {
 	}
 }
 
+func TestLocomoBackendComparisonRejectsExternalOutOfConversationMemoryID(t *testing.T) {
+	ctx := context.Background()
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", Content: "orchid marker"},
+			{MemoryID: "m2", ConversationID: "c2", Content: "orchid marker"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "orchid marker", GoldMemoryIDs: []string{"m1"}, Category: "single_hop_retrieval"}},
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "external.jsonl")
+	writeTestFile(t, path, `{"backend":"mem0","question_id":"q1","comparable":true,"results":[{"memory_id":"m2","score":0.9}]}
+`)
+	_, err := evaluateLocomoBackend(ctx, data, "mem0", 10, config{LocomoMem0Results: path})
+	if err == nil || !strings.Contains(err.Error(), `out-of-conversation memory_id "m2"`) {
+		t.Fatalf("err = %v, want out-of-conversation memory_id rejection", err)
+	}
+}
+
 func TestLocomoBackendComparisonRejectsExternalUnknownMemoryID(t *testing.T) {
 	ctx := context.Background()
 	data := locomoDataset{

@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO external adapter scoring now clamps top-K rows and rejects out-of-conversation stable IDs.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoBackendComparison(LimitsExternalRowsToTopK|RejectsExternalOutOfConversationMemoryID)' -count=1` proves comparable external rows obey the requested top-K window and cannot return a stable `memory_id` from a different `conversation_id` than the question.
+  - Result: the Go scorer now enforces the documented conversation-scoped backend comparison contract before stable-ID scoring, so external adapters cannot get comparable credit by over-returning rows or crossing conversation boundaries.
+
 - 2026-05-22: benchmark docs now surface conversation-scoped backend comparison.
   - Evidence target: `go test . -run TestBenchmarkDocsMentionConversationScopedBackendComparison -count=1` proves README, Retrieval Benchmarks, operator runbook, and external adapter docs say LOCOMO backend comparison is conversation-scoped.
   - Result: public benchmark methodology now explains why duplicate or near-duplicate content in another conversation cannot win by content-only matching before stable-ID scoring.
