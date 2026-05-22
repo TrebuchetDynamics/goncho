@@ -188,6 +188,15 @@ func TestLocomoFailureJSONLGeneration(t *testing.T) {
 	}
 }
 
+func TestWriteLocomoFailureAuditRejectsUnknownRetrievedID(t *testing.T) {
+	data := locomoDataset{Memories: []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c", SessionID: "s", Speaker: "user", TurnIndex: 1, Content: "known memory"}}}
+	report := locomoSystemReport{System: "goncho", QuestionsDetail: []locomoQuestionResult{{QuestionID: "q", ConversationID: "c", Category: "true_retrieval_failure", Question: "question", GoldMemoryIDs: []string{"m1"}, RetrievedIDs: []string{"missing"}, Rank: 0}}}
+	err := writeLocomoFailureAudit(filepath.Join(t.TempDir(), "failures.jsonl"), data, []locomoSystemReport{report})
+	if err == nil || !strings.Contains(err.Error(), `unknown retrieved memory_id "missing"`) {
+		t.Fatalf("write failure audit error = %v, want unknown retrieved stable ID error", err)
+	}
+}
+
 func TestLocomoAnswerHintIsNotIndexedOrScored(t *testing.T) {
 	data := locomoDataset{
 		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c", SessionID: "s", Speaker: "user", TurnIndex: 1, Timestamp: "2026-05-20T10:00:00Z", Content: "The durable fact is hidden under code name orchid."}},

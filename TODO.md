@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO failure audits now reject unknown retrieved stable IDs.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoFailureAuditRejectsUnknownRetrievedID -count=1` proves Goncho failure-audit output fails closed when a top-hit `memory_id` is not present in the loaded LOCOMO fixture.
+  - Result: failure JSONL no longer hides retrieval/stable-ID drift behind blank memory metadata rows.
+
 - 2026-05-22: LOCOMO leakage checks now reuse the conversation index.
   - Evidence target: `go test ./cmd/goncho-bench -run TestCheckLocomoLeakageUsesConversationIndex -count=1` proves leakage auditing reads the precomputed per-conversation LOCOMO memory index when available.
   - Result: LOCOMO report generation avoids rebuilding a duplicate conversation map for leakage checks while preserving conversation-scoped answer/gold/question leakage accounting.

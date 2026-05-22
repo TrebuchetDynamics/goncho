@@ -17,6 +17,7 @@
 
 ### Changed
 
+- LOCOMO failure audits now reject unknown retrieved stable IDs instead of emitting blank top-hit rows.
 - LOCOMO leakage checks now reuse the precomputed conversation index instead of rebuilding it per report.
 - LOCOMO direct retrieval helpers now return no IDs for non-positive limits before invoking local backends.
 - LOCOMO Goncho adapters now cap stable-ID fan-out to the requested top-K window when duplicate content maps to multiple stable IDs.
