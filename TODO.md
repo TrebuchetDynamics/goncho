@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO retrieval and backend-comparison reports now record the effective top-K scoring window.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomo(BenchmarkHonorsConfiguredLimit|BackendComparisonHonorsConfiguredLimitForExternalRows|SmokeProducesReport|BackendComparisonWritesJSONAndMarkdown)' -count=1` proves JSON artifacts emit `top_k` and markdown summaries print `Top-K`.
+  - Result: benchmark artifacts are self-describing when operators run LOCOMO with non-default retrieval limits.
+
 - 2026-05-22: LOCOMO failure-audit notes now report the actual retrieved top-K window.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoFailureJSONL(Generation|NotesUseRetrievedWindow)|TestWriteLocomoBackendComparisonFailuresRejectsUnknownRetrievedID' -count=1` proves failure JSONL says `top 1` for a top-1 miss instead of hard-coding `top 10`.
   - Result: benchmark miss notes remain accurate when LOCOMO reports run with non-default retrieval limits.

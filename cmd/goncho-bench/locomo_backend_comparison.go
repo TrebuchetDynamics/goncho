@@ -37,6 +37,7 @@ type scopedMemoryBackend interface {
 type locomoBackendComparisonReport struct {
 	BenchmarkName string                         `json:"benchmark_name"`
 	Mode          string                         `json:"mode"`
+	TopK          int                            `json:"top_k"`
 	NoLLMJudge    bool                           `json:"no_llm_judge"`
 	GeneratedAt   string                         `json:"generated_at"`
 	RepoCommit    string                         `json:"repo_commit,omitempty"`
@@ -111,6 +112,7 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 	report := locomoBackendComparisonReport{
 		BenchmarkName: "LOCOMO backend comparison",
 		Mode:          "retrieval_backend_adapter",
+		TopK:          topK,
 		NoLLMJudge:    true,
 		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
 		RepoCommit:    gitCommit(),
@@ -783,7 +785,7 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	if strings.TrimSpace(failuresPath) != "" {
 		fmt.Fprintf(&b, "- Failure JSONL: `%s`\n", failuresPath)
 	}
-	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.NoLLMJudge)
+	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.TopK, report.NoLLMJudge)
 	b.WriteString("## Rules\n\n")
 	for _, rule := range report.Rules {
 		fmt.Fprintf(&b, "- %s\n", rule)

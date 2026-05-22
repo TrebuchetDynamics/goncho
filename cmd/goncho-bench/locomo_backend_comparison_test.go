@@ -268,6 +268,13 @@ func TestRunLocomoBackendComparisonHonorsConfiguredLimitForExternalRows(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
+	var rawReport map[string]any
+	if err := json.Unmarshal(raw, &rawReport); err != nil {
+		t.Fatal(err)
+	}
+	if rawReport["top_k"] != float64(1) {
+		t.Fatalf("report top_k = %v, want configured limit 1", rawReport["top_k"])
+	}
 	var report locomoBackendComparisonReport
 	if err := json.Unmarshal(raw, &report); err != nil {
 		t.Fatal(err)
@@ -309,6 +316,7 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, failuresOut, `"failure_category":"not_comparable"`)
 	assertBenchFileContains(t, mdOut, "benchmark adapter suite")
 	assertBenchFileContains(t, mdOut, "Failure JSONL")
+	assertBenchFileContains(t, mdOut, "- Top-K: `10`")
 }
 
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing.T) {

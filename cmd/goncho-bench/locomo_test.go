@@ -379,6 +379,13 @@ func TestRunLocomoBenchmarkHonorsConfiguredLimit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read report: %v", err)
 	}
+	var rawReport map[string]any
+	if err := json.Unmarshal(raw, &rawReport); err != nil {
+		t.Fatalf("decode raw report: %v", err)
+	}
+	if rawReport["top_k"] != float64(1) {
+		t.Fatalf("report top_k = %v, want configured limit 1", rawReport["top_k"])
+	}
 	var report locomoReport
 	if err := json.Unmarshal(raw, &report); err != nil {
 		t.Fatalf("decode report: %v", err)
@@ -457,5 +464,8 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "LOCOMO smoke validates the benchmark harness") || !strings.Contains(string(mdRaw), "No answer generation") {
 		t.Fatalf("markdown missing required wording:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "- Top-K: `10`") {
+		t.Fatalf("markdown missing effective top-K provenance:\n%s", mdRaw)
 	}
 }

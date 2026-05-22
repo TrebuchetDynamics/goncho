@@ -50,6 +50,7 @@ type locomoDataset struct {
 type locomoReport struct {
 	BenchmarkName string               `json:"benchmark_name"`
 	Mode          string               `json:"mode"`
+	TopK          int                  `json:"top_k"`
 	NoLLMJudge    bool                 `json:"no_llm_judge"`
 	GeneratedAt   string               `json:"generated_at"`
 	RepoCommit    string               `json:"repo_commit,omitempty"`
@@ -161,6 +162,7 @@ func runLocomoBenchmark(ctx context.Context, cfg config) error {
 	report := locomoReport{
 		BenchmarkName: benchmarkName,
 		Mode:          "retrieval",
+		TopK:          limit,
 		NoLLMJudge:    true,
 		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
 		RepoCommit:    gitCommit(),
@@ -735,6 +737,7 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	fmt.Fprintf(&b, "- Questions: `%d`\n", report.QuestionCount)
 	fmt.Fprintf(&b, "- Memories: `%d`\n", report.MemoryCount)
 	fmt.Fprintf(&b, "- Mode: `%s`\n", report.Mode)
+	fmt.Fprintf(&b, "- Top-K: `%d`\n", report.TopK)
 	fmt.Fprintf(&b, "- no_llm_judge: `%t`\n", report.NoLLMJudge)
 	if len(report.Source) > 0 {
 		fmt.Fprintf(&b, "- Source: `%v` at `%v`\n", report.Source["source_url"], report.Source["source_revision"])
