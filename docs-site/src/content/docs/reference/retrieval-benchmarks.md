@@ -15,6 +15,8 @@ The runner itself does not download datasets. It consumes a local JSONL file, lo
 - per-question retrieved IDs and first relevant rank
 - leakage counts for exact query text and gold IDs in indexed memory
 
+LOCOMO result artifacts expand this surface with `NDCG@5`, `NDCG@10`, latency min/p50/p95/max, RSS, database size, memory token estimate, Top-K, failure categories, and leakage checks. Preserve the frozen historical full-run evidence at `docs/benchmarks/results/locomo-2026-05-20-goncho.json`; compare backend evidence through `docs/benchmarks/results/locomo-backend-comparison.json`.
+
 ## Scientific Validation Targets
 
 Use `make ecosystem-smoke` when checking public module resolution, package docs, external importability, and the checkout-local benchmark CLI together.

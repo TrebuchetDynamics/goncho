@@ -482,6 +482,8 @@ Pinned full run evidence:
 | LOCOMO full | 1,982 | 5,882 | 60.14% | 67.91% | 51.16% | 57.67% | 46.90% |
 | LOCOMO smoke | 8 | 17 | 100.00% | 100.00% | 100.00% | 100.00% | 85.42% |
 
+Result artifacts should not stop at recall and MRR. Current smoke and backend-comparison artifacts also report `NDCG@5`, `NDCG@10`, latency min/p50/p95/max, RSS, database size, memory token estimate, Top-K, failure categories, and leakage checks. Preserve the frozen historical full-run evidence at `docs/benchmarks/results/locomo-2026-05-20-goncho.json`; compare backend evidence through `docs/benchmarks/results/locomo-backend-comparison.json`.
+
 Candidate-generation milestone: LOCOMO exposed a candidate-generation weakness in Goncho. After widening lexical pre-rank candidates, BM25-win `missing_candidate` failures dropped from `164` to `2`, and Goncho now essentially matches BM25 on full LOCOMO retrieval while preserving LongMemEval-S performance. This was achieved without LLM judgment, answer scoring, benchmark-specific gold-ID hacks, or ranking changes.
 
 The full LOCOMO run compares random, recency, BM25, SQLite FTS5, and Goncho baselines against the pinned official LOCOMO source dataset.

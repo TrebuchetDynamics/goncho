@@ -199,6 +199,39 @@ func TestBenchmarkDocsMentionConversationScopedBackendComparison(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsSurfaceLocomoResultMetricSet(t *testing.T) {
+	wantMarkers := []string{
+		"NDCG@5",
+		"NDCG@10",
+		"latency min/p50/p95/max",
+		"RSS",
+		"database size",
+		"memory token estimate",
+		"Top-K",
+		"failure categories",
+		"leakage checks",
+		"docs/benchmarks/results/locomo-2026-05-20-goncho.json",
+		"docs/benchmarks/results/locomo-backend-comparison.json",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO result metric marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestPublicAdoptionDocsMentionPublicModuleSmoke(t *testing.T) {
 	for _, path := range []string{
 		"README.md",

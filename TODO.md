@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now surface the LOCOMO result metric set beyond recall and MRR.
+  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoResultMetricSet -count=1` proves README and Retrieval Benchmarks docs mention NDCG@5, NDCG@10, latency distribution, RSS, database size, memory token estimate, Top-K, failure categories, leakage checks, and the frozen JSON evidence files.
+  - Result: LOCOMO result readers see the full metric surface without rewriting frozen benchmark artifacts.
+
 - 2026-05-22: Root package documentation now includes a trust-boundary guide for pkg.go.dev readers embedding Goncho in host agents.
   - Evidence target: `go test . -run 'Test(PackageDocSurfacesTrustBoundaryGuide|ReleaseMetadataSmokeIncludesPackageDocTrustBoundaryGuard)' -count=1` proves `go doc .` distinguishes Goncho orientation from host authority over authorization, live filesystem/API/deployment/credential state, money movement, destructive writes, external side effects, and live verification.
   - Result: readers landing directly on pkg.go.dev can adopt Goncho without mistaking memory retrieval for permission to skip host-side gates.
