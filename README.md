@@ -332,6 +332,8 @@ go test ./... -run TestGonchoGoalNegativeDriftAnchorWarnsBeforeRepeatedFailureE2
 
 Release, benchmark, and public package smoke checks:
 
+`make release-smoke` runs release metadata checks, ecosystem smoke, Go tests, vet, race tests, and the docs-site build before local pre-tag decisions.
+
 ```bash
 make release-smoke
 make ecosystem-smoke

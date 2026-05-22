@@ -42,6 +42,7 @@ func TestChangelogReleaseHeadingsHaveMatchingTags(t *testing.T) {
 
 func TestReleaseSmokeDocsMentionMetadataGuard(t *testing.T) {
 	for _, path := range []string{
+		"README.md",
 		"docs-site/src/content/docs/start/quick-start.md",
 		"docs-site/src/content/docs/operators/runbook.md",
 	} {

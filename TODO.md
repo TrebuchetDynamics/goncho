@@ -3,7 +3,7 @@
 ## Release state
 
 - 2026-05-21: operator-facing release smoke docs now mention the release metadata guard.
-  - Evidence target: `go test . -run TestReleaseSmokeDocsMentionMetadataGuard -count=1` proves quick-start and runbook release-smoke guidance mention release metadata checks.
+  - Evidence target: `go test . -run TestReleaseSmokeDocsMentionMetadataGuard -count=1` proves README, quick-start, and runbook release-smoke guidance mention release metadata checks.
   - Result: public docs stay aligned with the local pre-tag gate instead of describing only ecosystem smoke plus Go/docs checks.
 
 - 2026-05-22: release metadata now has an explicit smoke target.

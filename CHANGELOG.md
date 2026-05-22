@@ -20,7 +20,7 @@
 
 ### Documentation
 
-- Clarified quick-start and operator runbook release-smoke guidance so it includes the release metadata guard.
+- Clarified README, quick-start, and operator runbook release-smoke guidance so it includes the release metadata guard.
 - Added a release-metadata guard so changelog release headings must match local git tags.
 - Corrected benchmark CLI install guidance so public docs no longer claim `cmd/goncho-bench@latest` before a tag contains the command.
 - Documented public `goncho_context` generated-primer token-budget E2E coverage in the README and current-capabilities docs.
