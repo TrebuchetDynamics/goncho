@@ -11,11 +11,13 @@ Use the module in an embedded Go runtime:
 go get github.com/TrebuchetDynamics/goncho
 ```
 
-From a checkout, verify the public `@latest` module can be imported by a fresh external Go module:
+From a checkout, verify the public module, local package docs, external import path, and benchmark CLI together:
 
 ```sh
-make public-module-smoke
+make ecosystem-smoke
 ```
+
+For a narrower external-import-only check, run `make public-module-smoke`.
 
 From a checkout, verify the benchmark CLI only when you need reproducible local retrieval reports:
 

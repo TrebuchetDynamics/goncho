@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: ecosystem smoke added for core public release-readiness signals.
+  - Evidence target: `make ecosystem-smoke` runs public module resolution, local `go doc .`, external import smoke, and checkout-local benchmark CLI installation.
+  - Result: the milestone now has one operator command for library importability plus local benchmark CLI readiness without overstating `cmd/goncho-bench@latest`.
+
 - 2026-05-22: public module adoption smoke added for `github.com/TrebuchetDynamics/goncho@latest`.
   - Evidence target: `make public-module-smoke` creates a temporary external Go module, runs `go get github.com/TrebuchetDynamics/goncho@latest`, and compiles a minimal public API import.
   - Result: release readiness now separates library importability proof from the still-checkout-local benchmark CLI.
