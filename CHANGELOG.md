@@ -12,6 +12,7 @@
 
 ### Changed
 
+- Review item IDs now include a deterministic field fingerprint so distinct same-timestamp review items do not collide.
 - `goncho_review` list requests now reject invalid `status` and `kind` filters instead of silently returning an empty queue.
 
 ### Documentation

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"strings"
 	"time"
 )
@@ -292,20 +293,36 @@ func normalizeReviewItem(p ReviewItemCreateParams) (ReviewItem, string, error) {
 	if err != nil {
 		return ReviewItem{}, "", fmt.Errorf("goncho: marshal review evidence ids: %w", err)
 	}
+	peerID := strings.TrimSpace(p.PeerID)
+	sessionKey := strings.TrimSpace(p.SessionKey)
+	relatedID := strings.TrimSpace(p.RelatedID)
 	item := ReviewItem{
-		ID:          fmt.Sprintf("review_%d", createdAt.UnixNano()),
+		ID:          reviewItemID(createdAt, []string{string(kind), workspaceID, peerID, sessionKey, subjectID, relatedID, reason}, evidence),
 		Kind:        kind,
 		Status:      ReviewStatusOpen,
 		WorkspaceID: workspaceID,
-		PeerID:      strings.TrimSpace(p.PeerID),
-		SessionKey:  strings.TrimSpace(p.SessionKey),
+		PeerID:      peerID,
+		SessionKey:  sessionKey,
 		SubjectID:   subjectID,
-		RelatedID:   strings.TrimSpace(p.RelatedID),
+		RelatedID:   relatedID,
 		Reason:      reason,
 		EvidenceIDs: evidence,
 		CreatedAt:   createdAt,
 	}
 	return item, string(raw), nil
+}
+
+func reviewItemID(createdAt time.Time, parts []string, evidence []string) string {
+	h := fnv.New64a()
+	for _, part := range parts {
+		_, _ = h.Write([]byte(part))
+		_, _ = h.Write([]byte{0})
+	}
+	for _, id := range evidence {
+		_, _ = h.Write([]byte(id))
+		_, _ = h.Write([]byte{0})
+	}
+	return fmt.Sprintf("review_%d_%016x", createdAt.UnixNano(), h.Sum64())
 }
 
 func getReviewItem(ctx context.Context, db *sql.DB, id string) (ReviewItem, error) {

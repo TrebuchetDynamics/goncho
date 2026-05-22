@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: same-timestamp review item ID collision fixed.
+  - Evidence target: `go test . -run TestCreateReviewItemAllowsDistinctItemsWithSameCreatedAt -count=1` proves two distinct review items sharing one `CreatedAt` get distinct IDs and remain listable.
+  - Result: review queues are safer when lifecycle scanners create multiple findings in the same timestamp bucket.
+
 - 2026-05-22: `goncho_review` list filter validation added.
   - Evidence target: `go test . -run TestReviewToolRejectsInvalidListFilters -count=1` proves invalid `status` and `kind` list filters return operator-visible errors instead of empty review queues.
   - Result: review queue inspection is safer when host/tool callers bypass schema enum validation.

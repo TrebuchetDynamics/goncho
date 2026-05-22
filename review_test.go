@@ -77,6 +77,46 @@ func TestReviewInboxListsOpenConflictAndStaleItems(t *testing.T) {
 	}
 }
 
+func TestCreateReviewItemAllowsDistinctItemsWithSameCreatedAt(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	createdAt := time.Date(2026, 5, 22, 11, 0, 0, 0, time.UTC)
+	first, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindConflict,
+		PeerID:    "peer-a",
+		SubjectID: "mem-a",
+		RelatedID: "mem-old",
+		Reason:    "first memory conflicts with old memory",
+		CreatedAt: createdAt,
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem first: %v", err)
+	}
+	second, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindStale,
+		PeerID:    "peer-a",
+		SubjectID: "mem-b",
+		Reason:    "second memory is stale",
+		CreatedAt: createdAt,
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem second: %v", err)
+	}
+	if first.ID == second.ID {
+		t.Fatalf("review IDs both %q, want distinct IDs for distinct same-timestamp review items", first.ID)
+	}
+
+	listed, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-a", Status: ReviewStatusOpen, Limit: 10})
+	if err != nil {
+		t.Fatalf("ListReviewItems: %v", err)
+	}
+	if len(listed.Items) != 2 {
+		t.Fatalf("review item count = %d, want 2: %+v", len(listed.Items), listed.Items)
+	}
+}
+
 func TestResolveReviewItemClosesOpenItemWithReviewerAndReason(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
