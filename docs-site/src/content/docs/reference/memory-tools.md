@@ -19,5 +19,5 @@ For `goncho_review` list requests, use `open` or `resolved` for `status` and `co
 These tools are a small integration surface, not the whole memory model. Internally, Goncho can preserve richer state than it exposes to an agent prompt.
 
 :::note[Current status]
-The generic memory tools are local-first and markdown-backed when used with `LocalMarkdownMemoryStore`.
+The generic memory tools are local-first and markdown-backed when used with `LocalMarkdownMemoryStore`. See [Local Markdown Memory](/reference/local-markdown-memory/) for the editable storage path.
 :::
