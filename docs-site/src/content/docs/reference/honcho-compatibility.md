@@ -18,6 +18,8 @@ honcho_conclude
 
 The goal is to let existing agent integrations move toward local-first memory without rewriting every tool call first.
 
+Use this page with the [Core API](/reference/core-api/), [Memory Tools](/reference/memory-tools/), and [Gormes Agent Integration](/integrations/gormes-agent/) references when planning a migration path.
+
 For new local-first tool surfaces, prefer the Goncho-native public tools:
 
 ```text
