@@ -27,5 +27,5 @@ Dumping every remembered fact into a prompt increases token cost and reasoning n
 A memory system should explain why a fact surfaced. It should also preserve enough evidence to revise or remove that fact when the world changes.
 
 :::note[Current status]
-Current Goncho APIs expose peer cards, search, context assembly, session summaries, and memory tools. First-class claim state, confidence, and review products are direction.
+Current Goncho [Core API](/reference/core-api/) surfaces peer cards, search, context assembly, and session summaries, while [memory tools](/reference/memory-tools/) provide the agent-facing memory surface. First-class claim state, confidence, and review products are direction.
 :::
