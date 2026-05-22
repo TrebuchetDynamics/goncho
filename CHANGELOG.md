@@ -4,6 +4,7 @@
 
 ### Documentation
 
+- Added root package documentation so pkg.go.dev exposes Goncho's public memory-kernel purpose and evidence-before-belief rule.
 - Added README package-status framing with public module verification and benchmark-methodology signals.
 - Added public package/status framing to the current-capabilities docs, including pkg.go.dev, v0.1.x, benchmark evidence, and stable-ID backend comparison signals.
 - Clarified library install guidance versus the installable `goncho-bench` benchmark CLI in the README and quick-start docs.
