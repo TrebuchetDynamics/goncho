@@ -17,6 +17,7 @@
 
 ### Changed
 
+- `make public-release-smoke` now checks the documented public `@latest` version and published date, not just the presence of release metadata fields.
 - `goncho_review` list requests now treat blank `status` values like omitted status and default to open review items.
 - `goncho_review` resolve requests now return enum-specific guidance for invalid `resolution` values.
 - Review item IDs now include a deterministic field fingerprint so distinct same-timestamp review items do not collide.
@@ -24,6 +25,7 @@
 
 ### Documentation
 
+- Clarified first-touch public docs that public release metadata smoke checks the documented public `@latest` version and published date.
 - Surfaced the public docs site smoke command from first-touch public docs.
 - Surfaced the package documentation smoke command from first-touch public docs.
 - Surfaced the local go.mod metadata smoke command from first-touch public docs.

@@ -14,7 +14,7 @@ Current public package signals:
 - Tagged release stream: public `@latest` currently resolves to v0.1.0, published May 20, 2026; v0.1.x is the active release line for the importable service and Gormes adapter surface.
 - Local release smoke: `make release-smoke` runs release metadata checks, ecosystem smoke, Go tests, vet, race tests, and the docs-site build before local pre-tag decisions.
 - Ecosystem smoke: `make ecosystem-smoke` verifies public release metadata, local Go module metadata, local package documentation, public docs site build, a temporary external Go module import, and checkout-local benchmark CLI installation.
-- Public release metadata smoke: `make public-release-smoke` checks the public `@latest` version and published time from `go list -m -json github.com/TrebuchetDynamics/goncho@latest`.
+- Public release metadata smoke: `make public-release-smoke` checks the documented public `@latest` version and published date from `go list -m -json github.com/TrebuchetDynamics/goncho@latest`.
 - Local module metadata smoke: `make local-module-smoke` checks the checkout `go.mod` module path and Go version from `go list -m -json`.
 - Package documentation smoke: `make package-doc-smoke` checks that local package docs render through `go doc .`.
 - Public docs site smoke: `make docs-site-smoke` checks the local documentation site build with `npm run build`.

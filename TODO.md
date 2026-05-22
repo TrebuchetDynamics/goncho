@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: public release metadata smoke now checks documented latest metadata.
+  - Evidence target: `go test . -run 'Test(PublicReleaseSmokeChecksDocumentedLatestMetadata|PublicDocsExplainDocumentedLatestPublicReleaseSmoke)' -count=1` proves `make public-release-smoke` checks the documented public `@latest` version and published date, and first-touch public docs explain that guard.
+  - Result: ecosystem-readiness smoke now catches drift between official public module metadata and the documented v0.1.0 / May 20, 2026 milestone instead of accepting any `Version`/`Time` fields.
+
 - 2026-05-22: first-touch public docs now surface the public docs site smoke.
   - Evidence target: `go test . -run 'Test(DocsSiteSmokeBuildsPublicDocs|PublicDocsMentionDocsSiteSmoke)' -count=1` proves `make docs-site-smoke` checks the local docs-site build with `npm run build`, and first-touch public docs mention the command.
   - Result: ecosystem-readiness docs now expose a narrow proof for the public docs site signal without claiming local smoke proves remote hosting or indexing.

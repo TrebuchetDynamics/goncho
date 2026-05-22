@@ -315,6 +315,44 @@ func TestEcosystemSmokeIncludesPublicReleaseMetadata(t *testing.T) {
 	}
 }
 
+func TestPublicReleaseSmokeChecksDocumentedLatestMetadata(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PUBLIC_LATEST_VERSION := v0.1.0",
+		"PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-20",
+		`"Version": "$(PUBLIC_LATEST_VERSION)"`,
+		`"Time": "$(PUBLIC_LATEST_PUBLISHED_DATE)`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("Makefile does not pin public release metadata smoke marker %q", want)
+		}
+	}
+}
+
+func TestPublicDocsExplainDocumentedLatestPublicReleaseSmoke(t *testing.T) {
+	const marker = "documented public `@latest` version and published date"
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), marker) {
+				t.Fatalf("%s does not explain public-release smoke marker %q", path, marker)
+			}
+		})
+	}
+}
+
 func TestLocalModuleSmokeChecksGoModMetadata(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {

@@ -8,6 +8,8 @@ LOCOMO_SMOKE_MEMORIES := ./cmd/goncho-bench/testdata/locomo-smoke/memories.jsonl
 LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jsonl
 LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
+PUBLIC_LATEST_VERSION := v0.1.0
+PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-20
 
 .PHONY: release-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
 
@@ -19,7 +21,7 @@ release-smoke:
 	go test -race ./...
 
 release-metadata-smoke:
-	go test . -run 'Test(ChangelogReleaseHeadingsHaveMatchingTags|ReleaseSmokeDocsMentionMetadataGuard|PublicDocsLinkGoReference|PublicDocsMentionEcosystemSmoke|PublicDocsLinkRetrievalBenchmarksReference|PublicDocsSurfaceExternalAdapterContract|PublicDocsMentionBackendComparisonSmoke|PublicAdoptionDocsMentionPublicModuleSmoke|PublicDocsMentionLatestReleaseVersion|PublicDocsUseLatestQualifiedGoGet|PublicDocsMentionPublishedReleaseDate|PublicDocsWarnRootGoInstallIsUnsupported|PublicDocsFrameRootModuleAsLibrary|EcosystemSmokeIncludesPublicReleaseMetadata|LocalModuleSmokeChecksGoModMetadata|PackageDocSmokeChecksLocalGoDoc|DocsSiteSmokeBuildsPublicDocs|PublicDocsMentionDocsSiteSmoke|PublicDocsMentionPackageDocSmoke|PublicDocsMentionLocalModuleSmoke|PublicDocsMentionPublicReleaseSmoke)' -count=1
+	go test . -run 'Test(ChangelogReleaseHeadingsHaveMatchingTags|ReleaseSmokeDocsMentionMetadataGuard|PublicDocsLinkGoReference|PublicDocsMentionEcosystemSmoke|PublicDocsLinkRetrievalBenchmarksReference|PublicDocsSurfaceExternalAdapterContract|PublicDocsMentionBackendComparisonSmoke|PublicAdoptionDocsMentionPublicModuleSmoke|PublicDocsMentionLatestReleaseVersion|PublicDocsUseLatestQualifiedGoGet|PublicDocsMentionPublishedReleaseDate|PublicDocsWarnRootGoInstallIsUnsupported|PublicDocsFrameRootModuleAsLibrary|EcosystemSmokeIncludesPublicReleaseMetadata|PublicReleaseSmokeChecksDocumentedLatestMetadata|PublicDocsExplainDocumentedLatestPublicReleaseSmoke|LocalModuleSmokeChecksGoModMetadata|PackageDocSmokeChecksLocalGoDoc|DocsSiteSmokeBuildsPublicDocs|PublicDocsMentionDocsSiteSmoke|PublicDocsMentionPackageDocSmoke|PublicDocsMentionLocalModuleSmoke|PublicDocsMentionPublicReleaseSmoke)' -count=1
 
 ecosystem-smoke:
 	$(MAKE) public-release-smoke
@@ -32,8 +34,8 @@ ecosystem-smoke:
 public-release-smoke:
 	@info=$$(go list -m -json github.com/TrebuchetDynamics/goncho@latest); \
 	printf '%s\n' "$$info"; \
-	printf '%s\n' "$$info" | grep -q '"Version":'; \
-	printf '%s\n' "$$info" | grep -q '"Time":'
+	printf '%s\n' "$$info" | grep -Fq '"Version": "$(PUBLIC_LATEST_VERSION)"'; \
+	printf '%s\n' "$$info" | grep -Fq '"Time": "$(PUBLIC_LATEST_PUBLISHED_DATE)'
 
 local-module-smoke:
 	@info=$$(go list -m -json); \
