@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO smoke/full retrieval reports now honor the configured top-K limit.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBenchmarkHonorsConfiguredLimit -count=1` proves `--limit 1` reaches the LOCOMO retrieval report path and caps each local system's reported retrieved IDs.
+  - Result: reproducible LOCOMO retrieval reports now use the operator-requested top-K window instead of always evaluating every local system with top 10.
+
 - 2026-05-22: LOCOMO backend comparison now honors the configured top-K limit in the full report path.
   - Evidence target: `go test ./cmd/goncho-bench -run 'Test(RunLocomoBackendComparisonHonorsConfiguredLimitForExternalRows|LocomoBackendComparisonDuplicateExternalRowsDoNotExpandTopK)' -count=1` proves `--limit 1` reaches external adapter scoring and duplicate external rows cannot expand the top-K window.
   - Result: reproducible backend comparison reports now use the operator-requested top-K window consistently across local and external backends.

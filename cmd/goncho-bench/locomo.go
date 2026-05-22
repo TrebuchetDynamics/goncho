@@ -141,10 +141,14 @@ func runLocomoBenchmark(ctx context.Context, cfg config) error {
 	if err != nil {
 		return err
 	}
+	limit := cfg.Limit
+	if limit <= 0 {
+		limit = 10
+	}
 	systems := []string{"random", "recency", "bm25", "sqlite-fts5", "goncho"}
 	reports := make([]locomoSystemReport, 0, len(systems))
 	for _, system := range systems {
-		systemReport, err := evaluateLocomoSystem(ctx, data, system, 10)
+		systemReport, err := evaluateLocomoSystem(ctx, data, system, limit)
 		if err != nil {
 			return fmt.Errorf("goncho-bench: locomo %s: %w", system, err)
 		}

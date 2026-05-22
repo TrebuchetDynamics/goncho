@@ -110,6 +110,37 @@ func TestLocomoAnswerHintIsNotIndexedOrScored(t *testing.T) {
 	}
 }
 
+func TestRunLocomoBenchmarkHonorsConfiguredLimit(t *testing.T) {
+	dir := t.TempDir()
+	memories := filepath.Join(dir, "memories.jsonl")
+	questions := filepath.Join(dir, "questions.jsonl")
+	out := filepath.Join(dir, "locomo.json")
+	writeTestFile(t, memories, `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"orchid marker primary"}
+{"memory_id":"m2","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":2,"content":"orchid marker secondary"}
+`)
+	writeTestFile(t, questions, `{"question_id":"q1","conversation_id":"c1","question":"orchid marker","gold_memory_ids":["m2"],"category":"single_hop_retrieval"}
+`)
+	if err := runLocomoBenchmark(context.Background(), config{LocomoMemoriesPath: memories, LocomoQuestionsPath: questions, OutPath: out, Limit: 1}); err != nil {
+		t.Fatalf("run LOCOMO limit smoke: %v", err)
+	}
+	raw, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read report: %v", err)
+	}
+	var report locomoReport
+	if err := json.Unmarshal(raw, &report); err != nil {
+		t.Fatalf("decode report: %v", err)
+	}
+	for _, system := range report.Systems {
+		if len(system.QuestionsDetail) != 1 {
+			t.Fatalf("%s question detail count = %d, want 1", system.System, len(system.QuestionsDetail))
+		}
+		if got := len(system.QuestionsDetail[0].RetrievedIDs); got > 1 {
+			t.Fatalf("%s retrieved ids = %v, want configured limit 1", system.System, system.QuestionsDetail[0].RetrievedIDs)
+		}
+	}
+}
+
 func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "locomo.json")
