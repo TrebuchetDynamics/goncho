@@ -135,7 +135,7 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 
 func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string, topK int, cfg config) (locomoBackendComparisonEntry, error) {
 	if path := externalLocomoResultsPath(name, cfg); path != "" {
-		return evaluateExternalLocomoResults(data, name, path)
+		return evaluateExternalLocomoResults(data, name, path, topK)
 	}
 	backend, unsupported, err := newLocomoBackend(name)
 	if err != nil {
@@ -190,7 +190,7 @@ func externalLocomoResultsPath(name string, cfg config) string {
 	}
 }
 
-func evaluateExternalLocomoResults(data locomoDataset, name, path string) (locomoBackendComparisonEntry, error) {
+func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK int) (locomoBackendComparisonEntry, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return locomoBackendComparisonEntry{}, fmt.Errorf("read external %s results: %w", name, err)
@@ -260,7 +260,7 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string) (locom
 		if !ok {
 			return locomoBackendComparisonEntry{}, fmt.Errorf("external %s missing question_id %q", name, q.QuestionID)
 		}
-		ids := make([]string, 0, len(row.Results))
+		ids := make([]string, 0, min(topK, len(row.Results)))
 		seen := map[string]struct{}{}
 		for _, hit := range row.Results {
 			id := strings.TrimSpace(hit.MemoryID)
@@ -274,7 +274,9 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string) (locom
 				continue
 			}
 			seen[id] = struct{}{}
-			ids = append(ids, id)
+			if len(ids) < topK {
+				ids = append(ids, id)
+			}
 		}
 		results = append(results, scoreLocomoQuestion(q, ids))
 	}

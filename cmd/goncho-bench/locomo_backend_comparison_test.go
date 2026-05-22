@@ -99,6 +99,31 @@ func TestLocomoBackendComparisonConsumesExternalStableIDJSONL(t *testing.T) {
 	}
 }
 
+func TestLocomoBackendComparisonLimitsExternalRowsToTopK(t *testing.T) {
+	ctx := context.Background()
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", Content: "distractor marker"},
+			{MemoryID: "m2", ConversationID: "c1", Content: "orchid marker"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "orchid marker", GoldMemoryIDs: []string{"m2"}, Category: "single_hop_retrieval"}},
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "external.jsonl")
+	writeTestFile(t, path, `{"backend":"mem0","question_id":"q1","comparable":true,"results":[{"memory_id":"m1","score":0.9},{"memory_id":"m2","score":0.8}]}
+`)
+	entry, err := evaluateLocomoBackend(ctx, data, "mem0", 1, config{LocomoMem0Results: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entry.QuestionsDetail) != 1 || strings.Join(entry.QuestionsDetail[0].RetrievedIDs, ",") != "m1" {
+		t.Fatalf("retrieved ids = %+v, want only topK external hit m1", entry.QuestionsDetail)
+	}
+	if entry.RecallAnyAt5 != 0 || entry.MRR != 0 {
+		t.Fatalf("metrics = any5 %.2f mrr %.2f, want miss when gold appears after topK", entry.RecallAnyAt5, entry.MRR)
+	}
+}
+
 func TestLocomoBackendComparisonRejectsExternalUnknownQuestionID(t *testing.T) {
 	ctx := context.Background()
 	data := locomoDataset{
