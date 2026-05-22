@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added a README API map for pkg.go.dev readers that links common evaluation goals to public Goncho entry points.
 - Pointed the root package overview at compiled pkg.go.dev examples for setup, orientation packs, and scoped retrieval.
 - Added a compiled `Service.Search` package example for pkg.go.dev readers evaluating scoped retrieval.
 - Added a compiled `Service.Context` package example for pkg.go.dev readers evaluating orientation-pack assembly.

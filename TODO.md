@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: README now gives pkg.go.dev readers an API map from evaluation goals to public entry points.
+  - Evidence target: `go test . -run 'Test(ReadmeSurfacesPkgGoDevAPIMap|ReleaseMetadataSmokeIncludesReadmeAPIMapGuard)' -count=1` proves the README includes the map and release metadata smoke keeps it guarded.
+  - Result: readers can find `memory.OpenSqlite`, `goncho.RunMigrations`, `goncho.NewService`, `svc.Conclude`, `svc.Search`, `svc.Context`, public tools, and `goncho-bench@latest` without scanning the full package index.
+
 - 2026-05-22: Root package overview now points pkg.go.dev readers to compiled examples for setup, orientation packs, and scoped retrieval.
   - Evidence target: `go test . -run 'Test(PackageDocPointsPkgGoDevReadersToCompiledExamples|ReleaseMetadataSmokeIncludesPackageDocExamplesGuard)' -count=1` proves `go doc .` includes the example path and release metadata smoke keeps it guarded.
   - Result: pkg.go.dev readers can jump from the overview to checked examples instead of inferring the first API path from the large index.

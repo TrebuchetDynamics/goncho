@@ -48,6 +48,18 @@ If you are evaluating Goncho on pkg.go.dev, start here:
 - **Trust boundary:** Goncho can remember, rank, and warn; the host agent must still verify file paths, APIs, credentials, and deployment state before acting.
 - **What to read next:** use [Quick Start](#quick-start) for a runnable service shape, [Core API](#core-api) for common calls, and [Package Status](#package-status) for release and smoke-test evidence.
 
+## API Map for pkg.go.dev Readers
+
+| If you need to... | Start with | Why |
+| --- | --- | --- |
+| Open local memory | `memory.OpenSqlite` plus `goncho.RunMigrations` | Creates the SQLite store and schema Goncho expects. |
+| Embed the service | `goncho.NewService` | Gives your Go host the profile, search, context, chat, and conclude APIs. |
+| Store durable facts | `svc.SetProfile` or `svc.Conclude` | Separates stable profile facts from current conclusions and evidence. |
+| Retrieve scoped memory | `svc.Search` | Returns peer/profile/session-scoped hits before you decide what to verify. |
+| Build an action primer | `svc.Context` | Produces an orientation pack; hosts still verify live state before acting. |
+| Expose agent tools | `NewGonchoContextTool`, `NewGonchoSearchTool`, `NewGonchoRememberTool`, `NewReviewTool`, `NewGonchoHandoffTool` | Keeps host integrations on the public tool boundary instead of database internals. |
+| Reproduce retrieval evidence | `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` | Installs the benchmark CLI shipped with the public module. |
+
 ## Package Status
 
 Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.1 release published May 22, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
