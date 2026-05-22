@@ -5,7 +5,7 @@ description: The main Goncho service methods and their mental model.
 
 Goncho's Go service API is the primary integration surface.
 
-This page names the exported symbols used by the current repository and explains the conceptual surface. Use Go documentation generated from this checkout for exact signatures until public module docs catch up.
+This page names the exported symbols used by the current repository and explains the conceptual surface. Use [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho) for released API signatures, and use Go documentation generated from this checkout for unreleased changes.
 
 | API | Role |
 | --- | --- |
