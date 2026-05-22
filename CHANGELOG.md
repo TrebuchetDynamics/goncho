@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Documentation
+
+- Clarified current benchmark roadmap and backlog status after the LOCOMO stable-ID backend comparison freeze and stale benchmark blocker resolution.
+
 ## v0.1.1 - 2026-05-20
 
 ### Added
