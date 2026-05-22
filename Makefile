@@ -9,14 +9,18 @@ LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jso
 LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
 
-.PHONY: release-smoke ecosystem-smoke public-module-smoke install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
+.PHONY: release-smoke release-metadata-smoke ecosystem-smoke public-module-smoke install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
 
 release-smoke:
+	$(MAKE) release-metadata-smoke
 	$(MAKE) ecosystem-smoke
 	go test ./...
 	go vet ./...
 	go test -race ./...
 	cd docs-site && npm run build
+
+release-metadata-smoke:
+	go test . -run TestChangelogReleaseHeadingsHaveMatchingTags -count=1
 
 ecosystem-smoke:
 	go list -m github.com/TrebuchetDynamics/goncho@latest

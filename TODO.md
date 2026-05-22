@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: release metadata now has an explicit smoke target.
+  - Evidence target: `make release-metadata-smoke` runs `go test . -run TestChangelogReleaseHeadingsHaveMatchingTags -count=1` before broader release checks.
+  - Result: operators can check changelog/tag consistency directly, and `make release-smoke` includes that guard before ecosystem validation.
+
 - 2026-05-22: changelog release headings are now guarded against untagged version overclaims.
   - Evidence target: `go test . -run TestChangelogReleaseHeadingsHaveMatchingTags -count=1` proves each `## vX.Y.Z - ...` changelog release heading has a matching local git tag.
   - Result: public release notes can keep candidate notes without implying that untagged versions are already published.

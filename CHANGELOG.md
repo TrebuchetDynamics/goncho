@@ -4,7 +4,8 @@
 
 ### Added
 
-- Added `make release-smoke` as a local pre-tag gate for ecosystem smoke, Go tests, vet, race tests, and docs build.
+- Added `make release-metadata-smoke` as an explicit guard for changelog release headings and local git tags.
+- Added `make release-smoke` as a local pre-tag gate for release metadata, ecosystem smoke, Go tests, vet, race tests, and docs build.
 - Added `subject_id` and `related_id` filters to `goncho_review` list requests so operators can inspect review and supersession chains.
 - Added `make ecosystem-smoke` to run the core public module, package-doc, external-import, and checkout-local benchmark CLI readiness checks together.
 - Added `make public-module-smoke` to verify `github.com/TrebuchetDynamics/goncho@latest` imports and compiles from a fresh external Go module.
