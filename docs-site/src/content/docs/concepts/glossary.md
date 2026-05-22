@@ -3,6 +3,8 @@ title: Glossary
 description: Canonical terms used in Goncho docs.
 ---
 
+For deeper context, see [Evidence, Claims, and Beliefs](/concepts/evidence-claims-beliefs/), [Orientation Packs](/concepts/orientation-packs/), and [Negative Memory](/concepts/negative-memory/).
+
 | Term | Meaning |
 | --- | --- |
 | Evidence | Raw observations, transcripts, tool outputs, or events preserved before interpretation. |
