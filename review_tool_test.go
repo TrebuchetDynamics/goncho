@@ -321,6 +321,28 @@ func TestReviewToolListFiltersByWorkspaceID(t *testing.T) {
 	}
 }
 
+func TestReviewToolListOutputIncludesEffectiveStatus(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	if _, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindConflict,
+		PeerID:    "peer-effective-status",
+		SubjectID: "mem-effective-status",
+		Reason:    "default status should be audit-visible in list output",
+		CreatedAt: time.Date(2026, 5, 22, 22, 0, 0, 0, time.UTC),
+	}); err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	listed := executeMemoryTool(t, ctx, tool, `{"action":"list","peer_id":"peer-effective-status","status":"   "}`)
+	if stringField(t, listed, "status") != string(ReviewStatusOpen) {
+		t.Fatalf("list output = %+v, want effective status %q", listed, ReviewStatusOpen)
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

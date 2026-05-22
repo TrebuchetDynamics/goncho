@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `goncho_review` list output now echoes the effective status filter.
+  - Evidence target: `go test . -run 'TestReviewTool(ListOutputIncludesEffectiveStatus|TreatsBlankStatusAsOpenDefault|ListFiltersByWorkspaceID|FiltersReviewChainsBySubjectAndRelatedID|ListsAndResolvesReviewItems)' -count=1` proves blank status requests default to `open` and the list response reports that effective status.
+  - Result: operators can audit which review queue status was listed without inferring silent defaults from item rows.
+
 - 2026-05-22: `goncho_review` list requests now support workspace ID filters.
   - Evidence target: `go test . -run 'TestReviewTool(ListFiltersByWorkspaceID|ResolveOutputIncludesWorkspaceID|ResolveOutputIncludesCreatedAt|ResolveOutputIncludesReason|ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves list responses honor `workspace_id` filters instead of falling back to the service default workspace.
   - Result: operators can inspect a workspace-specific review queue through the public review tool.

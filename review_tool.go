@@ -95,6 +95,7 @@ func (t *ReviewTool) executeList(ctx context.Context, workspaceID, peerID, sessi
 	return json.Marshal(map[string]any{
 		"success": true,
 		"action":  "list",
+		"status":  ReviewStatus(status),
 		"count":   items.Count,
 		"items":   items.Items,
 	})
