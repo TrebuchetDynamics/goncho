@@ -231,7 +231,11 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem, sessionKeys ...string
 		}
 	}
 	const detailLimit = 3
-	reason := fmt.Sprintf("%d open review items require adjudication: %s", len(items), strings.Join(parts, " "))
+	itemNoun, verb := "items", "require"
+	if len(items) == 1 {
+		itemNoun, verb = "item", "requires"
+	}
+	reason := fmt.Sprintf("%d open review %s %s adjudication: %s", len(items), itemNoun, verb, strings.Join(parts, " "))
 	if sessionKey != "" {
 		reason += "; session_key=" + sessionKey
 	} else if sessionKeys := reviewItemSessionKeys(items, detailLimit); len(sessionKeys) > 0 {

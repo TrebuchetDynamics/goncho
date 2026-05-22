@@ -64,10 +64,13 @@ func TestContextReportsReviewWarningMarksOmittedEvidenceIDs(t *testing.T) {
 	}
 
 	reviewEvidence := reviewRequiredEvidenceFromContext(t, got)
-	for _, want := range []string{"1 open review item", "evidence=obs-a obs-b obs-c", "evidence_omitted=1"} {
+	for _, want := range []string{"1 open review item requires adjudication", "evidence=obs-a obs-b obs-c", "evidence_omitted=1"} {
 		if !strings.Contains(reviewEvidence.Reason, want) {
 			t.Fatalf("review evidence reason = %q, missing %q", reviewEvidence.Reason, want)
 		}
+	}
+	if unwanted := "1 open review items require adjudication"; strings.Contains(reviewEvidence.Reason, unwanted) {
+		t.Fatalf("review evidence reason = %q, unexpectedly included %q", reviewEvidence.Reason, unwanted)
 	}
 }
 

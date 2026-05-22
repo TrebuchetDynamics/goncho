@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: single-item `review_required` context warnings now use singular wording.
+  - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedEvidenceIDs|MarksOmittedDetails)' -count=1` proves one open review item says `1 open review item requires adjudication` while multi-item warnings keep plural wording.
+  - Result: lifecycle review warnings read cleanly for both single-item and multi-item review queues.
+
 - 2026-05-22: bounded `review_required` context warnings now report omitted evidence-ID counts.
   - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedEvidenceIDs|MarksOmittedDetails)' -count=1` proves context unavailable evidence says `evidence_omitted=N` when more unique evidence IDs exist than the bounded preview shows.
   - Result: lifecycle review warnings stay compact without hiding that additional proof identifiers exist for open review work.
