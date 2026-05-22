@@ -22,6 +22,18 @@
 //
 //	go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest
 //
+// Import path guide:
+//
+//   - github.com/TrebuchetDynamics/goncho is the root library package for
+//     RunMigrations, NewService, service params, and public tool constructors.
+//   - github.com/TrebuchetDynamics/goncho/memory is the SQLite opener for
+//     memory.OpenSqlite when an embedded host wants a local file-backed store.
+//   - github.com/TrebuchetDynamics/goncho/cmd/goncho-bench is command-only;
+//     do not import cmd/goncho-bench into an agent host.
+//
+// When in doubt, stay on public service and tool APIs before reaching for
+// lower-level storage or benchmark internals.
+//
 // Quick start:
 //
 //	store, err := memory.OpenSqlite("goncho.db", 0, nil)

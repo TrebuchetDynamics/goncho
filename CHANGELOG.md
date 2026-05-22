@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added package documentation import path guidance for pkg.go.dev readers choosing between the root library package, `memory`, and `cmd/goncho-bench`.
 - Added a README import path guide for pkg.go.dev readers choosing between the root library package, `memory`, and `cmd/goncho-bench`.
 - Added package documentation versioning and adoption notes for pkg.go.dev readers evaluating Stable version and Imported by metadata.
 - Added README versioning and adoption notes for pkg.go.dev readers evaluating pre-1.0 stability and Imported by metadata.

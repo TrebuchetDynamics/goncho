@@ -781,6 +781,26 @@ func TestPackageDocSurfacesInstallAndCommandBoundary(t *testing.T) {
 	}
 }
 
+func TestPackageDocSurfacesImportPathGuide(t *testing.T) {
+	out, err := exec.Command("go", "doc", ".").Output()
+	if err != nil {
+		t.Fatalf("go doc .: %v", err)
+	}
+	text := strings.Join(strings.Fields(string(out)), " ")
+	for _, want := range []string{
+		"Import path guide",
+		"github.com/TrebuchetDynamics/goncho is the root library package",
+		"github.com/TrebuchetDynamics/goncho/memory is the SQLite opener",
+		"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench is command-only",
+		"do not import cmd/goncho-bench into an agent host",
+		"stay on public service and tool APIs",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("go doc . output does not surface import path guide marker %q\n%s", want, text)
+		}
+	}
+}
+
 func TestPackageDocSurfacesPrimaryAPIPath(t *testing.T) {
 	out, err := exec.Command("go", "doc", ".").Output()
 	if err != nil {
@@ -873,6 +893,22 @@ func TestReleaseMetadataSmokeIncludesPackageDocInstallGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include package doc install guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesPackageDocImportPathGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocSurfacesImportPathGuide",
+		"ReleaseMetadataSmokeIncludesPackageDocImportPathGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include package doc import path guard %q", want)
 		}
 	}
 }
