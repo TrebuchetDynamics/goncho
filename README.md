@@ -121,6 +121,18 @@ func main() {
 }
 ```
 
+## Host Integration Checklist
+
+Use this checklist when embedding Goncho in an agent host after the minimal skeleton:
+
+- Open SQLite with `memory.OpenSqlite` and close the store during host shutdown.
+- Run `goncho.RunMigrations` before `goncho.NewService` on every boot; migrations are the schema contract the service expects.
+- Set `WorkspaceID` and `ObserverPeerID` so memory, review queues, and audit output are attributable to the host.
+- Pass explicit `ProfileID`, `Peer`, and `SessionKey` on context, search, and conclude calls when the host has profile or session routing.
+- Call `svc.Context` before tool execution to build an orientation pack, then let the host decide which live checks are required.
+- Write conclusions with evidence after observations, user-visible decisions, or verified tool results; avoid storing guesses as durable claims.
+- Verify live state before acting: file paths, APIs, credentials, deployment state, and external services still need current proof outside memory.
+
 ## Package Status
 
 Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.1 release published May 22, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).

@@ -363,6 +363,28 @@ func TestReadmeSurfacesImportPathGuide(t *testing.T) {
 	}
 }
 
+func TestReadmeSurfacesHostIntegrationChecklist(t *testing.T) {
+	raw, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("ReadFile README.md: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"## Host Integration Checklist",
+		"Open SQLite with `memory.OpenSqlite`",
+		"Run `goncho.RunMigrations` before `goncho.NewService`",
+		"Set `WorkspaceID` and `ObserverPeerID`",
+		"Pass explicit `ProfileID`, `Peer`, and `SessionKey`",
+		"Call `svc.Context` before tool execution",
+		"Write conclusions with evidence",
+		"Verify live state before acting",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("README.md does not surface host integration checklist marker %q", want)
+		}
+	}
+}
+
 func TestReadmeSurfacesGoDevSignalMap(t *testing.T) {
 	raw, err := os.ReadFile("README.md")
 	if err != nil {
@@ -533,6 +555,22 @@ func TestReleaseMetadataSmokeIncludesReadmeImportPathGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include README import path guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesReadmeHostIntegrationGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"ReadmeSurfacesHostIntegrationChecklist",
+		"ReleaseMetadataSmokeIncludesReadmeHostIntegrationGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include README host integration guard %q", want)
 		}
 	}
 }

@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added a README host integration checklist for pkg.go.dev readers embedding Goncho in an agent host.
 - Added package documentation import path guidance for pkg.go.dev readers choosing between the root library package, `memory`, and `cmd/goncho-bench`.
 - Added a README import path guide for pkg.go.dev readers choosing between the root library package, `memory`, and `cmd/goncho-bench`.
 - Added package documentation versioning and adoption notes for pkg.go.dev readers evaluating Stable version and Imported by metadata.
