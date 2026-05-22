@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: README now gives pkg.go.dev readers a concise `At a Glance` evaluation path.
+  - Evidence target: `go test . -run TestReadmeSurfacesPkgGoDevEvaluationPath -count=1` proves the README includes pkg.go.dev evaluation, first-call, and next-reading markers.
+  - Result: README readers can quickly identify install command, use cases, non-goals, first useful service call, and trust boundary.
+
 - 2026-05-22: Root package documentation now gives pkg.go.dev readers a stronger landing page.
   - Evidence target: `go test . -run TestPackageDocSurfacesPkgGoDevLandingContent -count=1` proves `go doc .` includes use-case, quick-start, verification-before-action, and `goncho.NewService` markers.
   - Result: pkg.go.dev/go.dev package readers see a clearer first screen before the API index.

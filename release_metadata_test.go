@@ -297,6 +297,40 @@ func TestPublicDocsWarnRootGoInstallIsUnsupported(t *testing.T) {
 	}
 }
 
+func TestReadmeSurfacesPkgGoDevEvaluationPath(t *testing.T) {
+	raw, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("ReadFile README.md: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"## At a Glance",
+		"If you are evaluating Goncho on pkg.go.dev",
+		"First useful call",
+		"What to read next",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("README.md does not surface pkg.go.dev evaluation marker %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesReadmePkgGoDevGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"ReadmeSurfacesPkgGoDevEvaluationPath",
+		"ReleaseMetadataSmokeIncludesReadmePkgGoDevGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include README pkg.go.dev guard %q", want)
+		}
+	}
+}
+
 func TestPublicDocsFrameRootModuleAsLibrary(t *testing.T) {
 	for _, path := range []string{
 		"README.md",
