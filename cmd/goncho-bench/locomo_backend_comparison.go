@@ -57,24 +57,25 @@ type locomoBackendComparisonReport struct {
 }
 
 type locomoBackendComparisonEntry struct {
-	Backend             string                 `json:"backend"`
-	Comparable          bool                   `json:"comparable"`
-	NotComparableReason string                 `json:"not_comparable_reason,omitempty"`
-	Questions           int                    `json:"questions,omitempty"`
-	RecallAnyAt5        float64                `json:"recall_any_at_5,omitempty"`
-	RecallAnyAt10       float64                `json:"recall_any_at_10,omitempty"`
-	StrictRecallAt5     float64                `json:"strict_recall_at_5,omitempty"`
-	StrictRecallAt10    float64                `json:"strict_recall_at_10,omitempty"`
-	NDCGAt5             float64                `json:"ndcg_at_5,omitempty"`
-	NDCGAt10            float64                `json:"ndcg_at_10,omitempty"`
-	MRR                 float64                `json:"mrr,omitempty"`
-	InsertLatencyMs     int64                  `json:"insert_latency_ms,omitempty"`
-	SearchLatencyMs     int64                  `json:"search_latency_ms,omitempty"`
-	LatencyMs           locomoLatencyStats     `json:"latency_ms"`
-	RSSBytes            uint64                 `json:"rss_bytes,omitempty"`
-	FailureCategories   map[string]int         `json:"failure_categories,omitempty"`
-	QuestionsDetail     []locomoQuestionResult `json:"question_results,omitempty"`
-	SetupNotes          []string               `json:"setup_notes,omitempty"`
+	Backend             string                           `json:"backend"`
+	Comparable          bool                             `json:"comparable"`
+	NotComparableReason string                           `json:"not_comparable_reason,omitempty"`
+	Questions           int                              `json:"questions,omitempty"`
+	RecallAnyAt5        float64                          `json:"recall_any_at_5,omitempty"`
+	RecallAnyAt10       float64                          `json:"recall_any_at_10,omitempty"`
+	StrictRecallAt5     float64                          `json:"strict_recall_at_5,omitempty"`
+	StrictRecallAt10    float64                          `json:"strict_recall_at_10,omitempty"`
+	NDCGAt5             float64                          `json:"ndcg_at_5,omitempty"`
+	NDCGAt10            float64                          `json:"ndcg_at_10,omitempty"`
+	MRR                 float64                          `json:"mrr,omitempty"`
+	InsertLatencyMs     int64                            `json:"insert_latency_ms,omitempty"`
+	SearchLatencyMs     int64                            `json:"search_latency_ms,omitempty"`
+	LatencyMs           locomoLatencyStats               `json:"latency_ms"`
+	RSSBytes            uint64                           `json:"rss_bytes,omitempty"`
+	FailureCategories   map[string]int                   `json:"failure_categories,omitempty"`
+	CategoryMetrics     map[string]locomoCategoryMetrics `json:"category_metrics,omitempty"`
+	QuestionsDetail     []locomoQuestionResult           `json:"question_results,omitempty"`
+	SetupNotes          []string                         `json:"setup_notes,omitempty"`
 }
 
 type externalLocomoAdapterRow struct {
@@ -195,7 +196,7 @@ func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string,
 		RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10,
 		StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR,
 		InsertLatencyMs: insertLatency, SearchLatencyMs: searchLatency, LatencyMs: summary.LatencyMs, RSSBytes: currentRSSBytes(),
-		FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotesForBackend(name),
+		FailureCategories: locomoFailureCategories(results), CategoryMetrics: summary.CategoryMetrics, QuestionsDetail: results, SetupNotes: setupNotesForBackend(name),
 	}, nil
 }
 
@@ -307,7 +308,7 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 		results = append(results, scoreLocomoQuestion(q, ids))
 	}
 	summary := summarizeLocomoSystem(name, results)
-	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR, LatencyMs: summary.LatencyMs, FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotes}, nil
+	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR, LatencyMs: summary.LatencyMs, FailureCategories: locomoFailureCategories(results), CategoryMetrics: summary.CategoryMetrics, QuestionsDetail: results, SetupNotes: setupNotes}, nil
 }
 
 func newLocomoBackend(name string) (MemoryBackend, string, error) {
@@ -822,7 +823,19 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 			fmt.Fprintf(&b, "| `%s` | `%s` | %d |\n", e.Backend, category, e.FailureCategories[category])
 		}
 	}
-	b.WriteString("\n## Setup notes\n\n")
+	b.WriteString("\n## Category metrics\n\n")
+	for _, e := range report.Backends {
+		if len(e.CategoryMetrics) == 0 {
+			continue
+		}
+		fmt.Fprintf(&b, "### %s\n\n| Category | Questions | recall_any@5 | recall_any@10 | strict@5 | strict@10 | NDCG@5 | NDCG@10 | MRR |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n", e.Backend)
+		for _, category := range sortedLocomoCategories(e.CategoryMetrics) {
+			m := e.CategoryMetrics[category]
+			fmt.Fprintf(&b, "| `%s` | %d | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% |\n", category, m.Questions, m.RecallAnyAt5*100, m.RecallAnyAt10*100, m.StrictRecallAt5*100, m.StrictRecallAt10*100, m.NDCGAt5*100, m.NDCGAt10*100, m.MRR*100)
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("## Setup notes\n\n")
 	b.WriteString("- Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")
 	b.WriteString("- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Comparable when `AGENTMEMORY_SOURCE_DIR` points at PR #583 / commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` with npm dependencies installed. This adapter uses the standalone InMemoryKV fallback, not the full running agentmemory server.\n")
 	b.WriteString("- mem0 probe: `python3 scripts/bench_mem0_locomo.py --capability`. Exact package version used here: none; backend is marked not comparable before scoring. Candidate install: `pip install mem0ai` plus upstream local vector-store dependencies. Comparable only after configured local retrieval can return caller-supplied `memory_id` without answer-generation scoring.\n")

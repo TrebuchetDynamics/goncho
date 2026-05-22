@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO backend-comparison reports now include per-backend category metrics.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves JSON artifacts emit `category_metrics` and markdown summaries include per-backend category metric tables.
+  - Result: backend-comparison artifacts now mirror LOCOMO retrieval category-metric reporting without changing retrieval or stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO backend-comparison markdown now includes per-backend failure-category counts.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves markdown summaries include `## Failure categories` and backend/category count rows.
   - Result: backend-comparison markdown now surfaces the failure taxonomy already emitted in JSON without changing retrieval or stable-ID scoring semantics.

@@ -19,6 +19,7 @@
 
 ### Changed
 
+- LOCOMO backend-comparison reports now include per-backend category metrics.
 - LOCOMO backend-comparison markdown now includes per-backend failure-category counts.
 - LOCOMO backend-comparison reports now include per-backend latency distribution stats.
 - LOCOMO backend-comparison markdown now includes per-backend insert latency and RSS metrics.

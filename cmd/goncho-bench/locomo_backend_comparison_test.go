@@ -366,6 +366,10 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "RSS bytes")
 	assertBenchFileContains(t, mdOut, "## Failure categories")
 	assertBenchFileContains(t, mdOut, "| `bm25` | `gold_rank_1` | 1 |")
+	assertBenchFileContains(t, jsonOut, `"category_metrics"`)
+	assertBenchFileContains(t, mdOut, "## Category metrics")
+	assertBenchFileContains(t, mdOut, "### bm25")
+	assertBenchFileContains(t, mdOut, "| `single_hop_retrieval` | 1 | 100.00%")
 }
 
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing.T) {
