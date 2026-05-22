@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `make local-module-smoke` to verify checkout-local go.mod module path and Go version metadata from `go list -m -json`.
 - Added `make public-release-smoke` to verify public `@latest` version and published-time metadata from `go list -m -json`.
 - Added `make release-metadata-smoke` as an explicit guard for changelog release headings, local git tags, and release-smoke docs.
 - Added `make release-smoke` as a local pre-tag gate for release metadata, ecosystem smoke, Go tests, vet, race tests, and docs build.
@@ -21,6 +22,7 @@
 
 ### Documentation
 
+- Surfaced the local go.mod metadata smoke command from first-touch public docs.
 - Surfaced the external backend comparison smoke command from first-touch public docs.
 - Surfaced the external adapter contract and agentmemory PR #583 stable-ID status from first-touch public docs.
 - Linked first-touch public docs to the Retrieval Benchmarks methodology and stable-ID backend comparison reference.

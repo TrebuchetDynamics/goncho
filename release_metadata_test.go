@@ -315,6 +315,45 @@ func TestEcosystemSmokeIncludesPublicReleaseMetadata(t *testing.T) {
 	}
 }
 
+func TestLocalModuleSmokeChecksGoModMetadata(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"local-module-smoke:",
+		"$(MAKE) local-module-smoke",
+		"go list -m -json",
+		`"Path": "github.com/TrebuchetDynamics/goncho"`,
+		`"GoVersion":`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("Makefile does not include local go.mod metadata smoke marker %q", want)
+		}
+	}
+}
+
+func TestPublicDocsMentionLocalModuleSmoke(t *testing.T) {
+	const smokeCommand = "make local-module-smoke"
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), smokeCommand) {
+				t.Fatalf("%s does not mention local go.mod metadata smoke command %q", path, smokeCommand)
+			}
+		})
+	}
+}
+
 func TestPublicDocsMentionPublicReleaseSmoke(t *testing.T) {
 	for _, path := range []string{
 		"README.md",

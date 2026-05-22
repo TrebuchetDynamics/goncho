@@ -40,13 +40,13 @@ The root module is a library package, not a root `go install` target; `goncho-be
 
 Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.1.0 release published May 20, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
 
-Verify public release metadata, package documentation, external importability, and the checkout-local benchmark CLI without editing another project:
+Verify public release metadata, local Go module metadata, package documentation, external importability, and the checkout-local benchmark CLI without editing another project:
 
 ```bash
 make ecosystem-smoke
 ```
 
-For the narrower public release metadata proof only, run `make public-release-smoke`; it checks the public `@latest` version and published time from `go list -m -json`. For the narrower external import proof only, run `make public-module-smoke`. For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke`.
+For the narrower public release metadata proof only, run `make public-release-smoke`; it checks the public `@latest` version and published time from `go list -m -json`. For the narrower local go.mod metadata proof only, run `make local-module-smoke`; it checks the module path and Go version from `go list -m -json`. For the narrower external import proof only, run `make public-module-smoke`. For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke`.
 
 Use `go get github.com/TrebuchetDynamics/goncho@latest` to depend on the library package. For the command-line benchmark runner, use `make install-smoke` or `go install ./cmd/goncho-bench` from this checkout until the next v0.1.x tag includes the CLI.
 
