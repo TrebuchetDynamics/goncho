@@ -7,6 +7,8 @@ Goncho is being evaluated as a long-term memory retrieval system for agents, not
 
 LongMemEval-S is the first layer: deterministic retrieval sanity on long conversational haystacks. The next benchmarks should stress progressively harder memory behavior: evolving facts, temporal state, scale, noise, standard IR credibility, and real agent utility.
 
+For runnable commands, current frozen artifacts, and external-backend adapter status, see [Retrieval Benchmarks](/reference/retrieval-benchmarks/). This roadmap stays focused on the longer evaluation sequence.
+
 ## Progression
 
 | Phase | Benchmark | Purpose | Status |
