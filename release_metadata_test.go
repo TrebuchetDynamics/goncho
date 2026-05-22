@@ -105,6 +105,7 @@ func TestPublicDocsMentionEcosystemSmoke(t *testing.T) {
 func TestPublicAdoptionDocsMentionPublicModuleSmoke(t *testing.T) {
 	for _, path := range []string{
 		"README.md",
+		"docs-site/src/content/docs/index.md",
 		"docs-site/src/content/docs/start/current-capabilities.md",
 		"docs-site/src/content/docs/start/quick-start.md",
 	} {

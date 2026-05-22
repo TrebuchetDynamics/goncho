@@ -30,7 +30,7 @@ Goncho is pre-1.0. The v0.1.x Go library supports local persistence, peer cards,
 
 Public API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
 
-Local ecosystem smoke: `make ecosystem-smoke` verifies public module resolution, package docs, external importability, and checkout-local benchmark CLI installation.
+Local ecosystem smoke: `make ecosystem-smoke` verifies public module resolution, package docs, external importability, and checkout-local benchmark CLI installation. For the narrower external import proof, run `make public-module-smoke`.
 :::
 
 ## Four Paths
