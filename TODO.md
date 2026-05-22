@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package documentation now maps pkg.go.dev readers to the primary API path.
+  - Evidence target: `go test . -run 'Test(PackageDocSurfacesPrimaryAPIPath|ReleaseMetadataSmokeIncludesPackageDocAPIPathGuard)' -count=1` proves `go doc .` names `Service.Conclude`, `Service.Search`, `Service.Context`, the public tool constructors, and the database-internals boundary while release metadata smoke keeps the guard wired.
+  - Result: readers can orient on the service/tool entry points before scanning the large API index.
+
 - 2026-05-22: Root package documentation now tells pkg.go.dev readers how to install the library versus the benchmark command.
   - Evidence target: `go test . -run 'Test(PackageDocSurfacesInstallAndCommandBoundary|ReleaseMetadataSmokeIncludesPackageDocInstallGuard)' -count=1` proves `go doc .` includes the `go get` path, root-library boundary, and `goncho-bench@latest` command path while release metadata smoke keeps the guard wired.
   - Result: pkg.go.dev readers can distinguish the importable library from the installable benchmark CLI without learning that boundary from a failed `go install` attempt.

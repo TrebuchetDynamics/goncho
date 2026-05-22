@@ -39,9 +39,17 @@
 //		ObserverPeerID: "agent",
 //	}, nil)
 //
-// From there, call Service methods such as Conclude, Search, Context, Chat,
-// and Profile, or expose the public tools for context, search, remember,
-// review, and handoff workflows.
+// Primary API path:
+//
+//   - Service.Conclude records evidence-backed conclusions.
+//   - Service.Search retrieves scoped memory candidates.
+//   - Service.Context assembles an orientation pack for the next action.
+//   - Service.Profile stores and reads durable profile facts.
+//
+// For host integrations, prefer the public tool constructors such as
+// NewGonchoContextTool, NewGonchoSearchTool, NewGonchoRememberTool,
+// NewReviewTool, and NewGonchoHandoffTool so callers stay on the public
+// boundary instead of database internals.
 //
 // On pkg.go.dev, use the rendered pkg.go.dev examples as the shortest checked
 // path through the API: ExampleNewService shows setup, ExampleService_Context
