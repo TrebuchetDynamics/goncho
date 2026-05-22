@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Pointed the root package overview at compiled pkg.go.dev examples for setup, orientation packs, and scoped retrieval.
 - Added a compiled `Service.Search` package example for pkg.go.dev readers evaluating scoped retrieval.
 - Added a compiled `Service.Context` package example for pkg.go.dev readers evaluating orientation-pack assembly.
 - Added a compiled `NewService` package example for pkg.go.dev readers evaluating embedded service setup.

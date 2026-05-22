@@ -34,6 +34,11 @@
 // and Profile, or expose the public tools for context, search, remember,
 // review, and handoff workflows.
 //
+// On pkg.go.dev, use the rendered pkg.go.dev examples as the shortest checked
+// path through the API: ExampleNewService shows setup, ExampleService_Context
+// shows orientation-pack assembly, and ExampleService_Search shows scoped
+// retrieval against stored conclusions.
+//
 // Goncho is pre-1.0. Pin the module version or commit you deploy against, keep
 // live verification in the host, and treat retrieved memory as orientation
 // until current evidence confirms it.

@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package overview now points pkg.go.dev readers to compiled examples for setup, orientation packs, and scoped retrieval.
+  - Evidence target: `go test . -run 'Test(PackageDocPointsPkgGoDevReadersToCompiledExamples|ReleaseMetadataSmokeIncludesPackageDocExamplesGuard)' -count=1` proves `go doc .` includes the example path and release metadata smoke keeps it guarded.
+  - Result: pkg.go.dev readers can jump from the overview to checked examples instead of inferring the first API path from the large index.
+
 - 2026-05-22: Root package examples now give pkg.go.dev readers a compiled `Service.Search` scoped-retrieval path.
   - Evidence target: `go test . -run 'Test(PackageDocsIncludeCompiledSearchExample|ReleaseMetadataSmokeIncludesSearchExampleGuard)' -count=1` plus `go test . -run ExampleService_Search -count=1` proves the example is present, release-smoke guarded, and executable.
   - Result: pkg.go.dev can render a minimal search call that retrieves a stored conclusion by query and prints its evidence source.

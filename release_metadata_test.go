@@ -556,6 +556,40 @@ func TestPackageDocSurfacesPkgGoDevLandingContent(t *testing.T) {
 	}
 }
 
+func TestPackageDocPointsPkgGoDevReadersToCompiledExamples(t *testing.T) {
+	out, err := exec.Command("go", "doc", ".").Output()
+	if err != nil {
+		t.Fatalf("go doc .: %v", err)
+	}
+	text := strings.Join(strings.Fields(string(out)), " ")
+	for _, want := range []string{
+		"pkg.go.dev examples",
+		"ExampleNewService",
+		"ExampleService_Context",
+		"ExampleService_Search",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("go doc . output does not point pkg.go.dev readers to compiled examples marker %q\n%s", want, text)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesPackageDocExamplesGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocPointsPkgGoDevReadersToCompiledExamples",
+		"ReleaseMetadataSmokeIncludesPackageDocExamplesGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include package doc examples guard %q", want)
+		}
+	}
+}
+
 func TestPackageDocSmokeChecksLocalGoDoc(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
