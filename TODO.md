@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package documentation now explains versioning and adoption notes for pkg.go.dev readers.
+  - Evidence target: `go test . -run 'Test(PackageDocSurfacesVersioningAndAdoptionNotes|ReleaseMetadataSmokeIncludesPackageDocVersioningGuard)' -count=1` proves `go doc .` includes pre-1.0 stability guidance, pinned v0.1.1 install guidance, `@latest` deployment-lock warning, Stable version interpretation, Imported by 0 interpretation, reverse-dependency context, and ecosystem smoke guidance while release metadata smoke keeps the guard wired.
+  - Result: readers landing on pkg.go.dev can interpret go.dev stability and adoption metadata directly from the package overview.
+
 - 2026-05-22: README now explains versioning and adoption notes for pkg.go.dev readers.
   - Evidence target: `go test . -run 'Test(ReadmeSurfacesVersioningAndAdoptionNotes|ReleaseMetadataSmokeIncludesReadmeVersioningGuard)' -count=1` proves the README includes pre-1.0 stability guidance, a pinned v0.1.1 dependency command, an `@latest` deployment-lock warning, Imported by 0 interpretation, and ecosystem smoke guidance while release metadata smoke keeps the guard wired.
   - Result: readers can interpret go.dev stability and adoption metadata without confusing popularity counters or `@latest` with deployment readiness.

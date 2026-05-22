@@ -62,6 +62,14 @@
 // examples, make public-module-smoke for external imports, and make
 // install-smoke for the cmd/goncho-bench command path.
 //
+// Versioning and adoption notes: Goncho is pre-1.0, so read the go.dev Stable
+// version signal as not yet v1-stable. For reproducible builds, pin with
+// go get github.com/TrebuchetDynamics/goncho@v0.1.1 or a reviewed commit;
+// @latest is a discovery shortcut, not a deployment lock. pkg.go.dev currently
+// shows Imported by 0, but that reverse-dependency count is adoption context,
+// not a correctness gate. Before upgrading a pinned host, run make
+// ecosystem-smoke from a checkout.
+//
 // Goncho is pre-1.0. Pin the module version or commit you deploy against, keep
 // live verification in the host, and treat retrieved memory as orientation
 // until current evidence confirms it.

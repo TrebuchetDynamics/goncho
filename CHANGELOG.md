@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added package documentation versioning and adoption notes for pkg.go.dev readers evaluating Stable version and Imported by metadata.
 - Added README versioning and adoption notes for pkg.go.dev readers evaluating pre-1.0 stability and Imported by metadata.
 - Added package documentation that maps go.dev package signals to local smoke checks.
 - Added a README go.dev signal map that ties public package metadata to local smoke checks.

@@ -785,6 +785,28 @@ func TestPackageDocSurfacesGoDevPackageSignals(t *testing.T) {
 	}
 }
 
+func TestPackageDocSurfacesVersioningAndAdoptionNotes(t *testing.T) {
+	out, err := exec.Command("go", "doc", ".").Output()
+	if err != nil {
+		t.Fatalf("go doc .: %v", err)
+	}
+	text := strings.Join(strings.Fields(string(out)), " ")
+	for _, want := range []string{
+		"Versioning and adoption notes",
+		"pre-1.0",
+		"go get github.com/TrebuchetDynamics/goncho@v0.1.1",
+		"@latest is a discovery shortcut, not a deployment lock",
+		"Stable version",
+		"Imported by 0",
+		"reverse-dependency count",
+		"make ecosystem-smoke",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("go doc . output does not surface versioning and adoption marker %q\n%s", want, text)
+		}
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesPackageDocExamplesGuard(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -845,6 +867,22 @@ func TestReleaseMetadataSmokeIncludesPackageDocGoDevSignalGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include package doc go.dev signal guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesPackageDocVersioningGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocSurfacesVersioningAndAdoptionNotes",
+		"ReleaseMetadataSmokeIncludesPackageDocVersioningGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include package doc versioning guard %q", want)
 		}
 	}
 }
