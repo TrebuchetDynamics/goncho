@@ -16,6 +16,8 @@ The roadmap is framed as design constraints first and feature promises second.
 | Failures are part of intelligence | storable as memory or conclusions | first-class negative memory |
 | Optional adapters stay optional | no mandatory cloud dependency | pluggable consolidation and recall |
 
+Related concept pages expand the same constraints: [Trust-Preserving Context](/concepts/trust-preserving-context/), [Evidence, Claims, and Beliefs](/concepts/evidence-claims-beliefs/), [Orientation Packs](/concepts/orientation-packs/), [Negative Memory](/concepts/negative-memory/), and [Current Capabilities](/start/current-capabilities/).
+
 ## Not Yet Stable API
 
 These terms guide architecture but are not stable exported APIs yet:
