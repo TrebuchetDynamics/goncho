@@ -390,6 +390,7 @@ Start here:
 - [Current Capabilities](docs-site/src/content/docs/start/current-capabilities.md)
 - [Quick Start](docs-site/src/content/docs/start/quick-start.md)
 - [Core API](docs-site/src/content/docs/reference/core-api.md)
+- [Memory Tools](docs-site/src/content/docs/reference/memory-tools.md)
 - [Gormes Agent Integration](docs-site/src/content/docs/integrations/gormes-agent.md)
 - [Honcho Compatibility](docs-site/src/content/docs/reference/honcho-compatibility.md)
 - [Local Markdown Memory](docs-site/src/content/docs/reference/local-markdown-memory.md)
