@@ -364,6 +364,8 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "Insert latency ms")
 	assertBenchFileContains(t, mdOut, "Latency p50 ms")
 	assertBenchFileContains(t, mdOut, "RSS bytes")
+	assertBenchFileContains(t, mdOut, "## Failure categories")
+	assertBenchFileContains(t, mdOut, "| `bm25` | `gold_rank_1` | 1 |")
 }
 
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing.T) {

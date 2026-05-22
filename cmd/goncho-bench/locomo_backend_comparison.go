@@ -816,6 +816,12 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 		}
 		fmt.Fprintf(&b, "| `%s` | %t | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d | %d | %d | %d | %d | %d | %s |\n", e.Backend, e.Comparable, e.RecallAnyAt5*100, e.RecallAnyAt10*100, e.StrictRecallAt5*100, e.StrictRecallAt10*100, e.NDCGAt5*100, e.NDCGAt10*100, e.MRR*100, e.InsertLatencyMs, e.SearchLatencyMs, e.LatencyMs.Min, e.LatencyMs.P50, e.LatencyMs.P95, e.LatencyMs.Max, e.RSSBytes, strings.ReplaceAll(note, "|", "/"))
 	}
+	b.WriteString("\n## Failure categories\n\n| Backend | Category | Questions |\n| --- | --- | ---: |\n")
+	for _, e := range report.Backends {
+		for _, category := range sortedLocomoFailureCategories(e.FailureCategories) {
+			fmt.Fprintf(&b, "| `%s` | `%s` | %d |\n", e.Backend, category, e.FailureCategories[category])
+		}
+	}
 	b.WriteString("\n## Setup notes\n\n")
 	b.WriteString("- Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")
 	b.WriteString("- agentmemory probe: `python3 scripts/bench_agentmemory_locomo.py --capability`. Comparable when `AGENTMEMORY_SOURCE_DIR` points at PR #583 / commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` with npm dependencies installed. This adapter uses the standalone InMemoryKV fallback, not the full running agentmemory server.\n")
