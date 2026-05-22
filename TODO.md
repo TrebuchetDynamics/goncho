@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now link the LOCOMO BM25-vs-Goncho candidate-generation failure comparison audit.
+  - Evidence target: `go test . -run TestBenchmarkDocsLinkLocomoCandidateFailureComparisonAudit -count=1` proves README and Retrieval Benchmarks docs link `docs/benchmarks/failures/locomo-2026-05-20-bm25-vs-goncho.jsonl` and name the BM25-win `missing_candidate` diagnosis.
+  - Result: LOCOMO readers can trace the candidate-generation milestone back to the failure-comparison audit instead of trusting the summary alone.
+
 - 2026-05-22: Public benchmark docs now label LOCOMO smoke failure audits as smoke-only evidence.
   - Evidence target: `go test . -run TestBenchmarkDocsLabelSmokeFailureAuditArtifacts -count=1` proves README and Retrieval Benchmarks docs distinguish `docs/benchmarks/failures/locomo-smoke-categories.jsonl` and `docs/benchmarks/failures/locomo-backend-comparison-smoke.jsonl` from historical full-run evidence.
   - Result: LOCOMO readers can use smoke failure audits for harness checks without mistaking them for frozen full-run audit artifacts.
