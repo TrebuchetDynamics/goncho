@@ -36,6 +36,7 @@
 - LOCOMO external backend comparison now clamps comparable external rows to the requested top-K window and rejects stable memory IDs from a different conversation than the question.
 - `make public-release-smoke` now checks the documented public `@latest` version and published date, not just the presence of release metadata fields.
 - `goncho_review` list requests now treat blank `status` values like omitted status and default to open review items.
+- `goncho_review` resolve responses now include peer/session scope.
 - `goncho_review` resolve responses now include review kind.
 - `goncho_review` resolve responses now include review-chain identifiers.
 - `goncho_review` resolve responses now include `resolved_at` audit timestamps.

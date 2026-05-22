@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `goncho_review` resolve output now includes peer/session scope.
+  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `peer_id` and `session_key`.
+  - Result: operators can audit which scoped review queue item was closed without issuing a second list call.
+
 - 2026-05-22: `goncho_review` resolve output now includes review kind.
   - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `kind`.
   - Result: operators can audit whether a closed review item was conflict or stale without issuing a second list call.

@@ -144,6 +144,31 @@ func TestReviewToolResolveOutputIncludesKind(t *testing.T) {
 	}
 }
 
+func TestReviewToolResolveOutputIncludesScope(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:       ReviewKindConflict,
+		PeerID:     "peer-scope",
+		SessionKey: "session-scope",
+		SubjectID:  "mem-scoped",
+		RelatedID:  "mem-related",
+		Reason:     "scoped review item should be audit-visible on resolve",
+		CreatedAt:  time.Date(2026, 5, 22, 16, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	resolved := executeMemoryTool(t, ctx, tool, `{"action":"resolve","id":"`+item.ID+`","resolution":"verified","resolved_by":"agent:mineru","resolution_reason":"scope reviewed"}`)
+	if stringField(t, resolved, "peer_id") != "peer-scope" || stringField(t, resolved, "session_key") != "session-scope" {
+		t.Fatalf("resolve output = %+v, want peer/session review scope", resolved)
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
