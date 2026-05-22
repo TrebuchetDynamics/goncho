@@ -17,6 +17,7 @@ This page names the exported symbols used by the current repository and explains
 | `Profile` | Read the current peer card. |
 | `Search` | Retrieve conclusions or turn evidence relevant to a query. |
 | `Context` | Assemble an orientation pack for prompt construction. |
+| `Chat` | Return a local-memory-backed chat result without requiring hosted Honcho, an LLM, or browser dependency. |
 | `Conclude` | Write or delete manual conclusions. |
 | `CreateMessages` | Persist session messages as lifecycle evidence. |
 | `OnSessionEnd` | Consolidate a completed session into summaries. |
