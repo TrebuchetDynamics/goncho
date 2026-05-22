@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: docs home now surfaces local ecosystem smoke.
+  - Evidence target: `go test . -run TestPublicDocsMentionEcosystemSmoke -count=1` proves README, docs home, operator runbook, current-capabilities, and quick-start docs mention `make ecosystem-smoke`.
+  - Result: public adoption docs expose the local proof command for module resolution, package docs, external importability, and checkout-local benchmark CLI readiness.
+
 - 2026-05-22: docs home and quick-start docs now link the public Go reference.
   - Evidence target: `go test . -run TestPublicDocsLinkGoReference -count=1` proves README, docs home, current-capabilities, and quick-start docs link `https://pkg.go.dev/github.com/TrebuchetDynamics/goncho`.
   - Result: public adoption docs surface pkg.go.dev API reference at first use instead of hiding it in status pages.

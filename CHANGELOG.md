@@ -20,6 +20,7 @@
 
 ### Documentation
 
+- Surfaced ecosystem smoke from docs home and guarded public ecosystem-smoke mentions in release metadata checks.
 - Linked the public Go reference from docs home and quick-start docs, guarded by release metadata smoke checks.
 - Clarified README, quick-start, and operator runbook release-smoke guidance so it includes the release metadata guard.
 - Added a release-metadata guard so changelog release headings must match local git tags.

@@ -81,3 +81,23 @@ func TestPublicDocsLinkGoReference(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicDocsMentionEcosystemSmoke(t *testing.T) {
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/index.md",
+		"docs-site/src/content/docs/operators/runbook.md",
+		"docs-site/src/content/docs/start/current-capabilities.md",
+		"docs-site/src/content/docs/start/quick-start.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if !strings.Contains(string(raw), "make ecosystem-smoke") {
+				t.Fatalf("%s does not mention make ecosystem-smoke", path)
+			}
+		})
+	}
+}

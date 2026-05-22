@@ -29,6 +29,8 @@ Goncho treats memory as the state an agent carries forward: what it knows about 
 Goncho is pre-1.0. The v0.1.x Go library supports local persistence, peer cards, search, context assembly, session summaries, local markdown memory, public tools, trust checks, and compatibility surfaces. Deeper graph/cognitive-map layers remain architecture direction.
 
 Public API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
+
+Local ecosystem smoke: `make ecosystem-smoke` verifies public module resolution, package docs, external importability, and checkout-local benchmark CLI installation.
 :::
 
 ## Four Paths
