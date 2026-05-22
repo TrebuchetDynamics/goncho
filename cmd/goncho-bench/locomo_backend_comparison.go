@@ -35,22 +35,23 @@ type scopedMemoryBackend interface {
 }
 
 type locomoBackendComparisonReport struct {
-	BenchmarkName string                         `json:"benchmark_name"`
-	Mode          string                         `json:"mode"`
-	TopK          int                            `json:"top_k"`
-	NoLLMJudge    bool                           `json:"no_llm_judge"`
-	GeneratedAt   string                         `json:"generated_at"`
-	RepoCommit    string                         `json:"repo_commit,omitempty"`
-	GoVersion     string                         `json:"go_version"`
-	GOOS          string                         `json:"goos"`
-	GOARCH        string                         `json:"goarch"`
-	CPUCount      int                            `json:"cpu_count"`
-	FixturePaths  locomoFixturePaths             `json:"fixture_paths"`
-	Source        map[string]any                 `json:"source,omitempty"`
-	Rules         []string                       `json:"rules"`
-	MemoryCount   int                            `json:"memory_count"`
-	QuestionCount int                            `json:"question_count"`
-	Backends      []locomoBackendComparisonEntry `json:"backends"`
+	BenchmarkName       string                         `json:"benchmark_name"`
+	Mode                string                         `json:"mode"`
+	TopK                int                            `json:"top_k"`
+	NoLLMJudge          bool                           `json:"no_llm_judge"`
+	GeneratedAt         string                         `json:"generated_at"`
+	RepoCommit          string                         `json:"repo_commit,omitempty"`
+	GoVersion           string                         `json:"go_version"`
+	GOOS                string                         `json:"goos"`
+	GOARCH              string                         `json:"goarch"`
+	CPUCount            int                            `json:"cpu_count"`
+	FixturePaths        locomoFixturePaths             `json:"fixture_paths"`
+	Source              map[string]any                 `json:"source,omitempty"`
+	Rules               []string                       `json:"rules"`
+	MemoryCount         int                            `json:"memory_count"`
+	MemoryTokenEstimate int                            `json:"memory_token_estimate"`
+	QuestionCount       int                            `json:"question_count"`
+	Backends            []locomoBackendComparisonEntry `json:"backends"`
 }
 
 type locomoBackendComparisonEntry struct {
@@ -128,7 +129,7 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 			"same top-K scoring",
 			"if stable memory IDs are unavailable, mark backend not comparable",
 		},
-		MemoryCount: len(data.Memories), QuestionCount: len(data.Questions), Backends: entries,
+		MemoryCount: len(data.Memories), MemoryTokenEstimate: locomoMemoryTokenEstimate(data.Memories), QuestionCount: len(data.Questions), Backends: entries,
 	}
 	if err := writeLocomoBackendComparisonJSON(cfg.LocomoBackendComparisonJSON, report); err != nil {
 		return err
@@ -785,7 +786,7 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	if strings.TrimSpace(failuresPath) != "" {
 		fmt.Fprintf(&b, "- Failure JSONL: `%s`\n", failuresPath)
 	}
-	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.TopK, report.NoLLMJudge)
+	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- Memory token estimate: `%d`\n- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.MemoryTokenEstimate, report.TopK, report.NoLLMJudge)
 	b.WriteString("## Rules\n\n")
 	for _, rule := range report.Rules {
 		fmt.Fprintf(&b, "- %s\n", rule)

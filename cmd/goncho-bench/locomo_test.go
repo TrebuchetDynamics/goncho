@@ -386,6 +386,9 @@ func TestRunLocomoBenchmarkHonorsConfiguredLimit(t *testing.T) {
 	if rawReport["top_k"] != float64(1) {
 		t.Fatalf("report top_k = %v, want configured limit 1", rawReport["top_k"])
 	}
+	if rawReport["memory_token_estimate"] != float64(6) {
+		t.Fatalf("report memory_token_estimate = %v, want deterministic content token estimate 6", rawReport["memory_token_estimate"])
+	}
 	var report locomoReport
 	if err := json.Unmarshal(raw, &report); err != nil {
 		t.Fatalf("decode report: %v", err)
@@ -487,6 +490,9 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "- Top-K: `10`") {
 		t.Fatalf("markdown missing effective top-K provenance:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "Memory token estimate") {
+		t.Fatalf("markdown missing memory token estimate:\n%s", mdRaw)
 	}
 	if !strings.Contains(string(mdRaw), "Search latency ms") || !strings.Contains(string(mdRaw), "RSS bytes") {
 		t.Fatalf("markdown missing resource metric columns:\n%s", mdRaw)

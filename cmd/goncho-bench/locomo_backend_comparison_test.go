@@ -307,6 +307,17 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	if err := runLocomoBackendComparison(ctx, config{LocomoMemoriesPath: memories, LocomoQuestionsPath: questions, LocomoBackendComparisonJSON: jsonOut, LocomoBackendComparisonMD: mdOut, LocomoBackendComparisonFailures: failuresOut}); err != nil {
 		t.Fatal(err)
 	}
+	rawReportBytes, err := os.ReadFile(jsonOut)
+	if err != nil {
+		t.Fatalf("read backend comparison report: %v", err)
+	}
+	var rawReport map[string]any
+	if err := json.Unmarshal(rawReportBytes, &rawReport); err != nil {
+		t.Fatalf("decode backend comparison report: %v", err)
+	}
+	if rawReport["memory_token_estimate"] != float64(15) {
+		t.Fatalf("backend comparison memory_token_estimate = %v, want deterministic content token estimate 15", rawReport["memory_token_estimate"])
+	}
 	assertBenchFileContains(t, jsonOut, `"backend": "goncho"`)
 	assertBenchFileContains(t, jsonOut, `"backend": "agentmemory"`)
 	assertBenchFileContains(t, jsonOut, `"comparable": false`)
@@ -317,6 +328,7 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "benchmark adapter suite")
 	assertBenchFileContains(t, mdOut, "Failure JSONL")
 	assertBenchFileContains(t, mdOut, "- Top-K: `10`")
+	assertBenchFileContains(t, mdOut, "- Memory token estimate: `15`")
 }
 
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing.T) {

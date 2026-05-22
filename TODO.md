@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO retrieval and backend-comparison reports now record deterministic memory token estimates.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomo(BenchmarkHonorsConfiguredLimit|BackendComparisonWritesJSONAndMarkdown|SmokeProducesReport)' -count=1` proves JSON artifacts emit `memory_token_estimate` and markdown summaries print the value.
+  - Result: benchmark artifacts now satisfy the roadmap's memory-count plus total-token-estimate reporting requirement without changing scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval reports now record per-system search latency and RSS metrics.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoSmokeProducesReport -count=1` proves JSON system rows emit `search_latency_ms` and `rss_bytes`, and markdown summaries include resource metric columns.
   - Result: retrieval artifacts now satisfy the benchmark roadmap's latency/RSS evidence requirement without changing scoring semantics.

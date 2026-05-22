@@ -48,22 +48,23 @@ type locomoDataset struct {
 }
 
 type locomoReport struct {
-	BenchmarkName string               `json:"benchmark_name"`
-	Mode          string               `json:"mode"`
-	TopK          int                  `json:"top_k"`
-	NoLLMJudge    bool                 `json:"no_llm_judge"`
-	GeneratedAt   string               `json:"generated_at"`
-	RepoCommit    string               `json:"repo_commit,omitempty"`
-	GoVersion     string               `json:"go_version"`
-	GOOS          string               `json:"goos"`
-	GOARCH        string               `json:"goarch"`
-	CPUCount      int                  `json:"cpu_count"`
-	FixturePaths  locomoFixturePaths   `json:"fixture_paths"`
-	Source        map[string]any       `json:"source,omitempty"`
-	MemoryCount   int                  `json:"memory_count"`
-	QuestionCount int                  `json:"question_count"`
-	LeakageChecks locomoLeakageChecks  `json:"leakage_checks"`
-	Systems       []locomoSystemReport `json:"systems"`
+	BenchmarkName       string               `json:"benchmark_name"`
+	Mode                string               `json:"mode"`
+	TopK                int                  `json:"top_k"`
+	NoLLMJudge          bool                 `json:"no_llm_judge"`
+	GeneratedAt         string               `json:"generated_at"`
+	RepoCommit          string               `json:"repo_commit,omitempty"`
+	GoVersion           string               `json:"go_version"`
+	GOOS                string               `json:"goos"`
+	GOARCH              string               `json:"goarch"`
+	CPUCount            int                  `json:"cpu_count"`
+	FixturePaths        locomoFixturePaths   `json:"fixture_paths"`
+	Source              map[string]any       `json:"source,omitempty"`
+	MemoryCount         int                  `json:"memory_count"`
+	MemoryTokenEstimate int                  `json:"memory_token_estimate"`
+	QuestionCount       int                  `json:"question_count"`
+	LeakageChecks       locomoLeakageChecks  `json:"leakage_checks"`
+	Systems             []locomoSystemReport `json:"systems"`
 }
 
 type locomoFixturePaths struct {
@@ -162,22 +163,23 @@ func runLocomoBenchmark(ctx context.Context, cfg config) error {
 		benchmarkName = locomoBenchmarkName
 	}
 	report := locomoReport{
-		BenchmarkName: benchmarkName,
-		Mode:          "retrieval",
-		TopK:          limit,
-		NoLLMJudge:    true,
-		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
-		RepoCommit:    gitCommit(),
-		GoVersion:     runtime.Version(),
-		GOOS:          runtime.GOOS,
-		GOARCH:        runtime.GOARCH,
-		CPUCount:      runtime.NumCPU(),
-		FixturePaths:  locomoFixturePaths{Memories: cfg.LocomoMemoriesPath, Questions: cfg.LocomoQuestionsPath},
-		Source:        loadLocomoSourceMetadata(cfg.LocomoMemoriesPath),
-		MemoryCount:   len(data.Memories),
-		QuestionCount: len(data.Questions),
-		LeakageChecks: checkLocomoLeakage(data),
-		Systems:       reports,
+		BenchmarkName:       benchmarkName,
+		Mode:                "retrieval",
+		TopK:                limit,
+		NoLLMJudge:          true,
+		GeneratedAt:         time.Now().UTC().Format(time.RFC3339),
+		RepoCommit:          gitCommit(),
+		GoVersion:           runtime.Version(),
+		GOOS:                runtime.GOOS,
+		GOARCH:              runtime.GOARCH,
+		CPUCount:            runtime.NumCPU(),
+		FixturePaths:        locomoFixturePaths{Memories: cfg.LocomoMemoriesPath, Questions: cfg.LocomoQuestionsPath},
+		Source:              loadLocomoSourceMetadata(cfg.LocomoMemoriesPath),
+		MemoryCount:         len(data.Memories),
+		MemoryTokenEstimate: locomoMemoryTokenEstimate(data.Memories),
+		QuestionCount:       len(data.Questions),
+		LeakageChecks:       checkLocomoLeakage(data),
+		Systems:             reports,
 	}
 	if err := writeLocomoReport(cfg.OutPath, report); err != nil {
 		return err
@@ -532,6 +534,14 @@ func locomoIndexableContent(mem locomoMemoryRow) string {
 	return strings.Join(parts, "\n")
 }
 
+func locomoMemoryTokenEstimate(memories []locomoMemoryRow) int {
+	total := 0
+	for _, mem := range memories {
+		total += len(benchTokenPattern.FindAllString(strings.ToLower(mem.Content), -1))
+	}
+	return total
+}
+
 func scoreLocomoQuestion(q locomoQuestionRow, retrieved []string) locomoQuestionResult {
 	rank := firstRelevantRank(retrieved, q.GoldMemoryIDs)
 	mrr := 0.0
@@ -742,6 +752,7 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	fmt.Fprintf(&b, "- Questions %s: `%s`\n", label, report.FixturePaths.Questions)
 	fmt.Fprintf(&b, "- Questions: `%d`\n", report.QuestionCount)
 	fmt.Fprintf(&b, "- Memories: `%d`\n", report.MemoryCount)
+	fmt.Fprintf(&b, "- Memory token estimate: `%d`\n", report.MemoryTokenEstimate)
 	fmt.Fprintf(&b, "- Mode: `%s`\n", report.Mode)
 	fmt.Fprintf(&b, "- Top-K: `%d`\n", report.TopK)
 	fmt.Fprintf(&b, "- no_llm_judge: `%t`\n", report.NoLLMJudge)
