@@ -333,6 +333,7 @@ go test ./... -run TestGonchoGoalNegativeDriftAnchorWarnsBeforeRepeatedFailureE2
 Benchmarks and public package smoke checks:
 
 ```bash
+make release-smoke
 make ecosystem-smoke
 go test ./cmd/goncho-bench
 make bench-longmemeval-s-smoke

@@ -90,6 +90,12 @@ Prefer `goncho_context`, `goncho_search`, `goncho_remember`, `goncho_review`, an
 ### Build-time checks
 
 ```sh
+make release-smoke
+```
+
+`make release-smoke` runs ecosystem smoke, `go test ./...`, `go vet ./...`, `go test -race ./...`, and the docs-site build. For narrower checks, run:
+
+```sh
 make ecosystem-smoke
 go test ./integration/gormes
 go test ./...
@@ -229,12 +235,12 @@ Primary outputs:
 
 Before upgrading Goncho in an operator environment:
 
-1. Pin the module version or commit.
-2. Back up the current SQLite database.
-3. Run `go test ./...` in the repository.
-4. Run the restart persistence checks.
-5. Run trust checks for quarantine, stale code claims, and negative drift anchors.
-6. Run `make bench-locomo-backends-smoke` if retrieval/backend harness behavior changed.
+1. Run `make release-smoke` on the candidate commit.
+2. Run the restart persistence checks.
+3. Run trust checks for quarantine, stale code claims, and negative drift anchors.
+4. Run `make bench-locomo-backends-smoke` if retrieval/backend harness behavior changed.
+5. Pin the module version or commit.
+6. Back up the current SQLite database.
 7. Deploy to a staging agent with a copied database.
 8. Confirm startup logs show the expected workspace, observer, DB path, and tools.
 9. Promote to production only after the staging agent builds a valid context pack.

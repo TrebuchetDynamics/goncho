@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: local release smoke added.
+  - Evidence target: `make release-smoke` runs `make ecosystem-smoke`, `go test ./...`, `go vet ./...`, `go test -race ./...`, and the docs-site build.
+  - Result: next v0.1.x prep has one local pre-tag command without claiming CI or creating a tag.
+
 - 2026-05-22: `goncho_review` review-chain filters added.
   - Evidence target: `go test . -run TestReviewToolFiltersReviewChainsBySubjectAndRelatedID -count=1` proves `subject_id` plus `related_id` narrows open review items to one matching chain edge.
   - Result: review/staleness/supersession items are easier to inspect without losing historical evidence.
