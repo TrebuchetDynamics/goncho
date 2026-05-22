@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.1 - 2026-05-22
+
 ### Added
 
 - Added `make docs-site-smoke` to verify the public documentation site builds locally with `npm run build`.
@@ -99,9 +101,9 @@
 - Clarified library install guidance versus the installable `goncho-bench` benchmark CLI in the README and quick-start docs.
 - Clarified current benchmark roadmap and backlog status after the LOCOMO stable-ID backend comparison freeze and stale benchmark blocker resolution.
 
-## v0.1.1 candidate notes - 2026-05-20
+### Benchmark candidate milestone from 2026-05-20
 
-### Added
+#### Added
 
 - `cmd/goncho-bench`, a local LongMemEval-style retrieval benchmark runner that reports `R@5`, `R@10`, and `MRR` from JSONL memory/question fixtures.
 - `--runs` loop mode for repeated deterministic retrieval benchmark runs.
@@ -115,12 +117,12 @@
 - Frozen LOCOMO candidate-generation milestone: Goncho recall_any@5 `0.5247 -> 0.6014`, recall_any@10 `0.5873 -> 0.6791`, MRR `0.4104 -> 0.4690`, and BM25-win `missing_candidate` failures `164 -> 2` without LLM judgment, answer scoring, gold-ID hacks, or ranking changes.
 - Stable-ID LOCOMO external-backend adapter comparison harness for Goncho, BM25, SQLite FTS5, agentmemory, and mem0, with centralized ID scoring and not-comparable reporting.
 
-### Changed
+#### Changed
 
 - Widened LOCOMO lexical candidate generation while preserving LongMemEval-S benchmark performance.
 - Deepened retrieval architecture by moving search/context orchestration behind an internal retrieval module without public API changes.
 
-### Documentation
+#### Documentation
 
 - Added benchmark operator guidance, backend-adapter rules, LOCOMO milestone notes, and architecture design/implementation plans for retrieval and lifecycle module deepening.
 
