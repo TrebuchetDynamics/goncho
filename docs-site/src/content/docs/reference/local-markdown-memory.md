@@ -23,6 +23,8 @@ store := goncho.NewLocalMarkdownMemoryStore(db, goncho.LocalMarkdownMemoryConfig
 
 The store reports a local-first status, reloads markdown before retrieval, and exports after writes.
 
+Use it behind the [Memory Tools](/reference/memory-tools/) surface when an agent host wants editable local storage for `store_memory`, `retrieve_memory`, and review workflows.
+
 ## Why It Matters
 
 Editable markdown is a repair surface. Humans can inspect and correct memory without a hosted dashboard or opaque vector index.
