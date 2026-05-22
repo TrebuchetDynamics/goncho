@@ -21,6 +21,7 @@
 
 ### Documentation
 
+- Linked first-touch public docs to the Retrieval Benchmarks methodology and stable-ID backend comparison reference.
 - Clarified first-touch public docs that the root module is not a root `go install` target.
 - Surfaced the public v0.1.0 published date in first-touch package docs.
 - Clarified first-touch public adoption docs to use `go get github.com/TrebuchetDynamics/goncho@latest` for the library package.

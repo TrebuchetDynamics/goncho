@@ -102,6 +102,41 @@ func TestPublicDocsMentionEcosystemSmoke(t *testing.T) {
 	}
 }
 
+func TestPublicDocsLinkRetrievalBenchmarksReference(t *testing.T) {
+	wantByPath := map[string][]string{
+		"README.md": {
+			"Retrieval Benchmarks",
+			"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+		},
+		"docs-site/src/content/docs/index.md": {
+			"Retrieval Benchmarks",
+			"/reference/retrieval-benchmarks/",
+		},
+		"docs-site/src/content/docs/start/current-capabilities.md": {
+			"Retrieval Benchmarks",
+			"/reference/retrieval-benchmarks/",
+		},
+		"docs-site/src/content/docs/start/quick-start.md": {
+			"Retrieval Benchmarks",
+			"/reference/retrieval-benchmarks/",
+		},
+	}
+	for path, wants := range wantByPath {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, want := range wants {
+				if !strings.Contains(text, want) {
+					t.Fatalf("%s does not link benchmark methodology reference marker %q", path, want)
+				}
+			}
+		})
+	}
+}
+
 func TestPublicAdoptionDocsMentionPublicModuleSmoke(t *testing.T) {
 	for _, path := range []string{
 		"README.md",
