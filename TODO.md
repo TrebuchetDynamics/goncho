@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: session-scoped `review_required` context warnings now name their session key.
+  - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence includes `session_key=<session>` while keeping same-session counts, review item IDs, chains, and evidence IDs.
+  - Result: lifecycle review warnings are easier to audit because the compact warning states the scope used to filter open review items.
+
 - 2026-05-22: bounded `review_required` context warnings now report omitted detail counts.
   - Evidence target: `go test . -run 'TestContextReports(OpenReviewItemsAsUnavailableEvidence|ReviewWarningMarksOmittedDetails)' -count=1` proves context unavailable evidence says `item_details_omitted=N` when more open review items exist than the bounded item/chains/evidence preview shows.
   - Result: lifecycle review warnings stay compact without hiding that additional open review items need adjudication.

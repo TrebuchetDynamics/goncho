@@ -396,5 +396,5 @@ func (r retrievalModule) reviewContextUnavailableEvidence(ctx context.Context, p
 	if err != nil {
 		return nil, err
 	}
-	return reviewRequiredUnavailableEvidence(reviewItemsForContextSession(items.Items, sessionKey)), nil
+	return reviewRequiredUnavailableEvidence(reviewItemsForContextSession(items.Items, sessionKey), sessionKey), nil
 }

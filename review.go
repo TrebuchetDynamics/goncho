@@ -209,9 +209,16 @@ func reviewItemsForContextSession(items []ReviewItem, sessionKey string) []Revie
 	return filtered
 }
 
-func reviewRequiredUnavailableEvidence(items []ReviewItem) []ContextUnavailableEvidence {
+func reviewRequiredUnavailableEvidence(items []ReviewItem, sessionKeys ...string) []ContextUnavailableEvidence {
 	if len(items) == 0 {
 		return nil
+	}
+	sessionKey := ""
+	for _, value := range sessionKeys {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			sessionKey = trimmed
+			break
+		}
 	}
 	counts := map[ReviewKind]int{}
 	for _, item := range items {
@@ -225,6 +232,9 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem) []ContextUnavailableE
 	}
 	const detailLimit = 3
 	reason := fmt.Sprintf("%d open review items require adjudication: %s", len(items), strings.Join(parts, " "))
+	if sessionKey != "" {
+		reason += "; session_key=" + sessionKey
+	}
 	if reviewIDs := reviewItemIDs(items, detailLimit); len(reviewIDs) > 0 {
 		reason += "; items=" + strings.Join(reviewIDs, " ")
 	}
