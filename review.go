@@ -209,6 +209,9 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem) []ContextUnavailableE
 		}
 	}
 	reason := fmt.Sprintf("%d open review items require adjudication: %s", len(items), strings.Join(parts, " "))
+	if reviewIDs := reviewItemIDs(items, 3); len(reviewIDs) > 0 {
+		reason += "; items=" + strings.Join(reviewIDs, " ")
+	}
 	if chains := reviewItemChainEvidence(items, 3); len(chains) > 0 {
 		reason += "; chains=" + strings.Join(chains, " ")
 	}
@@ -220,6 +223,24 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem) []ContextUnavailableE
 		Capability: "review_required",
 		Reason:     reason,
 	}}
+}
+
+func reviewItemIDs(items []ReviewItem, limit int) []string {
+	if limit <= 0 {
+		return nil
+	}
+	reviewIDs := []string{}
+	for _, item := range items {
+		id := strings.TrimSpace(item.ID)
+		if id == "" {
+			continue
+		}
+		reviewIDs = append(reviewIDs, id)
+		if len(reviewIDs) >= limit {
+			break
+		}
+	}
+	return reviewIDs
 }
 
 func reviewItemChainEvidence(items []ReviewItem, limit int) []string {

@@ -13,6 +13,7 @@ func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 	ctx := context.Background()
 
 	createdAt := time.Date(2026, 5, 19, 14, 0, 0, 0, time.UTC)
+	reviewIDs := []string{}
 	for _, item := range []ReviewItemCreateParams{
 		{
 			Kind:        ReviewKindConflict,
@@ -34,9 +35,11 @@ func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 			CreatedAt:   createdAt.Add(time.Second),
 		},
 	} {
-		if _, err := svc.CreateReviewItem(ctx, item); err != nil {
+		created, err := svc.CreateReviewItem(ctx, item)
+		if err != nil {
 			t.Fatalf("CreateReviewItem: %v", err)
 		}
+		reviewIDs = append(reviewIDs, created.ID)
 	}
 	if _, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
 		Kind:        ReviewKindConflict,
@@ -71,6 +74,11 @@ func TestContextReportsOpenReviewItemsAsUnavailableEvidence(t *testing.T) {
 	for _, want := range []string{"2 open review items", "conflict=1", "stale=1", "mem-new->mem-old", "mem-stale", "obs-conflict", "obs-stale"} {
 		if !strings.Contains(reviewEvidence.Reason, want) {
 			t.Fatalf("review evidence reason = %q, missing %q", reviewEvidence.Reason, want)
+		}
+	}
+	for _, want := range reviewIDs {
+		if !strings.Contains(reviewEvidence.Reason, want) {
+			t.Fatalf("review evidence reason = %q, missing review item id %q", reviewEvidence.Reason, want)
 		}
 	}
 }

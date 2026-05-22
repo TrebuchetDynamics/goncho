@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `review_required` context warnings now include review item IDs.
+  - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence surfaces bounded review item IDs alongside counts, subject chains, and evidence IDs.
+  - Result: lifecycle review warnings are directly actionable because operators can resolve the listed review items without first running a separate list call.
+
 - 2026-05-22: `review_required` context warnings now include review evidence IDs.
   - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence surfaces bounded `evidence_ids` alongside review counts and subject chains.
   - Result: lifecycle review warnings are easier to audit from context output without silently dropping proof identifiers.
