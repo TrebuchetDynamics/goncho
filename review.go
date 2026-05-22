@@ -248,6 +248,9 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem, sessionKeys ...string
 	}
 	if evidenceIDs := reviewItemEvidenceIDs(items, detailLimit); len(evidenceIDs) > 0 {
 		reason += "; evidence=" + strings.Join(evidenceIDs, " ")
+		if omitted := reviewItemEvidenceIDCount(items) - len(evidenceIDs); omitted > 0 {
+			reason += fmt.Sprintf("; evidence_omitted=%d", omitted)
+		}
 	}
 	if omitted := len(items) - detailLimit; omitted > 0 {
 		reason += fmt.Sprintf("; item_details_omitted=%d", omitted)
@@ -354,6 +357,20 @@ func reviewItemEvidenceIDs(items []ReviewItem, limit int) []string {
 		}
 	}
 	return evidenceIDs
+}
+
+func reviewItemEvidenceIDCount(items []ReviewItem) int {
+	seen := map[string]struct{}{}
+	for _, item := range items {
+		for _, evidenceID := range item.EvidenceIDs {
+			evidenceID = strings.TrimSpace(evidenceID)
+			if evidenceID == "" {
+				continue
+			}
+			seen[evidenceID] = struct{}{}
+		}
+	}
+	return len(seen)
 }
 
 func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList, error) {

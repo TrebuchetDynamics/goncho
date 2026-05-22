@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: bounded `review_required` context warnings now report omitted evidence-ID counts.
+  - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedEvidenceIDs|MarksOmittedDetails)' -count=1` proves context unavailable evidence says `evidence_omitted=N` when more unique evidence IDs exist than the bounded preview shows.
+  - Result: lifecycle review warnings stay compact without hiding that additional proof identifiers exist for open review work.
+
 - 2026-05-22: unscoped `review_required` context warnings now report omitted session-key counts.
   - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedSessionKeys|IncludesSessionKeysWhenUnscoped)' -count=1` proves peer-level review warnings include `session_keys_omitted=N` when more distinct affected sessions exist than the bounded preview shows.
   - Result: lifecycle review warnings stay compact without hiding that additional sessions have open review work.

@@ -40,6 +40,37 @@ func TestContextReportsReviewWarningMarksOmittedDetails(t *testing.T) {
 	}
 }
 
+func TestContextReportsReviewWarningMarksOmittedEvidenceIDs(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	if _, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:        ReviewKindConflict,
+		PeerID:      "peer-evidence-omitted",
+		SessionKey:  "session-evidence-omitted",
+		SubjectID:   "mem-evidence-heavy",
+		RelatedID:   "mem-older",
+		Reason:      "memory conflict has more proof than the compact warning can show",
+		EvidenceIDs: []string{"obs-a", "obs-b", "obs-c", "obs-d"},
+		CreatedAt:   time.Date(2026, 5, 19, 15, 30, 0, 0, time.UTC),
+	}); err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	got, err := svc.Context(ctx, ContextParams{Peer: "peer-evidence-omitted", SessionKey: "session-evidence-omitted"})
+	if err != nil {
+		t.Fatalf("Context: %v", err)
+	}
+
+	reviewEvidence := reviewRequiredEvidenceFromContext(t, got)
+	for _, want := range []string{"1 open review item", "evidence=obs-a obs-b obs-c", "evidence_omitted=1"} {
+		if !strings.Contains(reviewEvidence.Reason, want) {
+			t.Fatalf("review evidence reason = %q, missing %q", reviewEvidence.Reason, want)
+		}
+	}
+}
+
 func reviewRequiredEvidenceFromContext(t *testing.T, got ContextResult) ContextUnavailableEvidence {
 	t.Helper()
 	for i := range got.Unavailable {
