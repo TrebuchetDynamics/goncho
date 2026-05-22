@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO backend-comparison reports now record LOCOMO leakage checks.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves JSON artifacts emit `leakage_checks` and markdown summaries include `## Leakage checks`.
+  - Result: backend-comparison artifacts now satisfy the roadmap's same-leakage-checks requirement without changing retrieval or stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval and backend-comparison reports now record converted fixture database byte sizes.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomoBenchmarkHonorsConfiguredLimit|TestRunLocomoSmokeProducesReport|TestRunLocomoBackendComparisonWritesJSONAndMarkdown' -count=1` proves JSON artifacts emit `database_size_bytes` and markdown summaries print `Database size bytes`.
   - Result: benchmark artifacts now satisfy the roadmap's database-size reporting requirement without changing retrieval or stable-ID scoring semantics.

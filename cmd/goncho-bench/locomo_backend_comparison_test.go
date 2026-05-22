@@ -299,7 +299,7 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	memoriesRaw := `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"Maya keeps the orchid marker in the archive cabinet."}
 {"memory_id":"m2","conversation_id":"c1","session_id":"s1","speaker":"Leo","turn_index":2,"content":"Leo talked about unrelated dashboard notes."}
 `
-	questionsRaw := `{"question_id":"q1","conversation_id":"c1","question":"Where is the orchid marker?","gold_memory_ids":["m1"],"category":"single_hop_retrieval"}
+	questionsRaw := `{"question_id":"q1","conversation_id":"c1","question":"Where is the orchid marker?","gold_memory_ids":["m1"],"category":"single_hop_retrieval","answer_hint":"orchid marker"}
 `
 	writeTestFile(t, memories, memoriesRaw)
 	writeTestFile(t, questions, questionsRaw)
@@ -324,6 +324,10 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	if rawReport["database_size_bytes"] != wantDatabaseSize {
 		t.Fatalf("backend comparison database_size_bytes = %v, want fixture byte size %.0f", rawReport["database_size_bytes"], wantDatabaseSize)
 	}
+	leakage, ok := rawReport["leakage_checks"].(map[string]any)
+	if !ok || leakage["answer_text_in_memory_content"] != float64(1) {
+		t.Fatalf("backend comparison leakage_checks = %#v, want one answer-text leakage count", rawReport["leakage_checks"])
+	}
 	assertBenchFileContains(t, jsonOut, `"backend": "goncho"`)
 	assertBenchFileContains(t, jsonOut, `"backend": "agentmemory"`)
 	assertBenchFileContains(t, jsonOut, `"comparable": false`)
@@ -336,6 +340,7 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "- Top-K: `10`")
 	assertBenchFileContains(t, mdOut, "- Memory token estimate: `15`")
 	assertBenchFileContains(t, mdOut, "- Database size bytes:")
+	assertBenchFileContains(t, mdOut, "## Leakage checks")
 }
 
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing.T) {

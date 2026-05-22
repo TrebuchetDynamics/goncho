@@ -52,6 +52,7 @@ type locomoBackendComparisonReport struct {
 	MemoryTokenEstimate int                            `json:"memory_token_estimate"`
 	DatabaseSizeBytes   int64                          `json:"database_size_bytes"`
 	QuestionCount       int                            `json:"question_count"`
+	LeakageChecks       locomoLeakageChecks            `json:"leakage_checks"`
 	Backends            []locomoBackendComparisonEntry `json:"backends"`
 }
 
@@ -134,7 +135,7 @@ func runLocomoBackendComparison(ctx context.Context, cfg config) error {
 			"same top-K scoring",
 			"if stable memory IDs are unavailable, mark backend not comparable",
 		},
-		MemoryCount: len(data.Memories), MemoryTokenEstimate: locomoMemoryTokenEstimate(data.Memories), DatabaseSizeBytes: databaseSizeBytes, QuestionCount: len(data.Questions), Backends: entries,
+		MemoryCount: len(data.Memories), MemoryTokenEstimate: locomoMemoryTokenEstimate(data.Memories), DatabaseSizeBytes: databaseSizeBytes, QuestionCount: len(data.Questions), LeakageChecks: checkLocomoLeakage(data), Backends: entries,
 	}
 	if err := writeLocomoBackendComparisonJSON(cfg.LocomoBackendComparisonJSON, report); err != nil {
 		return err
@@ -792,6 +793,10 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 		fmt.Fprintf(&b, "- Failure JSONL: `%s`\n", failuresPath)
 	}
 	fmt.Fprintf(&b, "- Memories: `%s`\n- Questions: `%s`\n- Questions: `%d`\n- Memories: `%d`\n- Memory token estimate: `%d`\n- Database size bytes: `%d`\n- Top-K: `%d`\n- no_llm_judge: `%t`\n\n", report.FixturePaths.Memories, report.FixturePaths.Questions, report.QuestionCount, report.MemoryCount, report.MemoryTokenEstimate, report.DatabaseSizeBytes, report.TopK, report.NoLLMJudge)
+	b.WriteString("## Leakage checks\n\n")
+	fmt.Fprintf(&b, "- Answer text present in memory content: `%d`\n", report.LeakageChecks.AnswerTextInMemoryContent)
+	fmt.Fprintf(&b, "- Gold IDs present in memory content: `%d`\n", report.LeakageChecks.GoldIDInMemoryContent)
+	fmt.Fprintf(&b, "- Question text present in memory content: `%d`\n\n", report.LeakageChecks.QuestionTextInMemory)
 	b.WriteString("## Rules\n\n")
 	for _, rule := range report.Rules {
 		fmt.Fprintf(&b, "- %s\n", rule)
