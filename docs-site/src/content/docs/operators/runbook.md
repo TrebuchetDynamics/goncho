@@ -90,6 +90,7 @@ Prefer `goncho_context`, `goncho_search`, `goncho_remember`, `goncho_review`, an
 ### Build-time checks
 
 ```sh
+make ecosystem-smoke
 go test ./integration/gormes
 go test ./...
 cd docs-site && npm run build
