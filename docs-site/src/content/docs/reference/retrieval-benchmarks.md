@@ -21,6 +21,7 @@ LOCOMO result artifacts expand this surface with `NDCG@5`, `NDCG@10`, latency mi
 - Retrieval smoke reproduction: `make bench-locomo-smoke` — CI-safe tiny fixture for retrieval report regeneration.
 - Backend smoke reproduction: `make bench-locomo-backends-smoke` — CI-safe external-backend harness check.
 - Full backend comparison reproduction: `make bench-locomo-backends` — manual full backend comparison with local adapter prerequisites.
+- Failure audit evidence: `docs/benchmarks/failures/locomo-2026-05-20-categories.jsonl` and `docs/benchmarks/failures/locomo-backend-comparison.jsonl` record retrieval-miss categories and not-comparable backend evidence alongside the result JSON.
 
 ## Scientific Validation Targets
 

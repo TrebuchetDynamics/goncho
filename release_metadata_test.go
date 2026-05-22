@@ -284,6 +284,31 @@ func TestBenchmarkDocsNameLocomoReproductionCommands(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsLinkLocomoFailureAuditArtifacts(t *testing.T) {
+	wantMarkers := []string{
+		"Failure audit evidence",
+		"docs/benchmarks/failures/locomo-2026-05-20-categories.jsonl",
+		"docs/benchmarks/failures/locomo-backend-comparison.jsonl",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not link LOCOMO failure-audit artifact marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -294,6 +319,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsSurfaceLocomoResultMetricSet",
 		"BenchmarkDocsDistinguishFrozenLocomoResultArtifacts",
 		"BenchmarkDocsNameLocomoReproductionCommands",
+		"BenchmarkDocsLinkLocomoFailureAuditArtifacts",
 		"ReleaseMetadataSmokeIncludesLocomoResultDocsGuards",
 	} {
 		if !strings.Contains(text, want) {

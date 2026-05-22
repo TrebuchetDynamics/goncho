@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now link LOCOMO failure-audit artifacts beside result JSON evidence.
+  - Evidence target: `go test . -run TestBenchmarkDocsLinkLocomoFailureAuditArtifacts -count=1` proves README and Retrieval Benchmarks docs link `docs/benchmarks/failures/locomo-2026-05-20-categories.jsonl` and `docs/benchmarks/failures/locomo-backend-comparison.jsonl`.
+  - Result: LOCOMO readers can inspect retrieval-miss categories and not-comparable backend evidence without treating result JSON as the only audit trail.
+
 - 2026-05-22: `make release-metadata-smoke` now runs the LOCOMO benchmark-result docs guards.
   - Evidence target: `go test . -run TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards -count=1` proves the release metadata smoke regex includes the LOCOMO metric-surface, frozen-artifact, and reproduction-command guards.
   - Result: the narrow release gate keeps the public LOCOMO benchmark-result claims wired after future docs edits.
