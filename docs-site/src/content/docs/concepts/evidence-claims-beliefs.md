@@ -26,5 +26,5 @@ Examples:
 A belief is a claim accepted for a scope and time. Beliefs can be revised when evidence conflicts, ages out, or becomes less relevant.
 
 :::note[Conceptual example]
-Goncho's current peer cards and conclusions are early belief products. First-class claim lifecycle states are architecture direction.
+Goncho's current peer cards and conclusions are early belief products exposed through the [Core API](/reference/core-api/) and agent-facing [memory tools](/reference/memory-tools/). First-class claim lifecycle states are architecture direction.
 :::
