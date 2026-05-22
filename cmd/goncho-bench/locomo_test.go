@@ -185,6 +185,34 @@ func TestLocomoAnswerHintIsNotIndexedOrScored(t *testing.T) {
 	}
 }
 
+func TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits(t *testing.T) {
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "orchid marker primary"},
+			{MemoryID: "m2", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 2, Content: "orchid marker secondary"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "orchid marker", GoldMemoryIDs: []string{"m2"}, Category: "single_hop_retrieval"}},
+	}
+	for _, system := range []string{"random", "recency", "bm25", "sqlite-fts5", "goncho"} {
+		for _, limit := range []int{0, -1} {
+			t.Run(system+"/limit", func(t *testing.T) {
+				defer func() {
+					if recovered := recover(); recovered != nil {
+						t.Fatalf("retrieve %s with limit %d panicked: %v", system, limit, recovered)
+					}
+				}()
+				got, err := retrieveLocomo(context.Background(), nil, data, data.Questions[0], system, nil, limit)
+				if err != nil {
+					t.Fatalf("retrieve %s with limit %d: %v", system, limit, err)
+				}
+				if len(got) != 0 {
+					t.Fatalf("retrieve %s with limit %d = %v, want no IDs", system, limit, got)
+				}
+			})
+		}
+	}
+}
+
 func TestRunLocomoBenchmarkHonorsConfiguredLimit(t *testing.T) {
 	dir := t.TempDir()
 	memories := filepath.Join(dir, "memories.jsonl")

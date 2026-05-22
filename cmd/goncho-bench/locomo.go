@@ -340,6 +340,9 @@ func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string
 }
 
 func retrieveLocomo(ctx context.Context, svc *goncho.Service, data locomoDataset, q locomoQuestionRow, system string, contentIDs map[string][]string, limit int) ([]string, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
 	items := locomoConversationMemories(data, q.ConversationID)
 	switch system {
 	case "random":

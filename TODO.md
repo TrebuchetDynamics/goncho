@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO direct retrieval now rejects non-positive limits before backend work.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits -count=1` proves direct calls with zero or negative limits return no IDs across random, recency, BM25, SQLite FTS5, and Goncho retrieval paths.
+  - Result: internal LOCOMO retrieval now treats non-positive top-K windows as empty instead of panicking in slice helpers or letting SQLite FTS5 return all rows for `LIMIT -1`.
+
 - 2026-05-22: LOCOMO fixture loading now rejects duplicate gold stable IDs before scoring.
   - Evidence target: `go test ./cmd/goncho-bench -run TestLoadLocomoDatasetRejectsDuplicateGoldStableIDs -count=1` proves repeated `gold_memory_ids` within one question fail at fixture-load time instead of silently reaching centralized stable-ID scoring.
   - Result: LOCOMO reports and external-backend comparisons now fail closed when gold evidence IDs are not unique per question.
