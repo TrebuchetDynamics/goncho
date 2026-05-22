@@ -36,6 +36,18 @@ The root module is a library package; `goncho-bench` is the installable command.
 [![Go Reference](https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho.svg)](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+## Package Status
+
+Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: tagged v0.1.x releases, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts.
+
+Verify public module resolution without editing a project:
+
+```bash
+go list -m github.com/TrebuchetDynamics/goncho@latest
+```
+
+Use `go get` to depend on the library package, and install `cmd/goncho-bench` when you need a command-line benchmark runner.
+
 ---
 
 ## Why Goncho
