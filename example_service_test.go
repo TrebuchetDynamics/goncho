@@ -103,3 +103,47 @@ func ExampleService_Context() {
 	// Current conclusions:
 	// - Use SQLite local memory for agent handoffs.
 }
+
+func ExampleService_Search() {
+	ctx := context.Background()
+	dir, err := os.MkdirTemp("", "goncho-search-example-*")
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = os.RemoveAll(dir) }()
+
+	store, err := memory.OpenSqlite(filepath.Join(dir, "memory.db"), 0, nil)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = store.Close(ctx) }()
+
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		panic(err)
+	}
+
+	svc := goncho.NewService(store.DB(), goncho.Config{
+		WorkspaceID:    "example-agent",
+		ObserverPeerID: "assistant",
+	}, nil)
+
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{
+		Peer:       "user:juan",
+		Conclusion: "Keep deployment notes evidence-first and searchable.",
+	}); err != nil {
+		panic(err)
+	}
+
+	results, err := svc.Search(ctx, goncho.SearchParams{
+		Peer:  "user:juan",
+		Query: "deployment evidence",
+		Limit: 1,
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%s: %s\n", results.Results[0].Source, results.Results[0].Content)
+
+	// Output:
+	// conclusion: Keep deployment notes evidence-first and searchable.
+}

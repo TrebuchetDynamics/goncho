@@ -309,6 +309,7 @@ func TestReadmeSurfacesPkgGoDevEvaluationPath(t *testing.T) {
 		"First useful call",
 		"compiled `NewService` example",
 		"compiled `Service.Context` example",
+		"compiled `Service.Search` example",
 		"What to read next",
 	} {
 		if !strings.Contains(text, want) {
@@ -358,6 +359,26 @@ func TestPackageDocsIncludeCompiledContextExample(t *testing.T) {
 	}
 }
 
+func TestPackageDocsIncludeCompiledSearchExample(t *testing.T) {
+	raw, err := os.ReadFile("example_service_test.go")
+	if err != nil {
+		t.Fatalf("ReadFile example_service_test.go: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"func ExampleService_Search()",
+		"svc.Conclude",
+		"svc.Search",
+		"results.Results[0].Source",
+		"results.Results[0].Content",
+		"// Output:",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("example_service_test.go does not include pkg.go.dev search example marker %q", want)
+		}
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesReadmePkgGoDevGuard(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -402,6 +423,22 @@ func TestReleaseMetadataSmokeIncludesContextExampleGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include context example guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesSearchExampleGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocsIncludeCompiledSearchExample",
+		"ReleaseMetadataSmokeIncludesSearchExampleGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include search example guard %q", want)
 		}
 	}
 }

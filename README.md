@@ -44,7 +44,7 @@ If you are evaluating Goncho on pkg.go.dev, start here:
 - **Use when:** your Go agent host needs local SQLite memory, scoped recall, review queues, stale-claim warnings, and verification-first context assembly.
 - **Do not use as:** a hosted memory API, generic vector database, standalone CLI app, or replacement for live checks before tool execution.
 - **First useful call:** wire `memory.OpenSqlite`, run `goncho.RunMigrations`, create `goncho.NewService`, then call `svc.Context` to build an orientation pack.
-- **Runnable reference:** pkg.go.dev renders the compiled `NewService` example and compiled `Service.Context` example from this module, so the embedded-service shape and first orientation pack are checked by `go test` instead of drifting as prose.
+- **Runnable reference:** pkg.go.dev renders the compiled `NewService` example, compiled `Service.Context` example, and compiled `Service.Search` example from this module, so setup, orientation packs, and scoped retrieval are checked by `go test` instead of drifting as prose.
 - **Trust boundary:** Goncho can remember, rank, and warn; the host agent must still verify file paths, APIs, credentials, and deployment state before acting.
 - **What to read next:** use [Quick Start](#quick-start) for a runnable service shape, [Core API](#core-api) for common calls, and [Package Status](#package-status) for release and smoke-test evidence.
 

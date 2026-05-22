@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added a compiled `Service.Search` package example for pkg.go.dev readers evaluating scoped retrieval.
 - Added a compiled `Service.Context` package example for pkg.go.dev readers evaluating orientation-pack assembly.
 - Added a compiled `NewService` package example for pkg.go.dev readers evaluating embedded service setup.
 - Added a README `At a Glance` section for pkg.go.dev readers evaluating installation, use cases, first calls, and trust boundaries.
