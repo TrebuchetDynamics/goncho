@@ -19,6 +19,7 @@
 
 ### Changed
 
+- LOCOMO retrieval reports now record per-system search latency and RSS metrics in JSON and markdown artifacts.
 - LOCOMO retrieval and backend-comparison reports now record the effective top-K scoring window in JSON and markdown artifacts.
 - LOCOMO failure-audit miss notes now report the actual retrieved top-K window instead of hard-coding top 10.
 - LOCOMO failure audits now reject out-of-conversation gold stable IDs before writing failure rows.

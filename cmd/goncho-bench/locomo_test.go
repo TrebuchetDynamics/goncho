@@ -448,6 +448,26 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read report: %v", err)
 	}
+	var rawReport map[string]any
+	if err := json.Unmarshal(raw, &rawReport); err != nil {
+		t.Fatalf("decode raw report: %v", err)
+	}
+	systemsRaw, ok := rawReport["systems"].([]any)
+	if !ok || len(systemsRaw) == 0 {
+		t.Fatalf("raw systems = %#v, want non-empty system list", rawReport["systems"])
+	}
+	for _, systemRaw := range systemsRaw {
+		system, ok := systemRaw.(map[string]any)
+		if !ok {
+			t.Fatalf("raw system = %#v, want object", systemRaw)
+		}
+		if _, ok := system["search_latency_ms"]; !ok {
+			t.Fatalf("raw system %v missing search_latency_ms", system["system"])
+		}
+		if _, ok := system["rss_bytes"]; !ok {
+			t.Fatalf("raw system %v missing rss_bytes", system["system"])
+		}
+	}
 	var report locomoReport
 	if err := json.Unmarshal(raw, &report); err != nil {
 		t.Fatalf("decode report: %v", err)
@@ -467,5 +487,8 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "- Top-K: `10`") {
 		t.Fatalf("markdown missing effective top-K provenance:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "Search latency ms") || !strings.Contains(string(mdRaw), "RSS bytes") {
+		t.Fatalf("markdown missing resource metric columns:\n%s", mdRaw)
 	}
 }

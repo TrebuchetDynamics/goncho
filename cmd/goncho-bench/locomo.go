@@ -86,6 +86,8 @@ type locomoSystemReport struct {
 	StrictRecallAt5  float64                          `json:"strict_recall_at_5"`
 	StrictRecallAt10 float64                          `json:"strict_recall_at_10"`
 	MRR              float64                          `json:"mrr"`
+	SearchLatencyMs  int64                            `json:"search_latency_ms"`
+	RSSBytes         uint64                           `json:"rss_bytes"`
 	CategoryMetrics  map[string]locomoCategoryMetrics `json:"category_metrics"`
 	QuestionsDetail  []locomoQuestionResult           `json:"question_results"`
 }
@@ -330,6 +332,7 @@ func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string
 			contentIDs[contentIDKey(mem.ConversationID, content)] = append(contentIDs[contentIDKey(mem.ConversationID, content)], mem.MemoryID)
 		}
 	}
+	searchStart := time.Now()
 	results := []locomoQuestionResult{}
 	for _, q := range data.Questions {
 		ids, err := retrieveLocomo(ctx, svc, data, q, system, contentIDs, limit)
@@ -338,7 +341,10 @@ func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string
 		}
 		results = append(results, scoreLocomoQuestion(q, ids))
 	}
-	return summarizeLocomoSystem(system, results), nil
+	report := summarizeLocomoSystem(system, results)
+	report.SearchLatencyMs = time.Since(searchStart).Milliseconds()
+	report.RSSBytes = currentRSSBytes()
+	return report, nil
 }
 
 func retrieveLocomo(ctx context.Context, svc *goncho.Service, data locomoDataset, q locomoQuestionRow, system string, contentIDs map[string][]string, limit int) ([]string, error) {
@@ -745,9 +751,9 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 		fmt.Fprintf(&b, "- License note: `%v`\n", report.Source["license"])
 	}
 	b.WriteString("\n")
-	b.WriteString("## Systems\n\n| System | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR |\n| --- | ---: | ---: | ---: | ---: | ---: |\n")
+	b.WriteString("## Systems\n\n| System | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR | Search latency ms | RSS bytes |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
 	for _, system := range report.Systems {
-		fmt.Fprintf(&b, "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% |\n", system.System, system.RecallAnyAt5*100, system.RecallAnyAt10*100, system.StrictRecallAt5*100, system.StrictRecallAt10*100, system.MRR*100)
+		fmt.Fprintf(&b, "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d |\n", system.System, system.RecallAnyAt5*100, system.RecallAnyAt10*100, system.StrictRecallAt5*100, system.StrictRecallAt10*100, system.MRR*100, system.SearchLatencyMs, system.RSSBytes)
 	}
 	b.WriteString("\n## Category metrics\n\n")
 	for _, system := range report.Systems {

@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO retrieval reports now record per-system search latency and RSS metrics.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoSmokeProducesReport -count=1` proves JSON system rows emit `search_latency_ms` and `rss_bytes`, and markdown summaries include resource metric columns.
+  - Result: retrieval artifacts now satisfy the benchmark roadmap's latency/RSS evidence requirement without changing scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval and backend-comparison reports now record the effective top-K scoring window.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomo(BenchmarkHonorsConfiguredLimit|BackendComparisonHonorsConfiguredLimitForExternalRows|SmokeProducesReport|BackendComparisonWritesJSONAndMarkdown)' -count=1` proves JSON artifacts emit `top_k` and markdown summaries print `Top-K`.
   - Result: benchmark artifacts are self-describing when operators run LOCOMO with non-default retrieval limits.
