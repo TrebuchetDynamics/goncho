@@ -70,6 +70,7 @@ type locomoBackendComparisonEntry struct {
 	MRR                 float64                `json:"mrr,omitempty"`
 	InsertLatencyMs     int64                  `json:"insert_latency_ms,omitempty"`
 	SearchLatencyMs     int64                  `json:"search_latency_ms,omitempty"`
+	LatencyMs           locomoLatencyStats     `json:"latency_ms"`
 	RSSBytes            uint64                 `json:"rss_bytes,omitempty"`
 	FailureCategories   map[string]int         `json:"failure_categories,omitempty"`
 	QuestionsDetail     []locomoQuestionResult `json:"question_results,omitempty"`
@@ -173,7 +174,9 @@ func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string,
 	searchStart := time.Now()
 	results := make([]locomoQuestionResult, 0, len(data.Questions))
 	for _, q := range data.Questions {
+		questionStart := time.Now()
 		hits, err := searchLocomoBackend(ctx, backend, q, topK)
+		latencyMs := time.Since(questionStart).Milliseconds()
 		if err != nil {
 			return locomoBackendComparisonEntry{}, err
 		}
@@ -181,7 +184,9 @@ func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string,
 		for _, hit := range hits {
 			ids = append(ids, hit.MemoryID)
 		}
-		results = append(results, scoreLocomoQuestion(q, ids))
+		result := scoreLocomoQuestion(q, ids)
+		result.RetrievalLatencyMs = latencyMs
+		results = append(results, result)
 	}
 	searchLatency := time.Since(searchStart).Milliseconds()
 	summary := summarizeLocomoSystem(name, results)
@@ -189,7 +194,7 @@ func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string,
 		Backend: name, Comparable: true, Questions: len(results),
 		RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10,
 		StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR,
-		InsertLatencyMs: insertLatency, SearchLatencyMs: searchLatency, RSSBytes: currentRSSBytes(),
+		InsertLatencyMs: insertLatency, SearchLatencyMs: searchLatency, LatencyMs: summary.LatencyMs, RSSBytes: currentRSSBytes(),
 		FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotesForBackend(name),
 	}, nil
 }
@@ -302,7 +307,7 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 		results = append(results, scoreLocomoQuestion(q, ids))
 	}
 	summary := summarizeLocomoSystem(name, results)
-	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR, FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotes}, nil
+	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR, LatencyMs: summary.LatencyMs, FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotes}, nil
 }
 
 func newLocomoBackend(name string) (MemoryBackend, string, error) {
@@ -803,13 +808,13 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	for _, rule := range report.Rules {
 		fmt.Fprintf(&b, "- %s\n", rule)
 	}
-	b.WriteString("\n## Results\n\n| Backend | Comparable | recall_any@5 | recall_any@10 | strict@5 | strict@10 | NDCG@5 | NDCG@10 | MRR | Insert latency ms | Search latency ms | RSS bytes | Notes |\n| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
+	b.WriteString("\n## Results\n\n| Backend | Comparable | recall_any@5 | recall_any@10 | strict@5 | strict@10 | NDCG@5 | NDCG@10 | MRR | Insert latency ms | Search latency ms | Latency min ms | Latency p50 ms | Latency p95 ms | Latency max ms | RSS bytes | Notes |\n| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
 	for _, e := range report.Backends {
 		note := e.NotComparableReason
 		if note == "" && len(e.SetupNotes) > 0 {
 			note = strings.Join(e.SetupNotes, " ")
 		}
-		fmt.Fprintf(&b, "| `%s` | %t | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d | %d | %s |\n", e.Backend, e.Comparable, e.RecallAnyAt5*100, e.RecallAnyAt10*100, e.StrictRecallAt5*100, e.StrictRecallAt10*100, e.NDCGAt5*100, e.NDCGAt10*100, e.MRR*100, e.InsertLatencyMs, e.SearchLatencyMs, e.RSSBytes, strings.ReplaceAll(note, "|", "/"))
+		fmt.Fprintf(&b, "| `%s` | %t | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d | %d | %d | %d | %d | %d | %s |\n", e.Backend, e.Comparable, e.RecallAnyAt5*100, e.RecallAnyAt10*100, e.StrictRecallAt5*100, e.StrictRecallAt10*100, e.NDCGAt5*100, e.NDCGAt10*100, e.MRR*100, e.InsertLatencyMs, e.SearchLatencyMs, e.LatencyMs.Min, e.LatencyMs.P50, e.LatencyMs.P95, e.LatencyMs.Max, e.RSSBytes, strings.ReplaceAll(note, "|", "/"))
 	}
 	b.WriteString("\n## Setup notes\n\n")
 	b.WriteString("- Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")

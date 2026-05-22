@@ -360,7 +360,9 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "## Leakage checks")
 	assertBenchFileContains(t, mdOut, "NDCG@5")
 	assertBenchFileContains(t, mdOut, "NDCG@10")
+	assertBenchFileContains(t, jsonOut, `"latency_ms"`)
 	assertBenchFileContains(t, mdOut, "Insert latency ms")
+	assertBenchFileContains(t, mdOut, "Latency p50 ms")
 	assertBenchFileContains(t, mdOut, "RSS bytes")
 }
 
