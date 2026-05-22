@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: README now includes an import path guide for pkg.go.dev readers.
+  - Evidence target: `go test . -run 'Test(ReadmeSurfacesImportPathGuide|ReleaseMetadataSmokeIncludesReadmeImportPathGuard)' -count=1` proves the README distinguishes the root library package, `memory` SQLite opener, and `cmd/goncho-bench` command path while release metadata smoke keeps the guard wired.
+  - Result: readers can choose the correct Go import/install path without starting from the full pkg.go.dev symbol index.
+
 - 2026-05-22: Root package documentation now explains versioning and adoption notes for pkg.go.dev readers.
   - Evidence target: `go test . -run 'Test(PackageDocSurfacesVersioningAndAdoptionNotes|ReleaseMetadataSmokeIncludesPackageDocVersioningGuard)' -count=1` proves `go doc .` includes pre-1.0 stability guidance, pinned v0.1.1 install guidance, `@latest` deployment-lock warning, Stable version interpretation, Imported by 0 interpretation, reverse-dependency context, and ecosystem smoke guidance while release metadata smoke keeps the guard wired.
   - Result: readers landing on pkg.go.dev can interpret go.dev stability and adoption metadata directly from the package overview.

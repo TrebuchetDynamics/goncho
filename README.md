@@ -60,6 +60,16 @@ If you are evaluating Goncho on pkg.go.dev, start here:
 | Expose agent tools | `NewGonchoContextTool`, `NewGonchoSearchTool`, `NewGonchoRememberTool`, `NewReviewTool`, `NewGonchoHandoffTool` | Keeps host integrations on the public tool boundary instead of database internals. |
 | Reproduce retrieval evidence | `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` | Installs the benchmark CLI shipped with the public module. |
 
+## Import Path Guide for pkg.go.dev Readers
+
+| Import path | Role | Use it for |
+| --- | --- | --- |
+| `github.com/TrebuchetDynamics/goncho` | Root library package | `RunMigrations`, `NewService`, service calls, context/search/conclude params, and public tool constructors. |
+| `github.com/TrebuchetDynamics/goncho/memory` | SQLite opener | `memory.OpenSqlite` when you want a local file-backed store for an embedded host. |
+| `github.com/TrebuchetDynamics/goncho/cmd/goncho-bench` | Command only | `go install .../cmd/goncho-bench@latest` for reproducible retrieval reports; do not import it into an agent host. |
+
+Stay on public service and tool APIs first. If pkg.go.dev shows a lower-level type before the service examples, treat it as implementation detail until `NewService`, `svc.Context`, `svc.Search`, or a public tool constructor cannot express the host need.
+
 ## Minimal Embedded Skeleton
 
 Copy this skeleton into a new Go module when you want the shortest local-memory host shape rather than the benchmark CLI:

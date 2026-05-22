@@ -341,6 +341,28 @@ func TestReadmeSurfacesPkgGoDevAPIMap(t *testing.T) {
 	}
 }
 
+func TestReadmeSurfacesImportPathGuide(t *testing.T) {
+	raw, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("ReadFile README.md: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"## Import Path Guide for pkg.go.dev Readers",
+		"github.com/TrebuchetDynamics/goncho",
+		"github.com/TrebuchetDynamics/goncho/memory",
+		"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench",
+		"Root library package",
+		"SQLite opener",
+		"Command only",
+		"Stay on public service and tool APIs",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("README.md does not surface import path guide marker %q", want)
+		}
+	}
+}
+
 func TestReadmeSurfacesGoDevSignalMap(t *testing.T) {
 	raw, err := os.ReadFile("README.md")
 	if err != nil {
@@ -495,6 +517,22 @@ func TestReleaseMetadataSmokeIncludesReadmeAPIMapGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include README API map guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesReadmeImportPathGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"ReadmeSurfacesImportPathGuide",
+		"ReleaseMetadataSmokeIncludesReadmeImportPathGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include README import path guard %q", want)
 		}
 	}
 }
