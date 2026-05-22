@@ -62,7 +62,7 @@ Do not edit or stage that path.
 **Files:**
 - Create: `lifecycle_module.go`
 
-- [ ] **Step 1: Create `lifecycle_module.go` skeleton**
+- [x] **Step 1: Create `lifecycle_module.go` skeleton**
 
 Create exact starting file:
 
@@ -92,7 +92,7 @@ func (s *Service) lifecycle() lifecycleModule {
 }
 ```
 
-- [ ] **Step 2: Run compile check**
+- [x] **Step 2: Run compile check**
 
 Run:
 
@@ -102,7 +102,7 @@ go test . -run '^$'
 
 Expected: PASS. If imports are unused, keep only imports needed at this step; later tasks add the rest.
 
-- [ ] **Step 3: Commit seam skeleton**
+- [x] **Step 3: Commit seam skeleton**
 
 Run:
 

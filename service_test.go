@@ -11,6 +11,22 @@ import (
 	session "github.com/TrebuchetDynamics/goncho/session"
 )
 
+func TestServiceLifecycleModuleSeamUsesServiceConfig(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	lifecycle := svc.lifecycle()
+	if lifecycle.db != svc.db {
+		t.Fatal("lifecycle module db does not match service db")
+	}
+	if lifecycle.workspaceID != svc.workspaceID {
+		t.Fatalf("lifecycle workspaceID = %q, want %q", lifecycle.workspaceID, svc.workspaceID)
+	}
+	if lifecycle.maxMessageSize != svc.maxMessageSize {
+		t.Fatalf("lifecycle maxMessageSize = %d, want %d", lifecycle.maxMessageSize, svc.maxMessageSize)
+	}
+}
+
 func TestService_ProfileRoundTrip(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
