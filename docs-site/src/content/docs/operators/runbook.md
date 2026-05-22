@@ -7,6 +7,8 @@ This runbook is for operators embedding Goncho in a local or server-side agent r
 
 Goncho is intentionally small at the operational layer: one Go library, one SQLite database by default, deterministic migrations, and local verification commands.
 
+Use this runbook with the [Quick Start](/start/quick-start/), [Current Capabilities](/start/current-capabilities/), and [Core API](/reference/core-api/) references when moving from first setup to an operator-owned deployment.
+
 ## Operator Contract
 
 A Goncho deployment should make these facts obvious:
