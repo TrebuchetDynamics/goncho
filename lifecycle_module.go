@@ -75,6 +75,56 @@ func (l lifecycleModule) createMessagesOnce(ctx context.Context, sessionKey stri
 	}, nil
 }
 
+func (l lifecycleModule) DeleteSession(ctx context.Context, sessionKey string) (SessionDeletionResult, error) {
+	sessionKey = strings.TrimSpace(sessionKey)
+	if sessionKey == "" {
+		return SessionDeletionResult{}, fmt.Errorf("goncho: session_key is required")
+	}
+	tx, err := l.db.BeginTx(ctx, nil)
+	if err != nil {
+		return SessionDeletionResult{}, fmt.Errorf("goncho: begin delete session: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+
+	result, err := deleteLifecycleSession(ctx, tx, l.workspaceID, sessionKey)
+	if err != nil {
+		return SessionDeletionResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return SessionDeletionResult{}, fmt.Errorf("goncho: commit delete session: %w", err)
+	}
+	committed = true
+	return result, nil
+}
+
+func (l lifecycleModule) DeleteWorkspace(ctx context.Context) (WorkspaceDeletionResult, error) {
+	tx, err := l.db.BeginTx(ctx, nil)
+	if err != nil {
+		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: begin delete workspace: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+
+	result, err := deleteLifecycleWorkspace(ctx, tx, l.workspaceID)
+	if err != nil {
+		return WorkspaceDeletionResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: commit delete workspace: %w", err)
+	}
+	committed = true
+	return result, nil
+}
+
 func waitCreateMessagesLockRetry(ctx context.Context, attempt int) error {
 	timer := time.NewTimer(createMessagesLockRetryDelay(attempt))
 	defer timer.Stop()

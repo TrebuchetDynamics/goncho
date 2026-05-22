@@ -201,7 +201,7 @@ Expected: commit succeeds.
 - Modify: `service.go`
 - Modify: `lifecycle_module.go`
 
-- [ ] **Step 1: Replace `Service.DeleteSession` with delegation**
+- [x] **Step 1: Replace `Service.DeleteSession` with delegation**
 
 In `service.go`, replace current `Service.DeleteSession` body with:
 
@@ -211,7 +211,7 @@ func (s *Service) DeleteSession(ctx context.Context, sessionKey string) (Session
 }
 ```
 
-- [ ] **Step 2: Add `lifecycleModule.DeleteSession`**
+- [x] **Step 2: Add `lifecycleModule.DeleteSession`**
 
 In `lifecycle_module.go`, add:
 
@@ -226,7 +226,7 @@ s.db -> l.db
 s.workspaceID -> l.workspaceID
 ```
 
-- [ ] **Step 3: Replace `Service.DeleteWorkspace` with delegation**
+- [x] **Step 3: Replace `Service.DeleteWorkspace` with delegation**
 
 In `service.go`, replace current `Service.DeleteWorkspace` body with:
 
@@ -236,7 +236,7 @@ func (s *Service) DeleteWorkspace(ctx context.Context) (WorkspaceDeletionResult,
 }
 ```
 
-- [ ] **Step 4: Add `lifecycleModule.DeleteWorkspace`**
+- [x] **Step 4: Add `lifecycleModule.DeleteWorkspace`**
 
 In `lifecycle_module.go`, add:
 
@@ -251,7 +251,7 @@ s.db -> l.db
 s.workspaceID -> l.workspaceID
 ```
 
-- [ ] **Step 5: Run delete tests**
+- [x] **Step 5: Run delete tests**
 
 Run:
 
@@ -261,7 +261,7 @@ go test . -run 'Test.*Delete|Test.*CRUD|Test.*Lifecycle' -count=1
 
 Expected: PASS.
 
-- [ ] **Step 6: Run package test**
+- [x] **Step 6: Run package test**
 
 Run:
 
@@ -271,7 +271,7 @@ go test . -count=1
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit delete extraction**
+- [x] **Step 7: Commit delete extraction**
 
 Run:
 

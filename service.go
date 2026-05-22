@@ -347,53 +347,11 @@ func (s *Service) CreateMessages(ctx context.Context, params CreateMessagesParam
 }
 
 func (s *Service) DeleteSession(ctx context.Context, sessionKey string) (SessionDeletionResult, error) {
-	sessionKey = strings.TrimSpace(sessionKey)
-	if sessionKey == "" {
-		return SessionDeletionResult{}, fmt.Errorf("goncho: session_key is required")
-	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return SessionDeletionResult{}, fmt.Errorf("goncho: begin delete session: %w", err)
-	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback()
-		}
-	}()
-
-	result, err := deleteLifecycleSession(ctx, tx, s.workspaceID, sessionKey)
-	if err != nil {
-		return SessionDeletionResult{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return SessionDeletionResult{}, fmt.Errorf("goncho: commit delete session: %w", err)
-	}
-	committed = true
-	return result, nil
+	return s.lifecycle().DeleteSession(ctx, sessionKey)
 }
 
 func (s *Service) DeleteWorkspace(ctx context.Context) (WorkspaceDeletionResult, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: begin delete workspace: %w", err)
-	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback()
-		}
-	}()
-
-	result, err := deleteLifecycleWorkspace(ctx, tx, s.workspaceID)
-	if err != nil {
-		return WorkspaceDeletionResult{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: commit delete workspace: %w", err)
-	}
-	committed = true
-	return result, nil
+	return s.lifecycle().DeleteWorkspace(ctx)
 }
 
 func normalizeReasoningLevel(level string) string {

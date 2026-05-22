@@ -51,6 +51,66 @@ func TestLifecycleModuleCreateMessagesPreservesServiceContract(t *testing.T) {
 	}
 }
 
+func TestLifecycleModuleDeleteSessionPreservesServiceContract(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	if _, err := svc.lifecycle().CreateMessages(ctx, CreateMessagesParams{
+		SessionKey: "lifecycle-delete-session",
+		Messages: []CreateMessage{{
+			Peer:    "peer-lifecycle",
+			Content: "delete this lifecycle session message",
+		}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	deleted, err := svc.lifecycle().DeleteSession(ctx, "lifecycle-delete-session")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deleted.WorkspaceID != svc.workspaceID || deleted.SessionKey != "lifecycle-delete-session" || deleted.MessagesDeleted != 1 {
+		t.Fatalf("session deletion result = %+v, want one message deleted in workspace %q", deleted, svc.workspaceID)
+	}
+	if countLifecycleMessages(t, svc.db, svc.workspaceID, "lifecycle-delete-session") != 0 {
+		t.Fatal("session-scoped lifecycle messages survived lifecycle module DeleteSession")
+	}
+}
+
+func TestLifecycleModuleDeleteWorkspacePreservesServiceContract(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	if err := svc.SetProfile(ctx, "peer-lifecycle", []string{"workspace delete fixture"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.lifecycle().CreateMessages(ctx, CreateMessagesParams{
+		SessionKey: "lifecycle-delete-workspace",
+		Messages: []CreateMessage{{
+			Peer:    "peer-lifecycle",
+			Content: "delete this lifecycle workspace message",
+		}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	deleted, err := svc.lifecycle().DeleteWorkspace(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deleted.WorkspaceID != svc.workspaceID || deleted.MessagesDeleted != 1 || deleted.PeerCardsDeleted != 1 {
+		t.Fatalf("workspace deletion result = %+v, want one message and one peer card deleted in workspace %q", deleted, svc.workspaceID)
+	}
+	if countLifecycleMessages(t, svc.db, svc.workspaceID, "lifecycle-delete-workspace") != 0 {
+		t.Fatal("workspace-scoped lifecycle messages survived lifecycle module DeleteWorkspace")
+	}
+	if countRows(t, svc.db, `SELECT COUNT(*) FROM goncho_peer_cards WHERE workspace_id = ?`, svc.workspaceID) != 0 {
+		t.Fatal("workspace-scoped peer cards survived lifecycle module DeleteWorkspace")
+	}
+}
+
 func TestService_ProfileRoundTrip(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
