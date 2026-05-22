@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Updated public `@latest` release metadata docs and smoke guards after v0.1.1 tag publication.
+
 ## v0.1.1 - 2026-05-22
 
 ### Added

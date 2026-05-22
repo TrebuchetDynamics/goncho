@@ -232,7 +232,7 @@
 
 - 2026-05-22: public release metadata smoke now checks documented latest metadata.
   - Evidence target: `go test . -run 'Test(PublicReleaseSmokeChecksDocumentedLatestMetadata|PublicDocsExplainDocumentedLatestPublicReleaseSmoke)' -count=1` proves `make public-release-smoke` checks the documented public `@latest` version and published date, and first-touch public docs explain that guard.
-  - Result: ecosystem-readiness smoke now catches drift between official public module metadata and the documented v0.1.0 / May 20, 2026 milestone instead of accepting any `Version`/`Time` fields.
+  - Result: ecosystem-readiness smoke now catches drift between official public module metadata and the documented v0.1.1 / May 22, 2026 milestone instead of accepting any `Version`/`Time` fields.
 
 - 2026-05-22: first-touch public docs now surface the public docs site smoke.
   - Evidence target: `go test . -run 'Test(DocsSiteSmokeBuildsPublicDocs|PublicDocsMentionDocsSiteSmoke)' -count=1` proves `make docs-site-smoke` checks the local docs-site build with `npm run build`, and first-touch public docs mention the command.
@@ -262,9 +262,9 @@
   - Evidence target: `go test . -run TestPublicDocsWarnRootGoInstallIsUnsupported -count=1` proves README, docs home, current-capabilities, and quick-start docs say the root module is not a root `go install` target.
   - Result: first-touch docs preserve the `go get github.com/TrebuchetDynamics/goncho@latest` library path without implying an unavailable root CLI install.
 
-- 2026-05-22: public docs now surface the v0.1.0 published date.
-  - Evidence target: `go test . -run TestPublicDocsMentionPublishedReleaseDate -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `published May 20, 2026`.
-  - Result: first-touch docs now show both public version and published-date signals from the official module metadata without implying a newer tag.
+- 2026-05-22: public docs now surface the v0.1.1 published date.
+  - Evidence target: `go test . -run TestPublicDocsMentionPublishedReleaseDate -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `published May 22, 2026`.
+  - Result: first-touch docs now show both public version and published-date signals from the official module metadata.
 
 - 2026-05-22: public adoption docs now use version-qualified `go get`.
   - Evidence target: `go test . -run TestPublicDocsUseLatestQualifiedGoGet -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `go get github.com/TrebuchetDynamics/goncho@latest`.
@@ -278,9 +278,9 @@
   - Evidence target: `go test . -run TestPublicDocsFrameRootModuleAsLibrary -count=1` proves README, docs home, current-capabilities, and quick-start docs say the root module is a library package.
   - Result: first-touch public docs preserve `go get` library semantics and avoid implying root-level CLI installability.
 
-- 2026-05-22: docs home now names the current public `@latest` release as v0.1.0.
-  - Evidence target: `go test . -run TestPublicDocsMentionLatestReleaseVersion -count=1` proves README, docs home, current-capabilities, and quick-start docs mention v0.1.0.
-  - Result: first-touch public docs show the official tagged release signal without implying checkout-local benchmark CLI availability at `@latest`.
+- 2026-05-22: docs home now names the current public `@latest` release as v0.1.1.
+  - Evidence target: `go test . -run TestPublicDocsMentionLatestReleaseVersion -count=1` proves README, docs home, current-capabilities, and quick-start docs mention v0.1.1.
+  - Result: first-touch public docs show the official tagged release signal and public benchmark CLI availability at `@latest`.
 
 - 2026-05-22: README and docs home now expose the narrower public module smoke.
   - Evidence target: `go test . -run TestPublicAdoptionDocsMentionPublicModuleSmoke -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `make public-module-smoke`.
@@ -338,9 +338,9 @@
   - Evidence target: `make public-module-smoke` creates a temporary external Go module, runs `go get github.com/TrebuchetDynamics/goncho@latest`, and compiles a minimal public API import.
   - Result: release readiness now separates library importability proof from the still-checkout-local benchmark CLI.
 
-- 2026-05-22: public `@latest` still resolves to v0.1.0, so `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` does not work yet.
-  - Evidence: public install reports module `github.com/TrebuchetDynamics/goncho@latest` found at `v0.1.0`, but it does not contain `cmd/goncho-bench`.
-  - Result: docs now point benchmark CLI users at checkout-local `make install-smoke` / `go install ./cmd/goncho-bench` until the next v0.1.x tag contains the command.
+- 2026-05-22: public `@latest` now resolves to v0.1.1, so `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` is available.
+  - Evidence target: `GOBIN=$(mktemp -d) go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` verifies the public benchmark CLI installs from the published tag.
+  - Result: docs now point benchmark CLI users at the public `go install .../cmd/goncho-bench@latest` path while keeping checkout-local `make install-smoke` as a local verification path.
 
 - 2026-05-22: generated primer/token-budget E2E coverage added for the public `goncho_context` tool.
   - Focused evidence: `go test . -run TestGonchoGoalPublicContextToolGeneratesPrimerWithinTokenBudgetE2E -count=1` passed.

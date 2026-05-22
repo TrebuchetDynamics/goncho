@@ -230,8 +230,8 @@ func TestPublicDocsMentionLatestReleaseVersion(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ReadFile %s: %v", path, err)
 			}
-			if !strings.Contains(string(raw), "v0.1.0") {
-				t.Fatalf("%s does not mention current public release v0.1.0", path)
+			if !strings.Contains(string(raw), "v0.1.1") {
+				t.Fatalf("%s does not mention current public release v0.1.1", path)
 			}
 		})
 	}
@@ -258,7 +258,7 @@ func TestPublicDocsUseLatestQualifiedGoGet(t *testing.T) {
 }
 
 func TestPublicDocsMentionPublishedReleaseDate(t *testing.T) {
-	const publishedDate = "published May 20, 2026"
+	const publishedDate = "published May 22, 2026"
 	for _, path := range []string{
 		"README.md",
 		"docs-site/src/content/docs/index.md",
@@ -342,8 +342,8 @@ func TestPublicReleaseSmokeChecksDocumentedLatestMetadata(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
-		"PUBLIC_LATEST_VERSION := v0.1.0",
-		"PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-20",
+		"PUBLIC_LATEST_VERSION := v0.1.1",
+		"PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-22",
 		`"Version": "$(PUBLIC_LATEST_VERSION)"`,
 		`"Time": "$(PUBLIC_LATEST_PUBLISHED_DATE)`,
 	} {

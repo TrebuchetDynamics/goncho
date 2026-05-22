@@ -8,8 +8,8 @@ LOCOMO_SMOKE_MEMORIES := ./cmd/goncho-bench/testdata/locomo-smoke/memories.jsonl
 LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jsonl
 LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
-PUBLIC_LATEST_VERSION := v0.1.0
-PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-20
+PUBLIC_LATEST_VERSION := v0.1.1
+PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-22
 
 .PHONY: release-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
 
