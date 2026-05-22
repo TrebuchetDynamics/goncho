@@ -722,7 +722,11 @@ func writeLocomoBackendComparisonFailures(path string, data locomoDataset, repor
 			}
 			row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: backend.Backend + ":" + locomoFailureNotes(q), Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
 			for i, id := range q.RetrievedIDs[:min(10, len(q.RetrievedIDs))] {
-				mem := memByID[id]
+				mem, ok := memByID[id]
+				if !ok {
+					_ = file.Close()
+					return fmt.Errorf("goncho-bench: LOCOMO backend comparison failure audit backend %q question %q unknown retrieved memory_id %q", backend.Backend, q.QuestionID, id)
+				}
 				row.TopHits = append(row.TopHits, locomoFailureHit{Rank: i + 1, MemoryID: id, Content: mem.Content, Score: 0, Speaker: mem.Speaker, SessionID: mem.SessionID, TurnIndex: mem.TurnIndex})
 			}
 			wrapped := map[string]any{"backend": backend.Backend, "comparable": true, "failure": row}

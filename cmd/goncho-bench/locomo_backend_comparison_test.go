@@ -311,6 +311,27 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "Failure JSONL")
 }
 
+func TestWriteLocomoBackendComparisonFailuresRejectsUnknownRetrievedID(t *testing.T) {
+	data := locomoDataset{Memories: []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"}}}
+	report := locomoBackendComparisonReport{Backends: []locomoBackendComparisonEntry{{
+		Backend:    "mem0",
+		Comparable: true,
+		QuestionsDetail: []locomoQuestionResult{{
+			QuestionID:     "q1",
+			ConversationID: "c1",
+			Category:       "true_retrieval_failure",
+			Question:       "question",
+			GoldMemoryIDs:  []string{"m1"},
+			RetrievedIDs:   []string{"missing"},
+			Rank:           0,
+		}},
+	}}}
+	err := writeLocomoBackendComparisonFailures(filepath.Join(t.TempDir(), "failures.jsonl"), data, report)
+	if err == nil || !strings.Contains(err.Error(), `unknown retrieved memory_id "missing"`) {
+		t.Fatalf("write backend comparison failures error = %v, want unknown retrieved stable ID error", err)
+	}
+}
+
 func writeTestFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
