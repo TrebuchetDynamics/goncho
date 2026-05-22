@@ -13,6 +13,15 @@
 // deterministic benchmark evidence without a Python service, Docker sidecar,
 // hosted vector database, or always-online memory API.
 //
+// Install the library with:
+//
+//	go get github.com/TrebuchetDynamics/goncho@latest
+//
+// The root module is a library package, not a root go install target. To
+// install the reproducible retrieval benchmark CLI, use:
+//
+//	go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest
+//
 // Quick start:
 //
 //	store, err := memory.OpenSqlite("goncho.db", 0, nil)

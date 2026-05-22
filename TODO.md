@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Root package documentation now tells pkg.go.dev readers how to install the library versus the benchmark command.
+  - Evidence target: `go test . -run 'Test(PackageDocSurfacesInstallAndCommandBoundary|ReleaseMetadataSmokeIncludesPackageDocInstallGuard)' -count=1` proves `go doc .` includes the `go get` path, root-library boundary, and `goncho-bench@latest` command path while release metadata smoke keeps the guard wired.
+  - Result: pkg.go.dev readers can distinguish the importable library from the installable benchmark CLI without learning that boundary from a failed `go install` attempt.
+
 - 2026-05-22: README now gives pkg.go.dev readers an API map from evaluation goals to public entry points.
   - Evidence target: `go test . -run 'Test(ReadmeSurfacesPkgGoDevAPIMap|ReleaseMetadataSmokeIncludesReadmeAPIMapGuard)' -count=1` proves the README includes the map and release metadata smoke keeps it guarded.
   - Result: readers can find `memory.OpenSqlite`, `goncho.RunMigrations`, `goncho.NewService`, `svc.Conclude`, `svc.Search`, `svc.Context`, public tools, and `goncho-bench@latest` without scanning the full package index.

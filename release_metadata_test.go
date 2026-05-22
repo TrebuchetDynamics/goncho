@@ -613,6 +613,23 @@ func TestPackageDocPointsPkgGoDevReadersToCompiledExamples(t *testing.T) {
 	}
 }
 
+func TestPackageDocSurfacesInstallAndCommandBoundary(t *testing.T) {
+	out, err := exec.Command("go", "doc", ".").Output()
+	if err != nil {
+		t.Fatalf("go doc .: %v", err)
+	}
+	text := strings.Join(strings.Fields(string(out)), " ")
+	for _, want := range []string{
+		"go get github.com/TrebuchetDynamics/goncho@latest",
+		"root module is a library package",
+		"go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("go doc . output does not surface install and command boundary marker %q\n%s", want, text)
+		}
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesPackageDocExamplesGuard(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -625,6 +642,22 @@ func TestReleaseMetadataSmokeIncludesPackageDocExamplesGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include package doc examples guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesPackageDocInstallGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"PackageDocSurfacesInstallAndCommandBoundary",
+		"ReleaseMetadataSmokeIncludesPackageDocInstallGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include package doc install guard %q", want)
 		}
 	}
 }

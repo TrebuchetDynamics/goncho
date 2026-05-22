@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Added package documentation install guidance that separates the library `go get` path from the `goncho-bench` command install path.
 - Added a README API map for pkg.go.dev readers that links common evaluation goals to public Goncho entry points.
 - Pointed the root package overview at compiled pkg.go.dev examples for setup, orientation packs, and scoped retrieval.
 - Added a compiled `Service.Search` package example for pkg.go.dev readers evaluating scoped retrieval.
