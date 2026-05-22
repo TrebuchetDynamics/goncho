@@ -10,6 +10,10 @@
 - Added `make public-module-smoke` to verify `github.com/TrebuchetDynamics/goncho@latest` imports and compiles from a fresh external Go module.
 - Added `make install-smoke` to verify the checkout-local `cmd/goncho-bench` install path without touching a developer's normal `GOBIN`.
 
+### Changed
+
+- `goncho_review` list requests now reject invalid `status` and `kind` filters instead of silently returning an empty queue.
+
 ### Documentation
 
 - Corrected benchmark CLI install guidance so public docs no longer claim `cmd/goncho-bench@latest` before a tag contains the command.

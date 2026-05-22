@@ -2,6 +2,8 @@ package goncho
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -56,6 +58,47 @@ func TestReviewToolListsAndResolvesReviewItems(t *testing.T) {
 	open := executeMemoryTool(t, ctx, tool, `{"action":"list","peer_id":"peer-a","status":"open"}`)
 	if intField(t, open, "count") != 0 {
 		t.Fatalf("open output after resolve = %+v, want no open items", open)
+	}
+}
+
+func TestReviewToolRejectsInvalidListFilters(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	if _, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindConflict,
+		PeerID:    "peer-a",
+		SubjectID: "mem-new",
+		RelatedID: "mem-old",
+		Reason:    "new memory conflicts with old memory",
+	}); err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	for _, tc := range []struct {
+		name    string
+		args    string
+		wantErr string
+	}{
+		{
+			name:    "status typo",
+			args:    `{"action":"list","peer_id":"peer-a","status":"archived"}`,
+			wantErr: "status must be open or resolved",
+		},
+		{
+			name:    "kind typo",
+			args:    `{"action":"list","peer_id":"peer-a","kind":"supersession"}`,
+			wantErr: "kind must be conflict or stale",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tool.Execute(ctx, json.RawMessage(tc.args))
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("Execute error = %v, want substring %q", err, tc.wantErr)
+			}
+		})
 	}
 }
 

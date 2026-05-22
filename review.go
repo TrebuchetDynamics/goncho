@@ -215,6 +215,14 @@ func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList
 	if limit <= 0 || limit > 500 {
 		limit = 50
 	}
+	kind := ReviewKind(strings.TrimSpace(string(q.Kind)))
+	if kind != "" && kind != ReviewKindConflict && kind != ReviewKindStale {
+		return ReviewList{}, fmt.Errorf("goncho: review kind must be conflict or stale")
+	}
+	status := ReviewStatus(strings.TrimSpace(string(q.Status)))
+	if status != "" && status != ReviewStatusOpen && status != ReviewStatusResolved {
+		return ReviewList{}, fmt.Errorf("goncho: review status must be open or resolved")
+	}
 	args := []any{}
 	where := []string{}
 	appendFilter := func(column, value string) {
@@ -230,8 +238,8 @@ func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList
 	appendFilter("session_key", q.SessionKey)
 	appendFilter("subject_id", q.SubjectID)
 	appendFilter("related_id", q.RelatedID)
-	appendFilter("kind", string(q.Kind))
-	appendFilter("status", string(q.Status))
+	appendFilter("kind", string(kind))
+	appendFilter("status", string(status))
 	query := `SELECT id, kind, status, workspace_id, peer_id, session_key, subject_id, related_id, reason, evidence_ids_json, created_at, resolution, resolved_by, resolution_reason, resolved_at FROM goncho_review_items`
 	if len(where) > 0 {
 		query += " WHERE " + strings.Join(where, " AND ")

@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: `goncho_review` list filter validation added.
+  - Evidence target: `go test . -run TestReviewToolRejectsInvalidListFilters -count=1` proves invalid `status` and `kind` list filters return operator-visible errors instead of empty review queues.
+  - Result: review queue inspection is safer when host/tool callers bypass schema enum validation.
+
 - 2026-05-22: local release smoke added.
   - Evidence target: `make release-smoke` runs `make ecosystem-smoke`, `go test ./...`, `go vet ./...`, `go test -race ./...`, and the docs-site build.
   - Result: next v0.1.x prep has one local pre-tag command without claiming CI or creating a tag.
