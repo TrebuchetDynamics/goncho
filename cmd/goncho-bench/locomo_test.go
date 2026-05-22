@@ -30,6 +30,37 @@ func TestLoadLocomoDatasetParsesSchema(t *testing.T) {
 	}
 }
 
+func TestLoadLocomoDatasetRejectsDuplicateStableIDs(t *testing.T) {
+	t.Run("memory_id", func(t *testing.T) {
+		dir := t.TempDir()
+		memories := filepath.Join(dir, "memories.jsonl")
+		questions := filepath.Join(dir, "questions.jsonl")
+		writeTestFile(t, memories, `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"first stable fact"}
+{"memory_id":"m1","conversation_id":"c2","session_id":"s1","speaker":"Noah","turn_index":1,"content":"second stable fact"}
+`)
+		writeTestFile(t, questions, `{"question_id":"q1","conversation_id":"c1","question":"what fact?","gold_memory_ids":["m1"],"category":"single_hop_retrieval"}
+`)
+		_, err := loadLocomoDataset(memories, questions)
+		if err == nil || !strings.Contains(err.Error(), `duplicate memory_id "m1"`) {
+			t.Fatalf("load duplicate memory_id error = %v, want duplicate stable ID error", err)
+		}
+	})
+	t.Run("question_id", func(t *testing.T) {
+		dir := t.TempDir()
+		memories := filepath.Join(dir, "memories.jsonl")
+		questions := filepath.Join(dir, "questions.jsonl")
+		writeTestFile(t, memories, `{"memory_id":"m1","conversation_id":"c1","session_id":"s1","speaker":"Maya","turn_index":1,"content":"stable fact"}
+`)
+		writeTestFile(t, questions, `{"question_id":"q1","conversation_id":"c1","question":"what fact?","gold_memory_ids":["m1"],"category":"single_hop_retrieval"}
+{"question_id":"q1","conversation_id":"c1","question":"what other fact?","gold_memory_ids":["m1"],"category":"single_hop_retrieval"}
+`)
+		_, err := loadLocomoDataset(memories, questions)
+		if err == nil || !strings.Contains(err.Error(), `duplicate question_id "q1"`) {
+			t.Fatalf("load duplicate question_id error = %v, want duplicate stable ID error", err)
+		}
+	})
+}
+
 func TestLocomoScoringStrictAnyAndMRR(t *testing.T) {
 	q := locomoQuestionRow{QuestionID: "q", ConversationID: "c", Category: "gold_ambiguity", Question: "who", GoldMemoryIDs: []string{"m2", "m4"}}
 	got := scoreLocomoQuestion(q, []string{"m1", "m2", "m3", "m4"})

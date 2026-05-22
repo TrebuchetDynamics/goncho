@@ -206,6 +206,7 @@ func loadLocomoMemories(path string) ([]locomoMemoryRow, error) {
 	}
 	defer file.Close()
 	var out []locomoMemoryRow
+	seenIDs := map[string]struct{}{}
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 1024*1024), 32*1024*1024)
 	lineNo := 0
@@ -222,6 +223,10 @@ func loadLocomoMemories(path string) ([]locomoMemoryRow, error) {
 		if strings.TrimSpace(row.MemoryID) == "" || strings.TrimSpace(row.ConversationID) == "" || strings.TrimSpace(row.Content) == "" {
 			return nil, fmt.Errorf("goncho-bench: LOCOMO memory line %d missing memory_id/conversation_id/content", lineNo)
 		}
+		if _, exists := seenIDs[row.MemoryID]; exists {
+			return nil, fmt.Errorf("goncho-bench: LOCOMO memory line %d duplicate memory_id %q", lineNo, row.MemoryID)
+		}
+		seenIDs[row.MemoryID] = struct{}{}
 		out = append(out, row)
 	}
 	if err := scanner.Err(); err != nil {
@@ -237,6 +242,7 @@ func loadLocomoQuestions(path string) ([]locomoQuestionRow, error) {
 	}
 	defer file.Close()
 	var out []locomoQuestionRow
+	seenIDs := map[string]struct{}{}
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 1024*1024), 32*1024*1024)
 	lineNo := 0
@@ -253,6 +259,10 @@ func loadLocomoQuestions(path string) ([]locomoQuestionRow, error) {
 		if strings.TrimSpace(row.QuestionID) == "" || strings.TrimSpace(row.ConversationID) == "" || strings.TrimSpace(row.Question) == "" || len(row.GoldMemoryIDs) == 0 {
 			return nil, fmt.Errorf("goncho-bench: LOCOMO question line %d missing question_id/conversation_id/question/gold_memory_ids", lineNo)
 		}
+		if _, exists := seenIDs[row.QuestionID]; exists {
+			return nil, fmt.Errorf("goncho-bench: LOCOMO question line %d duplicate question_id %q", lineNo, row.QuestionID)
+		}
+		seenIDs[row.QuestionID] = struct{}{}
 		out = append(out, row)
 	}
 	if err := scanner.Err(); err != nil {

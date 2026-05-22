@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO fixture loading now rejects duplicate stable IDs before scoring.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestLoadLocomoDatasetRejectsDuplicateStableIDs -count=1` proves duplicate `memory_id` and `question_id` values fail at fixture-load time instead of reaching centralized stable-ID scoring.
+  - Result: LOCOMO reports and external-backend comparisons now fail closed when converted fixture IDs are not unique enough for deterministic evidence scoring.
+
 - 2026-05-22: LOCOMO smoke/full retrieval reports now honor the configured top-K limit.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBenchmarkHonorsConfiguredLimit -count=1` proves `--limit 1` reaches the LOCOMO retrieval report path and caps each local system's reported retrieved IDs.
   - Result: reproducible LOCOMO retrieval reports now use the operator-requested top-K window instead of always evaluating every local system with top 10.
