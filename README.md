@@ -48,6 +48,15 @@ If you are evaluating Goncho on pkg.go.dev, start here:
 - **Trust boundary:** Goncho can remember, rank, and warn; the host agent must still verify file paths, APIs, credentials, and deployment state before acting.
 - **What to read next:** use [Quick Start](#quick-start) for a runnable service shape, [Core API](#core-api) for common calls, and [Package Status](#package-status) for release and smoke-test evidence.
 
+## Trust Boundary for Agent Hosts
+
+Goncho can orient the agent by storing evidence, ranking scoped memory, assembling context packs, and warning when remembered claims may be stale. The host remains authoritative for decisions that require current state or external authority:
+
+- Authorization and policy decisions still belong to the host runtime, gateway, or operator.
+- Live filesystem, API, deployment, and credential state must be checked at action time.
+- Money movement, destructive writes, and external side effects require explicit host-side gates.
+- Treat retrieved memory as evidence to check, not as permission to skip live verification.
+
 ## API Map for pkg.go.dev Readers
 
 | If you need to... | Start with | Why |

@@ -363,6 +363,27 @@ func TestReadmeSurfacesImportPathGuide(t *testing.T) {
 	}
 }
 
+func TestReadmeSurfacesTrustBoundaryGuide(t *testing.T) {
+	raw, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("ReadFile README.md: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"## Trust Boundary for Agent Hosts",
+		"Goncho can orient the agent",
+		"The host remains authoritative",
+		"Authorization and policy decisions",
+		"Live filesystem, API, deployment, and credential state",
+		"Money movement, destructive writes, and external side effects",
+		"Treat retrieved memory as evidence to check",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("README.md does not surface trust boundary guide marker %q", want)
+		}
+	}
+}
+
 func TestReadmeSurfacesHostIntegrationChecklist(t *testing.T) {
 	raw, err := os.ReadFile("README.md")
 	if err != nil {
@@ -555,6 +576,22 @@ func TestReleaseMetadataSmokeIncludesReadmeImportPathGuard(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("release-metadata-smoke does not include README import path guard %q", want)
+		}
+	}
+}
+
+func TestReleaseMetadataSmokeIncludesReadmeTrustBoundaryGuard(t *testing.T) {
+	raw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"ReadmeSurfacesTrustBoundaryGuide",
+		"ReleaseMetadataSmokeIncludesReadmeTrustBoundaryGuard",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("release-metadata-smoke does not include README trust boundary guard %q", want)
 		}
 	}
 }
