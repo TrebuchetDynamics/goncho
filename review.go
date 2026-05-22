@@ -191,11 +191,15 @@ func (s *Service) reviewContextUnavailableEvidence(ctx context.Context, peer str
 	if err != nil {
 		return nil, err
 	}
-	if len(items.Items) == 0 {
-		return nil, nil
+	return reviewRequiredUnavailableEvidence(items.Items), nil
+}
+
+func reviewRequiredUnavailableEvidence(items []ReviewItem) []ContextUnavailableEvidence {
+	if len(items) == 0 {
+		return nil
 	}
 	counts := map[ReviewKind]int{}
-	for _, item := range items.Items {
+	for _, item := range items {
 		counts[item.Kind]++
 	}
 	parts := []string{}
@@ -204,11 +208,37 @@ func (s *Service) reviewContextUnavailableEvidence(ctx context.Context, peer str
 			parts = append(parts, fmt.Sprintf("%s=%d", kind, counts[kind]))
 		}
 	}
+	reason := fmt.Sprintf("%d open review items require adjudication: %s", len(items), strings.Join(parts, " "))
+	if chains := reviewItemChainEvidence(items, 3); len(chains) > 0 {
+		reason += "; chains=" + strings.Join(chains, " ")
+	}
 	return []ContextUnavailableEvidence{{
 		Field:      "review",
 		Capability: "review_required",
-		Reason:     fmt.Sprintf("%d open review items require adjudication: %s", len(items.Items), strings.Join(parts, " ")),
-	}}, nil
+		Reason:     reason,
+	}}
+}
+
+func reviewItemChainEvidence(items []ReviewItem, limit int) []string {
+	if limit <= 0 {
+		return nil
+	}
+	chains := []string{}
+	for _, item := range items {
+		subjectID := strings.TrimSpace(item.SubjectID)
+		if subjectID == "" {
+			continue
+		}
+		chain := subjectID
+		if relatedID := strings.TrimSpace(item.RelatedID); relatedID != "" {
+			chain += "->" + relatedID
+		}
+		chains = append(chains, chain)
+		if len(chains) >= limit {
+			break
+		}
+	}
+	return chains
 }
 
 func ListReviewItems(ctx context.Context, db *sql.DB, q ReviewQuery) (ReviewList, error) {
