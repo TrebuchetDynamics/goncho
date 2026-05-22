@@ -661,7 +661,12 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 		for i, id := range q.RetrievedIDs[:min(10, len(q.RetrievedIDs))] {
 			mem, ok := memByID[id]
 			if !ok {
+				_ = file.Close()
 				return fmt.Errorf("goncho-bench: LOCOMO failure audit question %q unknown retrieved memory_id %q", q.QuestionID, id)
+			}
+			if mem.ConversationID != q.ConversationID {
+				_ = file.Close()
+				return fmt.Errorf("goncho-bench: LOCOMO failure audit question %q out-of-conversation retrieved memory_id %q", q.QuestionID, id)
 			}
 			row.TopHits = append(row.TopHits, locomoFailureHit{Rank: i + 1, MemoryID: id, Content: mem.Content, Score: 0, Speaker: mem.Speaker, SessionID: mem.SessionID, TurnIndex: mem.TurnIndex})
 		}

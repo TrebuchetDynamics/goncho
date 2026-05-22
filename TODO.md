@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO failure audits now reject out-of-conversation retrieved stable IDs.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsOutOfConversationRetrievedID|BackendComparisonFailuresRejectsOutOfConversationRetrievedID)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a top-hit `memory_id` belongs to another `conversation_id`.
+  - Result: failure reports preserve the same conversation-scoped stable-ID invariant as centralized scoring.
+
 - 2026-05-22: LOCOMO backend-comparison failure audits now reject unknown retrieved stable IDs.
   - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoBackendComparisonFailuresRejectsUnknownRetrievedID -count=1` proves backend-comparison failure JSONL fails closed when a top-hit `memory_id` is not present in the loaded LOCOMO fixture.
   - Result: comparison failure reports no longer hide backend/report stable-ID drift behind blank memory metadata rows.

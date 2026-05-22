@@ -17,6 +17,7 @@
 
 ### Changed
 
+- LOCOMO failure audits now reject out-of-conversation retrieved stable IDs before writing top-hit rows.
 - LOCOMO backend-comparison failure audits now reject unknown retrieved stable IDs instead of emitting blank top-hit rows.
 - LOCOMO SQLite FTS retrieval now skips temporary database setup for tokenless queries and uses the existing recency fallback directly.
 - LOCOMO failure audits now reject unknown retrieved stable IDs instead of emitting blank top-hit rows.
