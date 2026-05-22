@@ -88,10 +88,18 @@ type locomoSystemReport struct {
 	StrictRecallAt10  float64                          `json:"strict_recall_at_10"`
 	MRR               float64                          `json:"mrr"`
 	SearchLatencyMs   int64                            `json:"search_latency_ms"`
+	LatencyMs         locomoLatencyStats               `json:"latency_ms"`
 	RSSBytes          uint64                           `json:"rss_bytes"`
 	FailureCategories map[string]int                   `json:"failure_categories"`
 	CategoryMetrics   map[string]locomoCategoryMetrics `json:"category_metrics"`
 	QuestionsDetail   []locomoQuestionResult           `json:"question_results"`
+}
+
+type locomoLatencyStats struct {
+	Min int64 `json:"min"`
+	P50 int64 `json:"p50"`
+	P95 int64 `json:"p95"`
+	Max int64 `json:"max"`
 }
 
 type locomoCategoryMetrics struct {
@@ -104,18 +112,19 @@ type locomoCategoryMetrics struct {
 }
 
 type locomoQuestionResult struct {
-	QuestionID       string   `json:"question_id"`
-	ConversationID   string   `json:"conversation_id"`
-	Category         string   `json:"category"`
-	Question         string   `json:"question"`
-	GoldMemoryIDs    []string `json:"gold_memory_ids"`
-	RetrievedIDs     []string `json:"retrieved_ids"`
-	Rank             int      `json:"rank"`
-	RecallAnyAt5     float64  `json:"recall_any_at_5"`
-	RecallAnyAt10    float64  `json:"recall_any_at_10"`
-	StrictRecallAt5  float64  `json:"strict_recall_at_5"`
-	StrictRecallAt10 float64  `json:"strict_recall_at_10"`
-	MRR              float64  `json:"mrr"`
+	QuestionID         string   `json:"question_id"`
+	ConversationID     string   `json:"conversation_id"`
+	Category           string   `json:"category"`
+	Question           string   `json:"question"`
+	GoldMemoryIDs      []string `json:"gold_memory_ids"`
+	RetrievedIDs       []string `json:"retrieved_ids"`
+	Rank               int      `json:"rank"`
+	RecallAnyAt5       float64  `json:"recall_any_at_5"`
+	RecallAnyAt10      float64  `json:"recall_any_at_10"`
+	StrictRecallAt5    float64  `json:"strict_recall_at_5"`
+	StrictRecallAt10   float64  `json:"strict_recall_at_10"`
+	MRR                float64  `json:"mrr"`
+	RetrievalLatencyMs int64    `json:"retrieval_latency_ms"`
 }
 
 type locomoFailureRow struct {
@@ -338,11 +347,15 @@ func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string
 	searchStart := time.Now()
 	results := []locomoQuestionResult{}
 	for _, q := range data.Questions {
+		questionStart := time.Now()
 		ids, err := retrieveLocomo(ctx, svc, data, q, system, contentIDs, limit)
+		latencyMs := time.Since(questionStart).Milliseconds()
 		if err != nil {
 			return locomoSystemReport{}, err
 		}
-		results = append(results, scoreLocomoQuestion(q, ids))
+		result := scoreLocomoQuestion(q, ids)
+		result.RetrievalLatencyMs = latencyMs
+		results = append(results, result)
 	}
 	report := summarizeLocomoSystem(system, results)
 	report.SearchLatencyMs = time.Since(searchStart).Milliseconds()
@@ -611,6 +624,7 @@ func summarizeLocomoSystem(system string, results []locomoQuestionResult) locomo
 	out.StrictRecallAt5 = roundMetric(strict5 / float64(len(results)))
 	out.StrictRecallAt10 = roundMetric(strict10 / float64(len(results)))
 	out.MRR = roundMetric(mrr / float64(len(results)))
+	out.LatencyMs = summarizeLocomoLatency(results)
 	for category, items := range byCategory {
 		out.CategoryMetrics[category] = summarizeLocomoCategory(items)
 	}
@@ -628,6 +642,37 @@ func summarizeLocomoCategory(results []locomoQuestionResult) locomoCategoryMetri
 	}
 	n := float64(len(results))
 	return locomoCategoryMetrics{Questions: len(results), RecallAnyAt5: roundMetric(any5 / n), RecallAnyAt10: roundMetric(any10 / n), StrictRecallAt5: roundMetric(strict5 / n), StrictRecallAt10: roundMetric(strict10 / n), MRR: roundMetric(mrr / n)}
+}
+
+func summarizeLocomoLatency(results []locomoQuestionResult) locomoLatencyStats {
+	if len(results) == 0 {
+		return locomoLatencyStats{}
+	}
+	values := make([]int64, 0, len(results))
+	for _, q := range results {
+		values = append(values, q.RetrievalLatencyMs)
+	}
+	sort.Slice(values, func(i, j int) bool { return values[i] < values[j] })
+	return locomoLatencyStats{
+		Min: values[0],
+		P50: locomoNearestRankLatency(values, 50),
+		P95: locomoNearestRankLatency(values, 95),
+		Max: values[len(values)-1],
+	}
+}
+
+func locomoNearestRankLatency(sortedValues []int64, percentile int) int64 {
+	if len(sortedValues) == 0 {
+		return 0
+	}
+	rank := (len(sortedValues)*percentile + 99) / 100
+	if rank < 1 {
+		rank = 1
+	}
+	if rank > len(sortedValues) {
+		rank = len(sortedValues)
+	}
+	return sortedValues[rank-1]
 }
 
 func writeLocomoReport(path string, report locomoReport) error {
@@ -763,9 +808,9 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 		fmt.Fprintf(&b, "- License note: `%v`\n", report.Source["license"])
 	}
 	b.WriteString("\n")
-	b.WriteString("## Systems\n\n| System | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR | Search latency ms | RSS bytes |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+	b.WriteString("## Systems\n\n| System | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR | Search latency ms | Latency min ms | Latency p50 ms | Latency p95 ms | Latency max ms | RSS bytes |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
 	for _, system := range report.Systems {
-		fmt.Fprintf(&b, "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d |\n", system.System, system.RecallAnyAt5*100, system.RecallAnyAt10*100, system.StrictRecallAt5*100, system.StrictRecallAt10*100, system.MRR*100, system.SearchLatencyMs, system.RSSBytes)
+		fmt.Fprintf(&b, "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d | %d | %d | %d | %d |\n", system.System, system.RecallAnyAt5*100, system.RecallAnyAt10*100, system.StrictRecallAt5*100, system.StrictRecallAt10*100, system.MRR*100, system.SearchLatencyMs, system.LatencyMs.Min, system.LatencyMs.P50, system.LatencyMs.P95, system.LatencyMs.Max, system.RSSBytes)
 	}
 	b.WriteString("\n## Failure categories\n\n| System | Category | Questions |\n| --- | --- | ---: |\n")
 	for _, system := range report.Systems {

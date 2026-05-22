@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO retrieval reports now record per-system latency distribution stats.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoLatencyMetricAggregation|TestRunLocomoSmokeProducesReport' -count=1` proves JSON system rows emit `latency_ms` min/p50/p95/max and markdown summaries include latency distribution columns.
+  - Result: retrieval artifacts now satisfy the roadmap's latency min/p50/p95/max reporting requirement without changing scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval reports now record per-system failure-category counts.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoSmokeProducesReport -count=1` proves JSON system rows emit `failure_categories` and markdown summaries include a failure-category section.
   - Result: retrieval artifacts now satisfy the roadmap's failure-category reporting requirement without changing scoring semantics.

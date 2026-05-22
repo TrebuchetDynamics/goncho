@@ -152,6 +152,19 @@ func TestLocomoCategoryMetricAggregation(t *testing.T) {
 	}
 }
 
+func TestLocomoLatencyMetricAggregation(t *testing.T) {
+	report := summarizeLocomoSystem("test", []locomoQuestionResult{
+		{RetrievalLatencyMs: 4},
+		{RetrievalLatencyMs: 1},
+		{RetrievalLatencyMs: 9},
+		{RetrievalLatencyMs: 2},
+	})
+	want := locomoLatencyStats{Min: 1, P50: 2, P95: 9, Max: 9}
+	if report.LatencyMs != want {
+		t.Fatalf("latency stats = %+v, want %+v", report.LatencyMs, want)
+	}
+}
+
 func TestLocomoRecencyBaselineOrdering(t *testing.T) {
 	items := []locomoMemoryRow{
 		{MemoryID: "old", Timestamp: "2026-05-20T10:00:00Z", TurnIndex: 1},
@@ -474,6 +487,10 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 		if !ok || len(failureCategories) == 0 {
 			t.Fatalf("raw system %v failure_categories = %#v, want non-empty metric counts", system["system"], system["failure_categories"])
 		}
+		latency, ok := system["latency_ms"].(map[string]any)
+		if !ok || latency["min"] == nil || latency["p50"] == nil || latency["p95"] == nil || latency["max"] == nil {
+			t.Fatalf("raw system %v latency_ms = %#v, want min/p50/p95/max", system["system"], system["latency_ms"])
+		}
 	}
 	var report locomoReport
 	if err := json.Unmarshal(raw, &report); err != nil {
@@ -503,5 +520,8 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "## Failure categories") {
 		t.Fatalf("markdown missing failure-category summary:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "Latency p95 ms") {
+		t.Fatalf("markdown missing latency distribution columns:\n%s", mdRaw)
 	}
 }

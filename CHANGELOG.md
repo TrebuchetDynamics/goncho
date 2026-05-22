@@ -19,6 +19,7 @@
 
 ### Changed
 
+- LOCOMO retrieval reports now record per-system latency distribution stats in JSON and markdown artifacts.
 - LOCOMO retrieval reports now record per-system failure-category counts in JSON and markdown artifacts.
 - LOCOMO retrieval and backend-comparison reports now record deterministic memory token estimates in JSON and markdown artifacts.
 - LOCOMO retrieval reports now record per-system search latency and RSS metrics in JSON and markdown artifacts.
