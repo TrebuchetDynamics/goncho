@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO backend-comparison reports now record per-backend NDCG@5 and NDCG@10 metrics.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoBackendComparisonUsesStableMemoryIDs|TestRunLocomoBackendComparisonWritesJSONAndMarkdown' -count=1` proves backend-comparison entries aggregate ID-based NDCG metrics and markdown summaries include `NDCG@5`/`NDCG@10` columns.
+  - Result: backend-comparison artifacts now satisfy the roadmap's NDCG reporting requirement without changing retrieval or stable-ID scoring semantics.
+
 - 2026-05-22: LOCOMO backend-comparison reports now record LOCOMO leakage checks.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves JSON artifacts emit `leakage_checks` and markdown summaries include `## Leakage checks`.
   - Result: backend-comparison artifacts now satisfy the roadmap's same-leakage-checks requirement without changing retrieval or stable-ID scoring semantics.

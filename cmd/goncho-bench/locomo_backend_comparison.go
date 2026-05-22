@@ -65,6 +65,8 @@ type locomoBackendComparisonEntry struct {
 	RecallAnyAt10       float64                `json:"recall_any_at_10,omitempty"`
 	StrictRecallAt5     float64                `json:"strict_recall_at_5,omitempty"`
 	StrictRecallAt10    float64                `json:"strict_recall_at_10,omitempty"`
+	NDCGAt5             float64                `json:"ndcg_at_5,omitempty"`
+	NDCGAt10            float64                `json:"ndcg_at_10,omitempty"`
 	MRR                 float64                `json:"mrr,omitempty"`
 	InsertLatencyMs     int64                  `json:"insert_latency_ms,omitempty"`
 	SearchLatencyMs     int64                  `json:"search_latency_ms,omitempty"`
@@ -186,7 +188,7 @@ func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string,
 	return locomoBackendComparisonEntry{
 		Backend: name, Comparable: true, Questions: len(results),
 		RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10,
-		StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, MRR: summary.MRR,
+		StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR,
 		InsertLatencyMs: insertLatency, SearchLatencyMs: searchLatency, RSSBytes: currentRSSBytes(),
 		FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotesForBackend(name),
 	}, nil
@@ -300,7 +302,7 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 		results = append(results, scoreLocomoQuestion(q, ids))
 	}
 	summary := summarizeLocomoSystem(name, results)
-	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, MRR: summary.MRR, FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotes}, nil
+	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR, FailureCategories: locomoFailureCategories(results), QuestionsDetail: results, SetupNotes: setupNotes}, nil
 }
 
 func newLocomoBackend(name string) (MemoryBackend, string, error) {
@@ -801,13 +803,13 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	for _, rule := range report.Rules {
 		fmt.Fprintf(&b, "- %s\n", rule)
 	}
-	b.WriteString("\n## Results\n\n| Backend | Comparable | recall_any@5 | recall_any@10 | strict@5 | strict@10 | MRR | Search latency ms | Notes |\n| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
+	b.WriteString("\n## Results\n\n| Backend | Comparable | recall_any@5 | recall_any@10 | strict@5 | strict@10 | NDCG@5 | NDCG@10 | MRR | Search latency ms | Notes |\n| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |\n")
 	for _, e := range report.Backends {
 		note := e.NotComparableReason
 		if note == "" && len(e.SetupNotes) > 0 {
 			note = strings.Join(e.SetupNotes, " ")
 		}
-		fmt.Fprintf(&b, "| `%s` | %t | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %s |\n", e.Backend, e.Comparable, e.RecallAnyAt5*100, e.RecallAnyAt10*100, e.StrictRecallAt5*100, e.StrictRecallAt10*100, e.MRR*100, e.SearchLatencyMs, strings.ReplaceAll(note, "|", "/"))
+		fmt.Fprintf(&b, "| `%s` | %t | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %s |\n", e.Backend, e.Comparable, e.RecallAnyAt5*100, e.RecallAnyAt10*100, e.StrictRecallAt5*100, e.StrictRecallAt10*100, e.NDCGAt5*100, e.NDCGAt10*100, e.MRR*100, e.SearchLatencyMs, strings.ReplaceAll(note, "|", "/"))
 	}
 	b.WriteString("\n## Setup notes\n\n")
 	b.WriteString("- Goncho, BM25, and SQLite FTS5 are local Go adapters with no hosted dependency.\n")

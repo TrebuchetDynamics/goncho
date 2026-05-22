@@ -103,8 +103,8 @@ func TestLocomoBackendComparisonUsesStableMemoryIDs(t *testing.T) {
 	if len(entry.QuestionsDetail) != 1 || entry.QuestionsDetail[0].RetrievedIDs[0] != "m1" {
 		t.Fatalf("question detail = %+v, want stable memory id m1 first", entry.QuestionsDetail)
 	}
-	if entry.RecallAnyAt5 != 1 || entry.StrictRecallAt5 != 1 || entry.MRR != 1 {
-		t.Fatalf("metrics = any5 %.2f strict5 %.2f mrr %.2f, want all 1", entry.RecallAnyAt5, entry.StrictRecallAt5, entry.MRR)
+	if entry.RecallAnyAt5 != 1 || entry.StrictRecallAt5 != 1 || entry.NDCGAt5 != 1 || entry.NDCGAt10 != 1 || entry.MRR != 1 {
+		t.Fatalf("metrics = any5 %.2f strict5 %.2f ndcg5 %.2f ndcg10 %.2f mrr %.2f, want all 1", entry.RecallAnyAt5, entry.StrictRecallAt5, entry.NDCGAt5, entry.NDCGAt10, entry.MRR)
 	}
 }
 
@@ -328,6 +328,23 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	if !ok || leakage["answer_text_in_memory_content"] != float64(1) {
 		t.Fatalf("backend comparison leakage_checks = %#v, want one answer-text leakage count", rawReport["leakage_checks"])
 	}
+	var report locomoBackendComparisonReport
+	if err := json.Unmarshal(rawReportBytes, &report); err != nil {
+		t.Fatalf("decode typed backend comparison report: %v", err)
+	}
+	foundBM25 := false
+	for _, backend := range report.Backends {
+		if backend.Backend != "bm25" {
+			continue
+		}
+		foundBM25 = true
+		if backend.NDCGAt5 != 1 || backend.NDCGAt10 != 1 {
+			t.Fatalf("bm25 ndcg@5/@10 = %.2f/%.2f, want 1/1", backend.NDCGAt5, backend.NDCGAt10)
+		}
+	}
+	if !foundBM25 {
+		t.Fatal("bm25 backend missing from report")
+	}
 	assertBenchFileContains(t, jsonOut, `"backend": "goncho"`)
 	assertBenchFileContains(t, jsonOut, `"backend": "agentmemory"`)
 	assertBenchFileContains(t, jsonOut, `"comparable": false`)
@@ -341,6 +358,8 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "- Memory token estimate: `15`")
 	assertBenchFileContains(t, mdOut, "- Database size bytes:")
 	assertBenchFileContains(t, mdOut, "## Leakage checks")
+	assertBenchFileContains(t, mdOut, "NDCG@5")
+	assertBenchFileContains(t, mdOut, "NDCG@10")
 }
 
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing.T) {
