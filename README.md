@@ -19,9 +19,19 @@ live verification before action
 
 If memory says a file exists, verify it. If memory says a migration was approved, verify it. If memory says an API path still exists, verify it. Goncho treats memory as orientation until current evidence says it is safe to act.
 
+Use Goncho as an embedded Go module:
+
 ```bash
 go get github.com/TrebuchetDynamics/goncho
 ```
+
+Install the reproducible benchmark CLI when you need local retrieval reports:
+
+```bash
+go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest
+```
+
+The root module is a library package; `goncho-bench` is the installable command.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho.svg)](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

@@ -12,7 +12,7 @@ LongMemEval-S is the first layer: deterministic retrieval sanity on long convers
 | Phase | Benchmark | Purpose | Status |
 | --- | --- | --- | --- |
 | 1 | LongMemEval-S | Long conversational retrieval with ID-based evidence scoring. | First scientific pass done. |
-| 2 | LOCOMO | Conversational long-term memory: evolving facts, temporal recall, contradictions. | Candidate-generation milestone and backend harness done. |
+| 2 | LOCOMO | Conversational long-term memory: evolving facts, temporal recall, contradictions. | Candidate-generation milestone and stable-ID backend comparison frozen. |
 | 3 | InfiniteBench / RULER | Scale, buried-fact, distractor, and long-context stress. | Planned. |
 | 4 | BABILong | Controlled synthetic temporal/entity tracking. | Planned. |
 | 5 | BEIR | Standard IR credibility against established retrieval baselines. | Planned. |
@@ -32,7 +32,7 @@ Current milestone:
 
 The lesson: LOCOMO was not improved by clever reranking. It exposed a candidate-generation weakness, and the fix widened lexical pre-rank candidates before top-K truncation.
 
-The backend harness now compares Goncho, BM25, SQLite FTS5, agentmemory, and mem0 with the same LOCOMO data and centralized scoring. Backends that cannot return stable inserted memory IDs are marked `not comparable`.
+The backend harness now compares Goncho, BM25, SQLite FTS5, agentmemory, and mem0 with the same LOCOMO data and centralized scoring. Backends that cannot return stable inserted memory IDs are marked `not comparable`. Preserve the frozen comparison artifacts before adding contradiction/staleness audits or making additional external backends comparable.
 
 It tests:
 
