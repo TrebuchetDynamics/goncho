@@ -208,7 +208,12 @@ func validateLocomoGoldMemoryIDs(memories []locomoMemoryRow, questions []locomoQ
 		memoryConversationIDs[mem.MemoryID] = mem.ConversationID
 	}
 	for _, q := range questions {
+		seenGoldIDs := map[string]struct{}{}
 		for _, id := range q.GoldMemoryIDs {
+			if _, exists := seenGoldIDs[id]; exists {
+				return fmt.Errorf("goncho-bench: LOCOMO question %q duplicate gold_memory_id %q", q.QuestionID, id)
+			}
+			seenGoldIDs[id] = struct{}{}
 			conversationID, exists := memoryConversationIDs[id]
 			if !exists {
 				return fmt.Errorf("goncho-bench: LOCOMO question %q unknown gold_memory_id %q", q.QuestionID, id)

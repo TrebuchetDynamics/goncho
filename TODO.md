@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO fixture loading now rejects duplicate gold stable IDs before scoring.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestLoadLocomoDatasetRejectsDuplicateGoldStableIDs -count=1` proves repeated `gold_memory_ids` within one question fail at fixture-load time instead of silently reaching centralized stable-ID scoring.
+  - Result: LOCOMO reports and external-backend comparisons now fail closed when gold evidence IDs are not unique per question.
+
 - 2026-05-22: LOCOMO Goncho adapters now cap duplicate-content stable-ID fan-out to top-K.
   - Evidence target: `go test ./cmd/goncho-bench -run 'Test(RunLocomoBenchmarkCapsGonchoStableIDFanoutToLimit|GonchoBackendScopedSearchCapsStableIDFanoutToTopK)' -count=1` proves duplicate content mapping to multiple stable IDs cannot expand a configured top-K window in the LOCOMO report path or backend-comparison Goncho adapter.
   - Result: reproducible LOCOMO scoring now treats content-to-ID collisions like external duplicate rows: the requested top-K result window is the scoring boundary.

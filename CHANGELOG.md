@@ -18,6 +18,7 @@
 ### Changed
 
 - LOCOMO Goncho adapters now cap stable-ID fan-out to the requested top-K window when duplicate content maps to multiple stable IDs.
+- LOCOMO fixture loading now rejects duplicate `gold_memory_ids` within a question before stable-ID scoring.
 - LOCOMO fixture loading now rejects unknown or out-of-conversation `gold_memory_ids` before stable-ID scoring.
 - LOCOMO fixture loading now rejects duplicate `memory_id` and `question_id` values before stable-ID scoring.
 - LOCOMO smoke/full retrieval reports now honor the configured retrieval limit instead of always evaluating every local system with top 10.
