@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO retrieval reports now record per-system failure-category counts.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoSmokeProducesReport -count=1` proves JSON system rows emit `failure_categories` and markdown summaries include a failure-category section.
+  - Result: retrieval artifacts now satisfy the roadmap's failure-category reporting requirement without changing scoring semantics.
+
 - 2026-05-22: LOCOMO retrieval and backend-comparison reports now record deterministic memory token estimates.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomo(BenchmarkHonorsConfiguredLimit|BackendComparisonWritesJSONAndMarkdown|SmokeProducesReport)' -count=1` proves JSON artifacts emit `memory_token_estimate` and markdown summaries print the value.
   - Result: benchmark artifacts now satisfy the roadmap's memory-count plus total-token-estimate reporting requirement without changing scoring semantics.

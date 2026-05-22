@@ -80,17 +80,18 @@ type locomoLeakageChecks struct {
 }
 
 type locomoSystemReport struct {
-	System           string                           `json:"system"`
-	Questions        int                              `json:"questions"`
-	RecallAnyAt5     float64                          `json:"recall_any_at_5"`
-	RecallAnyAt10    float64                          `json:"recall_any_at_10"`
-	StrictRecallAt5  float64                          `json:"strict_recall_at_5"`
-	StrictRecallAt10 float64                          `json:"strict_recall_at_10"`
-	MRR              float64                          `json:"mrr"`
-	SearchLatencyMs  int64                            `json:"search_latency_ms"`
-	RSSBytes         uint64                           `json:"rss_bytes"`
-	CategoryMetrics  map[string]locomoCategoryMetrics `json:"category_metrics"`
-	QuestionsDetail  []locomoQuestionResult           `json:"question_results"`
+	System            string                           `json:"system"`
+	Questions         int                              `json:"questions"`
+	RecallAnyAt5      float64                          `json:"recall_any_at_5"`
+	RecallAnyAt10     float64                          `json:"recall_any_at_10"`
+	StrictRecallAt5   float64                          `json:"strict_recall_at_5"`
+	StrictRecallAt10  float64                          `json:"strict_recall_at_10"`
+	MRR               float64                          `json:"mrr"`
+	SearchLatencyMs   int64                            `json:"search_latency_ms"`
+	RSSBytes          uint64                           `json:"rss_bytes"`
+	FailureCategories map[string]int                   `json:"failure_categories"`
+	CategoryMetrics   map[string]locomoCategoryMetrics `json:"category_metrics"`
+	QuestionsDetail   []locomoQuestionResult           `json:"question_results"`
 }
 
 type locomoCategoryMetrics struct {
@@ -591,7 +592,7 @@ func locomoStrictRecall(retrieved, gold []string, k int) float64 {
 }
 
 func summarizeLocomoSystem(system string, results []locomoQuestionResult) locomoSystemReport {
-	out := locomoSystemReport{System: system, Questions: len(results), CategoryMetrics: map[string]locomoCategoryMetrics{}, QuestionsDetail: results}
+	out := locomoSystemReport{System: system, Questions: len(results), FailureCategories: locomoFailureCategories(results), CategoryMetrics: map[string]locomoCategoryMetrics{}, QuestionsDetail: results}
 	if len(results) == 0 {
 		return out
 	}
@@ -766,6 +767,12 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	for _, system := range report.Systems {
 		fmt.Fprintf(&b, "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %d | %d |\n", system.System, system.RecallAnyAt5*100, system.RecallAnyAt10*100, system.StrictRecallAt5*100, system.StrictRecallAt10*100, system.MRR*100, system.SearchLatencyMs, system.RSSBytes)
 	}
+	b.WriteString("\n## Failure categories\n\n| System | Category | Questions |\n| --- | --- | ---: |\n")
+	for _, system := range report.Systems {
+		for _, category := range sortedLocomoFailureCategories(system.FailureCategories) {
+			fmt.Fprintf(&b, "| %s | `%s` | %d |\n", system.System, category, system.FailureCategories[category])
+		}
+	}
 	b.WriteString("\n## Category metrics\n\n")
 	for _, system := range report.Systems {
 		fmt.Fprintf(&b, "### %s\n\n| Category | Questions | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n", system.System)
@@ -790,6 +797,15 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 }
 
 func sortedLocomoCategories(metrics map[string]locomoCategoryMetrics) []string {
+	keys := make([]string, 0, len(metrics))
+	for key := range metrics {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sortedLocomoFailureCategories(metrics map[string]int) []string {
 	keys := make([]string, 0, len(metrics))
 	for key := range metrics {
 		keys = append(keys, key)

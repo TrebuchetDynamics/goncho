@@ -470,6 +470,10 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 		if _, ok := system["rss_bytes"]; !ok {
 			t.Fatalf("raw system %v missing rss_bytes", system["system"])
 		}
+		failureCategories, ok := system["failure_categories"].(map[string]any)
+		if !ok || len(failureCategories) == 0 {
+			t.Fatalf("raw system %v failure_categories = %#v, want non-empty metric counts", system["system"], system["failure_categories"])
+		}
 	}
 	var report locomoReport
 	if err := json.Unmarshal(raw, &report); err != nil {
@@ -496,5 +500,8 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "Search latency ms") || !strings.Contains(string(mdRaw), "RSS bytes") {
 		t.Fatalf("markdown missing resource metric columns:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "## Failure categories") {
+		t.Fatalf("markdown missing failure-category summary:\n%s", mdRaw)
 	}
 }
