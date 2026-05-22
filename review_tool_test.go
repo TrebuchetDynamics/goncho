@@ -97,6 +97,30 @@ func TestReviewToolResolveOutputIncludesResolvedAt(t *testing.T) {
 	}
 }
 
+func TestReviewToolResolveOutputIncludesReviewChain(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:      ReviewKindConflict,
+		PeerID:    "peer-chain",
+		SubjectID: "mem-current",
+		RelatedID: "mem-superseded",
+		Reason:    "current memory supersedes an older conflicting claim",
+		CreatedAt: time.Date(2026, 5, 22, 14, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("CreateReviewItem: %v", err)
+	}
+
+	tool := NewReviewTool(svc)
+	resolved := executeMemoryTool(t, ctx, tool, `{"action":"resolve","id":"`+item.ID+`","resolution":"superseded","resolved_by":"agent:mineru","resolution_reason":"chain reviewed"}`)
+	if stringField(t, resolved, "subject_id") != "mem-current" || stringField(t, resolved, "related_id") != "mem-superseded" {
+		t.Fatalf("resolve output = %+v, want review-chain identifiers", resolved)
+	}
+}
+
 func TestReviewToolTreatsBlankStatusAsOpenDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
