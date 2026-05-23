@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO answer-ready closeout now has a guarded roadmap handoff.
+  - Evidence target: `go test . -run TestBenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout -count=1` proves internal and public benchmark roadmaps summarize the delivered graph, query-decomposition, temporal/speaker-routing, failure-bucket, backend-comparison, and docs-guard chain.
+  - Result: the loop can stop cleanly with a source-backed answer for how to improve Goncho next: keep frozen LOCOMO metrics as the guardrail, choose an approved retrieval slice, and generate a new date-stamped full LOCOMO run only when the change is ready to compare.
+
 - 2026-05-22: Public LOCOMO docs now guard backend-comparison failure-bucket summaries.
   - Evidence target: `go test . -run TestBenchmarkDocsDocumentBackendComparisonFailureBucketSummaries -count=1` proves README, retrieval reference docs, and external adapter notes state that backend-comparison reports expose stable-ID `failure_buckets` and a markdown `Failure buckets` table beside rank-based `failure_categories`.
   - Result: backend authors and benchmark readers can interpret failure-bucket summaries as reporting-only diagnostics without changing scoring or regenerating frozen LOCOMO artifacts.

@@ -65,6 +65,8 @@ Speaker who-said-what routing slice delivered: `TestRecallSpeakerRoutingKeepsWho
 
 Failure-driven evaluation slice delivered: `TestLocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets` and `TestWriteLocomoFailureAuditEmitsFailureBucket` prove wrong branch retrieval and missing companion memories can be separated into failure-audit buckets while preserving stable-ID memories without regenerating LOCOMO full-run artifacts.
 
+LOCOMO answer-ready closeout delivered: the current evidence chain supports a plain answer to how to improve Goncho. Keep the frozen baseline metrics as the guardrail, target multi-hop recall_any@10 above `50%` and multi-hop strict_recall@10 above `25%`, continue hybrid candidate generation plus graph expansion, query decomposition, coverage-aware selection, temporal routing, speaker routing, and failure-bucket audits, and read backend-comparison `failure_buckets` beside rank categories. The delivered loop proves graph companions, query decomposition, temporal routing, speaker routing, failure-audit buckets, backend-comparison `failure_buckets`, and public docs guards without answer hints, LLM judges, answer-text scoring, or frozen artifact regeneration. Remaining benchmark backlog: choose an approved retrieval slice, then generate a new date-stamped full LOCOMO run only when the change is ready to compare against the frozen evidence.
+
 It tests:
 
 - long conversations,

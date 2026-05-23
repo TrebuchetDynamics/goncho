@@ -453,6 +453,36 @@ func TestBenchmarkRoadmapSurfacesLocomoFailureDrivenEvaluationSlice(t *testing.T
 	}
 }
 
+func TestBenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO answer-ready closeout delivered",
+		"current evidence chain supports a plain answer to how to improve Goncho",
+		"target multi-hop recall_any@10 above `50%` and multi-hop strict_recall@10 above `25%`",
+		"hybrid candidate generation",
+		"graph expansion, query decomposition, coverage-aware selection, temporal routing, speaker routing, and failure-bucket audits",
+		"backend-comparison `failure_buckets`",
+		"without answer hints, LLM judges, answer-text scoring, or frozen artifact regeneration",
+		"new date-stamped full LOCOMO run",
+	}
+	for _, path := range []string{
+		"docs/benchmarks/ROADMAP.md",
+		"docs-site/src/content/docs/roadmap/benchmark-roadmap.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO answer-ready closeout marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation(t *testing.T) {
 	const path = "docs/superpowers/plans/2026-05-22-locomo-failure-driven-evaluation.md"
 	wantMarkers := []string{
@@ -1143,6 +1173,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	text := string(raw)
 	for _, want := range []string{
 		"BenchmarkDocsDocumentBackendComparisonFailureBucketSummaries",
+		"BenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout",
 		"BenchmarkPlanDocumentsLocomoFailureDrivenEvaluation",
 		"BenchmarkRoadmapSurfacesLocomoFailureDrivenEvaluationSlice",
 		"BenchmarkRoadmapSurfacesLocomoSpeakerRoutingSlice",
