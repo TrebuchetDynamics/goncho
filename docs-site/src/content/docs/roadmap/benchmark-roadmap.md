@@ -59,6 +59,8 @@ Coverage-aware graph companion selection delivered: `TestRecallPipelineCoverageA
 
 Query-decomposition recall slice delivered: `TestRecallQueryDecompositionRetrievesEachSubQuestionFact` proves multi-part questions can split into subqueries, retrieve each required stable-ID fact, and merge results before scoring without regenerating LOCOMO full-run artifacts.
 
+Temporal current-truth routing slice delivered: `TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence` proves current facts can outrank superseded evidence while preserving superseded candidates and stable-ID memories without regenerating LOCOMO full-run artifacts.
+
 It tests:
 
 - long conversations,

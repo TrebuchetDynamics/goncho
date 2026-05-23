@@ -156,6 +156,14 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 			Evidence: map[string]string{"scope_id": q.ScopeID},
 		})
 	}
+	if recallQueryAsksCurrentTruth(q.Query) && recallHasSupersededEvidence(eligible) {
+		warnings = appendRecallWarnings(warnings, RecallWarning{
+			Code:     RecallWarningSupersededEvidenceObserved,
+			Stage:    RecallStageSelect,
+			Severity: RecallWarningInfo,
+			Message:  "recall candidates include superseded evidence; current-truth routing adjusted selection",
+		})
+	}
 
 	selected := make([]ScoredRecallCandidate, 0, min(limit, len(eligible)))
 	remaining := append([]ScoredRecallCandidate(nil), eligible...)
@@ -166,7 +174,8 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 		for i := range remaining {
 			penalty := recallDiversityPenalty(remaining[i], selected, e.opts.scoringConfig)
 			coverageBonus := recallCoverageBonus(remaining[i], selected)
-			effectiveScore := remaining[i].Score.FinalScore - penalty + coverageBonus
+			temporalAdjustment := recallTemporalAdjustment(remaining[i], q.Query)
+			effectiveScore := remaining[i].Score.FinalScore - penalty + coverageBonus + temporalAdjustment
 			if effectiveScore > bestScore || (effectiveScore == bestScore && compareScoredRecall(remaining[i], remaining[bestIdx]) < 0) {
 				bestScore = effectiveScore
 				bestIdx = i
@@ -174,11 +183,15 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 		}
 		chosen := remaining[bestIdx]
 		coverageBonus := recallCoverageBonus(chosen, selected)
+		temporalAdjustment := recallTemporalAdjustment(chosen, q.Query)
 		chosen.Score.DiversityPenalty = roundRecallFloat(recallDiversityPenalty(chosen, selected, e.opts.scoringConfig))
-		chosen.Score.FinalScore = roundRecallFloat(chosen.Score.FinalScore - chosen.Score.DiversityPenalty + coverageBonus)
+		chosen.Score.FinalScore = roundRecallFloat(chosen.Score.FinalScore - chosen.Score.DiversityPenalty + coverageBonus + temporalAdjustment)
 		chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("diversity_penalty=%.6f", chosen.Score.DiversityPenalty))
 		if coverageBonus > 0 {
 			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("coverage_bonus=%.6f", coverageBonus))
+		}
+		if temporalAdjustment != 0 {
+			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("temporal_adjustment=%.6f", temporalAdjustment))
 		}
 		tokenCost := estimateRecallTokens(chosen.Candidate.Content)
 		if budget > 0 && usedTokens+tokenCost > budget {
@@ -421,6 +434,53 @@ func addRecallRRF(items []ScoredRecallCandidate, config RecallScoringConfig) {
 	for i := range items {
 		items[i].Score.RRFScore = roundRecallFloat(items[i].Score.RRFScore)
 	}
+}
+
+const recallTemporalCurrentBonus = 0.08
+const recallTemporalSupersededPenalty = 0.20
+
+func recallTemporalAdjustment(candidate ScoredRecallCandidate, query string) float64 {
+	if !recallQueryAsksCurrentTruth(query) {
+		return 0
+	}
+	for _, evidence := range candidate.Candidate.Provenance {
+		if evidence.Kind != "temporal" {
+			continue
+		}
+		note := strings.ToLower(strings.TrimSpace(evidence.Note))
+		if strings.Contains(note, "superseded_by=") || strings.Contains(note, "superseded") {
+			return -recallTemporalSupersededPenalty
+		}
+		if strings.Contains(note, "current_fact") || strings.Contains(note, "valid_now") {
+			return recallTemporalCurrentBonus
+		}
+	}
+	return 0
+}
+
+func recallQueryAsksCurrentTruth(query string) bool {
+	query = strings.ToLower(query)
+	for _, marker := range []string{" now", "current", "currently", "latest", "today"} {
+		if strings.Contains(query, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {
+	for _, candidate := range candidates {
+		for _, evidence := range candidate.Candidate.Provenance {
+			if evidence.Kind != "temporal" {
+				continue
+			}
+			note := strings.ToLower(strings.TrimSpace(evidence.Note))
+			if strings.Contains(note, "superseded_by=") || strings.Contains(note, "superseded") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func recallCoverageBonus(candidate ScoredRecallCandidate, selected []ScoredRecallCandidate) float64 {

@@ -21,6 +21,7 @@ const (
 	RecallWarningFTSUnavailable             = "fts_unavailable"
 	RecallWarningScopeExcludedAllCandidates = "scope_excluded_all_candidates"
 	RecallWarningTokenBudgetTruncated       = "token_budget_truncated"
+	RecallWarningSupersededEvidenceObserved = "superseded_evidence_observed"
 
 	RecallRejectScopeMismatch = "scope_mismatch"
 	RecallRejectTokenBudget   = "token_budget"
