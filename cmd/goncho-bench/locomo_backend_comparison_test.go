@@ -577,8 +577,8 @@ func TestWriteLocomoBackendComparisonFailuresRejectsOutOfConversationRetrievedID
 		}},
 	}}}
 	err := writeLocomoBackendComparisonFailures(filepath.Join(t.TempDir(), "failures.jsonl"), data, report)
-	if err == nil || !strings.Contains(err.Error(), `out-of-conversation retrieved memory_id "m2"`) {
-		t.Fatalf("write backend comparison failures error = %v, want out-of-conversation retrieved stable ID error", err)
+	if err == nil || !strings.Contains(err.Error(), `out-of-conversation retrieved memory_id "m2"`) || !strings.Contains(err.Error(), `failure_bucket "wrong_branch_retrieval"`) {
+		t.Fatalf("write backend comparison failures error = %v, want out-of-conversation retrieved stable ID error with wrong_branch_retrieval diagnostic", err)
 	}
 }
 

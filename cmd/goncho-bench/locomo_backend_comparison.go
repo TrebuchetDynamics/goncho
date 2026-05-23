@@ -774,7 +774,7 @@ func writeLocomoBackendComparisonFailures(path string, data locomoDataset, repor
 				}
 				if mem.ConversationID != q.ConversationID {
 					_ = file.Close()
-					return fmt.Errorf("goncho-bench: LOCOMO backend comparison failure audit backend %q question %q out-of-conversation retrieved memory_id %q", backend.Backend, q.QuestionID, id)
+					return fmt.Errorf("goncho-bench: LOCOMO backend comparison failure audit backend %q question %q out-of-conversation retrieved memory_id %q with failure_bucket %q", backend.Backend, q.QuestionID, id, "wrong_branch_retrieval")
 				}
 				row.TopHits = append(row.TopHits, locomoFailureHit{Rank: i + 1, MemoryID: id, Content: mem.Content, Score: 0, Speaker: mem.Speaker, SessionID: mem.SessionID, TurnIndex: mem.TurnIndex})
 			}
