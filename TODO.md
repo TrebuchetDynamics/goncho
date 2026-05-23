@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Benchmark roadmap now names the LOCOMO implementation gate.
+  - Evidence target: `go test . -run TestBenchmarkRoadmapNamesLocomoImplementationGate -count=1` proves internal and public benchmark roadmap docs state recommendations are not approval to change retrieval behavior, require an approved plan before production retrieval changes, and require a focused failing recall test before graph/ranking code.
+  - Result: future LOCOMO implementation loops have a test-protected approval/TDD boundary while preserving frozen artifacts and stable-ID scoring.
+
 - 2026-05-22: Public benchmark docs now recommend LOCOMO improvement levers.
   - Evidence target: `go test . -run TestBenchmarkDocsRecommendLocomoImprovementLevers -count=1` proves README and Retrieval Benchmarks docs tie next improvements to weak multi-hop and strict-recall metrics, while preserving stable-ID, retrieval-only scoring constraints.
   - Result: readers can answer how to improve Goncho LOCOMO next without adding answer hints, LLM judges, answer-text scoring, benchmark-specific gold-ID hacks, or extra runtime tools.

@@ -229,6 +229,35 @@ func TestBenchmarkRoadmapNamesLocomoImprovementPriorities(t *testing.T) {
 	}
 }
 
+func TestBenchmarkRoadmapNamesLocomoImplementationGate(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO implementation gate",
+		"Recommendations are not approval to change retrieval behavior.",
+		"Write an approved design or plan before production retrieval changes.",
+		"Start implementation with a focused failing recall test",
+		"TestGraphRecallConnectsOwnerThroughServiceRelation",
+		"Preserve frozen LOCOMO artifacts until a new date-stamped full run is intentionally generated.",
+		"Do not tune against LOCOMO gold IDs",
+	}
+	for _, path := range []string{
+		"docs/benchmarks/ROADMAP.md",
+		"docs-site/src/content/docs/roadmap/benchmark-roadmap.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not name LOCOMO implementation gate marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkDocsRecommendLocomoImprovementLevers(t *testing.T) {
 	wantMarkers := []string{
 		"LOCOMO improvement recommendations",
@@ -789,6 +818,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	text := string(raw)
 	for _, want := range []string{
 		"BenchmarkRoadmapNamesLocomoImprovementPriorities",
+		"BenchmarkRoadmapNamesLocomoImplementationGate",
 		"BenchmarkDocsRecommendLocomoImprovementLevers",
 		"BenchmarkDocsSurfaceLocomoResultMetricSet",
 		"BenchmarkDocsDistinguishFrozenLocomoResultArtifacts",

@@ -32,6 +32,14 @@ LOCOMO improvement priorities:
 - Drive changes from failure-audit buckets such as missing candidates, rank-too-low candidates, wrong branch retrieval, and missing companion memories.
 - Target: raise multi-hop recall_any@10 above `50%` and raise multi-hop strict_recall@10 above `25%` without answer hints, benchmark-specific hacks, or LLM judges.
 
+LOCOMO implementation gate:
+
+- Recommendations are not approval to change retrieval behavior.
+- Write an approved design or plan before production retrieval changes.
+- Start implementation with a focused failing recall test, for example `TestGraphRecallConnectsOwnerThroughServiceRelation`, before adding graph storage, relation extraction, or reranking code.
+- Preserve frozen LOCOMO artifacts until a new date-stamped full run is intentionally generated.
+- Do not tune against LOCOMO gold IDs, answer text, or benchmark-specific hacks; score only stable inserted memory IDs.
+
 It should test:
 
 - long conversations,
