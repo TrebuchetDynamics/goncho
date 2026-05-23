@@ -36,6 +36,12 @@ LOCOMO result artifacts expand this surface with `NDCG@5`, `NDCG@10`, latency mi
   - `open_domain_retrieval`: recall_any@5 `63.73%`, recall_any@10 `70.27%`, MRR `50.39%`
   - `single_hop_retrieval`: recall_any@5 `47.16%`, recall_any@10 `59.22%`, MRR `31.91%`
   - `temporal_retrieval`: recall_any@5 `66.98%`, recall_any@10 `71.96%`, MRR `54.47%`
+- LOCOMO Goncho strict category metrics:
+  - `adversarial_unanswerable`: strict_recall@5 `60.09%`, strict_recall@10 `69.73%`
+  - `multi_hop_retrieval`: strict_recall@5 `15.22%`, strict_recall@10 `18.48%`
+  - `open_domain_retrieval`: strict_recall@5 `60.76%`, strict_recall@10 `67.54%`
+  - `single_hop_retrieval`: strict_recall@5 `9.22%`, strict_recall@10 `13.48%`
+  - `temporal_retrieval`: strict_recall@5 `60.75%`, strict_recall@10 `65.11%`
 - LOCOMO BM25 category metrics:
   - `adversarial_unanswerable`: recall_any@5 `61.88%`, recall_any@10 `71.52%`, MRR `48.92%`
   - `multi_hop_retrieval`: recall_any@5 `35.87%`, recall_any@10 `41.30%`, MRR `24.76%`

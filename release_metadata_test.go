@@ -578,6 +578,34 @@ func TestBenchmarkDocsSurfaceLocomoGonchoCategoryMetrics(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsSurfaceLocomoGonchoStrictCategoryMetrics(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO Goncho strict category metrics",
+		"`adversarial_unanswerable`: strict_recall@5 `60.09%`, strict_recall@10 `69.73%`",
+		"`multi_hop_retrieval`: strict_recall@5 `15.22%`, strict_recall@10 `18.48%`",
+		"`open_domain_retrieval`: strict_recall@5 `60.76%`, strict_recall@10 `67.54%`",
+		"`single_hop_retrieval`: strict_recall@5 `9.22%`, strict_recall@10 `13.48%`",
+		"`temporal_retrieval`: strict_recall@5 `60.75%`, strict_recall@10 `65.11%`",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO Goncho strict category metric marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkDocsSurfaceLocomoBM25CategoryMetrics(t *testing.T) {
 	wantMarkers := []string{
 		"LOCOMO BM25 category metrics",
@@ -711,6 +739,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsSurfaceLocomoCategoryMetricGroups",
 		"BenchmarkDocsSurfaceLocomoCategoryQuestionCounts",
 		"BenchmarkDocsSurfaceLocomoGonchoCategoryMetrics",
+		"BenchmarkDocsSurfaceLocomoGonchoStrictCategoryMetrics",
 		"BenchmarkDocsSurfaceLocomoBM25CategoryMetrics",
 		"BenchmarkDocsSurfaceLocomoSQLiteFTS5CategoryMetrics",
 		"BenchmarkDocsSurfaceLocomoRandomCategoryMetrics",

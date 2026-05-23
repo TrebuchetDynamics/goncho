@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now surface Goncho strict LOCOMO category metrics.
+  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoGonchoStrictCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name Goncho strict_recall@5 and strict_recall@10 for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
+  - Result: LOCOMO readers can distinguish any-hit category recall from all-gold-ID strict recall for Goncho without opening the generated full report first.
+
 - 2026-05-22: Public benchmark docs now surface LOCOMO category question counts.
   - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoCategoryQuestionCounts -count=1` proves README and Retrieval Benchmarks docs name 446 adversarial, 92 multi-hop, 841 open-domain, 282 single-hop, and 321 temporal retrieval questions from the frozen full run.
   - Result: LOCOMO readers can interpret category metrics with denominators without opening the generated full report first.
