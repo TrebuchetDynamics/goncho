@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Benchmark roadmap now names LOCOMO improvement priorities.
+  - Evidence target: `go test . -run TestBenchmarkRoadmapNamesLocomoImprovementPriorities -count=1` proves internal and public benchmark roadmap docs name multi-hop graph expansion, query decomposition, coverage-aware ranking, temporal and speaker routing, failure-audit buckets, and explicit multi-hop recall/strict-recall targets.
+  - Result: future LOCOMO optimization loops have a test-protected roadmap before changing retrieval behavior or frozen benchmark artifacts.
+
 - 2026-05-22: Public benchmark docs now surface Goncho strict LOCOMO category metrics.
   - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoGonchoStrictCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name Goncho strict_recall@5 and strict_recall@10 for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
   - Result: LOCOMO readers can distinguish any-hit category recall from all-gold-ID strict recall for Goncho without opening the generated full report first.

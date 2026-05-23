@@ -23,6 +23,15 @@ Milestone: LOCOMO exposed a candidate-generation weakness in Goncho, not primari
 
 The next LOCOMO step should not be immediate tuning. The candidate-generation result and stable-ID backend comparison are frozen for historical comparability. Future LOCOMO work should preserve those artifacts while either making more external backends comparable or adding contradiction/staleness audits on top of the same harness.
 
+LOCOMO improvement priorities:
+
+- Use multi-hop graph expansion to connect entities, events, relationships, and evidence IDs that lexical matching alone cannot bridge.
+- Add query decomposition so multi-part questions retrieve each required fact before final ranking.
+- Add coverage-aware ranking so top results include complementary gold memories instead of near-duplicate hits.
+- Improve temporal and speaker routing so changed facts, chronology, and who-said-what are ranked in the right conversation branch.
+- Drive changes from failure-audit buckets such as missing candidates, rank-too-low candidates, wrong branch retrieval, and missing companion memories.
+- Target: raise multi-hop recall_any@10 above `50%` and raise multi-hop strict_recall@10 above `25%` without answer hints, benchmark-specific hacks, or LLM judges.
+
 It should test:
 
 - long conversations,

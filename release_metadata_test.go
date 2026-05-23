@@ -199,6 +199,36 @@ func TestBenchmarkDocsMentionConversationScopedBackendComparison(t *testing.T) {
 	}
 }
 
+func TestBenchmarkRoadmapNamesLocomoImprovementPriorities(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO improvement priorities",
+		"multi-hop graph expansion",
+		"query decomposition",
+		"coverage-aware ranking",
+		"temporal and speaker routing",
+		"failure-audit buckets",
+		"raise multi-hop recall_any@10 above `50%`",
+		"raise multi-hop strict_recall@10 above `25%`",
+	}
+	for _, path := range []string{
+		"docs/benchmarks/ROADMAP.md",
+		"docs-site/src/content/docs/roadmap/benchmark-roadmap.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not name LOCOMO improvement priority marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkDocsSurfaceLocomoResultMetricSet(t *testing.T) {
 	wantMarkers := []string{
 		"NDCG@5",
@@ -725,6 +755,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
+		"BenchmarkRoadmapNamesLocomoImprovementPriorities",
 		"BenchmarkDocsSurfaceLocomoResultMetricSet",
 		"BenchmarkDocsDistinguishFrozenLocomoResultArtifacts",
 		"BenchmarkDocsNameLocomoReproductionCommands",
