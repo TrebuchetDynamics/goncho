@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO query-decomposition recall now has an implementation plan.
+  - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoQueryDecompositionRecall -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-query-decomposition-recall.md` names the TDD entrypoint, subquery split, stable-ID merge/deduplication, and stable-ID/no-answer-hint constraints.
+  - Result: the next retrieval-code loop can start from a concrete query-decomposition plan without changing frozen LOCOMO artifacts or scoring by answer text.
+
 - 2026-05-22: LOCOMO graph-assisted recall now has a coverage-aware selection slice.
   - Evidence target: `go test . -run TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion -count=1` proves a relation-path graph companion can beat a near-duplicate lexical hit when the selected set is small.
   - Result: multi-hop recall work can preserve complementary stable-ID memories in the selected context before any LOCOMO full-run artifact is regenerated.
