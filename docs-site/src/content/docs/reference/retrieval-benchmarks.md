@@ -262,6 +262,8 @@ Outputs:
 
 External adapters must return stable inserted `memory_id` values. Content-only matching is not accepted because LOCOMO contains duplicate and near-duplicate memories. Backend comparison is conversation-scoped before scoring so duplicate content from another conversation cannot beat the correct stable ID.
 
+An out-of-conversation `memory_id` is rejected before scoring and labeled `failure_bucket "wrong_branch_retrieval"`; it is not rescued by content matching or answer text.
+
 Current status:
 
 | Backend | Comparable | Notes |

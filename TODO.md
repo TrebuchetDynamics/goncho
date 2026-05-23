@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO docs now guard wrong-branch external backend rejections.
+  - Evidence target: `go test . -run TestBenchmarkDocsDocumentWrongBranchBackendRejections -count=1` proves README, public retrieval docs, and adapter notes state that an out-of-conversation stable `memory_id` is rejected before scoring, labeled `failure_bucket "wrong_branch_retrieval"`, and not rescued by content matching or answer text.
+  - Result: backend authors can see that wrong-branch diagnostics are scoring-blocking stable-ID validation, not a new content-only rescue path.
+
 - 2026-05-22: LOCOMO external backend wrong-branch rejections now name the failure bucket.
   - Evidence target: `go test ./cmd/goncho-bench -run TestLocomoBackendComparisonRejectsExternalOutOfConversationMemoryID -count=1` proves external comparable rows that return another conversation's stable `memory_id` are still rejected, and the error names `failure_bucket "wrong_branch_retrieval"`.
   - Result: backend authors get the same failure-driven vocabulary without weakening stable-ID comparability or admitting wrong-branch rows into scoring.

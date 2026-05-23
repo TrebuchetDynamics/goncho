@@ -199,6 +199,33 @@ func TestBenchmarkDocsMentionConversationScopedBackendComparison(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsDocumentWrongBranchBackendRejections(t *testing.T) {
+	wantMarkers := []string{
+		"out-of-conversation `memory_id`",
+		"`failure_bucket \"wrong_branch_retrieval\"`",
+		"rejected before scoring",
+		"not rescued by content matching or answer text",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+		"docs/benchmarks/external-backend-adapters.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not document wrong-branch backend rejection marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkRoadmapNamesLocomoImprovementPriorities(t *testing.T) {
 	wantMarkers := []string{
 		"LOCOMO improvement priorities",

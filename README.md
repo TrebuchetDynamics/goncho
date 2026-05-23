@@ -571,6 +571,8 @@ LOCOMO improvement recommendations:
 
 The backend comparison harness uses the same LOCOMO JSONL, same gold IDs, same centralized scoring, same leakage checks, and same failure taxonomy for Goncho, BM25, SQLite FTS5, agentmemory, and mem0. External backends are scored only if they return stable inserted `memory_id` values. If they cannot preserve IDs, they are marked `not comparable` instead of being scored by content matching or answer text.
 
+An out-of-conversation `memory_id` is rejected before scoring and labeled `failure_bucket "wrong_branch_retrieval"`; it is not rescued by content matching or answer text.
+
 Current external-backend status:
 
 | Backend | Comparable | Reason |

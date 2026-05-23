@@ -53,6 +53,7 @@ If the backend cannot preserve stable IDs, the adapter must fail closed:
 - Gold IDs must be unique within each LOCOMO question.
 - Unique `memory_id` and `question_id` values in the converted LOCOMO fixtures.
 - Conversation-scoped backend comparison before stable-ID scoring.
+- Any out-of-conversation `memory_id` returned for a question is rejected before scoring and labeled `failure_bucket "wrong_branch_retrieval"`; it is not rescued by content matching or answer text.
 - Stable-ID fan-out must not expand the requested top-K scoring window.
 - Centralized Go scoring only.
 - No Goncho ranking changes.
