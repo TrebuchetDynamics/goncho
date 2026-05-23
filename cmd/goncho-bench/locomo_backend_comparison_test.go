@@ -381,6 +381,54 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "| `single_hop_retrieval` | 1 | 100.00%")
 }
 
+func TestWriteLocomoBackendComparisonFailuresEmitsFailureBucket(t *testing.T) {
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "primary stable evidence"},
+			{MemoryID: "m2", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 2, Content: "companion stable evidence"},
+			{MemoryID: "m3", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 3, Content: "same-branch distractor"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "Which two stable facts belong together?", GoldMemoryIDs: []string{"m1", "m2"}, Category: "multi_hop_retrieval"}},
+	}
+	report := locomoBackendComparisonReport{Backends: []locomoBackendComparisonEntry{{
+		Backend:    "bm25",
+		Comparable: true,
+		QuestionsDetail: []locomoQuestionResult{{
+			QuestionID:       "q1",
+			ConversationID:   "c1",
+			Category:         "multi_hop_retrieval",
+			Question:         "Which two stable facts belong together?",
+			GoldMemoryIDs:    []string{"m1", "m2"},
+			RetrievedIDs:     []string{"m1", "m3"},
+			Rank:             1,
+			RecallAnyAt10:    1,
+			StrictRecallAt10: 0,
+		}},
+	}}}
+	path := filepath.Join(t.TempDir(), "failures.jsonl")
+	if err := writeLocomoBackendComparisonFailures(path, data, report); err != nil {
+		t.Fatalf("write backend comparison failures: %v", err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read failures: %v", err)
+	}
+	var wrapped struct {
+		Backend    string           `json:"backend"`
+		Comparable bool             `json:"comparable"`
+		Failure    locomoFailureRow `json:"failure"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(raw))), &wrapped); err != nil {
+		t.Fatalf("decode backend comparison failure row: %v; raw=%q", err, raw)
+	}
+	if wrapped.Backend != "bm25" || !wrapped.Comparable {
+		t.Fatalf("wrapped row = %+v, want comparable bm25 failure", wrapped)
+	}
+	if wrapped.Failure.FailureBucket != "missing_companion_memory" {
+		t.Fatalf("failure bucket = %q, want missing_companion_memory; row=%+v", wrapped.Failure.FailureBucket, wrapped.Failure)
+	}
+}
+
 func TestWriteLocomoBackendComparisonFailuresRejectsUnknownQuestionID(t *testing.T) {
 	data := locomoDataset{
 		Memories:  []locomoMemoryRow{{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "known memory"}},

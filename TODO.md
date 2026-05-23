@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO backend-comparison failure audits now emit stable-ID failure buckets.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoBackendComparisonFailuresEmitsFailureBucket -count=1` proves comparable backend failure rows can label missing companion memories as `failure_bucket` without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
+  - Result: external-backend comparisons can share the same failure-driven evaluation vocabulary as Goncho's native LOCOMO failure audit.
+
 - 2026-05-22: LOCOMO failure-driven evaluation has its first implementation slice.
   - Evidence target: `go test ./cmd/goncho-bench -run 'Test(LocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets|WriteLocomoFailureAuditEmitsFailureBucket)' -count=1` proves wrong branch retrieval and missing companion memories can be classified from stable-ID LOCOMO rows, and partial multi-gold audit rows emit `failure_bucket` without regenerating LOCOMO full-run artifacts.
   - Result: future retrieval tuning can start from named failure-audit buckets instead of tuning aggregate recall alone.

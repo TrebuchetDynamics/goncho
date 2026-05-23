@@ -715,8 +715,10 @@ func writeLocomoBackendComparisonFailures(path string, data locomoDataset, repor
 		return nil
 	}
 	memByID := map[string]locomoMemoryRow{}
+	memoryConversationIDs := map[string]string{}
 	for _, mem := range data.Memories {
 		memByID[mem.MemoryID] = mem
+		memoryConversationIDs[mem.MemoryID] = mem.ConversationID
 	}
 	questionsByID := map[string]locomoQuestionRow{}
 	for _, q := range data.Questions {
@@ -740,7 +742,7 @@ func writeLocomoBackendComparisonFailures(path string, data locomoDataset, repor
 			continue
 		}
 		for _, q := range backend.QuestionsDetail {
-			if q.Rank == 1 {
+			if locomoFailureAuditShouldSkip(q) {
 				continue
 			}
 			fixtureQuestion, ok := questionsByID[q.QuestionID]
@@ -763,7 +765,7 @@ func writeLocomoBackendComparisonFailures(path string, data locomoDataset, repor
 					return fmt.Errorf("goncho-bench: LOCOMO backend comparison failure audit backend %q question %q out-of-conversation gold_memory_id %q", backend.Backend, q.QuestionID, id)
 				}
 			}
-			row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: backend.Backend + ":" + locomoFailureNotes(q), Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
+			row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: backend.Backend + ":" + locomoFailureNotes(q), FailureBucket: classifyLocomoFailureBucket(q, memoryConversationIDs), Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
 			for i, id := range q.RetrievedIDs[:min(10, len(q.RetrievedIDs))] {
 				mem, ok := memByID[id]
 				if !ok {
