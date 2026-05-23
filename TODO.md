@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now recommend LOCOMO improvement levers.
+  - Evidence target: `go test . -run TestBenchmarkDocsRecommendLocomoImprovementLevers -count=1` proves README and Retrieval Benchmarks docs tie next improvements to weak multi-hop and strict-recall metrics, while preserving stable-ID, retrieval-only scoring constraints.
+  - Result: readers can answer how to improve Goncho LOCOMO next without adding answer hints, LLM judges, answer-text scoring, benchmark-specific gold-ID hacks, or extra runtime tools.
+
 - 2026-05-22: Benchmark roadmap now names LOCOMO improvement priorities.
   - Evidence target: `go test . -run TestBenchmarkRoadmapNamesLocomoImprovementPriorities -count=1` proves internal and public benchmark roadmap docs name multi-hop graph expansion, query decomposition, coverage-aware ranking, temporal and speaker routing, failure-audit buckets, and explicit multi-hop recall/strict-recall targets.
   - Result: future LOCOMO optimization loops have a test-protected roadmap before changing retrieval behavior or frozen benchmark artifacts.

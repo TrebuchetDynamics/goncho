@@ -66,6 +66,14 @@ LOCOMO result artifacts expand this surface with `NDCG@5`, `NDCG@10`, latency mi
   - `open_domain_retrieval`: recall_any@5 `0.36%`, recall_any@10 `0.59%`, MRR `0.21%`
   - `single_hop_retrieval`: recall_any@5 `0.71%`, recall_any@10 `1.77%`, MRR `0.29%`
   - `temporal_retrieval`: recall_any@5 `0.31%`, recall_any@10 `0.93%`, MRR `0.14%`
+- LOCOMO improvement recommendations:
+  - Focus first on the weakest frozen metrics: multi-hop recall_any@10 is `41.30%`, multi-hop strict_recall@10 is `18.48%`, and single-hop strict_recall@10 is `13.48%`.
+  - Use hybrid candidate generation to combine local lexical hits, backend-comparison lessons, and graph-expanded evidence before top-K truncation.
+  - Add multi-hop graph expansion and query decomposition so relationship questions retrieve each required companion memory before final ranking.
+  - Improve temporal and speaker routing so changed facts and who-said-what stay in the right conversation branch.
+  - Add coverage-aware ranking so top-K results cover distinct gold evidence instead of near-duplicate memories.
+  - Keep failure-driven evaluation by tying each change to a failure-audit bucket and stable inserted `memory_id` evidence.
+  - Treat these as retrieval improvements, not extra tools: do not introduce answer hints, LLM judges, answer-text scoring, or benchmark-specific gold-ID hacks.
 - Full LOCOMO reproduction: `make bench-locomo` — manual full run with pinned conversion; writes date-stamped full-run artifacts.
 - Retrieval smoke reproduction: `make bench-locomo-smoke` — CI-safe tiny fixture for retrieval report regeneration.
 - Backend smoke reproduction: `make bench-locomo-backends-smoke` — CI-safe external-backend harness check.
