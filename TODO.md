@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO external backend wrong-branch rejections now name the failure bucket.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestLocomoBackendComparisonRejectsExternalOutOfConversationMemoryID -count=1` proves external comparable rows that return another conversation's stable `memory_id` are still rejected, and the error names `failure_bucket "wrong_branch_retrieval"`.
+  - Result: backend authors get the same failure-driven vocabulary without weakening stable-ID comparability or admitting wrong-branch rows into scoring.
+
 - 2026-05-22: LOCOMO backend-comparison failure audits now emit stable-ID failure buckets.
   - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoBackendComparisonFailuresEmitsFailureBucket -count=1` proves comparable backend failure rows can label missing companion memories as `failure_bucket` without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
   - Result: external-backend comparisons can share the same failure-driven evaluation vocabulary as Goncho's native LOCOMO failure audit.

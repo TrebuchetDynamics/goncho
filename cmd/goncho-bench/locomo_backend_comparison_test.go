@@ -208,8 +208,8 @@ func TestLocomoBackendComparisonRejectsExternalOutOfConversationMemoryID(t *test
 	writeTestFile(t, path, `{"backend":"mem0","question_id":"q1","comparable":true,"results":[{"memory_id":"m2","score":0.9}]}
 `)
 	_, err := evaluateLocomoBackend(ctx, data, "mem0", 10, config{LocomoMem0Results: path})
-	if err == nil || !strings.Contains(err.Error(), `out-of-conversation memory_id "m2"`) {
-		t.Fatalf("err = %v, want out-of-conversation memory_id rejection", err)
+	if err == nil || !strings.Contains(err.Error(), `out-of-conversation memory_id "m2"`) || !strings.Contains(err.Error(), `failure_bucket "wrong_branch_retrieval"`) {
+		t.Fatalf("err = %v, want out-of-conversation memory_id rejection with wrong_branch_retrieval diagnostic", err)
 	}
 }
 

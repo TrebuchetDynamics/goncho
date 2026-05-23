@@ -294,7 +294,7 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 				return locomoBackendComparisonEntry{}, fmt.Errorf("external %s question %s returned unknown memory_id %q", name, q.QuestionID, id)
 			}
 			if memConversationID := memoryConversationIDs[id]; memConversationID != "" && q.ConversationID != "" && memConversationID != q.ConversationID {
-				return locomoBackendComparisonEntry{}, fmt.Errorf("external %s question %s returned out-of-conversation memory_id %q", name, q.QuestionID, id)
+				return locomoBackendComparisonEntry{}, fmt.Errorf("external %s question %s returned out-of-conversation memory_id %q with failure_bucket %q", name, q.QuestionID, id, "wrong_branch_retrieval")
 			}
 			if i >= topK {
 				continue
