@@ -73,6 +73,7 @@ type locomoBackendComparisonEntry struct {
 	LatencyMs           locomoLatencyStats               `json:"latency_ms"`
 	RSSBytes            uint64                           `json:"rss_bytes,omitempty"`
 	FailureCategories   map[string]int                   `json:"failure_categories,omitempty"`
+	FailureBuckets      map[string]int                   `json:"failure_buckets,omitempty"`
 	CategoryMetrics     map[string]locomoCategoryMetrics `json:"category_metrics,omitempty"`
 	QuestionsDetail     []locomoQuestionResult           `json:"question_results,omitempty"`
 	SetupNotes          []string                         `json:"setup_notes,omitempty"`
@@ -191,12 +192,13 @@ func evaluateLocomoBackend(ctx context.Context, data locomoDataset, name string,
 	}
 	searchLatency := time.Since(searchStart).Milliseconds()
 	summary := summarizeLocomoSystem(name, results)
+	memoryConversationIDs := locomoMemoryConversationIDs(data.Memories)
 	return locomoBackendComparisonEntry{
 		Backend: name, Comparable: true, Questions: len(results),
 		RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10,
 		StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR,
 		InsertLatencyMs: insertLatency, SearchLatencyMs: searchLatency, LatencyMs: summary.LatencyMs, RSSBytes: currentRSSBytes(),
-		FailureCategories: locomoFailureCategories(results), CategoryMetrics: summary.CategoryMetrics, QuestionsDetail: results, SetupNotes: setupNotesForBackend(name),
+		FailureCategories: locomoFailureCategories(results), FailureBuckets: locomoFailureBuckets(results, memoryConversationIDs), CategoryMetrics: summary.CategoryMetrics, QuestionsDetail: results, SetupNotes: setupNotesForBackend(name),
 	}, nil
 }
 
@@ -272,10 +274,9 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 		return locomoBackendComparisonEntry{Backend: name, Comparable: false, NotComparableReason: statusReason, SetupNotes: setupNotes}, nil
 	}
 	validMemoryIDs := make(map[string]struct{}, len(data.Memories))
-	memoryConversationIDs := make(map[string]string, len(data.Memories))
+	memoryConversationIDs := locomoMemoryConversationIDs(data.Memories)
 	for _, mem := range data.Memories {
 		validMemoryIDs[mem.MemoryID] = struct{}{}
-		memoryConversationIDs[mem.MemoryID] = mem.ConversationID
 	}
 	results := make([]locomoQuestionResult, 0, len(data.Questions))
 	for _, q := range data.Questions {
@@ -308,7 +309,7 @@ func evaluateExternalLocomoResults(data locomoDataset, name, path string, topK i
 		results = append(results, scoreLocomoQuestion(q, ids))
 	}
 	summary := summarizeLocomoSystem(name, results)
-	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR, LatencyMs: summary.LatencyMs, FailureCategories: locomoFailureCategories(results), CategoryMetrics: summary.CategoryMetrics, QuestionsDetail: results, SetupNotes: setupNotes}, nil
+	return locomoBackendComparisonEntry{Backend: name, Comparable: true, Questions: len(results), RecallAnyAt5: summary.RecallAnyAt5, RecallAnyAt10: summary.RecallAnyAt10, StrictRecallAt5: summary.StrictRecallAt5, StrictRecallAt10: summary.StrictRecallAt10, NDCGAt5: summary.NDCGAt5, NDCGAt10: summary.NDCGAt10, MRR: summary.MRR, LatencyMs: summary.LatencyMs, FailureCategories: locomoFailureCategories(results), FailureBuckets: locomoFailureBuckets(results, memoryConversationIDs), CategoryMetrics: summary.CategoryMetrics, QuestionsDetail: results, SetupNotes: setupNotes}, nil
 }
 
 func newLocomoBackend(name string) (MemoryBackend, string, error) {
@@ -670,6 +671,23 @@ func locomoFailureCategories(results []locomoQuestionResult) map[string]int {
 	}
 	return out
 }
+func locomoFailureBuckets(results []locomoQuestionResult, memoryConversationIDs map[string]string) map[string]int {
+	out := map[string]int{}
+	for _, q := range results {
+		if locomoFailureAuditShouldSkip(q) {
+			continue
+		}
+		out[classifyLocomoFailureBucket(q, memoryConversationIDs)]++
+	}
+	return out
+}
+func locomoMemoryConversationIDs(memories []locomoMemoryRow) map[string]string {
+	out := make(map[string]string, len(memories))
+	for _, mem := range memories {
+		out[mem.MemoryID] = mem.ConversationID
+	}
+	return out
+}
 func setupNotesForBackend(name string) []string {
 	switch name {
 	case "goncho-no-rank":
@@ -838,6 +856,12 @@ func writeLocomoBackendComparisonMarkdown(path string, report locomoBackendCompa
 	for _, e := range report.Backends {
 		for _, category := range sortedLocomoFailureCategories(e.FailureCategories) {
 			fmt.Fprintf(&b, "| `%s` | `%s` | %d |\n", e.Backend, category, e.FailureCategories[category])
+		}
+	}
+	b.WriteString("\n## Failure buckets\n\n| Backend | Bucket | Questions |\n| --- | --- | ---: |\n")
+	for _, e := range report.Backends {
+		for _, bucket := range sortedLocomoFailureCategories(e.FailureBuckets) {
+			fmt.Fprintf(&b, "| `%s` | `%s` | %d |\n", e.Backend, bucket, e.FailureBuckets[bucket])
 		}
 	}
 	b.WriteString("\n## Category metrics\n\n")

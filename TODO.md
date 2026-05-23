@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO backend-comparison reports now summarize failure buckets.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestLocomoBackendComparisonSummarizesFailureBuckets -count=1` proves comparable backend reports emit `failure_buckets` JSON and a markdown `Failure buckets` table with stable-ID-only `missing_companion_memory` counts.
+  - Result: operators can compare failure-driven buckets beside rank-based failure categories without regenerating frozen LOCOMO full-run artifacts or changing scoring semantics.
+
 - 2026-05-22: LOCOMO backend-comparison failure-audit validation now names wrong-branch buckets.
   - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoBackendComparisonFailuresRejectsOutOfConversationRetrievedID -count=1` proves out-of-conversation retrieved stable IDs are still rejected before JSONL emission, and the validation error names `failure_bucket "wrong_branch_retrieval"`.
   - Result: failure-audit operators get bucket-aligned diagnostics without admitting invalid cross-conversation rows into comparable backend audits.

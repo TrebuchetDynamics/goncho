@@ -381,6 +381,42 @@ func TestRunLocomoBackendComparisonWritesJSONAndMarkdown(t *testing.T) {
 	assertBenchFileContains(t, mdOut, "| `single_hop_retrieval` | 1 | 100.00%")
 }
 
+func TestLocomoBackendComparisonSummarizesFailureBuckets(t *testing.T) {
+	ctx := context.Background()
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", Content: "primary stable evidence"},
+			{MemoryID: "m2", ConversationID: "c1", Content: "companion stable evidence"},
+			{MemoryID: "m3", ConversationID: "c1", Content: "same-branch distractor"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "Which two stable facts belong together?", GoldMemoryIDs: []string{"m1", "m2"}, Category: "multi_hop_retrieval"}},
+	}
+	dir := t.TempDir()
+	externalPath := filepath.Join(dir, "mem0.jsonl")
+	writeTestFile(t, externalPath, `{"backend":"mem0","question_id":"q1","comparable":true,"results":[{"memory_id":"m1","score":0.9},{"memory_id":"m3","score":0.8}]}
+`)
+	entry, err := evaluateLocomoBackend(ctx, data, "mem0", 10, config{LocomoMem0Results: externalPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry.FailureBuckets["missing_companion_memory"] != 1 {
+		t.Fatalf("failure buckets = %+v, want one missing_companion_memory bucket", entry.FailureBuckets)
+	}
+	report := locomoBackendComparisonReport{TopK: 10, NoLLMJudge: true, Backends: []locomoBackendComparisonEntry{entry}}
+	jsonOut := filepath.Join(dir, "comparison.json")
+	if err := writeLocomoBackendComparisonJSON(jsonOut, report); err != nil {
+		t.Fatalf("write backend comparison json: %v", err)
+	}
+	assertBenchFileContains(t, jsonOut, `"failure_buckets"`)
+	assertBenchFileContains(t, jsonOut, `"missing_companion_memory": 1`)
+	mdOut := filepath.Join(dir, "comparison.md")
+	if err := writeLocomoBackendComparisonMarkdown(mdOut, report, jsonOut, filepath.Join(dir, "failures.jsonl")); err != nil {
+		t.Fatalf("write backend comparison markdown: %v", err)
+	}
+	assertBenchFileContains(t, mdOut, "## Failure buckets")
+	assertBenchFileContains(t, mdOut, "| `mem0` | `missing_companion_memory` | 1 |")
+}
+
 func TestWriteLocomoBackendComparisonFailuresEmitsFailureBucket(t *testing.T) {
 	data := locomoDataset{
 		Memories: []locomoMemoryRow{
