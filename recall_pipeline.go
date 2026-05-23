@@ -24,6 +24,8 @@ var defaultRecallWeights = map[string]float64{
 	"scope":      0.05,
 }
 
+const recallGraphCoverageBonus = 0.05
+
 type RecallEngine interface {
 	Run(ctx context.Context, q RecallQuery) (RecallTrace, error)
 }
@@ -163,16 +165,21 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 		bestScore := math.Inf(-1)
 		for i := range remaining {
 			penalty := recallDiversityPenalty(remaining[i], selected, e.opts.scoringConfig)
-			effectiveScore := remaining[i].Score.FinalScore - penalty
+			coverageBonus := recallCoverageBonus(remaining[i], selected)
+			effectiveScore := remaining[i].Score.FinalScore - penalty + coverageBonus
 			if effectiveScore > bestScore || (effectiveScore == bestScore && compareScoredRecall(remaining[i], remaining[bestIdx]) < 0) {
 				bestScore = effectiveScore
 				bestIdx = i
 			}
 		}
 		chosen := remaining[bestIdx]
+		coverageBonus := recallCoverageBonus(chosen, selected)
 		chosen.Score.DiversityPenalty = roundRecallFloat(recallDiversityPenalty(chosen, selected, e.opts.scoringConfig))
-		chosen.Score.FinalScore = roundRecallFloat(chosen.Score.FinalScore - chosen.Score.DiversityPenalty)
+		chosen.Score.FinalScore = roundRecallFloat(chosen.Score.FinalScore - chosen.Score.DiversityPenalty + coverageBonus)
 		chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("diversity_penalty=%.6f", chosen.Score.DiversityPenalty))
+		if coverageBonus > 0 {
+			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("coverage_bonus=%.6f", coverageBonus))
+		}
 		tokenCost := estimateRecallTokens(chosen.Candidate.Content)
 		if budget > 0 && usedTokens+tokenCost > budget {
 			rejected = append(rejected, RejectedRecallCandidate{
@@ -414,6 +421,26 @@ func addRecallRRF(items []ScoredRecallCandidate, config RecallScoringConfig) {
 	for i := range items {
 		items[i].Score.RRFScore = roundRecallFloat(items[i].Score.RRFScore)
 	}
+}
+
+func recallCoverageBonus(candidate ScoredRecallCandidate, selected []ScoredRecallCandidate) float64 {
+	if len(selected) == 0 {
+		return 0
+	}
+	for _, evidence := range candidate.Candidate.Provenance {
+		if evidence.Kind != "graph" {
+			continue
+		}
+		for _, item := range selected {
+			if item.Candidate.MemoryID == "" || item.Candidate.MemoryID == candidate.Candidate.MemoryID {
+				continue
+			}
+			if evidence.Source == item.Candidate.MemoryID || strings.HasPrefix(evidence.Note, item.Candidate.MemoryID+" -> ") {
+				return recallGraphCoverageBonus
+			}
+		}
+	}
+	return 0
 }
 
 func recallDiversityPenalty(candidate ScoredRecallCandidate, selected []ScoredRecallCandidate, config RecallScoringConfig) float64 {

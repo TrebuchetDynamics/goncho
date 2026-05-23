@@ -55,6 +55,8 @@ LOCOMO implementation gate:
 
 First graph-assisted implementation slice delivered: `TestGraphRecallConnectsOwnerThroughServiceRelation` proves graph-expanded multi-hop recall can retrieve a stable-ID companion memory with relation path provenance before any LOCOMO full-run artifact is regenerated.
 
+Coverage-aware graph companion selection delivered: `TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion` proves selection prefers relation-path companion memories over near-duplicate lexical hits without regenerating LOCOMO full-run artifacts.
+
 It tests:
 
 - long conversations,

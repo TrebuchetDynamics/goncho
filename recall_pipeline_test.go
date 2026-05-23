@@ -124,6 +124,61 @@ func TestRecallPipelineScopeWarningWhenAllCandidatesExcluded(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-auth-service",
+			Content:    "Authentication service handles login flows.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.8,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 1.0}},
+		},
+		{
+			MemoryID:   "mem-auth-service-dup",
+			Content:    "Authentication service handles login flows and session refresh.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.8,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.99}},
+		},
+		{
+			MemoryID:   "mem-auth-owner",
+			Content:    "Mira owns component A-17.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.8,
+			Provenance: []EvidenceItem{{Kind: "graph", Source: "mem-auth-service", Score: 0.98, Note: "mem-auth-service -> owned_by -> mem-auth-owner"}},
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "coverage-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:       "coverage-test-v1",
+			Weights:       map[string]float64{"keyword": 0.45, "graph": 0.45, "scope": 0.10},
+			RRFK:          60,
+			MMRLambda:     0.70,
+			DiversityKeys: []string{"memory_id"},
+			TokenBudget:   120,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "authentication owner",
+		ScopeID:     "team",
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(selectedRecallIDs(trace), []string{"mem-auth-service", "mem-auth-owner"}) {
+		t.Fatalf("selected IDs = %v, want coverage-aware selection", selectedRecallIDs(trace))
+	}
+}
+
 func TestRecallPipelineCopiesScoringConfig(t *testing.T) {
 	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	config := RecallScoringConfig{
