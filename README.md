@@ -527,6 +527,14 @@ LOCOMO SQLite FTS5 category metrics:
 - `single_hop_retrieval`: recall_any@5 `35.11%`, recall_any@10 `45.39%`, MRR `25.38%`
 - `temporal_retrieval`: recall_any@5 `54.83%`, recall_any@10 `60.75%`, MRR `43.48%`
 
+LOCOMO random baseline category metrics:
+
+- `adversarial_unanswerable`: recall_any@5 `1.35%`, recall_any@10 `2.47%`, MRR `0.88%`
+- `multi_hop_retrieval`: recall_any@5 `3.26%`, recall_any@10 `5.43%`, MRR `1.58%`
+- `open_domain_retrieval`: recall_any@5 `1.19%`, recall_any@10 `2.50%`, MRR `0.89%`
+- `single_hop_retrieval`: recall_any@5 `2.48%`, recall_any@10 `3.55%`, MRR `0.97%`
+- `temporal_retrieval`: recall_any@5 `0.00%`, recall_any@10 `0.62%`, MRR `0.08%`
+
 The backend comparison harness uses the same LOCOMO JSONL, same gold IDs, same centralized scoring, same leakage checks, and same failure taxonomy for Goncho, BM25, SQLite FTS5, agentmemory, and mem0. External backends are scored only if they return stable inserted `memory_id` values. If they cannot preserve IDs, they are marked `not comparable` instead of being scored by content matching or answer text.
 
 Current external-backend status:

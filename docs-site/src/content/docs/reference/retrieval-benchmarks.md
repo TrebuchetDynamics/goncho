@@ -42,6 +42,12 @@ LOCOMO result artifacts expand this surface with `NDCG@5`, `NDCG@10`, latency mi
   - `open_domain_retrieval`: recall_any@5 `52.68%`, recall_any@10 `60.05%`, MRR `41.87%`
   - `single_hop_retrieval`: recall_any@5 `35.11%`, recall_any@10 `45.39%`, MRR `25.38%`
   - `temporal_retrieval`: recall_any@5 `54.83%`, recall_any@10 `60.75%`, MRR `43.48%`
+- LOCOMO random baseline category metrics:
+  - `adversarial_unanswerable`: recall_any@5 `1.35%`, recall_any@10 `2.47%`, MRR `0.88%`
+  - `multi_hop_retrieval`: recall_any@5 `3.26%`, recall_any@10 `5.43%`, MRR `1.58%`
+  - `open_domain_retrieval`: recall_any@5 `1.19%`, recall_any@10 `2.50%`, MRR `0.89%`
+  - `single_hop_retrieval`: recall_any@5 `2.48%`, recall_any@10 `3.55%`, MRR `0.97%`
+  - `temporal_retrieval`: recall_any@5 `0.00%`, recall_any@10 `0.62%`, MRR `0.08%`
 - Full LOCOMO reproduction: `make bench-locomo` — manual full run with pinned conversion; writes date-stamped full-run artifacts.
 - Retrieval smoke reproduction: `make bench-locomo-smoke` — CI-safe tiny fixture for retrieval report regeneration.
 - Backend smoke reproduction: `make bench-locomo-backends-smoke` — CI-safe external-backend harness check.
