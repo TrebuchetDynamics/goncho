@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now surface Goncho LOCOMO category metrics.
+  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoGonchoCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name Goncho recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
+  - Result: LOCOMO readers can inspect Goncho's category-level full-run performance without opening the generated full report first.
+
 - 2026-05-22: Public benchmark docs now surface LOCOMO category metric groups.
   - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoCategoryMetricGroups -count=1` proves README and Retrieval Benchmarks docs name the adversarial, multi-hop, open-domain, single-hop, and temporal retrieval groups reported by the frozen full run.
   - Result: LOCOMO readers can see which retrieval categories are summarized without opening the generated full report first.
