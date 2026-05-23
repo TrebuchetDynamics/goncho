@@ -61,6 +61,8 @@ Query-decomposition recall slice delivered: `TestRecallQueryDecompositionRetriev
 
 Temporal current-truth routing slice delivered: `TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence` proves current facts can outrank superseded evidence while preserving superseded candidates and stable-ID memories without regenerating LOCOMO full-run artifacts.
 
+Speaker who-said-what routing slice delivered: `TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch` proves explicit speaker provenance can select the right who-said-what branches while preserving stable-ID memories without regenerating LOCOMO full-run artifacts.
+
 It tests:
 
 - long conversations,

@@ -175,7 +175,8 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 			penalty := recallDiversityPenalty(remaining[i], selected, e.opts.scoringConfig)
 			coverageBonus := recallCoverageBonus(remaining[i], selected)
 			temporalAdjustment := recallTemporalAdjustment(remaining[i], q.Query)
-			effectiveScore := remaining[i].Score.FinalScore - penalty + coverageBonus + temporalAdjustment
+			speakerAdjustment := recallSpeakerAdjustment(remaining[i], q.Query)
+			effectiveScore := remaining[i].Score.FinalScore - penalty + coverageBonus + temporalAdjustment + speakerAdjustment
 			if effectiveScore > bestScore || (effectiveScore == bestScore && compareScoredRecall(remaining[i], remaining[bestIdx]) < 0) {
 				bestScore = effectiveScore
 				bestIdx = i
@@ -184,14 +185,18 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 		chosen := remaining[bestIdx]
 		coverageBonus := recallCoverageBonus(chosen, selected)
 		temporalAdjustment := recallTemporalAdjustment(chosen, q.Query)
+		speakerAdjustment := recallSpeakerAdjustment(chosen, q.Query)
 		chosen.Score.DiversityPenalty = roundRecallFloat(recallDiversityPenalty(chosen, selected, e.opts.scoringConfig))
-		chosen.Score.FinalScore = roundRecallFloat(chosen.Score.FinalScore - chosen.Score.DiversityPenalty + coverageBonus + temporalAdjustment)
+		chosen.Score.FinalScore = roundRecallFloat(chosen.Score.FinalScore - chosen.Score.DiversityPenalty + coverageBonus + temporalAdjustment + speakerAdjustment)
 		chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("diversity_penalty=%.6f", chosen.Score.DiversityPenalty))
 		if coverageBonus > 0 {
 			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("coverage_bonus=%.6f", coverageBonus))
 		}
 		if temporalAdjustment != 0 {
 			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("temporal_adjustment=%.6f", temporalAdjustment))
+		}
+		if speakerAdjustment > 0 {
+			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("speaker_adjustment=%.6f", speakerAdjustment))
 		}
 		tokenCost := estimateRecallTokens(chosen.Candidate.Content)
 		if budget > 0 && usedTokens+tokenCost > budget {
@@ -438,6 +443,7 @@ func addRecallRRF(items []ScoredRecallCandidate, config RecallScoringConfig) {
 
 const recallTemporalCurrentBonus = 0.08
 const recallTemporalSupersededPenalty = 0.20
+const recallSpeakerMatchBonus = 0.12
 
 func recallTemporalAdjustment(candidate ScoredRecallCandidate, query string) float64 {
 	if !recallQueryAsksCurrentTruth(query) {
@@ -481,6 +487,72 @@ func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {
 		}
 	}
 	return false
+}
+
+func recallSpeakerAdjustment(candidate ScoredRecallCandidate, query string) float64 {
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return 0
+	}
+	speaker := recallCandidateSpeaker(candidate.Candidate)
+	if speaker == "" {
+		return 0
+	}
+	targets := recallQuerySpeakerTargets(query)
+	if len(targets) > 0 {
+		for _, target := range targets {
+			if target == speaker {
+				return recallSpeakerMatchBonus
+			}
+		}
+		return 0
+	}
+	if strings.Contains(query, speaker) {
+		return recallSpeakerMatchBonus
+	}
+	return 0
+}
+
+func recallCandidateSpeaker(candidate RecallCandidate) string {
+	for _, evidence := range candidate.Provenance {
+		if evidence.Kind != "speaker" {
+			continue
+		}
+		speaker := strings.ToLower(strings.TrimSpace(evidence.Source))
+		if speaker == "" {
+			note := strings.ToLower(strings.TrimSpace(evidence.Note))
+			if strings.HasPrefix(note, "speaker=") {
+				speaker = strings.TrimSpace(strings.TrimPrefix(note, "speaker="))
+			}
+		}
+		if speaker != "" {
+			return speaker
+		}
+	}
+	return strings.ToLower(strings.TrimSpace(candidate.AgentID))
+}
+
+func recallQuerySpeakerTargets(query string) []string {
+	tokens := recallQueryTokens(query)
+	for i := 0; i+2 < len(tokens); i++ {
+		if tokens[i] == "did" && tokens[i+2] == "say" {
+			return []string{tokens[i+1]}
+		}
+		if tokens[i] == "has" && tokens[i+2] == "said" {
+			return []string{tokens[i+1]}
+		}
+	}
+	return nil
+}
+
+func recallQueryTokens(query string) []string {
+	query = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			return r
+		}
+		return ' '
+	}, strings.ToLower(query))
+	return strings.Fields(query)
 }
 
 func recallCoverageBonus(candidate ScoredRecallCandidate, selected []ScoredRecallCandidate) float64 {

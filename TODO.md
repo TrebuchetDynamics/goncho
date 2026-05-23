@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO speaker who-said-what routing has its first implementation slice.
+  - Evidence target: `go test . -run TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch -count=1` proves explicit speaker provenance can steer selection to the right who-said-what branch even when the query also names another person.
+  - Result: future LOCOMO speaker-routing work can separate the speaker from the object of speech without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
+
 - 2026-05-22: LOCOMO temporal current-truth routing has its first implementation slice.
   - Evidence target: `go test . -run TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence -count=1` proves current facts can outrank superseded evidence for now/current/latest-style questions while preserving the superseded candidate in `trace.Candidates`.
   - Result: future LOCOMO temporal work can distinguish current truth from past truth with a visible `superseded_evidence_observed` warning and without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
