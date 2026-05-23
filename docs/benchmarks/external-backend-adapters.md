@@ -130,3 +130,5 @@ Make targets run the probes first, then central scoring:
 make bench-locomo-backends-smoke
 make bench-locomo-backends
 ```
+
+LOCOMO backend-comparison reports expose stable-ID failure buckets through the JSON `failure_buckets` field and markdown `Failure buckets` table, beside rank-based `failure_categories`, without changing scoring or regenerating frozen LOCOMO artifacts.

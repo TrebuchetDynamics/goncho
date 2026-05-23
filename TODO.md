@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public LOCOMO docs now guard backend-comparison failure-bucket summaries.
+  - Evidence target: `go test . -run TestBenchmarkDocsDocumentBackendComparisonFailureBucketSummaries -count=1` proves README, retrieval reference docs, and external adapter notes state that backend-comparison reports expose stable-ID `failure_buckets` and a markdown `Failure buckets` table beside rank-based `failure_categories`.
+  - Result: backend authors and benchmark readers can interpret failure-bucket summaries as reporting-only diagnostics without changing scoring or regenerating frozen LOCOMO artifacts.
+
 - 2026-05-22: LOCOMO backend-comparison reports now summarize failure buckets.
   - Evidence target: `go test ./cmd/goncho-bench -run TestLocomoBackendComparisonSummarizesFailureBuckets -count=1` proves comparable backend reports emit `failure_buckets` JSON and a markdown `Failure buckets` table with stable-ID-only `missing_companion_memory` counts.
   - Result: operators can compare failure-driven buckets beside rank-based failure categories without regenerating frozen LOCOMO full-run artifacts or changing scoring semantics.

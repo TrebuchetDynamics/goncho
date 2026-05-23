@@ -226,6 +226,35 @@ func TestBenchmarkDocsDocumentWrongBranchBackendRejections(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsDocumentBackendComparisonFailureBucketSummaries(t *testing.T) {
+	wantMarkers := []string{
+		"backend-comparison reports",
+		"`failure_buckets`",
+		"`Failure buckets`",
+		"beside rank-based `failure_categories`",
+		"stable-ID failure buckets",
+		"without changing scoring or regenerating frozen LOCOMO artifacts",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+		"docs/benchmarks/external-backend-adapters.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not document backend comparison failure-bucket summary marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkRoadmapNamesLocomoImprovementPriorities(t *testing.T) {
 	wantMarkers := []string{
 		"LOCOMO improvement priorities",
@@ -1113,6 +1142,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
+		"BenchmarkDocsDocumentBackendComparisonFailureBucketSummaries",
 		"BenchmarkPlanDocumentsLocomoFailureDrivenEvaluation",
 		"BenchmarkRoadmapSurfacesLocomoFailureDrivenEvaluationSlice",
 		"BenchmarkRoadmapSurfacesLocomoSpeakerRoutingSlice",
