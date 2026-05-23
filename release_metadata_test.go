@@ -283,6 +283,34 @@ func TestBenchmarkRoadmapSurfacesLocomoCoverageAwareSelectionSlice(t *testing.T)
 	}
 }
 
+func TestBenchmarkRoadmapSurfacesLocomoQueryDecompositionSlice(t *testing.T) {
+	wantMarkers := []string{
+		"Query-decomposition recall slice delivered",
+		"TestRecallQueryDecompositionRetrievesEachSubQuestionFact",
+		"split into subqueries",
+		"retrieve each required stable-ID fact",
+		"merge results before scoring",
+		"without regenerating LOCOMO full-run artifacts",
+	}
+	for _, path := range []string{
+		"docs/benchmarks/ROADMAP.md",
+		"docs-site/src/content/docs/roadmap/benchmark-roadmap.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO query-decomposition marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall(t *testing.T) {
 	const path = "docs/superpowers/plans/2026-05-22-locomo-graph-assisted-multihop-recall.md"
 	wantMarkers := []string{
@@ -921,6 +949,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
+		"BenchmarkRoadmapSurfacesLocomoQueryDecompositionSlice",
 		"BenchmarkPlanDocumentsLocomoQueryDecompositionRecall",
 		"BenchmarkRoadmapSurfacesLocomoCoverageAwareSelectionSlice",
 		"BenchmarkRoadmapSurfacesLocomoGraphRecallSlice",

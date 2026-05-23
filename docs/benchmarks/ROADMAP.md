@@ -44,6 +44,8 @@ First graph-assisted implementation slice delivered: `TestGraphRecallConnectsOwn
 
 Coverage-aware graph companion selection delivered: `TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion` proves selection prefers relation-path companion memories over near-duplicate lexical hits without regenerating LOCOMO full-run artifacts.
 
+Query-decomposition recall slice delivered: `TestRecallQueryDecompositionRetrievesEachSubQuestionFact` proves multi-part questions can split into subqueries, retrieve each required stable-ID fact, and merge results before scoring without regenerating LOCOMO full-run artifacts.
+
 It should test:
 
 - long conversations,

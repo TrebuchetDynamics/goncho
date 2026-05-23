@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO query-decomposition recall has its first implementation slice.
+  - Evidence target: `go test . -run TestRecallQueryDecompositionRetrievesEachSubQuestionFact -count=1` proves decomposed subqueries can retrieve each required stable-ID fact for a multi-part question before scoring.
+  - Result: multi-hop recall work can cover more required facts without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
+
 - 2026-05-22: LOCOMO query-decomposition recall now has an implementation plan.
   - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoQueryDecompositionRecall -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-query-decomposition-recall.md` names the TDD entrypoint, subquery split, stable-ID merge/deduplication, and stable-ID/no-answer-hint constraints.
   - Result: the next retrieval-code loop can start from a concrete query-decomposition plan without changing frozen LOCOMO artifacts or scoring by answer text.
