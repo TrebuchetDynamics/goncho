@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now surface LOCOMO leakage-check counts.
+  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoLeakageCheckCounts -count=1` proves README and Retrieval Benchmarks docs name answer-text, gold-ID, and question-text leakage counts and explain why answer-text presence is reported separately from `answer_hint` indexing/scoring.
+  - Result: LOCOMO readers can distinguish literal answer spans in gold memories from benchmark leakage or answer-hint scoring.
+
 - 2026-05-22: Public benchmark docs now surface LOCOMO converted dataset evidence.
   - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoConvertedDatasetEvidence -count=1` proves README and Retrieval Benchmarks docs name `data/locomo/memories.jsonl`, `data/locomo/questions.jsonl`, 1,982 questions, and 5,882 memories for the frozen full run.
   - Result: LOCOMO readers can connect the frozen result JSON to the converted dataset files and full-run scale without opening the generated full report first.

@@ -467,6 +467,33 @@ func TestBenchmarkDocsSurfaceLocomoConvertedDatasetEvidence(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsSurfaceLocomoLeakageCheckCounts(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO leakage check counts",
+		"Answer text present in memory content: `3026`",
+		"Gold IDs present in memory content: `0`",
+		"Question text present in memory content: `0`",
+		"Answer-text presence is reported because LOCOMO answers may be literal spans from the gold memories",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO leakage-check marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -484,6 +511,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsNameLocomoFullBaselineSet",
 		"BenchmarkDocsSurfaceLocomoSourceProvenance",
 		"BenchmarkDocsSurfaceLocomoConvertedDatasetEvidence",
+		"BenchmarkDocsSurfaceLocomoLeakageCheckCounts",
 		"ReleaseMetadataSmokeIncludesLocomoResultDocsGuards",
 	} {
 		if !strings.Contains(text, want) {

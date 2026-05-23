@@ -22,6 +22,7 @@ LOCOMO result artifacts expand this surface with `NDCG@5`, `NDCG@10`, latency mi
 - Full LOCOMO baseline set: random, recency, BM25, SQLite FTS5, and Goncho in the frozen full LOCOMO run.
 - LOCOMO source provenance: `https://github.com/snap-research/locomo` at revision `3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376`. Source SHA256: `79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4`. License note: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0).
 - LOCOMO converted dataset evidence: memories at `data/locomo/memories.jsonl`, questions at `data/locomo/questions.jsonl`. Questions: `1982`. Memories: `5882`.
+- LOCOMO leakage check counts: Answer text present in memory content: `3026`; Gold IDs present in memory content: `0`; Question text present in memory content: `0`. Answer-text presence is reported because LOCOMO answers may be literal spans from the gold memories, while `answer_hint` fields are never indexed or scored.
 - Full LOCOMO reproduction: `make bench-locomo` — manual full run with pinned conversion; writes date-stamped full-run artifacts.
 - Retrieval smoke reproduction: `make bench-locomo-smoke` — CI-safe tiny fixture for retrieval report regeneration.
 - Backend smoke reproduction: `make bench-locomo-backends-smoke` — CI-safe external-backend harness check.
