@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now surface LOCOMO source provenance.
+  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoSourceProvenance -count=1` proves README and Retrieval Benchmarks docs name the LOCOMO source repository, pinned revision, source SHA256, and CC BY-NC license note.
+  - Result: LOCOMO readers can trace the frozen result back to source provenance without opening the generated full report first.
+
 - 2026-05-22: Public benchmark docs now name the frozen full LOCOMO baseline set.
   - Evidence target: `go test . -run TestBenchmarkDocsNameLocomoFullBaselineSet -count=1` proves README and Retrieval Benchmarks docs name random, recency, BM25, SQLite FTS5, and Goncho as the frozen full LOCOMO run's baseline set.
   - Result: LOCOMO readers can distinguish the full-run comparison set from smoke-only and external-backend adapter evidence.

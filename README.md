@@ -495,6 +495,8 @@ Candidate-generation milestone: LOCOMO exposed a candidate-generation weakness i
 
 Full LOCOMO baseline set: random, recency, BM25, SQLite FTS5, and Goncho in the frozen full LOCOMO run against the pinned official LOCOMO source dataset.
 
+LOCOMO source provenance: `https://github.com/snap-research/locomo` at revision `3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376`. Source SHA256: `79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4`. License note: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0).
+
 The backend comparison harness uses the same LOCOMO JSONL, same gold IDs, same centralized scoring, same leakage checks, and same failure taxonomy for Goncho, BM25, SQLite FTS5, agentmemory, and mem0. External backends are scored only if they return stable inserted `memory_id` values. If they cannot preserve IDs, they are marked `not comparable` instead of being scored by content matching or answer text.
 
 Current external-backend status:

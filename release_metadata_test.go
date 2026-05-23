@@ -413,6 +413,33 @@ func TestBenchmarkDocsNameLocomoFullBaselineSet(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsSurfaceLocomoSourceProvenance(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO source provenance",
+		"https://github.com/snap-research/locomo",
+		"3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376",
+		"Source SHA256: `79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4`",
+		"Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO source provenance marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -428,6 +455,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsLinkLocomoCandidateFailureComparisonAudit",
 		"BenchmarkDocsStateLocomoRetrievalOnlyScope",
 		"BenchmarkDocsNameLocomoFullBaselineSet",
+		"BenchmarkDocsSurfaceLocomoSourceProvenance",
 		"ReleaseMetadataSmokeIncludesLocomoResultDocsGuards",
 	} {
 		if !strings.Contains(text, want) {
