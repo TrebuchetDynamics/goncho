@@ -578,6 +578,34 @@ func TestBenchmarkDocsSurfaceLocomoBM25CategoryMetrics(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsSurfaceLocomoSQLiteFTS5CategoryMetrics(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO SQLite FTS5 category metrics",
+		"`adversarial_unanswerable`: recall_any@5 `51.12%`, recall_any@10 `58.97%`, MRR `39.09%`",
+		"`multi_hop_retrieval`: recall_any@5 `30.43%`, recall_any@10 `36.96%`, MRR `20.42%`",
+		"`open_domain_retrieval`: recall_any@5 `52.68%`, recall_any@10 `60.05%`, MRR `41.87%`",
+		"`single_hop_retrieval`: recall_any@5 `35.11%`, recall_any@10 `45.39%`, MRR `25.38%`",
+		"`temporal_retrieval`: recall_any@5 `54.83%`, recall_any@10 `60.75%`, MRR `43.48%`",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO SQLite FTS5 category metric marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -599,6 +627,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsSurfaceLocomoCategoryMetricGroups",
 		"BenchmarkDocsSurfaceLocomoGonchoCategoryMetrics",
 		"BenchmarkDocsSurfaceLocomoBM25CategoryMetrics",
+		"BenchmarkDocsSurfaceLocomoSQLiteFTS5CategoryMetrics",
 		"ReleaseMetadataSmokeIncludesLocomoResultDocsGuards",
 	} {
 		if !strings.Contains(text, want) {

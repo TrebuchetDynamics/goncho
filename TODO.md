@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now surface SQLite FTS5 LOCOMO category metrics.
+  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoSQLiteFTS5CategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name SQLite FTS5 recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
+  - Result: LOCOMO readers can compare Goncho and BM25 against the local SQLite FTS5 lexical baseline without opening the generated full report first.
+
 - 2026-05-22: Public benchmark docs now surface BM25 LOCOMO category metrics.
   - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoBM25CategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name BM25 recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
   - Result: LOCOMO readers can compare Goncho's category-level full-run performance against BM25 without opening the generated full report first.
