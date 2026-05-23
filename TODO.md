@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO failure-driven evaluation has its first implementation slice.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'Test(LocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets|WriteLocomoFailureAuditEmitsFailureBucket)' -count=1` proves wrong branch retrieval and missing companion memories can be classified from stable-ID LOCOMO rows, and partial multi-gold audit rows emit `failure_bucket` without regenerating LOCOMO full-run artifacts.
+  - Result: future retrieval tuning can start from named failure-audit buckets instead of tuning aggregate recall alone.
+
 - 2026-05-22: LOCOMO failure-driven evaluation now has an implementation plan.
   - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-failure-driven-evaluation.md` names wrong branch retrieval, missing companion memories, failure-audit buckets, stable-ID constraints, and no-answer-hint benchmark discipline.
   - Result: the next LOCOMO evaluation loop can start from a concrete plan before classifying new failure buckets or tuning retrieval behavior.

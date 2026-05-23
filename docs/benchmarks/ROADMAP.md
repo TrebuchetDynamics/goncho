@@ -50,6 +50,8 @@ Temporal current-truth routing slice delivered: `TestRecallTemporalRoutingPrefer
 
 Speaker who-said-what routing slice delivered: `TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch` proves explicit speaker provenance can select the right who-said-what branches while preserving stable-ID memories without regenerating LOCOMO full-run artifacts.
 
+Failure-driven evaluation slice delivered: `TestLocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets` and `TestWriteLocomoFailureAuditEmitsFailureBucket` prove wrong branch retrieval and missing companion memories can be separated into failure-audit buckets while preserving stable-ID memories without regenerating LOCOMO full-run artifacts.
+
 It should test:
 
 - long conversations,

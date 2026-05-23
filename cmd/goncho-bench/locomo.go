@@ -139,6 +139,7 @@ type locomoFailureRow struct {
 	QuestionID      string             `json:"question_id"`
 	Category        string             `json:"category"`
 	FailureCategory string             `json:"failure_category"`
+	FailureBucket   string             `json:"failure_bucket,omitempty"`
 	Question        string             `json:"question"`
 	GoldMemoryIDs   []string           `json:"gold_memory_ids"`
 	TopHits         []locomoFailureHit `json:"top_hits"`
@@ -770,8 +771,10 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 		return nil
 	}
 	memByID := map[string]locomoMemoryRow{}
+	memoryConversationIDs := map[string]string{}
 	for _, mem := range data.Memories {
 		memByID[mem.MemoryID] = mem
+		memoryConversationIDs[mem.MemoryID] = mem.ConversationID
 	}
 	questionsByID := map[string]locomoQuestionRow{}
 	for _, q := range data.Questions {
@@ -786,7 +789,7 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 	}
 	enc := json.NewEncoder(file)
 	for _, q := range gonchoReport.QuestionsDetail {
-		if q.Rank == 1 {
+		if locomoFailureAuditShouldSkip(q) {
 			continue
 		}
 		fixtureQuestion, ok := questionsByID[q.QuestionID]
@@ -809,7 +812,7 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 				return fmt.Errorf("goncho-bench: LOCOMO failure audit question %q out-of-conversation gold_memory_id %q", q.QuestionID, id)
 			}
 		}
-		row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: q.Category, Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
+		row := locomoFailureRow{QuestionID: q.QuestionID, Category: q.Category, FailureCategory: q.Category, FailureBucket: classifyLocomoFailureBucket(q, memoryConversationIDs), Question: q.Question, GoldMemoryIDs: q.GoldMemoryIDs, Notes: locomoFailureNotes(q)}
 		for i, id := range q.RetrievedIDs[:min(10, len(q.RetrievedIDs))] {
 			mem, ok := memByID[id]
 			if !ok {
@@ -828,6 +831,10 @@ func writeLocomoFailureAudit(path string, data locomoDataset, reports []locomoSy
 		}
 	}
 	return file.Close()
+}
+
+func locomoFailureAuditShouldSkip(q locomoQuestionResult) bool {
+	return q.Rank == 1 && (q.StrictRecallAt10 == 1 || len(q.GoldMemoryIDs) <= 1)
 }
 
 func locomoFailureNotes(q locomoQuestionResult) string {

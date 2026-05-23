@@ -207,6 +207,33 @@ func TestLocomoFailureJSONLGeneration(t *testing.T) {
 	}
 }
 
+func TestWriteLocomoFailureAuditEmitsFailureBucket(t *testing.T) {
+	data := locomoDataset{
+		Memories: []locomoMemoryRow{
+			{MemoryID: "m1", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 1, Content: "primary stable evidence"},
+			{MemoryID: "m2", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 2, Content: "companion stable evidence"},
+			{MemoryID: "m3", ConversationID: "c1", SessionID: "s1", Speaker: "Maya", TurnIndex: 3, Content: "same-branch distractor"},
+		},
+		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "Which two stable facts belong together?", GoldMemoryIDs: []string{"m1", "m2"}, Category: "multi_hop_retrieval"}},
+	}
+	report := locomoSystemReport{System: "goncho", QuestionsDetail: []locomoQuestionResult{{QuestionID: "q1", ConversationID: "c1", Category: "multi_hop_retrieval", Question: "Which two stable facts belong together?", GoldMemoryIDs: []string{"m1", "m2"}, RetrievedIDs: []string{"m1", "m3"}, Rank: 1, RecallAnyAt10: 1, StrictRecallAt10: 0}}}
+	path := filepath.Join(t.TempDir(), "failures.jsonl")
+	if err := writeLocomoFailureAudit(path, data, []locomoSystemReport{report}); err != nil {
+		t.Fatalf("write failures: %v", err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read failures: %v", err)
+	}
+	var row locomoFailureRow
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(raw))), &row); err != nil {
+		t.Fatalf("decode failure row: %v", err)
+	}
+	if row.FailureBucket != "missing_companion_memory" {
+		t.Fatalf("failure bucket = %q, want missing_companion_memory; row=%+v", row.FailureBucket, row)
+	}
+}
+
 func TestLocomoFailureJSONLNotesUseRetrievedWindow(t *testing.T) {
 	data := locomoDataset{
 		Memories: []locomoMemoryRow{
