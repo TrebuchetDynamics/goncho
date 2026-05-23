@@ -494,6 +494,34 @@ func TestBenchmarkDocsSurfaceLocomoLeakageCheckCounts(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsSurfaceLocomoCategoryMetricGroups(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO category metric groups",
+		"`adversarial_unanswerable`",
+		"`multi_hop_retrieval`",
+		"`open_domain_retrieval`",
+		"`single_hop_retrieval`",
+		"`temporal_retrieval`",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO category metric group marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -512,6 +540,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsSurfaceLocomoSourceProvenance",
 		"BenchmarkDocsSurfaceLocomoConvertedDatasetEvidence",
 		"BenchmarkDocsSurfaceLocomoLeakageCheckCounts",
+		"BenchmarkDocsSurfaceLocomoCategoryMetricGroups",
 		"ReleaseMetadataSmokeIncludesLocomoResultDocsGuards",
 	} {
 		if !strings.Contains(text, want) {

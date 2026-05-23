@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now surface LOCOMO category metric groups.
+  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoCategoryMetricGroups -count=1` proves README and Retrieval Benchmarks docs name the adversarial, multi-hop, open-domain, single-hop, and temporal retrieval groups reported by the frozen full run.
+  - Result: LOCOMO readers can see which retrieval categories are summarized without opening the generated full report first.
+
 - 2026-05-22: Public benchmark docs now surface LOCOMO leakage-check counts.
   - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoLeakageCheckCounts -count=1` proves README and Retrieval Benchmarks docs name answer-text, gold-ID, and question-text leakage counts and explain why answer-text presence is reported separately from `answer_hint` indexing/scoring.
   - Result: LOCOMO readers can distinguish literal answer spans in gold memories from benchmark leakage or answer-hint scoring.

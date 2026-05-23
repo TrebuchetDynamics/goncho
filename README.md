@@ -501,6 +501,8 @@ LOCOMO converted dataset evidence: memories at `data/locomo/memories.jsonl`, que
 
 LOCOMO leakage check counts: Answer text present in memory content: `3026`; Gold IDs present in memory content: `0`; Question text present in memory content: `0`. Answer-text presence is reported because LOCOMO answers may be literal spans from the gold memories, while `answer_hint` fields are never indexed or scored.
 
+LOCOMO category metric groups: `adversarial_unanswerable`, `multi_hop_retrieval`, `open_domain_retrieval`, `single_hop_retrieval`, and `temporal_retrieval`.
+
 The backend comparison harness uses the same LOCOMO JSONL, same gold IDs, same centralized scoring, same leakage checks, and same failure taxonomy for Goncho, BM25, SQLite FTS5, agentmemory, and mem0. External backends are scored only if they return stable inserted `memory_id` values. If they cannot preserve IDs, they are marked `not comparable` instead of being scored by content matching or answer text.
 
 Current external-backend status:
