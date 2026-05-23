@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now surface recency baseline LOCOMO category metrics.
+  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoRecencyCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name recency recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
+  - Result: LOCOMO readers can compare real retrieval backends against the recency lower-bound category baseline without opening the generated full report first.
+
 - 2026-05-22: Public benchmark docs now surface random baseline LOCOMO category metrics.
   - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoRandomCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name random recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
   - Result: LOCOMO readers can compare real retrieval backends against the random lower-bound category baseline without opening the generated full report first.
