@@ -229,6 +229,32 @@ func TestBenchmarkRoadmapNamesLocomoImprovementPriorities(t *testing.T) {
 	}
 }
 
+func TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall(t *testing.T) {
+	const path = "docs/superpowers/plans/2026-05-22-locomo-graph-assisted-multihop-recall.md"
+	wantMarkers := []string{
+		"# Graph-Assisted LOCOMO Multi-Hop Recall Implementation Plan",
+		"Use superpowers:executing-plans",
+		"TestGraphRecallConnectsOwnerThroughServiceRelation",
+		"graph-expanded candidates must carry `EvidenceItem{Kind: \"graph\"`",
+		"stable inserted `memory_id`",
+		"no answer hints, no LLM judges, no answer-text scoring",
+		"coverage-aware selection",
+		"relation path provenance",
+		"go test . -run TestGraphRecallConnectsOwnerThroughServiceRelation -count=1",
+		"go test ./... -count=1",
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile %s: %v", path, err)
+	}
+	text := string(raw)
+	for _, marker := range wantMarkers {
+		if !strings.Contains(text, marker) {
+			t.Fatalf("%s does not document LOCOMO graph-assisted recall marker %q", path, marker)
+		}
+	}
+}
+
 func TestBenchmarkRoadmapNamesLocomoImplementationGate(t *testing.T) {
 	wantMarkers := []string{
 		"LOCOMO implementation gate",
@@ -817,6 +843,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
+		"BenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall",
 		"BenchmarkRoadmapNamesLocomoImprovementPriorities",
 		"BenchmarkRoadmapNamesLocomoImplementationGate",
 		"BenchmarkDocsRecommendLocomoImprovementLevers",

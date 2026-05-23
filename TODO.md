@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Graph-assisted LOCOMO multi-hop recall now has an implementation plan.
+  - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-graph-assisted-multihop-recall.md` names the TDD entrypoint, stable-ID boundary, graph provenance, coverage-aware selection, and required validation commands.
+  - Result: future retrieval-code work can start from a concrete plan without changing production retrieval behavior, frozen LOCOMO artifacts, or stable-ID scoring semantics in this slice.
+
 - 2026-05-22: Benchmark roadmap now names the LOCOMO implementation gate.
   - Evidence target: `go test . -run TestBenchmarkRoadmapNamesLocomoImplementationGate -count=1` proves internal and public benchmark roadmap docs state recommendations are not approval to change retrieval behavior, require an approved plan before production retrieval changes, and require a focused failing recall test before graph/ranking code.
   - Result: future LOCOMO implementation loops have a test-protected approval/TDD boundary while preserving frozen artifacts and stable-ID scoring.
