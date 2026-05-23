@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Graph-assisted LOCOMO multi-hop recall has its first implementation slice.
+  - Evidence target: `go test . -run TestGraphRecallConnectsOwnerThroughServiceRelation -count=1` proves graph-expanded recall retrieves a stable-ID companion memory with relation path provenance.
+  - Result: LOCOMO improvement work can move from recommendations to a measured graph-assisted recall slice without changing frozen benchmark artifacts or scoring by answer text.
+
 - 2026-05-22: Graph-assisted LOCOMO multi-hop recall now has an implementation plan.
   - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-graph-assisted-multihop-recall.md` names the TDD entrypoint, stable-ID boundary, graph provenance, coverage-aware selection, and required validation commands.
   - Result: future retrieval-code work can start from a concrete plan without changing production retrieval behavior, frozen LOCOMO artifacts, or stable-ID scoring semantics in this slice.

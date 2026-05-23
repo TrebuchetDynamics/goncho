@@ -1,0 +1,80 @@
+package goncho
+
+import (
+	"context"
+	"strings"
+)
+
+type GraphExpansionIndex struct {
+	Memories  map[string]RecallCandidate
+	Relations []GraphRelation
+}
+
+type GraphRelation struct {
+	FromMemoryID string
+	ToMemoryID   string
+	Relation     string
+	QueryTerms   []string
+	EvidenceID   string
+	Score        float64
+}
+
+type graphExpandingRecallGenerator struct {
+	base  recallCandidateGenerator
+	index GraphExpansionIndex
+}
+
+func newGraphExpandingRecallGenerator(base recallCandidateGenerator, index GraphExpansionIndex) recallCandidateGenerator {
+	return graphExpandingRecallGenerator{base: base, index: index}
+}
+
+func (g graphExpandingRecallGenerator) Generate(ctx context.Context, q RecallQuery) ([]RecallCandidate, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	base, err := g.base.Generate(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]RecallCandidate, len(base))
+	copy(out, base)
+	seen := make(map[string]bool, len(out))
+	for _, candidate := range out {
+		seen[candidate.MemoryID] = true
+	}
+	for _, relation := range g.index.Relations {
+		if !seen[relation.FromMemoryID] || seen[relation.ToMemoryID] || !graphRelationMatchesQuery(q.Query, relation.QueryTerms) {
+			continue
+		}
+		target, ok := g.index.Memories[relation.ToMemoryID]
+		if !ok || recallScopeMismatch(q, target) {
+			continue
+		}
+		target.Provenance = append(cloneEvidenceItems(target.Provenance), EvidenceItem{
+			Kind:   "graph",
+			ID:     relation.EvidenceID,
+			Source: relation.FromMemoryID,
+			Note:   relation.FromMemoryID + " -> " + relation.Relation + " -> " + relation.ToMemoryID,
+			Score:  relation.Score,
+		})
+		out = append(out, target)
+		seen[target.MemoryID] = true
+	}
+	return out, nil
+}
+
+func graphRelationMatchesQuery(query string, terms []string) bool {
+	query = strings.ToLower(query)
+	for _, term := range terms {
+		if !strings.Contains(query, strings.ToLower(strings.TrimSpace(term))) {
+			return false
+		}
+	}
+	return true
+}
+
+func cloneEvidenceItems(items []EvidenceItem) []EvidenceItem {
+	out := make([]EvidenceItem, len(items))
+	copy(out, items)
+	return out
+}

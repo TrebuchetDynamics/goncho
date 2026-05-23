@@ -229,6 +229,33 @@ func TestBenchmarkRoadmapNamesLocomoImprovementPriorities(t *testing.T) {
 	}
 }
 
+func TestBenchmarkRoadmapSurfacesLocomoGraphRecallSlice(t *testing.T) {
+	wantMarkers := []string{
+		"First graph-assisted implementation slice delivered",
+		"TestGraphRecallConnectsOwnerThroughServiceRelation",
+		"stable-ID companion memory",
+		"relation path provenance",
+		"before any LOCOMO full-run artifact is regenerated",
+	}
+	for _, path := range []string{
+		"docs/benchmarks/ROADMAP.md",
+		"docs-site/src/content/docs/roadmap/benchmark-roadmap.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO graph recall slice marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall(t *testing.T) {
 	const path = "docs/superpowers/plans/2026-05-22-locomo-graph-assisted-multihop-recall.md"
 	wantMarkers := []string{
@@ -843,6 +870,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
+		"BenchmarkRoadmapSurfacesLocomoGraphRecallSlice",
 		"BenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall",
 		"BenchmarkRoadmapNamesLocomoImprovementPriorities",
 		"BenchmarkRoadmapNamesLocomoImplementationGate",

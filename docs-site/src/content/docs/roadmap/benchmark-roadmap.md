@@ -53,6 +53,8 @@ LOCOMO implementation gate:
 - Preserve frozen LOCOMO artifacts until a new date-stamped full run is intentionally generated.
 - Do not tune against LOCOMO gold IDs, answer text, or benchmark-specific hacks; score only stable inserted memory IDs.
 
+First graph-assisted implementation slice delivered: `TestGraphRecallConnectsOwnerThroughServiceRelation` proves graph-expanded multi-hop recall can retrieve a stable-ID companion memory with relation path provenance before any LOCOMO full-run artifact is regenerated.
+
 It tests:
 
 - long conversations,
