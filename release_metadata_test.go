@@ -361,6 +361,31 @@ func TestBenchmarkPlanDocumentsLocomoQueryDecompositionRecall(t *testing.T) {
 	}
 }
 
+func TestBenchmarkPlanDocumentsLocomoTemporalSpeakerRoutingRecall(t *testing.T) {
+	const path = "docs/superpowers/plans/2026-05-22-locomo-temporal-speaker-routing-recall.md"
+	wantMarkers := []string{
+		"# LOCOMO Temporal and Speaker Routing Recall Implementation Plan",
+		"TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence",
+		"TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch",
+		"changed facts, chronology, and who-said-what",
+		"stable inserted `memory_id`",
+		"superseded evidence remains preserved",
+		"no answer hints, no LLM judges, no answer-text scoring",
+		"go test . -run TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence -count=1",
+		"go test ./... -count=1",
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile %s: %v", path, err)
+	}
+	text := string(raw)
+	for _, marker := range wantMarkers {
+		if !strings.Contains(text, marker) {
+			t.Fatalf("%s does not document LOCOMO temporal/speaker routing marker %q", path, marker)
+		}
+	}
+}
+
 func TestBenchmarkRoadmapNamesLocomoImplementationGate(t *testing.T) {
 	wantMarkers := []string{
 		"LOCOMO implementation gate",
@@ -949,6 +974,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
+		"BenchmarkPlanDocumentsLocomoTemporalSpeakerRoutingRecall",
 		"BenchmarkRoadmapSurfacesLocomoQueryDecompositionSlice",
 		"BenchmarkPlanDocumentsLocomoQueryDecompositionRecall",
 		"BenchmarkRoadmapSurfacesLocomoCoverageAwareSelectionSlice",

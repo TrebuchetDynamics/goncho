@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO temporal and speaker routing recall now has an implementation plan.
+  - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoTemporalSpeakerRoutingRecall -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-temporal-speaker-routing-recall.md` names the TDD entrypoints, current-truth warning, who-said-what branch routing, superseded-evidence preservation, and stable-ID/no-answer-hint constraints.
+  - Result: the next retrieval-code loop can start from a concrete temporal/speaker routing plan without changing frozen LOCOMO artifacts or scoring by answer text.
+
 - 2026-05-22: LOCOMO query-decomposition recall has its first implementation slice.
   - Evidence target: `go test . -run TestRecallQueryDecompositionRetrievesEachSubQuestionFact -count=1` proves decomposed subqueries can retrieve each required stable-ID fact for a multi-part question before scoring.
   - Result: multi-hop recall work can cover more required facts without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
