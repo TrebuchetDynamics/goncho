@@ -522,6 +522,34 @@ func TestBenchmarkDocsSurfaceLocomoCategoryMetricGroups(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsSurfaceLocomoCategoryQuestionCounts(t *testing.T) {
+	wantMarkers := []string{
+		"LOCOMO category question counts",
+		"`adversarial_unanswerable`: `446` questions",
+		"`multi_hop_retrieval`: `92` questions",
+		"`open_domain_retrieval`: `841` questions",
+		"`single_hop_retrieval`: `282` questions",
+		"`temporal_retrieval`: `321` questions",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not surface LOCOMO category question-count marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestBenchmarkDocsSurfaceLocomoGonchoCategoryMetrics(t *testing.T) {
 	wantMarkers := []string{
 		"LOCOMO Goncho category metrics",
@@ -681,6 +709,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsSurfaceLocomoConvertedDatasetEvidence",
 		"BenchmarkDocsSurfaceLocomoLeakageCheckCounts",
 		"BenchmarkDocsSurfaceLocomoCategoryMetricGroups",
+		"BenchmarkDocsSurfaceLocomoCategoryQuestionCounts",
 		"BenchmarkDocsSurfaceLocomoGonchoCategoryMetrics",
 		"BenchmarkDocsSurfaceLocomoBM25CategoryMetrics",
 		"BenchmarkDocsSurfaceLocomoSQLiteFTS5CategoryMetrics",

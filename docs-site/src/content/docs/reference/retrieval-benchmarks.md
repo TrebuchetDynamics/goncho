@@ -24,6 +24,12 @@ LOCOMO result artifacts expand this surface with `NDCG@5`, `NDCG@10`, latency mi
 - LOCOMO converted dataset evidence: memories at `data/locomo/memories.jsonl`, questions at `data/locomo/questions.jsonl`. Questions: `1982`. Memories: `5882`.
 - LOCOMO leakage check counts: Answer text present in memory content: `3026`; Gold IDs present in memory content: `0`; Question text present in memory content: `0`. Answer-text presence is reported because LOCOMO answers may be literal spans from the gold memories, while `answer_hint` fields are never indexed or scored.
 - LOCOMO category metric groups: `adversarial_unanswerable`, `multi_hop_retrieval`, `open_domain_retrieval`, `single_hop_retrieval`, and `temporal_retrieval`.
+- LOCOMO category question counts:
+  - `adversarial_unanswerable`: `446` questions
+  - `multi_hop_retrieval`: `92` questions
+  - `open_domain_retrieval`: `841` questions
+  - `single_hop_retrieval`: `282` questions
+  - `temporal_retrieval`: `321` questions
 - LOCOMO Goncho category metrics:
   - `adversarial_unanswerable`: recall_any@5 `61.66%`, recall_any@10 `71.52%`, MRR `48.90%`
   - `multi_hop_retrieval`: recall_any@5 `35.87%`, recall_any@10 `41.30%`, MRR `24.76%`

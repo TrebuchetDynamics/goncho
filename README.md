@@ -503,6 +503,14 @@ LOCOMO leakage check counts: Answer text present in memory content: `3026`; Gold
 
 LOCOMO category metric groups: `adversarial_unanswerable`, `multi_hop_retrieval`, `open_domain_retrieval`, `single_hop_retrieval`, and `temporal_retrieval`.
 
+LOCOMO category question counts:
+
+- `adversarial_unanswerable`: `446` questions
+- `multi_hop_retrieval`: `92` questions
+- `open_domain_retrieval`: `841` questions
+- `single_hop_retrieval`: `282` questions
+- `temporal_retrieval`: `321` questions
+
 LOCOMO Goncho category metrics:
 
 - `adversarial_unanswerable`: recall_any@5 `61.66%`, recall_any@10 `71.52%`, MRR `48.90%`
