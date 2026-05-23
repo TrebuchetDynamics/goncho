@@ -367,6 +367,32 @@ func TestBenchmarkRoadmapSurfacesLocomoSpeakerRoutingSlice(t *testing.T) {
 	}
 }
 
+func TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation(t *testing.T) {
+	const path = "docs/superpowers/plans/2026-05-22-locomo-failure-driven-evaluation.md"
+	wantMarkers := []string{
+		"# LOCOMO Failure-Driven Evaluation Implementation Plan",
+		"TestLocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets",
+		"wrong branch retrieval",
+		"missing companion memories",
+		"failure-audit buckets",
+		"stable inserted `memory_id`",
+		"no answer hints, no LLM judges, no answer-text scoring",
+		"Preserve frozen LOCOMO artifacts",
+		"go test ./cmd/goncho-bench -run TestLocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets -count=1",
+		"go test ./... -count=1",
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile %s: %v", path, err)
+	}
+	text := string(raw)
+	for _, marker := range wantMarkers {
+		if !strings.Contains(text, marker) {
+			t.Fatalf("%s does not document LOCOMO failure-driven evaluation marker %q", path, marker)
+		}
+	}
+}
+
 func TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall(t *testing.T) {
 	const path = "docs/superpowers/plans/2026-05-22-locomo-graph-assisted-multihop-recall.md"
 	wantMarkers := []string{
@@ -1030,6 +1056,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
+		"BenchmarkPlanDocumentsLocomoFailureDrivenEvaluation",
 		"BenchmarkRoadmapSurfacesLocomoSpeakerRoutingSlice",
 		"BenchmarkRoadmapSurfacesLocomoTemporalRoutingSlice",
 		"BenchmarkPlanDocumentsLocomoTemporalSpeakerRoutingRecall",

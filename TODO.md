@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: LOCOMO failure-driven evaluation now has an implementation plan.
+  - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-failure-driven-evaluation.md` names wrong branch retrieval, missing companion memories, failure-audit buckets, stable-ID constraints, and no-answer-hint benchmark discipline.
+  - Result: the next LOCOMO evaluation loop can start from a concrete plan before classifying new failure buckets or tuning retrieval behavior.
+
 - 2026-05-22: LOCOMO speaker who-said-what routing has its first implementation slice.
   - Evidence target: `go test . -run TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch -count=1` proves explicit speaker provenance can steer selection to the right who-said-what branch even when the query also names another person.
   - Result: future LOCOMO speaker-routing work can separate the speaker from the object of speech without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
