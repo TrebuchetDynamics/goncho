@@ -388,6 +388,31 @@ func TestBenchmarkDocsStateLocomoRetrievalOnlyScope(t *testing.T) {
 	}
 }
 
+func TestBenchmarkDocsNameLocomoFullBaselineSet(t *testing.T) {
+	wantMarkers := []string{
+		"Full LOCOMO baseline set",
+		"random, recency, BM25, SQLite FTS5, and Goncho",
+		"frozen full LOCOMO run",
+	}
+	for _, path := range []string{
+		"README.md",
+		"docs-site/src/content/docs/reference/retrieval-benchmarks.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			for _, marker := range wantMarkers {
+				if !strings.Contains(text, marker) {
+					t.Fatalf("%s does not name LOCOMO full-run baseline marker %q", path, marker)
+				}
+			}
+		})
+	}
+}
+
 func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	raw, err := os.ReadFile("Makefile")
 	if err != nil {
@@ -402,6 +427,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 		"BenchmarkDocsLabelSmokeFailureAuditArtifacts",
 		"BenchmarkDocsLinkLocomoCandidateFailureComparisonAudit",
 		"BenchmarkDocsStateLocomoRetrievalOnlyScope",
+		"BenchmarkDocsNameLocomoFullBaselineSet",
 		"ReleaseMetadataSmokeIncludesLocomoResultDocsGuards",
 	} {
 		if !strings.Contains(text, want) {

@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-22: Public benchmark docs now name the frozen full LOCOMO baseline set.
+  - Evidence target: `go test . -run TestBenchmarkDocsNameLocomoFullBaselineSet -count=1` proves README and Retrieval Benchmarks docs name random, recency, BM25, SQLite FTS5, and Goncho as the frozen full LOCOMO run's baseline set.
+  - Result: LOCOMO readers can distinguish the full-run comparison set from smoke-only and external-backend adapter evidence.
+
 - 2026-05-22: Public benchmark docs now state the LOCOMO benchmark scope explicitly.
   - Evidence target: `go test . -run TestBenchmarkDocsStateLocomoRetrievalOnlyScope -count=1` proves README and Retrieval Benchmarks docs say LOCOMO is retrieval-only, uses no answer generation, no LLM judge, ID-based scoring, and never indexes or scores `answer_hint` fields.
   - Result: LOCOMO readers can distinguish deterministic retrieval evidence from answer-generation or judge-based benchmark claims.
