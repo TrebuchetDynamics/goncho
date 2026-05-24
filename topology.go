@@ -6,10 +6,7 @@ import (
 	"strings"
 )
 
-const (
-	DefaultWorkspaceID    = "gormes"
-	DefaultObserverPeerID = "gormes"
-)
+const DefaultObserverPeerID = "gormes"
 
 var (
 	ErrWorkspacePerUser               = errors.New("goncho: workspace-per-user topology is not allowed")
@@ -20,7 +17,7 @@ var (
 )
 
 const (
-	EvidenceDefaultWorkspace     = "default_workspace:gormes"
+	EvidenceDefaultWorkspace     = "default_workspace:" + DefaultWorkspaceID
 	EvidenceHardIsolation        = "workspace:hard_isolation"
 	EvidenceCanonicalUserID      = "peer:session_metadata_user_id"
 	EvidenceExternalPeerFallback = "peer:source_prefixed_external_fallback"

@@ -1,6 +1,9 @@
 package architecture
 
 import (
+	"bytes"
+	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
 	"os"
@@ -57,6 +60,66 @@ func TestArchitectureLayoutWorkspaceDetectionLivesInWorkspacePackage(t *testing.
 			t.Fatalf("workspace detection package file missing at %s: %v", path, err)
 		}
 	}
+}
+
+func TestArchitectureLayoutWorkspaceDefaultsHaveSingleOwner(t *testing.T) {
+	root := repoRoot(t)
+
+	requireConstExpr(t, filepath.Join(root, "workspace_facade.go"), "DefaultWorkspaceID", "workspacepkg.DefaultWorkspaceID")
+	requireConstExpr(t, filepath.Join(root, "workspace_facade.go"), "GlobalWorkspaceID", "workspacepkg.GlobalWorkspaceID")
+	forbidConstExpr(t, filepath.Join(root, "topology.go"), "DefaultWorkspaceID")
+	requireConstExpr(t, filepath.Join(root, "topology.go"), "EvidenceDefaultWorkspace", `"default_workspace:" + DefaultWorkspaceID`)
+	requireConstExpr(t, filepath.Join(root, "integration", "gormes", "adapter.go"), "DefaultWorkspaceID", "goncho.DefaultWorkspaceID")
+}
+
+func requireConstExpr(t *testing.T, path, name, want string) {
+	t.Helper()
+	got, ok := constExpr(t, path, name)
+	if !ok {
+		t.Fatalf("%s must define const %s as %s", path, name, want)
+	}
+	if got != want {
+		t.Fatalf("%s const %s = %s, want %s", path, name, got, want)
+	}
+}
+
+func forbidConstExpr(t *testing.T, path, name string) {
+	t.Helper()
+	if got, ok := constExpr(t, path, name); ok {
+		t.Fatalf("%s must not define const %s = %s; keep workspace defaults behind workspace_facade.go", path, name, got)
+	}
+}
+
+func constExpr(t *testing.T, path, name string) (string, bool) {
+	t.Helper()
+	fset := token.NewFileSet()
+	parsed, err := parser.ParseFile(fset, path, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", path, err)
+	}
+	for _, decl := range parsed.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			valueSpec := spec.(*ast.ValueSpec)
+			for i, ident := range valueSpec.Names {
+				if ident.Name != name {
+					continue
+				}
+				if len(valueSpec.Values) <= i {
+					t.Fatalf("%s const %s must have an explicit value", path, name)
+				}
+				var out bytes.Buffer
+				if err := format.Node(&out, fset, valueSpec.Values[i]); err != nil {
+					t.Fatalf("format const %s in %s: %v", name, path, err)
+				}
+				return out.String(), true
+			}
+		}
+	}
+	return "", false
 }
 
 func repoRoot(t *testing.T) string {

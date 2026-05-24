@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	DefaultWorkspaceID = "gormes"
-	DefaultObserverID  = "gormes"
+	DefaultWorkspaceID = goncho.DefaultWorkspaceID
+	DefaultObserverID  = goncho.DefaultObserverPeerID
 )
 
 type Config struct {

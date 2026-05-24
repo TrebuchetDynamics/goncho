@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	workspacepkg "github.com/TrebuchetDynamics/goncho/workspace"
 )
 
 func TestWorkspaceDetectionRootFacadePreservesPublicBehavior(t *testing.T) {
@@ -24,7 +26,10 @@ func TestWorkspaceDetectionRootFacadePreservesPublicBehavior(t *testing.T) {
 	if got := WorkspaceIDForPath(nested); got != "ws-"+filepath.Base(root) {
 		t.Fatalf("WorkspaceIDForPath(%q) = %q, want %q", nested, got, "ws-"+filepath.Base(root))
 	}
-	if GlobalWorkspaceID != "__global__" {
-		t.Fatalf("GlobalWorkspaceID = %q, want %q", GlobalWorkspaceID, "__global__")
+	if DefaultWorkspaceID != workspacepkg.DefaultWorkspaceID {
+		t.Fatalf("DefaultWorkspaceID = %q, want workspace default %q", DefaultWorkspaceID, workspacepkg.DefaultWorkspaceID)
+	}
+	if GlobalWorkspaceID != workspacepkg.GlobalWorkspaceID {
+		t.Fatalf("GlobalWorkspaceID = %q, want workspace global %q", GlobalWorkspaceID, workspacepkg.GlobalWorkspaceID)
 	}
 }

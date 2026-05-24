@@ -2,7 +2,10 @@ package goncho
 
 import workspacepkg "github.com/TrebuchetDynamics/goncho/workspace"
 
-const GlobalWorkspaceID = workspacepkg.GlobalWorkspaceID
+const (
+	DefaultWorkspaceID = workspacepkg.DefaultWorkspaceID
+	GlobalWorkspaceID  = workspacepkg.GlobalWorkspaceID
+)
 
 // DetectWorkspaceFromPath finds the workspace root by looking for project markers.
 // Returns the directory containing the marker and the marker filename.
