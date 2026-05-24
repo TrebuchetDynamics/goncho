@@ -64,6 +64,7 @@ type RecallScore struct {
 	KeywordScore     float64  `json:"keyword_score"`
 	SemanticScore    float64  `json:"semantic_score"`
 	GraphScore       float64  `json:"graph_score"`
+	FactScore        float64  `json:"fact_score,omitempty"`
 	RecencyScore     float64  `json:"recency_score"`
 	ImportanceScore  float64  `json:"importance_score"`
 	ScopeScore       float64  `json:"scope_score"`

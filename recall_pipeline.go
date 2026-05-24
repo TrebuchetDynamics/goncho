@@ -16,12 +16,13 @@ import (
 const defaultRecallPipelineVersion = "goncho-recall-v1"
 
 var defaultRecallWeights = map[string]float64{
-	"keyword":    0.30,
+	"keyword":    0.25,
 	"semantic":   0.25,
 	"graph":      0.20,
-	"recency":    0.10,
-	"importance": 0.10,
-	"scope":      0.05,
+	"fact":       0.15,
+	"recency":    0.07,
+	"importance": 0.05,
+	"scope":      0.03,
 }
 
 const recallGraphCoverageBonus = 0.05
@@ -97,6 +98,7 @@ func (e *recallPipelineEngine) score(q RecallQuery, candidates []RecallCandidate
 			KeywordScore:    roundRecallFloat(maxEvidenceScore(candidate.Provenance, "keyword", keywordRecallScore(candidate.Content, q.Query))),
 			SemanticScore:   roundRecallFloat(maxEvidenceScore(candidate.Provenance, "semantic", 0)),
 			GraphScore:      roundRecallFloat(maxEvidenceScore(candidate.Provenance, "graph", 0)),
+			FactScore:       roundRecallFloat(maxEvidenceScore(candidate.Provenance, "fact", 0)),
 			RecencyScore:    roundRecallFloat(recallRecencyScore(candidate.CreatedAt, now)),
 			ImportanceScore: roundRecallFloat(clampRecall(candidate.Importance)),
 			ScopeScore:      roundRecallFloat(scopeRecallScore(q, candidate)),
@@ -111,6 +113,9 @@ func (e *recallPipelineEngine) score(q RecallQuery, candidates []RecallCandidate
 		out[i].Score.WhySelected = []string{
 			fmt.Sprintf("final_score=%.6f", out[i].Score.FinalScore),
 			fmt.Sprintf("scoring_config=%s", e.opts.scoringConfig.Version),
+		}
+		if out[i].Score.FactScore > 0 {
+			out[i].Score.WhySelected = append(out[i].Score.WhySelected, fmt.Sprintf("fact_score=%.6f", out[i].Score.FactScore))
 		}
 	}
 	sortScoredRecall(out)
@@ -394,6 +399,7 @@ func weightedRecallScore(score RecallScore, weights map[string]float64) float64 
 		weights["keyword"]*score.KeywordScore +
 			weights["semantic"]*score.SemanticScore +
 			weights["graph"]*score.GraphScore +
+			weights["fact"]*score.FactScore +
 			weights["recency"]*score.RecencyScore +
 			weights["importance"]*score.ImportanceScore +
 			weights["scope"]*score.ScopeScore,
@@ -411,6 +417,7 @@ func addRecallRRF(items []ScoredRecallCandidate, config RecallScoringConfig) {
 		{"keyword", func(s RecallScore) float64 { return s.KeywordScore }},
 		{"semantic", func(s RecallScore) float64 { return s.SemanticScore }},
 		{"graph", func(s RecallScore) float64 { return s.GraphScore }},
+		{"fact", func(s RecallScore) float64 { return s.FactScore }},
 		{"recency", func(s RecallScore) float64 { return s.RecencyScore }},
 		{"importance", func(s RecallScore) float64 { return s.ImportanceScore }},
 		{"scope", func(s RecallScore) float64 { return s.ScopeScore }},

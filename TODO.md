@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA fact-voice scoring has its first Goncho recall slice.
+  - Evidence target: `go test . -run TestRecallFactVoiceRanksStructuredEvidence -count=1` proves structured `fact` evidence contributes to recall scoring, outranks a question-shaped lexical decoy, and surfaces `fact_score`/`fact=` diagnostics in the recall trace/report.
+  - Result: Goncho can ingest a Mnemosyne-style structured fact voice through its existing evidence seam without adding LLM extraction, answer hints, benchmark gold IDs, or frozen-artifact changes.
+
 - 2026-05-22: LOCOMO answer-ready closeout now has a guarded roadmap handoff.
   - Evidence target: `go test . -run TestBenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout -count=1` proves internal and public benchmark roadmaps summarize the delivered graph, query-decomposition, temporal/speaker-routing, failure-bucket, backend-comparison, and docs-guard chain.
   - Result: the loop can stop cleanly with a source-backed answer for how to improve Goncho next: keep frozen LOCOMO metrics as the guardrail, choose an approved retrieval slice, and generate a new date-stamped full LOCOMO run only when the change is ready to compare.

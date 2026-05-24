@@ -169,10 +169,11 @@ func FormatRecallDiagnosticsReport(report RecallDiagnosticsReport) string {
 }
 
 func formatRecallDiagnosticScores(scores RecallScore) string {
-	return fmt.Sprintf("scores: keyword=%.6f semantic=%.6f graph=%.6f recency=%.6f importance=%.6f scope=%.6f rrf=%.6f diversity_penalty=%.6f",
+	return fmt.Sprintf("scores: keyword=%.6f semantic=%.6f graph=%.6f fact=%.6f recency=%.6f importance=%.6f scope=%.6f rrf=%.6f diversity_penalty=%.6f",
 		scores.KeywordScore,
 		scores.SemanticScore,
 		scores.GraphScore,
+		scores.FactScore,
 		scores.RecencyScore,
 		scores.ImportanceScore,
 		scores.ScopeScore,
