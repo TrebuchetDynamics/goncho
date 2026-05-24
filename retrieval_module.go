@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -25,6 +26,88 @@ func (s *Service) retrieval() retrievalModule {
 		recentLimit:  s.recentLimit,
 		dreamEnabled: s.dreamEnabled,
 		sessions:     s.sessions,
+	}
+}
+
+func (r retrievalModule) Generate(ctx context.Context, q RecallQuery) ([]RecallCandidate, error) {
+	peer := strings.TrimSpace(q.Peer)
+	if peer == "" {
+		return nil, fmt.Errorf("goncho: peer is required")
+	}
+	if !recallSourcesAllowConclusions(q.Sources) {
+		return []RecallCandidate{}, nil
+	}
+	workspaceID := strings.TrimSpace(q.WorkspaceID)
+	if workspaceID == "" {
+		workspaceID = r.workspaceID
+	}
+	memoryScope := normalizeMemoryScope(q.ScopeID, "")
+	hits, err := findConclusions(ctx, r.db, workspaceID, "", r.observer, peer, q.Query, q.SessionKey, memoryScope, compiledSearchFilter{}, recallCandidateSearchLimit(q.Limit))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]RecallCandidate, 0, len(hits))
+	for _, hit := range hits {
+		out = append(out, recallCandidateFromSearchHit(q, hit, r.observer, memoryScope))
+	}
+	return out, nil
+}
+
+func recallCandidateSearchLimit(selectionLimit int) int {
+	limit := selectionLimit * 5
+	if selectionLimit <= 0 {
+		limit = 25
+	}
+	if limit < 10 {
+		limit = 10
+	}
+	return normalizeSearchLimit(limit)
+}
+
+func recallSourcesAllowConclusions(sources []string) bool {
+	if len(sources) == 0 || filterHasWildcard(sources) {
+		return true
+	}
+	for _, source := range sources {
+		if strings.EqualFold(strings.TrimSpace(source), "conclusion") {
+			return true
+		}
+	}
+	return false
+}
+
+func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeID string) RecallCandidate {
+	provenance := []EvidenceItem{}
+	if keywordScore := roundRecallFloat(keywordRecallScore(hit.Content, q.Query)); keywordScore > 0 {
+		provenance = append(provenance, EvidenceItem{
+			Kind:   "keyword",
+			Source: "goncho_conclusions",
+			ID:     strconv.FormatInt(hit.ID, 10),
+			Score:  keywordScore,
+			Note:   "matched conclusion content",
+		})
+	}
+	for i, fact := range hit.factAnnotations {
+		fact = strings.TrimSpace(fact)
+		if fact == "" {
+			continue
+		}
+		provenance = append(provenance, EvidenceItem{
+			Kind:   "fact",
+			Source: "goncho_memory_annotations",
+			ID:     fmt.Sprintf("conclusion:%d#fact:%d", hit.ID, i+1),
+			Score:  roundRecallFloat(searchFactIntentScore(q.Query, fact)),
+			Note:   "fact=" + fact,
+		})
+	}
+	return RecallCandidate{
+		MemoryID:   strconv.FormatInt(hit.ID, 10),
+		SourceType: hit.Source,
+		Content:    hit.Content,
+		SessionID:  hit.SessionKey,
+		AgentID:    observer,
+		ScopeID:    scopeID,
+		Provenance: provenance,
 	}
 }
 
