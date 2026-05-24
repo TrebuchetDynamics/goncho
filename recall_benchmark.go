@@ -27,6 +27,7 @@ type RecallBenchmarkCase struct {
 	RelevantIDs           []string
 	ContextContains       []string
 	RequiredEvidenceKinds []string
+	ExpectedNoAnswer      bool
 	Latency               time.Duration
 }
 
@@ -55,6 +56,7 @@ type RecallBenchmarkServiceCase struct {
 	RelevantRefs          []string
 	ContextContains       []string
 	RequiredEvidenceKinds []string
+	ExpectedNoAnswer      bool
 	Limit                 int
 	MaxTokens             int
 	ScoringConfig         RecallScoringConfig
@@ -101,6 +103,7 @@ type RecallBenchmarkCaseReport struct {
 	ScoringConfigVersion  string   `json:"scoring_config_version"`
 	RelevantIDs           []string `json:"relevant_ids"`
 	RequiredEvidenceKinds []string `json:"required_evidence_kinds,omitempty"`
+	ExpectedNoAnswer      bool     `json:"expected_no_answer,omitempty"`
 	CandidateMemoryIDs    []string `json:"candidate_memory_ids"`
 	SelectedMemoryIDs     []string `json:"selected_memory_ids"`
 	RecallAt5             float64  `json:"recall_at_5"`
@@ -225,6 +228,7 @@ func runServiceRecallBenchmarkCase(ctx context.Context, svc *Service, index int,
 		RelevantIDs:           relevantIDs,
 		ContextContains:       append([]string(nil), c.ContextContains...),
 		RequiredEvidenceKinds: append([]string(nil), c.RequiredEvidenceKinds...),
+		ExpectedNoAnswer:      c.ExpectedNoAnswer,
 		Latency:               time.Since(started),
 	}, nil
 }
@@ -285,11 +289,12 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 		ScoringConfigVersion:  c.Trace.ScoringConfig.Version,
 		RelevantIDs:           append([]string(nil), c.RelevantIDs...),
 		RequiredEvidenceKinds: requiredEvidenceKinds,
+		ExpectedNoAnswer:      c.ExpectedNoAnswer,
 		CandidateMemoryIDs:    candidateIDs,
 		SelectedMemoryIDs:     selectedIDs,
-		RecallAt5:             recallAtK(candidateIDs, c.RelevantIDs, 5),
-		RecallAt10:            recallAtK(candidateIDs, c.RelevantIDs, 10),
-		ContextSatisfied:      recallBenchmarkContextSatisfied(c.Trace, c.RelevantIDs, c.ContextContains),
+		RecallAt5:             recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, c.RelevantIDs, c.ExpectedNoAnswer, 5),
+		RecallAt10:            recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, c.RelevantIDs, c.ExpectedNoAnswer, 10),
+		ContextSatisfied:      recallBenchmarkContextSatisfied(c.Trace, c.RelevantIDs, c.ContextContains, c.ExpectedNoAnswer),
 		ProvenanceSatisfied:   len(requiredEvidenceKinds) > 0 && recallBenchmarkProvenanceSatisfied(c.Trace, c.RelevantIDs, requiredEvidenceKinds),
 		TokenBudget:           budget,
 		SelectedTokens:        selectedTokens,
@@ -310,7 +315,7 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 			Evidence: map[string]string{"case_id": id},
 		})
 	}
-	if len(c.RelevantIDs) == 0 {
+	if len(c.RelevantIDs) == 0 && !c.ExpectedNoAnswer {
 		warnings = append(warnings, RecallWarning{
 			Code:     RecallBenchmarkWarningNoRelevantIDs,
 			Stage:    RecallStageScore,
@@ -467,6 +472,16 @@ func recallBenchmarkSelectedIDs(items []ScoredRecallCandidate) []string {
 	return out
 }
 
+func recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, relevantIDs []string, expectedNoAnswer bool, k int) float64 {
+	if expectedNoAnswer {
+		if len(selectedIDs) == 0 {
+			return 1
+		}
+		return 0
+	}
+	return recallAtK(candidateIDs, relevantIDs, k)
+}
+
 func recallAtK(candidateIDs, relevantIDs []string, k int) float64 {
 	if len(relevantIDs) == 0 || k <= 0 {
 		return 0
@@ -493,7 +508,10 @@ func recallAtK(candidateIDs, relevantIDs []string, k int) float64 {
 	return roundRecallFloat(float64(len(found)) / float64(len(relevant)))
 }
 
-func recallBenchmarkContextSatisfied(trace RecallTrace, relevantIDs []string, contains []string) bool {
+func recallBenchmarkContextSatisfied(trace RecallTrace, relevantIDs []string, contains []string, expectedNoAnswer bool) bool {
+	if expectedNoAnswer {
+		return len(trace.Selected) == 0 && len(contains) == 0
+	}
 	context := (&RecallProjector{}).ProjectContext(trace).Representation
 	if len(contains) > 0 {
 		for _, needle := range contains {

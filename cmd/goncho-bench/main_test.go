@@ -28,7 +28,7 @@ func TestRunBeamServiceRecallOracleWritesAbilityReport(t *testing.T) {
 	if err := json.Unmarshal(raw, &report); err != nil {
 		t.Fatalf("decode BEAM service report: %v", err)
 	}
-	wantAbilities := []string{"CR", "EO", "IE", "IF", "KU", "MR", "PF", "TR"}
+	wantAbilities := []string{"ABS", "CR", "EO", "IE", "IF", "KU", "MR", "PF", "SUM", "TR"}
 	gotAbilities := make([]string, 0, len(report.Abilities))
 	for _, ability := range report.Abilities {
 		gotAbilities = append(gotAbilities, ability.Ability)
@@ -77,7 +77,7 @@ func TestRunBeamServiceRecallOracleWritesMnemosyneCompatibleArtifacts(t *testing
 		t.Fatalf("summary metadata = %+v date=%q, want Mnemosyne-compatible local recall metadata", summary.Metadata, summary.Date)
 	}
 	scale := summary.AbilitySummary["100K"]
-	wantAbilities := []string{"CR", "EO", "IE", "IF", "KU", "MR", "PF", "TR"}
+	wantAbilities := []string{"ABS", "CR", "EO", "IE", "IF", "KU", "MR", "PF", "SUM", "TR"}
 	for _, ability := range wantAbilities {
 		stats, ok := scale[ability]
 		if !ok || stats.Count != 1 || stats.AvgScore != 1 {

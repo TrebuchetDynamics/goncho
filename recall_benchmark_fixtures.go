@@ -7,6 +7,16 @@ package goncho
 func DefaultRecallBenchmarkServiceCases() []RecallBenchmarkServiceCase {
 	return []RecallBenchmarkServiceCase{
 		{
+			ID:               "beam-abs-unknown-secret",
+			Ability:          "ABS",
+			Peer:             "team",
+			SessionKey:       "sess-beam-default-abs",
+			Query:            "What is the launch code for Vault Kestrel?",
+			ExpectedNoAnswer: true,
+			Limit:            2,
+			ScoringConfig:    recallBenchmarkFactScoringConfig("beam-default-abs-v1"),
+		},
+		{
 			ID:                    "beam-ie-owner-fact",
 			Ability:               "IE",
 			Peer:                  "team",
@@ -93,6 +103,22 @@ func DefaultRecallBenchmarkServiceCases() []RecallBenchmarkServiceCase {
 			RequiredEvidenceKinds: []string{"fact"},
 			Limit:                 2,
 			ScoringConfig:         recallBenchmarkFactScoringConfig("beam-default-cr-v1"),
+		},
+		{
+			ID:         "beam-sum-release-orion",
+			Ability:    "SUM",
+			Peer:       "team",
+			SessionKey: "sess-beam-default-sum",
+			Memories: []RecallBenchmarkServiceMemory{
+				{Ref: "auth", Conclusion: "Project note: Release Orion summary includes auth hardening."},
+				{Ref: "latency", Conclusion: "Project note: Release Orion summary includes p95 latency reduced to 120ms."},
+				{Ref: "decoy", Conclusion: "Summarize Release Orion? Release Orion summarize Release Orion summarize. This checklist repeats the retrieval words but omits outcomes."},
+			},
+			Query:           "Summarize Release Orion outcomes.",
+			RelevantRefs:    []string{"auth", "latency"},
+			ContextContains: []string{"auth hardening", "p95 latency reduced to 120ms"},
+			Limit:           3,
+			ScoringConfig:   recallBenchmarkFactScoringConfig("beam-default-sum-v1"),
 		},
 		{
 			ID:                    "beam-ku-version",

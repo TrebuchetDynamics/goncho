@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: service-backed BEAM oracle now covers ABS and SUM fixtures plus expected-no-answer scoring.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunBeamServiceRecallOracleWrites(AbilityReport|MnemosyneCompatibleArtifacts)' -count=1` proves the CLI summary and paired outcomes include all ten BEAM abilities (ABS, CR, EO, IE, IF, KU, MR, PF, SUM, TR) with perfect deterministic service-backed recall, context, token-budget, and provenance gates.
+  - Result: Goncho can now produce local Mnemosyne-compatible BEAM-style artifacts for every BEAM ability dimension while still avoiding answer hints, LLM judges, external datasets, or final BEAM superiority claims.
+
 - 2026-05-24: `goncho-bench --beam-service-summary-out` and `--beam-service-paired-out` now emit Mnemosyne-compatible BEAM artifacts.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamServiceRecallOracleWritesMnemosyneCompatibleArtifacts -count=1` proves the deterministic service oracle writes `beam_e2e_summary.json`-style ability scores and append-only `paired_outcomes.jsonl` rows with config IDs, scale, qid, ability, score, and correctness.
   - Result: Goncho's delivered MEMORIA fixture oracle can now be compared with Mnemosyne-style BEAM result tooling while still avoiding answer hints, LLM judges, external datasets, or final BEAM superiority claims.
