@@ -6,9 +6,16 @@ import (
 	"strings"
 )
 
+const searchMetricUnitPattern = `ms|sec|seconds?|minutes?|hours?|days?|weeks?|months?|%|kb|mb|gb|tb|rows?|columns?|roles?|features?|bugs?|commits?|cards?|users?|items?|tests?|apis?|endpoints?|tickets?`
+
 var (
 	searchOwnerQuestionPattern = regexp.MustCompile(`(?i)\bwho\s+(?:currently\s+|now\s+)?owns?\s+([^?!.]+)`)
 	searchOwnerAnswerPattern   = regexp.MustCompile(`(?i)^\s*([a-z][a-z0-9 _.'-]{0,80}?)\s+(?:currently\s+|now\s+)?owns?\s+(.+?)\s*$`)
+	searchMetricValuePattern   = regexp.MustCompile(`(?i)^\d+(?:[.,]\d+)?\s*(?:` + searchMetricUnitPattern + `)\s*$`)
+	searchMetricAnswerPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+(?:is|was|=)\s+(\d+(?:[.,]\d+)?\s*(?:` + searchMetricUnitPattern + `))\s*$`)
+	searchVersionValuePattern  = regexp.MustCompile(`(?i)^v?\d+\.\d+(?:\.\d+)?\s*$`)
+	searchVersionIsPattern     = regexp.MustCompile(`(?i)^\s*(.+?)\s+version\s+(?:is|was|=)\s+(v?\d+\.\d+(?:\.\d+)?)\s*$`)
+	searchVersionShortPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+v(\d+\.\d+(?:\.\d+)?)\s*$`)
 	recallSentencePattern      = regexp.MustCompile(`[^.!?]+[.!?]?`)
 )
 
@@ -26,6 +33,12 @@ func searchFactIntentScore(query, content string) float64 {
 		return score
 	}
 	if score := searchTimelineFactIntentScore(query, content); score > 0 {
+		return score
+	}
+	if score := searchMetricFactIntentScore(query, content); score > 0 {
+		return score
+	}
+	if score := searchVersionFactIntentScore(query, content); score > 0 {
 		return score
 	}
 	return 0
@@ -203,6 +216,127 @@ func searchTimelineAnswerParts(sentence string) (event, date string, ok bool) {
 	return "", "", false
 }
 
+func searchMetricFactIntentScore(query, content string) float64 {
+	queryKey, ok := searchMetricQuestionKey(query)
+	if !ok {
+		return 0
+	}
+	queryTokens := searchRankTokenSet(queryKey)
+	if len(queryTokens) == 0 {
+		return 0
+	}
+	if !strings.Contains(content, "?") {
+		key, value, ok := searchMetricAnswerParts(content)
+		if ok && searchMetricValueLooksAssertive(value) && searchRankTokenCoverage(queryTokens, key) >= 0.80 {
+			return 1
+		}
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		key, value, ok := searchMetricAnswerParts(sentence)
+		if !ok || !searchMetricValueLooksAssertive(value) {
+			continue
+		}
+		if searchRankTokenCoverage(queryTokens, key) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func searchMetricQuestionKey(query string) (string, bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?! ."))
+	lower := strings.ToLower(query)
+	for _, prefix := range []string{"what is ", "what was ", "what are ", "what were ", "how fast is ", "how many ", "how much "} {
+		if strings.HasPrefix(lower, prefix) {
+			key := cleanFactObject(query[len(prefix):])
+			return key, key != ""
+		}
+	}
+	return "", false
+}
+
+func searchMetricAnswerParts(sentence string) (key, value string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	match := searchMetricAnswerPattern.FindStringSubmatch(sentence)
+	if len(match) != 3 {
+		return "", "", false
+	}
+	key = cleanFactObject(match[1])
+	value = cleanFactValue(match[2])
+	return key, value, searchFactObjectLooksAssertive(key) && searchMetricValueLooksAssertive(value)
+}
+
+func searchVersionFactIntentScore(query, content string) float64 {
+	querySubject, ok := searchVersionQuestionSubject(query)
+	if !ok {
+		return 0
+	}
+	queryTokens := searchRankTokenSet(querySubject)
+	if len(queryTokens) == 0 {
+		return 0
+	}
+	if !strings.Contains(content, "?") {
+		subject, version, ok := searchVersionAnswerParts(content)
+		if ok && searchVersionValueLooksAssertive(version) && searchRankTokenCoverage(queryTokens, subject) >= 0.80 {
+			return 1
+		}
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		subject, version, ok := searchVersionAnswerParts(sentence)
+		if !ok || !searchVersionValueLooksAssertive(version) {
+			continue
+		}
+		if searchRankTokenCoverage(queryTokens, subject) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func searchVersionQuestionSubject(query string) (string, bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?! ."))
+	lower := strings.ToLower(query)
+	for _, prefix := range []string{"what version is ", "which version is ", "what version does ", "which version does "} {
+		if strings.HasPrefix(lower, prefix) {
+			subject := cleanFactObject(query[len(prefix):])
+			return subject, subject != ""
+		}
+	}
+	for _, prefix := range []string{"what ", "which "} {
+		if strings.HasPrefix(lower, prefix) && strings.HasSuffix(lower, " version") {
+			subject := cleanFactObject(query[len(prefix) : len(query)-len(" version")])
+			return subject, subject != ""
+		}
+	}
+	for _, prefix := range []string{"what is ", "what was ", "which is "} {
+		if strings.HasPrefix(lower, prefix) && strings.HasSuffix(lower, " version") {
+			subject := cleanFactObject(query[len(prefix) : len(query)-len(" version")])
+			return subject, subject != ""
+		}
+	}
+	return "", false
+}
+
+func searchVersionAnswerParts(sentence string) (subject, version string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	for _, pattern := range []*regexp.Regexp{searchVersionIsPattern, searchVersionShortPattern} {
+		match := pattern.FindStringSubmatch(sentence)
+		if len(match) != 3 {
+			continue
+		}
+		subject = cleanFactObject(match[1])
+		version = cleanFactValue(match[2])
+		return subject, version, searchFactObjectLooksAssertive(subject) && searchVersionValueLooksAssertive(version)
+	}
+	return "", "", false
+}
+
 func searchInstructionFactIntentScore(query, content string) float64 {
 	querySubject, queryTopic, ok := searchInstructionQuestion(query)
 	if !ok {
@@ -366,6 +500,14 @@ func searchFactSubjectLooksAssertive(subject string) bool {
 		}
 	}
 	return true
+}
+
+func searchMetricValueLooksAssertive(value string) bool {
+	return searchMetricValuePattern.MatchString(strings.TrimSpace(value))
+}
+
+func searchVersionValueLooksAssertive(value string) bool {
+	return searchVersionValuePattern.MatchString(strings.TrimSpace(value))
 }
 
 func searchFactObjectLooksAssertive(object string) bool {

@@ -17,19 +17,24 @@ var memoryAnnotationDDL = memoryannotations.DDL
 func conclusionFactAnnotations(content string) []string {
 	seen := map[string]struct{}{}
 	facts := []string{}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
-		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation} {
-			fact, ok := extractor(sentence)
-			if !ok {
-				continue
-			}
-			key := strings.ToLower(fact)
-			if _, exists := seen[key]; exists {
-				continue
-			}
-			seen[key] = struct{}{}
-			facts = append(facts, fact)
+	addFact := func(fact string, ok bool) {
+		if !ok {
+			return
 		}
+		key := strings.ToLower(fact)
+		if _, exists := seen[key]; exists {
+			return
+		}
+		seen[key] = struct{}{}
+		facts = append(facts, fact)
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation, conclusionMetricFactAnnotation, conclusionVersionFactAnnotation} {
+			addFact(extractor(sentence))
+		}
+	}
+	for _, extractor := range []func(string) (string, bool){conclusionMetricFactAnnotation, conclusionVersionFactAnnotation} {
+		addFact(extractor(content))
 	}
 	return facts
 }
@@ -168,6 +173,30 @@ func conclusionTimelineFactAnnotation(sentence string) (string, bool) {
 	return "", false
 }
 
+func conclusionMetricFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	key, value, ok := searchMetricAnswerParts(sentence)
+	if !ok {
+		return "", false
+	}
+	return metricFactAnnotation(key, value)
+}
+
+func conclusionVersionFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	subject, version, ok := searchVersionAnswerParts(sentence)
+	if !ok {
+		return "", false
+	}
+	return versionFactAnnotation(subject, version)
+}
+
 func cleanFactObject(value string) string {
 	value = strings.TrimSpace(value)
 	if idx := strings.LastIndexAny(value, ":;"); idx >= 0 {
@@ -240,6 +269,24 @@ func timelineFactAnnotation(event, date string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("%s occurs on %s", event, date), true
+}
+
+func metricFactAnnotation(key, value string) (string, bool) {
+	key = cleanFactObject(key)
+	value = cleanFactValue(value)
+	if !searchFactObjectLooksAssertive(key) || !searchMetricValueLooksAssertive(value) {
+		return "", false
+	}
+	return fmt.Sprintf("%s is %s", key, value), true
+}
+
+func versionFactAnnotation(subject, version string) (string, bool) {
+	subject = cleanFactObject(subject)
+	version = cleanFactValue(version)
+	if !searchFactObjectLooksAssertive(subject) || !searchVersionValueLooksAssertive(version) {
+		return "", false
+	}
+	return fmt.Sprintf("%s version is %s", subject, version), true
 }
 
 func storeConclusionFactAnnotations(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, conclusionID int64, facts []string) error {

@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA metric/version extraction now feeds Goncho search through durable annotations.
+  - Evidence target: `go test . -run 'TestServiceConclude(MetricAnnotationRanksDurableMetric|VersionAnnotationRanksDurableVersion)' -count=1` proves `Service.Conclude` derives conservative numeric metric and semantic-version facts from prose (`dashboard API latency is 250ms`, `PostgreSQL version is 14.2`) and `Service.Search` ranks those durable facts above question-shaped lexical echoes.
+  - Result: the append-only fact annotation lane now covers MEMORIA-style IE/KU measurement facts without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
+
 - 2026-05-23: Mnemosyne MEMORIA timeline extraction now feeds Goncho search through durable annotations.
   - Evidence target: `go test . -run TestServiceConcludeTimelineAnnotationRanksDurableDate -count=1` proves `Service.Conclude` derives a conservative timeline fact from prose (`Release Orion deadline is 2026-06-01`) and `Service.Search` ranks that durable date above a question-shaped lexical echo.
   - Result: the append-only fact annotation lane now covers MEMORIA-style timelines without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
