@@ -17,7 +17,7 @@ func TestGonchoGoalPublicToolsSurviveSQLiteRestartE2E(t *testing.T) {
 		t.Fatalf("RunGonchoPublicToolsRestartE2E: %v", err)
 	}
 
-	for _, tool := range []string{"goncho_context", "goncho_search", "goncho_remember", "goncho_review", "goncho_handoff"} {
+	for _, tool := range []string{"goncho_context", "goncho_search", "goncho_recall", "goncho_remember", "goncho_review", "goncho_handoff"} {
 		if !containsPublicRestartValue(report.ToolNames, tool) {
 			t.Fatalf("tool names = %#v, missing %s", report.ToolNames, tool)
 		}
@@ -27,6 +27,9 @@ func TestGonchoGoalPublicToolsSurviveSQLiteRestartE2E(t *testing.T) {
 	}
 	if report.SearchCountBeforeRestart != 1 || report.SearchCountAfterRestart != 1 {
 		t.Fatalf("search counts = before %d after %d, want 1/1", report.SearchCountBeforeRestart, report.SearchCountAfterRestart)
+	}
+	if report.RecallSelectedAfterRestart != 1 {
+		t.Fatalf("recall selected after restart = %d, want 1", report.RecallSelectedAfterRestart)
 	}
 	if report.ContextRepresentationAfterRestart == "" {
 		t.Fatalf("context representation after restart is empty: %+v", report)

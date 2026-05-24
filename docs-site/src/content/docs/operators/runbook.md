@@ -76,7 +76,8 @@ Expose a small surface first.
 | Tool | Mutates memory? | Suggested access |
 | --- | --- | --- |
 | `goncho_context` | No | Safe default. Use before prompt construction. |
-| `goncho_search` | No | Safe default. Use for explicit recall. |
+| `goncho_search` | No | Safe default. Use for flat explicit memory search. |
+| `goncho_recall` | No | Safe default for audit/debug flows that need scored trace and replay evidence. |
 | `goncho_remember` | Yes | Gate behind operator policy or explicit host rules. |
 | `goncho_review` | Yes for resolve actions | Operator/system only. |
 | `goncho_handoff` | Yes for save actions | Agent or operator, depending on session policy. |
@@ -85,7 +86,7 @@ Expose a small surface first.
 | `update_memory` | Yes | Operator/system or reviewed agent action. |
 | `forget_memory` | Yes | Operator/system only unless the product has a user-facing deletion flow. |
 
-Prefer `goncho_context`, `goncho_search`, `goncho_remember`, `goncho_review`, and `goncho_handoff` for new Goncho-native hosts. Use MCP-style tools when the host already expects generic memory contracts.
+Prefer `goncho_context`, `goncho_search`, `goncho_recall`, `goncho_remember`, `goncho_review`, and `goncho_handoff` for new Goncho-native hosts. Use MCP-style tools when the host already expects generic memory contracts.
 
 ## Health Checks
 

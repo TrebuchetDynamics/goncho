@@ -87,8 +87,8 @@
 //   - Service.Profile stores and reads durable profile facts.
 //
 // For host integrations, prefer the public tool constructors such as
-// NewGonchoContextTool, NewGonchoSearchTool, NewGonchoRememberTool,
-// NewReviewTool, and NewGonchoHandoffTool so callers stay on the public
+// NewGonchoContextTool, NewGonchoSearchTool, NewGonchoRecallTool,
+// NewGonchoRememberTool, NewReviewTool, and NewGonchoHandoffTool so callers stay on the public
 // boundary instead of database internals.
 //
 // On pkg.go.dev, use the rendered pkg.go.dev examples as the shortest checked

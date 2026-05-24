@@ -21,14 +21,14 @@ func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
 	}
 	defer runtime.Close(ctx)
 
-	if runtime.Service == nil || runtime.ContextTool == nil || runtime.SearchTool == nil || runtime.RememberTool == nil || runtime.ReviewTool == nil || runtime.HandoffTool == nil {
+	if runtime.Service == nil || runtime.ContextTool == nil || runtime.SearchTool == nil || runtime.RecallTool == nil || runtime.RememberTool == nil || runtime.ReviewTool == nil || runtime.HandoffTool == nil {
 		t.Fatalf("runtime tools not fully initialized: %+v", runtime)
 	}
 	status := runtime.Status()
 	if !status.Ready || status.WorkspaceID != "gormes-test" || status.ObserverID != "gormes" || status.DatabasePath == "" {
 		t.Fatalf("status = %+v, want ready gormes-test/gormes with db path", status)
 	}
-	wantTools := []string{"goncho_context", "goncho_search", "goncho_remember", "goncho_review", "goncho_handoff"}
+	wantTools := []string{"goncho_context", "goncho_search", "goncho_recall", "goncho_remember", "goncho_review", "goncho_handoff"}
 	for _, want := range wantTools {
 		if !contains(status.ToolNames, want) {
 			t.Fatalf("tool names = %#v, missing %s", status.ToolNames, want)
@@ -48,6 +48,13 @@ func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
 	}
 	if len(contextPayload) == 0 {
 		t.Fatalf("context returned empty payload")
+	}
+	recallPayload, err := runtime.RecallTool.Execute(ctx, json.RawMessage(`{"peer_id":"user-1","session_key":"session-1","query":"local SQLite memory","limit":1}`))
+	if err != nil {
+		t.Fatalf("recall execute: %v", err)
+	}
+	if len(recallPayload) == 0 {
+		t.Fatalf("recall returned empty payload")
 	}
 }
 

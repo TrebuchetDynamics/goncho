@@ -15,12 +15,15 @@ type GonchoContextTool struct{ svc *Service }
 
 type GonchoSearchTool struct{ svc *Service }
 
+type GonchoRecallTool struct{ svc *Service }
+
 type GonchoRememberTool struct{ svc *Service }
 
 type GonchoHandoffTool struct{ store MemoryToolStore }
 
 func NewGonchoContextTool(svc *Service) *GonchoContextTool { return &GonchoContextTool{svc: svc} }
 func NewGonchoSearchTool(svc *Service) *GonchoSearchTool   { return &GonchoSearchTool{svc: svc} }
+func NewGonchoRecallTool(svc *Service) *GonchoRecallTool   { return &GonchoRecallTool{svc: svc} }
 func NewGonchoRememberTool(svc *Service) *GonchoRememberTool {
 	return &GonchoRememberTool{svc: svc}
 }
@@ -93,6 +96,71 @@ func (t *GonchoSearchTool) Execute(ctx context.Context, args json.RawMessage) (j
 		return nil, fmt.Errorf("goncho_search: %w", err)
 	}
 	return json.Marshal(map[string]any{"action": "search", "count": len(out.Results), "results": out.Results, "workspace_id": out.WorkspaceID, "profile_id": out.ProfileID, "peer": out.Peer, "query": out.Query})
+}
+
+func (t *GonchoRecallTool) Name() string           { return "goncho_recall" }
+func (t *GonchoRecallTool) Timeout() time.Duration { return 5 * time.Second }
+func (t *GonchoRecallTool) Description() string {
+	return "Run auditable Goncho recall and return the scored trace with replay evidence."
+}
+func (t *GonchoRecallTool) Schema() json.RawMessage {
+	return json.RawMessage(`{"type":"object","properties":{"workspace_id":{"type":"string"},"peer_id":{"type":"string"},"peer":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"},"scope_id":{"type":"string"},"sources":{"type":"array","items":{"type":"string"}},"limit":{"type":"integer"},"max_tokens":{"type":"integer"}},"required":["peer_id","query"]}`)
+}
+func (t *GonchoRecallTool) Spec() toolmeta.OperationSpec {
+	return gonchoPublicToolSpec(t.Name(), t.Description(), t.Schema(), false, true)
+}
+func (t *GonchoRecallTool) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+	if t == nil || t.svc == nil {
+		return nil, errors.New("goncho_recall: service is required")
+	}
+	var in struct {
+		WorkspaceID string   `json:"workspace_id"`
+		PeerID      string   `json:"peer_id"`
+		Peer        string   `json:"peer"`
+		Query       string   `json:"query"`
+		SessionKey  string   `json:"session_key"`
+		Scope       string   `json:"scope"`
+		ScopeID     string   `json:"scope_id"`
+		Sources     []string `json:"sources"`
+		Limit       int      `json:"limit"`
+		MaxTokens   int      `json:"max_tokens"`
+	}
+	if err := json.Unmarshal(args, &in); err != nil {
+		return nil, fmt.Errorf("goncho_recall: %w", err)
+	}
+	trace, err := t.svc.Recall(ctx, RecallQuery{
+		WorkspaceID: in.WorkspaceID,
+		Peer:        firstPublicNonEmpty(in.PeerID, in.Peer),
+		Query:       in.Query,
+		SessionKey:  in.SessionKey,
+		ScopeID:     firstPublicNonEmpty(in.ScopeID, in.Scope),
+		Sources:     in.Sources,
+		Limit:       in.Limit,
+		MaxTokens:   in.MaxTokens,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("goncho_recall: %w", err)
+	}
+	replay := BuildRecallReplay(trace)
+	return json.Marshal(map[string]any{
+		"action":             "recall",
+		"trace_id":           trace.TraceID,
+		"pipeline_version":   trace.PipelineVersion,
+		"workspace_id":       trace.Query.WorkspaceID,
+		"peer":               trace.Query.Peer,
+		"query":              trace.Query.Query,
+		"candidate_count":    len(trace.Candidates),
+		"selected_count":     len(trace.Selected),
+		"rejected_count":     len(trace.Rejected),
+		"warning_count":      len(trace.Warnings),
+		"selected":           trace.Selected,
+		"warnings":           trace.Warnings,
+		"trace":              trace,
+		"replay":             replay,
+		"replay_contract":    replay.ReplayContract,
+		"projection_ready":   true,
+		"projection_warning": "recall trace is orientation evidence; hosts must verify live state before acting",
+	})
 }
 
 func (t *GonchoRememberTool) Name() string           { return "goncho_remember" }

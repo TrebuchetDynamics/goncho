@@ -12,6 +12,7 @@ Goncho exposes generic memory tools around `MemoryToolStore`.
 | `update_memory` | Correct content or adjust importance. |
 | `summarize_memories` | Summarize related memories by query or tag. |
 | `forget_memory` | Soft-delete an active memory entry. |
+| `goncho_recall` | Run auditable service recall and return a scored `RecallTrace`, selected/rejected counts, warnings, and deterministic replay evidence. |
 | `goncho_review` | List and resolve conflict/stale review items, with enum-validated `status`/`kind` filters plus `subject_id` and `related_id` filters for inspecting review or supersession chains. |
 
 For `goncho_review` list requests, use `open` or `resolved` for `status` and `conflict` or `stale` for `kind`; invalid values return an error instead of an empty queue. Omitted or blank `status` defaults to open review items. For resolve requests, use `accepted`, `rejected`, `superseded`, or `verified` for `resolution`; invalid values return enum-specific guidance and leave the review item open.

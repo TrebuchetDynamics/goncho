@@ -34,6 +34,7 @@ type Runtime struct {
 	Service      *goncho.Service
 	ContextTool  *goncho.GonchoContextTool
 	SearchTool   *goncho.GonchoSearchTool
+	RecallTool   *goncho.GonchoRecallTool
 	RememberTool *goncho.GonchoRememberTool
 	ReviewTool   *goncho.ReviewTool
 	HandoffTool  *goncho.GonchoHandoffTool
@@ -89,6 +90,7 @@ func Open(ctx context.Context, cfg Config) (*Runtime, error) {
 		Service:      svc,
 		ContextTool:  goncho.NewGonchoContextTool(svc),
 		SearchTool:   goncho.NewGonchoSearchTool(svc),
+		RecallTool:   goncho.NewGonchoRecallTool(svc),
 		RememberTool: goncho.NewGonchoRememberTool(svc),
 		ReviewTool:   goncho.NewReviewTool(svc),
 		HandoffTool:  goncho.NewGonchoHandoffTool(handoffStore),
@@ -116,7 +118,7 @@ func (r *Runtime) Status() Status {
 		ProfileDirectory:   profileDirectory(r.config.ProfilesDirectory, r.config.ProfileID),
 		DatabasePath:       r.config.DatabasePath,
 		MemoryMarkdownPath: r.config.MemoryMarkdownPath,
-		ToolNames:          []string{r.ContextTool.Name(), r.SearchTool.Name(), r.RememberTool.Name(), r.ReviewTool.Name(), r.HandoffTool.Name()},
+		ToolNames:          []string{r.ContextTool.Name(), r.SearchTool.Name(), r.RecallTool.Name(), r.RememberTool.Name(), r.ReviewTool.Name(), r.HandoffTool.Name()},
 	}
 }
 

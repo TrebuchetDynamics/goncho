@@ -63,6 +63,7 @@ func TestGonchoGoalMetaanalysisPublicToolSurfaceWorksEndToEnd(t *testing.T) {
 
 	rememberTool := NewGonchoRememberTool(svc)
 	searchTool := NewGonchoSearchTool(svc)
+	recallTool := NewGonchoRecallTool(svc)
 	contextTool := NewGonchoContextTool(svc)
 	reviewTool := NewReviewTool(svc)
 	handoffTool := NewGonchoHandoffTool(newMockToolStore())
@@ -73,6 +74,7 @@ func TestGonchoGoalMetaanalysisPublicToolSurfaceWorksEndToEnd(t *testing.T) {
 	}{
 		{"goncho_remember", rememberTool},
 		{"goncho_search", searchTool},
+		{"goncho_recall", recallTool},
 		{"goncho_context", contextTool},
 		{"goncho_review", reviewTool},
 		{"goncho_handoff", handoffTool},
@@ -90,6 +92,14 @@ func TestGonchoGoalMetaanalysisPublicToolSurfaceWorksEndToEnd(t *testing.T) {
 	searched := executeMemoryTool(t, ctx, searchTool, `{"peer_id":"`+peer+`","query":"local-first claims","session_key":"`+sessionKey+`"}`)
 	if intField(t, searched, "count") != 1 {
 		t.Fatalf("search output = %+v, want one result", searched)
+	}
+
+	recalled := executeMemoryTool(t, ctx, recallTool, `{"peer_id":"`+peer+`","query":"local-first claims","session_key":"`+sessionKey+`","limit":3}`)
+	if stringField(t, recalled, "action") != "recall" || intField(t, recalled, "selected_count") != 1 {
+		t.Fatalf("recall output = %+v, want one selected trace result", recalled)
+	}
+	if stringField(t, recalled, "trace_id") == "" || stringField(t, recalled, "replay_contract") != "deterministic_replay_from_recall_trace" {
+		t.Fatalf("recall output = %+v, want trace and replay contract", recalled)
 	}
 
 	contexted := executeMemoryTool(t, ctx, contextTool, `{"peer_id":"`+peer+`","query":"local-first claims","session_key":"`+sessionKey+`"}`)

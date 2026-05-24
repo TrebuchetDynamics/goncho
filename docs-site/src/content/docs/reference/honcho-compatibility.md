@@ -25,6 +25,7 @@ For new local-first tool surfaces, prefer the Goncho-native public tools:
 ```text
 goncho_context
 goncho_search
+goncho_recall
 goncho_remember
 goncho_review
 goncho_handoff

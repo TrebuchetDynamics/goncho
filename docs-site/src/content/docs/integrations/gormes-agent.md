@@ -32,7 +32,7 @@ A Gormes integration should provide:
 | Conversation id | `session_key` |
 | Prompt budget | `ContextParams.MaxTokens` |
 | Durable local state | SQLite database opened with `memory.OpenSqlite` |
-| Agent tools | `goncho_context`, `goncho_search`, `goncho_remember`, `goncho_review`, `goncho_handoff` |
+| Agent tools | `goncho_context`, `goncho_search`, `goncho_recall`, `goncho_remember`, `goncho_review`, `goncho_handoff` |
 
 Keep these mappings stable. Most memory bugs are scope bugs.
 
@@ -84,6 +84,7 @@ func main() {
     // Register these with the Gormes tool registry:
     _ = mem.ContextTool
     _ = mem.SearchTool
+    _ = mem.RecallTool
     _ = mem.RememberTool
     _ = mem.ReviewTool
     _ = mem.HandoffTool
@@ -131,7 +132,8 @@ Register these first:
 | Tool | Gormes use |
 | --- | --- |
 | `goncho_context` | Build orientation before model calls. |
-| `goncho_search` | Let the agent ask explicit memory questions. |
+| `goncho_search` | Let the agent ask flat explicit memory questions. |
+| `goncho_recall` | Let audit/debug flows inspect scored recall traces and replay evidence. |
 | `goncho_remember` | Store deliberate conclusions after user-visible decisions. |
 | `goncho_review` | Let operator/system flows inspect stale/conflict review items. |
 | `goncho_handoff` | Save/load session handoff details during compaction or transfer. |

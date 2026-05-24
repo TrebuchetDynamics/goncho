@@ -67,7 +67,7 @@ Goncho can orient the agent by storing evidence, ranking scoped memory, assembli
 | Retrieve scoped memory | `svc.Search` | Returns peer/profile/session-scoped hits before you decide what to verify. |
 | Audit recall scoring | `svc.Recall` | Returns the scored `RecallTrace` with candidates, selected/rejected memories, warnings, and provenance before any projection. |
 | Build an action primer | `svc.Context` | Produces an orientation pack; hosts still verify live state before acting. |
-| Expose agent tools | `NewGonchoContextTool`, `NewGonchoSearchTool`, `NewGonchoRememberTool`, `NewReviewTool`, `NewGonchoHandoffTool` | Keeps host integrations on the public tool boundary instead of database internals. |
+| Expose agent tools | `NewGonchoContextTool`, `NewGonchoSearchTool`, `NewGonchoRecallTool`, `NewGonchoRememberTool`, `NewReviewTool`, `NewGonchoHandoffTool` | Keeps host integrations on the public tool boundary instead of database internals. |
 | Reproduce retrieval evidence | `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` | Installs the benchmark CLI shipped with the public module. |
 
 ## Import Path Guide for pkg.go.dev Readers
@@ -369,12 +369,13 @@ Register these with the Gormes tool registry:
 ```text
 goncho_context
 goncho_search
+goncho_recall
 goncho_remember
 goncho_review
 goncho_handoff
 ```
 
-`goncho_context` has public E2E coverage for generated primer behavior under `max_tokens`: it preserves the newest in-budget turns and excludes older turns outside the budget while returning a representation for the target peer.
+`goncho_context` has public E2E coverage for generated primer behavior under `max_tokens`: it preserves the newest in-budget turns and excludes older turns outside the budget while returning a representation for the target peer. `goncho_recall` exposes the scored recall trace and deterministic replay contract through the same public tool seam.
 
 For Navivox, the same boundary applies: the Android app should treat Goncho as the local memory kernel behind the phone-hosted Gormes runtime, not as a separate memory server users must operate.
 

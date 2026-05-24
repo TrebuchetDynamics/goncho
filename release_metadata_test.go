@@ -1350,6 +1350,7 @@ func TestReadmeSurfacesPkgGoDevAPIMap(t *testing.T) {
 		"svc.Recall",
 		"svc.Context",
 		"NewGonchoContextTool",
+		"NewGonchoRecallTool",
 		"goncho-bench@latest",
 	} {
 		if !strings.Contains(text, want) {
@@ -1950,6 +1951,7 @@ func TestPackageDocSurfacesPrimaryAPIPath(t *testing.T) {
 		"Service.Context",
 		"public tool constructors",
 		"NewGonchoContextTool",
+		"NewGonchoRecallTool",
 		"NewGonchoHandoffTool",
 		"database internals",
 	} {

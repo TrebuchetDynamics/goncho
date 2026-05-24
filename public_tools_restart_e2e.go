@@ -25,6 +25,7 @@ type GonchoPublicToolsRestartE2EReport struct {
 	OllamaRequired                    bool     `json:"ollama_required"`
 	SearchCountBeforeRestart          int      `json:"search_count_before_restart"`
 	SearchCountAfterRestart           int      `json:"search_count_after_restart"`
+	RecallSelectedAfterRestart        int      `json:"recall_selected_after_restart"`
 	ContextRepresentationAfterRestart string   `json:"context_representation_after_restart"`
 	ReviewWarningBeforeResolve        bool     `json:"review_warning_before_resolve"`
 	ReviewWarningAfterResolve         bool     `json:"review_warning_after_resolve"`
@@ -46,6 +47,7 @@ func RunGonchoPublicToolsRestartE2E(ctx context.Context, cfg GonchoPublicToolsRe
 	memoryStore := NewLocalMarkdownMemoryStore(store.DB(), LocalMarkdownMemoryConfig{Path: cfg.MarkdownPath, AgentID: cfg.ObserverID, WorkspaceID: cfg.WorkspaceID, ObserverPeerID: cfg.ObserverID, PeerID: cfg.PeerID, SessionID: cfg.SessionKey})
 	rememberTool := NewGonchoRememberTool(svc)
 	searchTool := NewGonchoSearchTool(svc)
+	recallTool := NewGonchoRecallTool(svc)
 	contextTool := NewGonchoContextTool(svc)
 	reviewTool := NewReviewTool(svc)
 	handoffTool := NewGonchoHandoffTool(memoryStore)
@@ -98,10 +100,15 @@ func RunGonchoPublicToolsRestartE2E(ctx context.Context, cfg GonchoPublicToolsRe
 	reopenedSvc := NewService(reopened.DB(), Config{WorkspaceID: cfg.WorkspaceID, ObserverPeerID: cfg.ObserverID, RecentMessages: 4}, nil)
 	reopenedMemoryStore := NewLocalMarkdownMemoryStore(reopened.DB(), LocalMarkdownMemoryConfig{Path: cfg.MarkdownPath, AgentID: cfg.ObserverID, WorkspaceID: cfg.WorkspaceID, ObserverPeerID: cfg.ObserverID, PeerID: cfg.PeerID, SessionID: cfg.SessionKey})
 	reopenedSearchTool := NewGonchoSearchTool(reopenedSvc)
+	reopenedRecallTool := NewGonchoRecallTool(reopenedSvc)
 	reopenedContextTool := NewGonchoContextTool(reopenedSvc)
 	reopenedHandoffTool := NewGonchoHandoffTool(reopenedMemoryStore)
 
 	afterSearch, err := executePublicToolMap(ctx, reopenedSearchTool, map[string]any{"peer_id": cfg.PeerID, "query": "restart E2E", "session_key": cfg.SessionKey})
+	if err != nil {
+		return GonchoPublicToolsRestartE2EReport{}, err
+	}
+	afterRecall, err := executePublicToolMap(ctx, reopenedRecallTool, map[string]any{"peer_id": cfg.PeerID, "query": "restart E2E", "session_key": cfg.SessionKey, "limit": 3})
 	if err != nil {
 		return GonchoPublicToolsRestartE2EReport{}, err
 	}
@@ -115,12 +122,13 @@ func RunGonchoPublicToolsRestartE2E(ctx context.Context, cfg GonchoPublicToolsRe
 	}
 
 	return GonchoPublicToolsRestartE2EReport{
-		ToolNames:                         []string{rememberTool.Name(), searchTool.Name(), contextTool.Name(), reviewTool.Name(), handoffTool.Name()},
-		SQLiteRestartVerified:             publicToolInt(afterSearch, "count") == 1 && strings.TrimSpace(publicToolString(afterContextMap, "representation")) != "",
+		ToolNames:                         []string{rememberTool.Name(), searchTool.Name(), recallTool.Name(), contextTool.Name(), reviewTool.Name(), handoffTool.Name()},
+		SQLiteRestartVerified:             publicToolInt(afterSearch, "count") == 1 && publicToolInt(afterRecall, "selected_count") == 1 && strings.TrimSpace(publicToolString(afterContextMap, "representation")) != "",
 		NetworkRequired:                   false,
 		OllamaRequired:                    false,
 		SearchCountBeforeRestart:          publicToolInt(beforeSearch, "count"),
 		SearchCountAfterRestart:           publicToolInt(afterSearch, "count"),
+		RecallSelectedAfterRestart:        publicToolInt(afterRecall, "selected_count"),
 		ContextRepresentationAfterRestart: publicToolString(afterContextMap, "representation"),
 		ReviewWarningBeforeResolve:        contextUnavailableHasPublicCapability(beforeContext.Unavailable, "review_required"),
 		ReviewWarningAfterResolve:         contextUnavailableHasPublicCapability(afterContext.Unavailable, "review_required"),
