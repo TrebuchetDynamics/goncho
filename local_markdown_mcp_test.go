@@ -2,6 +2,7 @@ package goncho
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
-func TestLocalMarkdownMemoryStorePersistsExportsAndSurvivesRestart(t *testing.T) {
+func TestLocalMarkdownMemoryPublicFacadePersistsThroughMemoryTools(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "memory.db")
 	markdownPath := filepath.Join(t.TempDir(), "GONCHO_MEMORY.md")
@@ -19,7 +20,9 @@ func TestLocalMarkdownMemoryStorePersistsExportsAndSurvivesRestart(t *testing.T)
 	if err != nil {
 		t.Fatalf("OpenSqlite: %v", err)
 	}
-	local := NewLocalMarkdownMemoryStore(sqlite.DB(), LocalMarkdownMemoryConfig{
+	defer sqlite.Close(ctx)
+
+	store := NewLocalMarkdownMemoryStore(sqlite.DB(), LocalMarkdownMemoryConfig{
 		Path:           markdownPath,
 		AgentID:        "agent-a",
 		WorkspaceID:    "workspace-private",
@@ -27,50 +30,37 @@ func TestLocalMarkdownMemoryStorePersistsExportsAndSurvivesRestart(t *testing.T)
 		PeerID:         "user-juan",
 		SessionID:      "telegram:1",
 	})
-
-	status, err := local.Status(ctx)
+	status, err := store.Status(ctx)
 	if err != nil {
 		t.Fatalf("Status: %v", err)
 	}
 	if !status.Enabled || status.NetworkRequired || status.OllamaRequired {
 		t.Fatalf("status = %+v, want enabled local-only markdown memory", status)
 	}
-	if !stringSliceContains(status.MCPTools, "store_memory") || stringSliceContains(status.MCPTools, "purge_memory") {
-		t.Fatalf("MCPTools = %#v, want normal V1 tools without purge", status.MCPTools)
+
+	if _, err := NewStoreMemoryTool(store).Execute(ctx, json.RawMessage(`{
+		"content":"Juan wants Goncho memory to be local markdown and fast.",
+		"tags":["goncho","local"],
+		"importance":0.9
+	}`)); err != nil {
+		t.Fatalf("store tool Execute: %v", err)
 	}
 
-	if err := local.Store(ctx, MemoryToolEntry{
-		ID:         "mem_manual_local_1",
-		Content:    "Juan wants Goncho memory to be local markdown and fast.",
-		Tags:       []string{"goncho", "local"},
-		Importance: 0.9,
-	}); err != nil {
-		t.Fatalf("Store: %v", err)
-	}
-	assertFileContains(t, markdownPath, "mem_manual_local_1")
-	assertFileContains(t, markdownPath, "local markdown and fast")
-
-	if err := sqlite.Close(ctx); err != nil {
-		t.Fatalf("Close: %v", err)
-	}
-	reopened, err := memory.OpenSqlite(dbPath, 0, nil)
+	raw, err := NewRetrieveMemoryTool(store).Execute(ctx, json.RawMessage(`{"query":"local markdown","limit":5}`))
 	if err != nil {
-		t.Fatalf("reopen sqlite: %v", err)
+		t.Fatalf("retrieve tool Execute: %v", err)
 	}
-	defer reopened.Close(ctx)
-	restarted := NewLocalMarkdownMemoryStore(reopened.DB(), LocalMarkdownMemoryConfig{
-		Path:        markdownPath,
-		AgentID:     "agent-a",
-		WorkspaceID: "workspace-private",
-		PeerID:      "user-juan",
-	})
-	results, err := restarted.Retrieve(ctx, "local markdown", 5)
-	if err != nil {
-		t.Fatalf("Retrieve after restart: %v", err)
+	var retrieved struct {
+		Results []MemoryToolEntry `json:"results"`
+		Count   int               `json:"count"`
 	}
-	if len(results) != 1 || !strings.Contains(results[0].Content, "local markdown and fast") {
-		t.Fatalf("restart results = %+v, want persisted local markdown memory", results)
+	if err := json.Unmarshal(raw, &retrieved); err != nil {
+		t.Fatalf("unmarshal retrieve response: %v", err)
 	}
+	if retrieved.Count != 1 || len(retrieved.Results) != 1 || !strings.Contains(retrieved.Results[0].Content, "local markdown and fast") {
+		t.Fatalf("retrieve response = %+v, want persisted local markdown memory", retrieved)
+	}
+	assertLocalMarkdownFileContains(t, markdownPath, "local markdown and fast")
 }
 
 func stringSliceContains(values []string, want string) bool {
@@ -82,7 +72,7 @@ func stringSliceContains(values []string, want string) bool {
 	return false
 }
 
-func assertFileContains(t *testing.T, path, want string) {
+func assertLocalMarkdownFileContains(t *testing.T, path, want string) {
 	t.Helper()
 	raw, err := os.ReadFile(path)
 	if err != nil {

@@ -285,6 +285,17 @@ func (t *summarizeMemoryTool) Execute(ctx context.Context, args json.RawMessage)
 	})
 }
 
+func clampMemoryImportance(value float64) float64 {
+	switch {
+	case value < 0:
+		return 0
+	case value > 1:
+		return 1
+	default:
+		return value
+	}
+}
+
 func summarizeMemoryEntries(entries []MemoryToolEntry) string {
 	if len(entries) == 0 {
 		return "No matching memories."

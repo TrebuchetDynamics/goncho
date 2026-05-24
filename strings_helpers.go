@@ -10,3 +10,7 @@ func firstNonBlank(values ...string) string {
 	}
 	return ""
 }
+
+func firstNonEmpty(values ...string) string {
+	return firstNonBlank(values...)
+}

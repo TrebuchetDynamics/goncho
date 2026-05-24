@@ -126,6 +126,63 @@ func TestArchitectureLayoutDynamicAgentRegistryTestsLiveWithModule(t *testing.T)
 	}
 }
 
+func TestArchitectureLayoutLocalMarkdownMemoryImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "localmarkdown", "store.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("local markdown memory implementation must live at %s: %v", implPath, err)
+	}
+
+	facadePath := filepath.Join(root, "local_markdown_memory.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), facadePath, nil, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", facadePath, err)
+	}
+	forbiddenImplementationImports := map[string]struct{}{
+		"encoding/json": {},
+		"errors":        {},
+		"fmt":           {},
+		"os":            {},
+		"strings":       {},
+		"time":          {},
+		"github.com/TrebuchetDynamics/goncho/memory": {},
+	}
+	for _, imp := range parsed.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+		}
+		if _, forbidden := forbiddenImplementationImports[path]; forbidden {
+			t.Fatalf("local_markdown_memory.go imports implementation package %q; keep root local_markdown_memory.go as a public facade and put implementation behind internal/localmarkdown", path)
+		}
+	}
+}
+
+func TestArchitectureLayoutLocalMarkdownMemoryTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "localmarkdown", "store_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("local markdown memory behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "local_markdown_mcp_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestLocalMarkdownMemoryPublicFacade") {
+			t.Fatalf("%s keeps %s in the root package; move pure local markdown memory behavior tests to internal/localmarkdown", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
 func TestArchitectureLayoutFileImportImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 
