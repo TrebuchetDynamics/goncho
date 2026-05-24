@@ -4,233 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
-	"reflect"
 	"strings"
-	"sync"
 	"testing"
-	"time"
 
 	memory "github.com/TrebuchetDynamics/goncho/memory"
-	toolmeta "github.com/TrebuchetDynamics/goncho/toolmeta"
+	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
-type mockMemoryToolStore struct {
-	mu      sync.Mutex
-	entries map[string]MemoryToolEntry
-}
-
-func newMockToolStore() *mockMemoryToolStore {
-	return &mockMemoryToolStore{entries: make(map[string]MemoryToolEntry)}
-}
-
-func (m *mockMemoryToolStore) Store(ctx context.Context, entry MemoryToolEntry) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.entries[entry.ID] = entry
-	return nil
-}
-
-func (m *mockMemoryToolStore) Retrieve(ctx context.Context, query string, limit int) ([]MemoryToolEntry, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	var results []MemoryToolEntry
-	for _, e := range m.entries {
-		if query == "" || containsTag(e.Tags, query) || containsMemoryContent(e.Content, query) {
-			results = append(results, e)
-			if len(results) >= limit {
-				break
-			}
-		}
-	}
-	return results, nil
-}
-
-func (m *mockMemoryToolStore) Update(ctx context.Context, id string, content string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	entry, ok := m.entries[id]
-	if !ok {
-		return nil
-	}
-	entry.Content = content
-	m.entries[id] = entry
-	return nil
-}
-
-func (m *mockMemoryToolStore) UpdateImportance(ctx context.Context, id string, importance float64) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	entry, ok := m.entries[id]
-	if !ok {
-		return nil
-	}
-	entry.Importance = importance
-	m.entries[id] = entry
-	return nil
-}
-
-func (m *mockMemoryToolStore) Forget(ctx context.Context, id string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.entries, id)
-	return nil
-}
-
-func containsTag(tags []string, query string) bool {
-	for _, t := range tags {
-		if t == query {
-			return true
-		}
-	}
-	return false
-}
-
-func containsMemoryContent(content string, query string) bool {
-	content = strings.ToLower(content)
-	query = strings.ToLower(query)
-	return strings.Contains(content, query) || strings.Contains(query, content)
-}
-
-func TestStoreMemory(t *testing.T) {
-	store := newMockToolStore()
-	tool := &storeMemoryTool{newMemoryToolBase(store)}
-	args := json.RawMessage(`{"content":"test memory","tags":["test"],"importance":0.8}`)
-	result, err := tool.Execute(context.Background(), args)
-	if err != nil {
-		t.Fatalf("store_memory failed: %v", err)
-	}
-	var out map[string]interface{}
-	if err := json.Unmarshal(result, &out); err != nil {
-		t.Fatalf("invalid result json: %v", err)
-	}
-	if out["success"] != true {
-		t.Fatal("store_memory did not succeed")
-	}
-}
-
-func TestStoreMemory_MissingContent(t *testing.T) {
-	store := newMockToolStore()
-	tool := &storeMemoryTool{newMemoryToolBase(store)}
-	_, err := tool.Execute(context.Background(), json.RawMessage(`{"tags":["test"]}`))
-	if err == nil {
-		t.Fatal("store_memory should fail with missing content")
-	}
-}
-
-func TestRetrieveMemory(t *testing.T) {
-	store := newMockToolStore()
-	store.Store(context.Background(), MemoryToolEntry{ID: "mem_1", Content: "hello world", Tags: []string{"greeting"}, Importance: 0.9})
-	tool := &retrieveMemoryTool{newMemoryToolBase(store)}
-	result, err := tool.Execute(context.Background(), json.RawMessage(`{"query":"greeting","limit":5}`))
-	if err != nil {
-		t.Fatalf("retrieve_memory failed: %v", err)
-	}
-	var out map[string]interface{}
-	json.Unmarshal(result, &out)
-	results, ok := out["results"].([]interface{})
-	if !ok || len(results) == 0 {
-		t.Fatal("retrieve_memory did not return results")
-	}
-}
-
-func TestUpdateMemory(t *testing.T) {
-	store := newMockToolStore()
-	store.Store(context.Background(), MemoryToolEntry{ID: "mem_1", Content: "old content"})
-	tool := &updateMemoryTool{newMemoryToolBase(store)}
-	result, err := tool.Execute(context.Background(), json.RawMessage(`{"id":"mem_1","content":"new content"}`))
-	if err != nil {
-		t.Fatalf("update_memory failed: %v", err)
-	}
-	var out map[string]interface{}
-	json.Unmarshal(result, &out)
-	if out["success"] != true {
-		t.Fatal("update_memory did not succeed")
-	}
-}
-
-func TestUpdateMemoryImportance(t *testing.T) {
-	store := newMockToolStore()
-	store.Store(context.Background(), MemoryToolEntry{ID: "mem_1", Content: "old content", Importance: 0.2})
-	tool := &updateMemoryTool{newMemoryToolBase(store)}
-	result, err := tool.Execute(context.Background(), json.RawMessage(`{"id":"mem_1","importance":0.95}`))
-	if err != nil {
-		t.Fatalf("update_memory importance failed: %v", err)
-	}
-	var out map[string]interface{}
-	json.Unmarshal(result, &out)
-	if out["success"] != true {
-		t.Fatal("update_memory importance did not succeed")
-	}
-	if got := store.entries["mem_1"].Importance; got != 0.95 {
-		t.Fatalf("importance = %v, want 0.95", got)
-	}
-}
-
-func TestSummarizeMemories(t *testing.T) {
-	store := newMockToolStore()
-	store.Store(context.Background(), MemoryToolEntry{ID: "m1", Content: "a", Tags: []string{"proj"}})
-	store.Store(context.Background(), MemoryToolEntry{ID: "m2", Content: "b", Tags: []string{"proj"}})
-	tool := &summarizeMemoryTool{newMemoryToolBase(store)}
-	result, err := tool.Execute(context.Background(), json.RawMessage(`{"filter":"proj","max_items":5}`))
-	if err != nil {
-		t.Fatalf("summarize_memories failed: %v", err)
-	}
-	var out map[string]interface{}
-	json.Unmarshal(result, &out)
-	if out["summarized"].(float64) == 0 {
-		t.Fatal("summarize_memories did not return summarized count")
-	}
-}
-
-func TestForgetMemory(t *testing.T) {
-	store := newMockToolStore()
-	store.Store(context.Background(), MemoryToolEntry{ID: "mem_1", Content: "to forget"})
-	tool := &forgetMemoryTool{newMemoryToolBase(store)}
-	result, err := tool.Execute(context.Background(), json.RawMessage(`{"id":"mem_1"}`))
-	if err != nil {
-		t.Fatalf("forget_memory failed: %v", err)
-	}
-	var out map[string]interface{}
-	json.Unmarshal(result, &out)
-	if out["success"] != true {
-		t.Fatal("forget_memory did not succeed")
-	}
-}
-
-func TestMemoryToolNames(t *testing.T) {
-	store := newMockToolStore()
-	tests := []struct {
-		want string
-		tool interface{ Name() string }
-	}{
-		{"store_memory", &storeMemoryTool{newMemoryToolBase(store)}},
-		{"retrieve_memory", &retrieveMemoryTool{newMemoryToolBase(store)}},
-		{"update_memory", &updateMemoryTool{newMemoryToolBase(store)}},
-		{"summarize_memories", &summarizeMemoryTool{newMemoryToolBase(store)}},
-		{"forget_memory", &forgetMemoryTool{newMemoryToolBase(store)}},
-		{"goncho_review", NewReviewTool(newTestReviewToolService(t))},
-	}
-	for _, tc := range tests {
-		if tc.tool.Name() != tc.want {
-			t.Errorf("tool Name() = %q, want %q", tc.tool.Name(), tc.want)
-		}
-	}
-}
-
-func TestMemoryToolsExposeOperationSpecs(t *testing.T) {
-	store := newMockToolStore()
+func TestMemoryToolsPublicFacadeExposeOperationSpecs(t *testing.T) {
+	ctx := context.Background()
+	_, store := newLocalMarkdownToolStore(t, ctx)
 	tests := []struct {
 		tool       toolmeta.Tool
 		mutating   bool
 		idempotent bool
-		auditKind  string
 	}{
-		{NewStoreMemoryTool(store), true, false, "memory"},
-		{NewRetrieveMemoryTool(store), false, true, "memory"},
-		{NewUpdateMemoryTool(store), true, false, "memory"},
-		{NewSummarizeMemoryTool(store), false, true, "memory"},
-		{NewForgetMemoryTool(store), true, true, "memory"},
-		{NewReviewTool(newTestReviewToolService(t)), true, false, "review"},
+		{NewStoreMemoryTool(store), true, false},
+		{NewRetrieveMemoryTool(store), false, true},
+		{NewUpdateMemoryTool(store), true, false},
+		{NewSummarizeMemoryTool(store), false, true},
+		{NewForgetMemoryTool(store), true, true},
 	}
 	for _, tc := range tests {
 		specTool, ok := tc.tool.(toolmeta.Spec)
@@ -241,8 +34,8 @@ func TestMemoryToolsExposeOperationSpecs(t *testing.T) {
 		if spec.Name != tc.tool.Name() || spec.Description != tc.tool.Description() || string(spec.Schema) != string(tc.tool.Schema()) {
 			t.Fatalf("%s spec descriptor = %+v, want live tool descriptor", tc.tool.Name(), spec.ToolDescriptor)
 		}
-		if spec.AuditKind != tc.auditKind || !spec.PromptSafe {
-			t.Fatalf("%s spec = %+v, want prompt-safe %s audit spec", tc.tool.Name(), spec, tc.auditKind)
+		if spec.AuditKind != "memory" || !spec.PromptSafe {
+			t.Fatalf("%s spec = %+v, want prompt-safe memory audit spec", tc.tool.Name(), spec)
 		}
 		if !stringSliceContains(spec.TrustClass, "operator") || !stringSliceContains(spec.TrustClass, "system") {
 			t.Fatalf("%s trust class = %#v, want operator and system", tc.tool.Name(), spec.TrustClass)
@@ -253,7 +46,7 @@ func TestMemoryToolsExposeOperationSpecs(t *testing.T) {
 	}
 }
 
-func TestMemoryToolsStoreRetrieveUpdateSummarizeForgetWithMetadata(t *testing.T) {
+func TestMemoryToolsPublicFacadeStoreRetrieveUpdateSummarizeForgetWithMetadata(t *testing.T) {
 	ctx := context.Background()
 	sqlite, store := newLocalMarkdownToolStore(t, ctx)
 
@@ -357,7 +150,7 @@ func TestMemoryToolsStoreRetrieveUpdateSummarizeForgetWithMetadata(t *testing.T)
 	}
 }
 
-func TestMemoryToolsKeepAgentMemoryIndependentInSharedStore(t *testing.T) {
+func TestMemoryToolsPublicFacadeKeepAgentMemoryIndependentInSharedStore(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	sqlite, err := memory.OpenSqlite(filepath.Join(dir, "memory.db"), 0, nil)
@@ -408,44 +201,6 @@ func TestMemoryToolsKeepAgentMemoryIndependentInSharedStore(t *testing.T) {
 	aResults = memoryResults(t, aView)
 	if len(aResults) != 1 || aResults[0].ID != idA {
 		t.Fatalf("agent B forget removed agent A memory: %+v", aResults)
-	}
-}
-
-func TestImportanceScorer_LocalMarkdownRetrieveRanksRelevanceImportanceAndRecency(t *testing.T) {
-	ctx := context.Background()
-	sqlite, store := newLocalMarkdownToolStore(t, ctx)
-	now := time.Date(2026, 5, 4, 12, 0, 0, 0, time.UTC)
-	entries := []MemoryToolEntry{
-		{ID: "old-high", Content: "Telegram latency budget from an old incident.", Tags: []string{"latency"}, Importance: 0.95, CreatedAt: now.Add(-90 * 24 * time.Hour), UpdatedAt: now.Add(-90 * 24 * time.Hour)},
-		{ID: "fresh-low", Content: "Telegram latency note from this morning.", Tags: []string{"latency"}, Importance: 0.2, CreatedAt: now.Add(-1 * time.Hour), UpdatedAt: now.Add(-1 * time.Hour)},
-		{ID: "fresh-important", Content: "Telegram latency SLO must stay below eighty milliseconds.", Tags: []string{"latency", "slo"}, Importance: 0.8, CreatedAt: now.Add(-2 * time.Hour), UpdatedAt: now.Add(-2 * time.Hour)},
-		{ID: "irrelevant", Content: "Theme preference is dark.", Tags: []string{"theme"}, Importance: 1.0, CreatedAt: now, UpdatedAt: now},
-	}
-	for _, entry := range entries {
-		if err := store.Store(ctx, entry); err != nil {
-			t.Fatalf("store %s: %v", entry.ID, err)
-		}
-	}
-
-	results, err := store.Retrieve(ctx, "Telegram latency", 4)
-	if err != nil {
-		t.Fatalf("Retrieve: %v", err)
-	}
-	var got []string
-	for _, result := range results {
-		got = append(got, result.ID)
-	}
-	want := []string{"fresh-important", "fresh-low", "old-high"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("retrieve ranked IDs = %v, want %v", got, want)
-	}
-
-	var irrelevantActive int
-	if err := sqlite.DB().QueryRowContext(ctx, `SELECT active FROM goncho_memory_items WHERE memory_id = 'irrelevant'`).Scan(&irrelevantActive); err != nil {
-		t.Fatalf("read irrelevant row: %v", err)
-	}
-	if irrelevantActive != 1 {
-		t.Fatalf("irrelevant memory active = %d, want retained but not returned", irrelevantActive)
 	}
 }
 
@@ -513,11 +268,4 @@ func jsonArgs(t *testing.T, value any) string {
 		t.Fatalf("marshal args: %v", err)
 	}
 	return string(raw)
-}
-
-func newTestReviewToolService(t *testing.T) *Service {
-	t.Helper()
-	svc, cleanup := newTestService(t)
-	t.Cleanup(cleanup)
-	return svc
 }

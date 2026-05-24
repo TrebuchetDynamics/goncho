@@ -15,6 +15,32 @@ func NewCrossSessionMemory(store MemoryToolStore) *CrossSessionMemory {
 	return &CrossSessionMemory{store: store}
 }
 
+func summarizeMemoryEntries(entries []MemoryToolEntry) string {
+	if len(entries) == 0 {
+		return "No matching memories."
+	}
+	var summary strings.Builder
+	for _, entry := range entries {
+		content := strings.TrimSpace(entry.Content)
+		if content == "" {
+			continue
+		}
+		if summary.Len() > 0 {
+			summary.WriteByte('\n')
+		}
+		summary.WriteString("- ")
+		if entry.ID != "" {
+			summary.WriteString(entry.ID)
+			summary.WriteString(": ")
+		}
+		summary.WriteString(content)
+	}
+	if summary.Len() == 0 {
+		return "No matching memories."
+	}
+	return summary.String()
+}
+
 func (csm *CrossSessionMemory) LoadRelevant(ctx context.Context, query string, limit int) ([]MemoryToolEntry, error) {
 	if limit <= 0 {
 		limit = 5

@@ -126,6 +126,60 @@ func TestArchitectureLayoutDynamicAgentRegistryTestsLiveWithModule(t *testing.T)
 	}
 }
 
+func TestArchitectureLayoutMemoryToolsImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "memorytools", "tools.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("memory tools implementation must live at %s: %v", implPath, err)
+	}
+
+	facadePath := filepath.Join(root, "memory_tools.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), facadePath, nil, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", facadePath, err)
+	}
+	forbiddenImplementationImports := map[string]struct{}{
+		"errors":  {},
+		"fmt":     {},
+		"strings": {},
+		"github.com/TrebuchetDynamics/goncho/memory": {},
+	}
+	for _, imp := range parsed.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+		}
+		if _, forbidden := forbiddenImplementationImports[path]; forbidden {
+			t.Fatalf("memory_tools.go imports implementation package %q; keep root memory_tools.go as a public facade and put implementation behind internal/memorytools", path)
+		}
+	}
+}
+
+func TestArchitectureLayoutMemoryToolsTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "memorytools", "tools_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("memory tool behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "memory_tools_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestMemoryToolsPublicFacade") {
+			t.Fatalf("%s keeps %s in the root package; move pure memory-tool behavior tests to internal/memorytools", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
 func TestArchitectureLayoutLocalMarkdownMemoryImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 

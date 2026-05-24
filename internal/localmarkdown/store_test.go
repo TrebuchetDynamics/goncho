@@ -4,8 +4,10 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/TrebuchetDynamics/goncho/internal/localmarkdown"
 	memory "github.com/TrebuchetDynamics/goncho/memory"
@@ -71,6 +73,58 @@ func TestLocalMarkdownMemoryStorePersistsExportsAndSurvivesRestart(t *testing.T)
 	}
 	if len(results) != 1 || !strings.Contains(results[0].Content, "local markdown and fast") {
 		t.Fatalf("restart results = %+v, want persisted local markdown memory", results)
+	}
+}
+
+func TestLocalMarkdownMemoryStoreRanksRelevanceImportanceAndRecency(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	sqlite, err := memory.OpenSqlite(filepath.Join(dir, "memory.db"), 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	t.Cleanup(func() { _ = sqlite.Close(ctx) })
+	store := localmarkdown.NewStore(sqlite.DB(), localmarkdown.Config{
+		Path:           filepath.Join(dir, "GONCHO_MEMORY.md"),
+		AgentID:        "agent-a",
+		WorkspaceID:    "workspace-a",
+		ObserverPeerID: "agent-a",
+		PeerID:         "user-a",
+		SessionID:      "telegram:42",
+	})
+
+	now := time.Date(2026, 5, 4, 12, 0, 0, 0, time.UTC)
+	entries := []localmarkdown.Entry{
+		{ID: "old-high", Content: "Telegram latency budget from an old incident.", Tags: []string{"latency"}, Importance: 0.95, CreatedAt: now.Add(-90 * 24 * time.Hour), UpdatedAt: now.Add(-90 * 24 * time.Hour)},
+		{ID: "fresh-low", Content: "Telegram latency note from this morning.", Tags: []string{"latency"}, Importance: 0.2, CreatedAt: now.Add(-1 * time.Hour), UpdatedAt: now.Add(-1 * time.Hour)},
+		{ID: "fresh-important", Content: "Telegram latency SLO must stay below eighty milliseconds.", Tags: []string{"latency", "slo"}, Importance: 0.8, CreatedAt: now.Add(-2 * time.Hour), UpdatedAt: now.Add(-2 * time.Hour)},
+		{ID: "irrelevant", Content: "Theme preference is dark.", Tags: []string{"theme"}, Importance: 1.0, CreatedAt: now, UpdatedAt: now},
+	}
+	for _, entry := range entries {
+		if err := store.Store(ctx, entry); err != nil {
+			t.Fatalf("store %s: %v", entry.ID, err)
+		}
+	}
+
+	results, err := store.Retrieve(ctx, "Telegram latency", 4)
+	if err != nil {
+		t.Fatalf("Retrieve: %v", err)
+	}
+	var got []string
+	for _, result := range results {
+		got = append(got, result.ID)
+	}
+	want := []string{"fresh-important", "fresh-low", "old-high"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("retrieve ranked IDs = %v, want %v", got, want)
+	}
+
+	var irrelevantActive int
+	if err := sqlite.DB().QueryRowContext(ctx, `SELECT active FROM goncho_memory_items WHERE memory_id = 'irrelevant'`).Scan(&irrelevantActive); err != nil {
+		t.Fatalf("read irrelevant row: %v", err)
+	}
+	if irrelevantActive != 1 {
+		t.Fatalf("irrelevant memory active = %d, want retained but not returned", irrelevantActive)
 	}
 }
 
