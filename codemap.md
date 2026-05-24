@@ -4,11 +4,11 @@ Goncho is the local memory/service substrate extracted from Gormes. It owns the 
 
 ## Responsibility
 
-Expose a Go-native memory facade for agents and hosts: profile cards, conclusions, session context, recall traces, local memory tools, dynamic agent/webhook helpers, and observation/audit capture.
+Expose a Go-native memory facade for agents and hosts: profile cards, conclusions, session context, recall traces, local memory tools, dynamic agent/webhook helpers, observation/audit capture, and review-item governance.
 
 ## Design
 
-Core APIs are package-level functions plus thin `Service` wrappers. `RunMigrations`, `Observe`, `ListObservations`, and `AuditTrail` create a claims/evidence foundation without feeding raw observations into recall yet. Observations live in `goncho_observations`; observe provenance lives in `goncho_audit_events`.
+Core APIs are package-level functions plus thin `Service` wrappers. `RunMigrations`, `Observe`, `ListObservations`, `AuditTrail`, `CreateReviewItem`, `ListReviewItems`, and `ResolveReviewItem` create a claims/evidence/review foundation without feeding raw observations into recall yet. `internal/observationlog` owns observation/audit storage; `internal/reviewlog` owns review-item storage and review-required context evidence.
 
 ## Flow
 

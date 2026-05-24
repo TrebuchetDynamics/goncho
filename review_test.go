@@ -6,118 +6,7 @@ import (
 	"time"
 )
 
-func TestReviewInboxListsOpenConflictAndStaleItems(t *testing.T) {
-	svc, cleanup := newTestService(t)
-	defer cleanup()
-	ctx := context.Background()
-
-	createdAt := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
-	_, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
-		Kind:        ReviewKindConflict,
-		WorkspaceID: svc.workspaceID,
-		PeerID:      "peer-a",
-		SessionKey:  "session-a",
-		SubjectID:   "mem-new",
-		RelatedID:   "mem-old",
-		Reason:      "new memory conflicts with old memory",
-		EvidenceIDs: []string{"obs-a", "obs-b"},
-		CreatedAt:   createdAt,
-	})
-	if err != nil {
-		t.Fatalf("CreateReviewItem conflict: %v", err)
-	}
-	_, err = svc.CreateReviewItem(ctx, ReviewItemCreateParams{
-		Kind:        ReviewKindStale,
-		WorkspaceID: svc.workspaceID,
-		PeerID:      "peer-a",
-		SessionKey:  "session-a",
-		SubjectID:   "mem-stale",
-		Reason:      "memory has not been verified recently",
-		EvidenceIDs: []string{"obs-stale"},
-		CreatedAt:   createdAt.Add(time.Second),
-	})
-	if err != nil {
-		t.Fatalf("CreateReviewItem stale: %v", err)
-	}
-	_, err = svc.CreateReviewItem(ctx, ReviewItemCreateParams{
-		Kind:        ReviewKindConflict,
-		WorkspaceID: "other-workspace",
-		PeerID:      "peer-a",
-		SessionKey:  "session-a",
-		SubjectID:   "mem-other",
-		RelatedID:   "mem-old",
-		Reason:      "other workspace conflict",
-		EvidenceIDs: []string{"obs-other"},
-		CreatedAt:   createdAt.Add(2 * time.Second),
-	})
-	if err != nil {
-		t.Fatalf("CreateReviewItem other workspace: %v", err)
-	}
-
-	items, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-a", Status: ReviewStatusOpen})
-	if err != nil {
-		t.Fatalf("ListReviewItems: %v", err)
-	}
-	if len(items.Items) != 2 {
-		t.Fatalf("review item count = %d, want 2: %+v", len(items.Items), items.Items)
-	}
-	if items.Items[0].Kind != ReviewKindStale || items.Items[1].Kind != ReviewKindConflict {
-		t.Fatalf("review item order/kinds = %+v, want newest stale then conflict", items.Items)
-	}
-	for _, item := range items.Items {
-		if item.Status != ReviewStatusOpen {
-			t.Fatalf("status = %q, want open", item.Status)
-		}
-		if item.WorkspaceID != svc.workspaceID || item.PeerID != "peer-a" || item.SessionKey != "session-a" {
-			t.Fatalf("scope = %+v, want service workspace peer/session", item)
-		}
-		if item.Reason == "" || len(item.EvidenceIDs) == 0 {
-			t.Fatalf("review item missing reason/evidence: %+v", item)
-		}
-	}
-}
-
-func TestCreateReviewItemAllowsDistinctItemsWithSameCreatedAt(t *testing.T) {
-	svc, cleanup := newTestService(t)
-	defer cleanup()
-	ctx := context.Background()
-
-	createdAt := time.Date(2026, 5, 22, 11, 0, 0, 0, time.UTC)
-	first, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
-		Kind:      ReviewKindConflict,
-		PeerID:    "peer-a",
-		SubjectID: "mem-a",
-		RelatedID: "mem-old",
-		Reason:    "first memory conflicts with old memory",
-		CreatedAt: createdAt,
-	})
-	if err != nil {
-		t.Fatalf("CreateReviewItem first: %v", err)
-	}
-	second, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
-		Kind:      ReviewKindStale,
-		PeerID:    "peer-a",
-		SubjectID: "mem-b",
-		Reason:    "second memory is stale",
-		CreatedAt: createdAt,
-	})
-	if err != nil {
-		t.Fatalf("CreateReviewItem second: %v", err)
-	}
-	if first.ID == second.ID {
-		t.Fatalf("review IDs both %q, want distinct IDs for distinct same-timestamp review items", first.ID)
-	}
-
-	listed, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-a", Status: ReviewStatusOpen, Limit: 10})
-	if err != nil {
-		t.Fatalf("ListReviewItems: %v", err)
-	}
-	if len(listed.Items) != 2 {
-		t.Fatalf("review item count = %d, want 2: %+v", len(listed.Items), listed.Items)
-	}
-}
-
-func TestResolveReviewItemClosesOpenItemWithReviewerAndReason(t *testing.T) {
+func TestReviewPublicFacadeCreatesListsAndResolvesWithServiceWorkspace(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
 	ctx := context.Background()
@@ -125,7 +14,6 @@ func TestResolveReviewItemClosesOpenItemWithReviewerAndReason(t *testing.T) {
 	createdAt := time.Date(2026, 5, 19, 13, 0, 0, 0, time.UTC)
 	item, err := svc.CreateReviewItem(ctx, ReviewItemCreateParams{
 		Kind:        ReviewKindConflict,
-		WorkspaceID: svc.workspaceID,
 		PeerID:      "peer-a",
 		SessionKey:  "session-a",
 		SubjectID:   "mem-new",
@@ -135,43 +23,31 @@ func TestResolveReviewItemClosesOpenItemWithReviewerAndReason(t *testing.T) {
 		CreatedAt:   createdAt,
 	})
 	if err != nil {
-		t.Fatalf("CreateReviewItem: %v", err)
+		t.Fatalf("Service.CreateReviewItem: %v", err)
+	}
+	if item.WorkspaceID != svc.workspaceID || item.Status != ReviewStatusOpen {
+		t.Fatalf("created review item = %+v, want default workspace and open status", item)
 	}
 
-	resolvedAt := createdAt.Add(time.Minute)
-	resolved, err := svc.ResolveReviewItem(ctx, ReviewResolutionParams{
+	listed, err := ListReviewItems(ctx, svc.db, ReviewQuery{WorkspaceID: svc.workspaceID, PeerID: "peer-a", Status: ReviewStatusOpen})
+	if err != nil {
+		t.Fatalf("ListReviewItems facade: %v", err)
+	}
+	if listed.Count != 1 || listed.Items[0].ID != item.ID {
+		t.Fatalf("listed review items = %+v, want created item %s", listed, item.ID)
+	}
+
+	resolved, err := ResolveReviewItem(ctx, svc.db, ReviewResolutionParams{
 		ID:               item.ID,
-		Resolution:       ReviewResolutionSuperseded,
+		Resolution:       ReviewResolutionVerified,
 		ResolvedBy:       "agent:mineru",
-		ResolutionReason: "newer memory supersedes old memory after evidence review",
-		ResolvedAt:       resolvedAt,
+		ResolutionReason: "evidence checked through public facade",
+		ResolvedAt:       createdAt.Add(time.Minute),
 	})
 	if err != nil {
-		t.Fatalf("ResolveReviewItem: %v", err)
+		t.Fatalf("ResolveReviewItem facade: %v", err)
 	}
-	if resolved.Status != ReviewStatusResolved || resolved.Resolution != ReviewResolutionSuperseded {
-		t.Fatalf("resolved state = status %q resolution %q, want resolved/superseded", resolved.Status, resolved.Resolution)
-	}
-	if resolved.ResolvedBy != "agent:mineru" || resolved.ResolutionReason == "" {
-		t.Fatalf("resolved reviewer/reason = %+v", resolved)
-	}
-	if resolved.ResolvedAt == nil || !resolved.ResolvedAt.Equal(resolvedAt) {
-		t.Fatalf("resolved_at = %v, want %s", resolved.ResolvedAt, resolvedAt)
-	}
-
-	open, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-a", Status: ReviewStatusOpen})
-	if err != nil {
-		t.Fatalf("ListReviewItems open: %v", err)
-	}
-	if len(open.Items) != 0 {
-		t.Fatalf("open review items = %+v, want none", open.Items)
-	}
-
-	closed, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-a", Status: ReviewStatusResolved})
-	if err != nil {
-		t.Fatalf("ListReviewItems resolved: %v", err)
-	}
-	if len(closed.Items) != 1 || closed.Items[0].ID != item.ID || closed.Items[0].Resolution != ReviewResolutionSuperseded {
-		t.Fatalf("resolved review items = %+v, want superseded item %s", closed.Items, item.ID)
+	if resolved.Status != ReviewStatusResolved || resolved.Resolution != ReviewResolutionVerified || resolved.ResolvedAt == nil {
+		t.Fatalf("resolved review item = %+v, want verified resolved item", resolved)
 	}
 }

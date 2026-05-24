@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/internal/observationlog"
+	"github.com/TrebuchetDynamics/goncho/internal/reviewlog"
 )
 
 func RunMigrations(db *sql.DB) error {
@@ -28,7 +29,7 @@ func RunMigrations(db *sql.DB) error {
 		return fmt.Errorf("goncho: begin migrations: %w", err)
 	}
 	defer tx.Rollback()
-	for _, stmt := range append(append(observationlog.DDL, gonchoReviewDDL...), gonchoSkillLearningProposalDDL...) {
+	for _, stmt := range append(append(observationlog.DDL, reviewlog.DDL...), gonchoSkillLearningProposalDDL...) {
 		if err := applyGonchoMigrationStmt(tx, stmt); err != nil {
 			return fmt.Errorf("goncho: apply migration: %w", err)
 		}
