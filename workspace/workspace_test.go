@@ -1,4 +1,4 @@
-package goncho
+package workspace
 
 import (
 	"os"

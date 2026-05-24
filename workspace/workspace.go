@@ -1,4 +1,4 @@
-package goncho
+package workspace
 
 import (
 	"os"
@@ -6,7 +6,10 @@ import (
 	"strings"
 )
 
-const GlobalWorkspaceID = "__global__"
+const (
+	DefaultWorkspaceID = "gormes"
+	GlobalWorkspaceID  = "__global__"
+)
 
 // DetectWorkspaceFromPath finds the workspace root by looking for project markers.
 // Returns the directory containing the marker and the marker filename.
