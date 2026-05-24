@@ -25,6 +25,9 @@ func searchFactIntentScore(query, content string) float64 {
 	if score := searchInstructionFactIntentScore(query, content); score > 0 {
 		return score
 	}
+	if score := searchTimelineFactIntentScore(query, content); score > 0 {
+		return score
+	}
 	return 0
 }
 
@@ -149,6 +152,57 @@ func searchLocationAnswerParts(sentence string) (object, location string, ok boo
 	return "", "", false
 }
 
+func searchTimelineFactIntentScore(query, content string) float64 {
+	queryEvent, ok := searchTimelineQuestionEvent(query)
+	if !ok {
+		return 0
+	}
+	queryTokens := searchRankTokenSet(queryEvent)
+	if len(queryTokens) == 0 {
+		return 0
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		event, date, ok := searchTimelineAnswerParts(sentence)
+		if !ok || !searchFactObjectLooksAssertive(date) {
+			continue
+		}
+		if searchRankTokenCoverage(queryTokens, event) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func searchTimelineQuestionEvent(query string) (string, bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	lower := strings.ToLower(query)
+	for _, prefix := range []string{"when is ", "when are "} {
+		if strings.HasPrefix(lower, prefix) {
+			event := cleanFactObject(query[len(prefix):])
+			return event, event != ""
+		}
+	}
+	return "", false
+}
+
+func searchTimelineAnswerParts(sentence string) (event, date string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	lower := strings.ToLower(sentence)
+	for _, marker := range []string{" occurs on ", " is scheduled for ", " deadline is ", " is on "} {
+		idx := strings.Index(lower, marker)
+		if idx <= 0 {
+			continue
+		}
+		event = cleanFactObject(sentence[:idx])
+		date = cleanFactValue(sentence[idx+len(marker):])
+		return event, date, searchFactObjectLooksAssertive(event) && date != ""
+	}
+	return "", "", false
+}
+
 func searchInstructionFactIntentScore(query, content string) float64 {
 	querySubject, queryTopic, ok := searchInstructionQuestion(query)
 	if !ok {
@@ -203,7 +257,6 @@ func searchInstructionQuestion(query string) (subject, topic string, ok bool) {
 			return subject, topic, subject != "" && topic != ""
 		}
 		return "", "", false
-		return subject, topic, subject != "" && topic != ""
 	}
 	return "", "", false
 }

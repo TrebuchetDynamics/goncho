@@ -18,7 +18,7 @@ func conclusionFactAnnotations(content string) []string {
 	seen := map[string]struct{}{}
 	facts := []string{}
 	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
-		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation} {
+		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation} {
 			fact, ok := extractor(sentence)
 			if !ok {
 				continue
@@ -150,6 +150,24 @@ func conclusionInstructionFactAnnotation(sentence string) (string, bool) {
 	return "", false
 }
 
+func conclusionTimelineFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	lower := strings.ToLower(sentence)
+	for _, marker := range []string{" deadline is ", " is scheduled for ", " occurs on ", " is on "} {
+		idx := strings.Index(lower, marker)
+		if idx <= 0 {
+			continue
+		}
+		event := cleanFactObject(sentence[:idx])
+		date := cleanFactValue(sentence[idx+len(marker):])
+		return timelineFactAnnotation(event, date)
+	}
+	return "", false
+}
+
 func cleanFactObject(value string) string {
 	value = strings.TrimSpace(value)
 	if idx := strings.LastIndexAny(value, ":;"); idx >= 0 {
@@ -213,6 +231,15 @@ func instructionFactAnnotation(subject, instruction string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("%s instructed %s", subject, instruction), true
+}
+
+func timelineFactAnnotation(event, date string) (string, bool) {
+	event = cleanFactObject(event)
+	date = cleanFactValue(date)
+	if !searchFactObjectLooksAssertive(event) || !searchFactObjectLooksAssertive(date) {
+		return "", false
+	}
+	return fmt.Sprintf("%s occurs on %s", event, date), true
 }
 
 func storeConclusionFactAnnotations(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, conclusionID int64, facts []string) error {
