@@ -203,6 +203,10 @@ func TestGonchoRelations_SaveCreatesPendingCandidates(t *testing.T) {
 	if ev2.Candidates[0].From != "m-2" || ev2.Candidates[0].To != "m-1" {
 		t.Fatalf("candidate edge = %s->%s, want m-2->m-1", ev2.Candidates[0].From, ev2.Candidates[0].To)
 	}
+	wantEvidenceIDs := []string{"memory:m-2", "memory:m-1"}
+	if !reflect.DeepEqual(ev2.Candidates[0].EvidenceIDs, wantEvidenceIDs) {
+		t.Fatalf("candidate evidence IDs = %v, want %v", ev2.Candidates[0].EvidenceIDs, wantEvidenceIDs)
+	}
 
 	ev3 := q.Submit(ctx, MemoryWrite{ID: "m-3", Content: "third"})
 	if !ev3.WriteOK {
@@ -220,6 +224,11 @@ func TestGonchoRelations_SaveCreatesPendingCandidates(t *testing.T) {
 	saved := rel.snapshot()
 	if len(saved) != 3 {
 		t.Fatalf("relation store saved = %d candidates, want 3", len(saved))
+	}
+	for _, candidate := range saved {
+		if len(candidate.EvidenceIDs) == 0 {
+			t.Fatalf("saved candidate %+v missing evidence IDs", candidate)
+		}
 	}
 
 	// Verify the canonical verb vocabulary is the Goncho-native set.

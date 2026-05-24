@@ -32,10 +32,11 @@ const (
 // later judgment. The detector returns these synchronously after a write
 // completes; storage must not block the originating write.
 type RelationCandidate struct {
-	From string       // memory ID the relation originates from
-	To   string       // memory ID the relation targets
-	Verb RelationVerb // canonical Goncho relation vocabulary
-	Note string       // free-form note for later human/LLM judgment
+	From        string       // memory ID the relation originates from
+	To          string       // memory ID the relation targets
+	Verb        RelationVerb // canonical Goncho relation vocabulary
+	Note        string       // free-form note for later human/LLM judgment
+	EvidenceIDs []string     // durable evidence IDs supporting the candidate edge
 }
 
 // RelationStore persists pending relation candidates. Implementations must

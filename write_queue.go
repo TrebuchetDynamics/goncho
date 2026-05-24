@@ -156,6 +156,7 @@ func (q *WriteQueue) Submit(ctx context.Context, w MemoryWrite) WriteEvidence {
 	if len(candidates) == 0 {
 		return WriteEvidence{Code: WriteEvidenceComplete, WriteOK: true}
 	}
+	candidates = withDefaultRelationEvidenceIDs(candidates)
 	if q.relations != nil {
 		if err := q.relations.SavePending(ctx, candidates); err != nil {
 			return WriteEvidence{
@@ -188,6 +189,36 @@ func (q *WriteQueue) priorMemoriesExcluding(ctx context.Context, id string) ([]M
 		out = append(out, m)
 	}
 	return out, nil
+}
+
+func withDefaultRelationEvidenceIDs(candidates []RelationCandidate) []RelationCandidate {
+	out := make([]RelationCandidate, len(candidates))
+	copy(out, candidates)
+	for i := range out {
+		if len(out[i].EvidenceIDs) != 0 {
+			out[i].EvidenceIDs = append([]string(nil), out[i].EvidenceIDs...)
+			continue
+		}
+		out[i].EvidenceIDs = relationMemoryEvidenceIDs(out[i].From, out[i].To)
+	}
+	return out
+}
+
+func relationMemoryEvidenceIDs(ids ...string) []string {
+	out := make([]string, 0, len(ids))
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		evidenceID := "memory:" + id
+		if _, ok := seen[evidenceID]; ok {
+			continue
+		}
+		seen[evidenceID] = struct{}{}
+		out = append(out, evidenceID)
+	}
+	return out
 }
 
 // takeCancelled atomically checks-and-clears a pending cancellation,
