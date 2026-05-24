@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-metric recall through durable annotations.
+  - Evidence target: `go test . -run TestRecallExpandsMetricThroughDurableKGRelation -count=1` proves `Service.Conclude` derives durable `Billing API uses VectorDB` and `VectorDB latency is 250ms` facts, then recall selects the metric memory for `How fast is the storage used by Billing API?` with graph provenance citing both annotation rows.
+  - Result: annotation-backed graph recall now covers a BEAM-style dependency/metric path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
+
 - 2026-05-23: Mnemosyne MEMORIA KG relation facts now support owner-to-timeline recall through durable annotations.
   - Evidence target: `go test . -run TestRecallExpandsTimelineThroughOwnerRelation -count=1` proves `Service.Conclude` derives durable `Mira owns Orion` and `Orion occurs on 2026-06-01` facts, then recall selects the timeline memory for `When is the deadline for Mira's owned project?` with graph provenance citing both annotation rows.
   - Result: annotation-backed graph recall now covers a BEAM-style ownership/timeline path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.

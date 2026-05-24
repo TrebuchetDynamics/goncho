@@ -32,11 +32,18 @@ type annotationGraphTimelineTarget struct {
 	Entity       string
 }
 
+type annotationGraphMetricTarget struct {
+	Candidate  RecallCandidate
+	MetricFact memoryFactAnnotation
+	Entity     string
+}
+
 func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope string, base []RecallCandidate) ([]RecallCandidate, error) {
 	ownerQuery := annotationGraphOwnerQuery(q.Query)
 	versionQuery := annotationGraphVersionQuery(q.Query)
 	timelineQuery := annotationGraphTimelineQuery(q.Query)
-	if len(base) == 0 || (!ownerQuery && !versionQuery && !timelineQuery) {
+	metricQuery := annotationGraphMetricQuery(q.Query)
+	if len(base) == 0 || (!ownerQuery && !versionQuery && !timelineQuery && !metricQuery) {
 		return base, nil
 	}
 	out := make([]RecallCandidate, len(base))
@@ -85,6 +92,16 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 				}
 				for _, target := range targets {
 					graphEvidence := annotationGraphVersionEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, target.Relation, target.Entity, evidence.ID, target.RelationFact.ID, target.VersionFact.ID)
+					out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
+				}
+			}
+			if metricQuery {
+				targets, err := r.findAnnotationGraphMetricTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
+				if err != nil {
+					return nil, err
+				}
+				for _, target := range targets {
+					graphEvidence := annotationGraphMetricEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, target.Entity, evidence.ID, target.MetricFact.ID)
 					out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
 				}
 			}
@@ -200,6 +217,35 @@ func (r retrievalModule) findAnnotationGraphTimelineTargets(ctx context.Context,
 			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, timelineFact.memoryFactAnnotation)},
 		}
 		out = append(out, annotationGraphTimelineTarget{Candidate: candidate, TimelineFact: timelineFact.memoryFactAnnotation, Entity: event})
+	}
+	return out, nil
+}
+
+func (r retrievalModule) findAnnotationGraphMetricTargets(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope, entity, sourceMemoryID string) ([]annotationGraphMetricTarget, error) {
+	facts, err := r.queryAnnotationGraphFacts(ctx, workspaceID, peer, memoryScope, q.SessionKey)
+	if err != nil {
+		return nil, err
+	}
+	out := []annotationGraphMetricTarget{}
+	for _, metricFact := range facts {
+		memoryID := strconv.FormatInt(metricFact.MemoryID, 10)
+		if memoryID == sourceMemoryID {
+			continue
+		}
+		key, _, ok := searchMetricAnswerParts(metricFact.Value)
+		if !ok || !annotationGraphEntityMentionedInFact(entity, key) {
+			continue
+		}
+		candidate := RecallCandidate{
+			MemoryID:   memoryID,
+			SourceType: memoryAnnotationSourceConclusion,
+			Content:    metricFact.Content,
+			SessionID:  metricFact.SessionKey,
+			AgentID:    r.observer,
+			ScopeID:    normalizeMemoryScope(memoryScope, ""),
+			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, metricFact.memoryFactAnnotation)},
+		}
+		out = append(out, annotationGraphMetricTarget{Candidate: candidate, MetricFact: metricFact.memoryFactAnnotation, Entity: key})
 	}
 	return out, nil
 }
@@ -361,6 +407,25 @@ func annotationGraphTimelineEvidence(sourceMemoryID, targetMemoryID, entity, sou
 	}
 }
 
+func annotationGraphMetricEvidence(sourceMemoryID, targetMemoryID, relation, entity, metricEntity, sourceFactID string, metricFactID int64) EvidenceItem {
+	metricFactIDText := strconv.FormatInt(metricFactID, 10)
+	return EvidenceItem{
+		Kind:   "graph",
+		Source: sourceMemoryID,
+		ID:     "annotation:" + sourceFactID + "->annotation:" + metricFactIDText,
+		Score:  1,
+		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> metric -> " + targetMemoryID,
+		Metadata: map[string]string{
+			"entity":          entity,
+			"metric_entity":   metricEntity,
+			"relation":        relation,
+			"source_fact_id":  sourceFactID,
+			"target_fact_id":  metricFactIDText,
+			"target_relation": "metric",
+		},
+	}
+}
+
 func annotationGraphVersionEvidence(sourceMemoryID, targetMemoryID, firstRelation, firstEntity, secondRelation, secondEntity, sourceFactID string, relationFactID, versionFactID int64) EvidenceItem {
 	relationFactIDText := strconv.FormatInt(relationFactID, 10)
 	versionFactIDText := strconv.FormatInt(versionFactID, 10)
@@ -424,6 +489,11 @@ func annotationGraphTimelineQuery(query string) bool {
 	return strings.Contains(query, "owner") || strings.Contains(query, "owned") || strings.Contains(query, "responsible") || strings.Contains(query, "accountable")
 }
 
+func annotationGraphMetricQuery(query string) bool {
+	query = strings.ToLower(query)
+	return strings.Contains(query, "how fast") || strings.Contains(query, "how many") || strings.Contains(query, "how much") || strings.Contains(query, "latency") || strings.Contains(query, "metric") || strings.Contains(query, "measurement")
+}
+
 func annotationGraphQueryMatchesOwnerFact(query, owner string) bool {
 	ownerTokens := searchRankTokenSet(owner)
 	return len(ownerTokens) > 0 && searchRankTokenCoverage(ownerTokens, query) >= 0.80
@@ -456,6 +526,11 @@ func annotationGraphEntityMatches(a, b string) bool {
 	aTokens := searchRankTokenSet(a)
 	bTokens := searchRankTokenSet(b)
 	return len(aTokens) > 0 && searchRankTokenCoverage(aTokens, b) >= 0.80 && searchRankTokenCoverage(bTokens, a) >= 0.80
+}
+
+func annotationGraphEntityMentionedInFact(entity, factKey string) bool {
+	entityTokens := searchRankTokenSet(cleanFactObject(entity))
+	return len(entityTokens) > 0 && searchRankTokenCoverage(entityTokens, factKey) >= 0.80
 }
 
 func annotationGraphOwnerFactParts(fact string) (owner, entity string, ok bool) {

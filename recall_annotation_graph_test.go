@@ -264,6 +264,88 @@ func TestRecallExpandsTimelineThroughOwnerRelation(t *testing.T) {
 	}
 }
 
+func TestRecallExpandsMetricThroughDurableKGRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	uses, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Billing API uses VectorDB.",
+		SessionKey: "sess-annotation-graph-metric",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	metric, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: VectorDB latency is 250ms.",
+		SessionKey: "sess-annotation-graph-metric",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "How fast is the storage used by Billing API? fast storage used Billing API latency fast storage used Billing API. This checklist repeats the retrieval words but names no metric.",
+		SessionKey: "sess-annotation-graph-metric",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?)
+	`, decoy.ID, uses.ID, metric.ID, decoy.ID, uses.ID, metric.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	usesFactID := lookupAnnotationID(t, svc, uses.ID, "Billing API uses VectorDB")
+	metricFactID := lookupAnnotationID(t, svc, metric.ID, "VectorDB latency is 250ms")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-metric-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-metric-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 200,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "How fast is the storage used by Billing API?",
+		SessionKey:  "sess-annotation-graph-metric",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	metricMemoryID := strconv.FormatInt(metric.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, metricMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded metric %s", selected, trace.Candidates, trace.Rejected, metricMemoryID)
+	}
+	metricCandidate, ok := selectedRecallCandidate(trace, metricMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want metric candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, metricFactID)
+	if !candidateHasGraphProvenance(metricCandidate, evidenceID) {
+		t.Fatalf("metric provenance = %+v, want graph evidence %s", metricCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> uses -> VectorDB -> metric -> %d", uses.ID, metric.ID)
+	if !candidateHasGraphNote(metricCandidate, wantNote) {
+		t.Fatalf("metric provenance = %+v, want relation path %q", metricCandidate.Provenance, wantNote)
+	}
+}
+
 func lookupAnnotationID(t *testing.T, svc *Service, memoryID int64, value string) int64 {
 	t.Helper()
 	var id int64
