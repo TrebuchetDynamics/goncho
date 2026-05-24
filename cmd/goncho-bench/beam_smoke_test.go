@@ -39,6 +39,11 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 					ConvertedJSONLSHA256 string `json:"converted_jsonl_sha256"`
 					QuestionCount        int    `json:"question_count"`
 				} `json:"conversion"`
+				Leakage struct {
+					QuestionTextInMemory int `json:"question_text_in_memory"`
+					RelevantIDInMemory   int `json:"relevant_id_in_memory"`
+					RubricTextInMemory   int `json:"rubric_text_in_memory"`
+				} `json:"leakage"`
 			} `json:"diagnostics"`
 		} `json:"metadata"`
 		Results []struct {
@@ -56,6 +61,9 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 	conversion := results.Metadata.Diagnostics.Conversion
 	if conversion.SourceSHA256 == "" || conversion.ConvertedJSONLSHA256 == "" || conversion.QuestionCount != 1 {
 		t.Fatalf("BEAM smoke conversion diagnostics = %+v, want source/converted checksums and one question", conversion)
+	}
+	if leakage := results.Metadata.Diagnostics.Leakage; leakage.QuestionTextInMemory != 0 || leakage.RelevantIDInMemory != 0 || leakage.RubricTextInMemory != 0 {
+		t.Fatalf("BEAM smoke leakage diagnostics = %+v, want clean pinned fixture", leakage)
 	}
 	if len(results.Results) != 1 || len(results.Results[0].Results) != 1 {
 		t.Fatalf("BEAM smoke results = %+v, want one conversation with one result", results.Results)

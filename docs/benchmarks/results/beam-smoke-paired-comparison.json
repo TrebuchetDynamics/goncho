@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-24T09:00:04Z",
+  "generated_at": "2026-05-24T09:08:32Z",
   "source_path": "./artifacts/beam-smoke/paired_outcomes.jsonl",
   "baseline_config_id": "mnemosyne-smoke",
   "candidate_config_id": "goncho-smoke",

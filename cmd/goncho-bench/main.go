@@ -62,6 +62,7 @@ type config struct {
 	BeamPairedCompareBootstrapSamples int
 	BeamPairedCompareEffectSizeFloor  float64
 	BeamConversionDiagnostics         *beamConversionDiagnostics
+	BeamServiceLeakageChecks          *beamServiceLeakageChecks
 }
 
 type dataset struct {
@@ -137,7 +138,7 @@ func main() {
 	flag.StringVar(&cfg.System, "system", "goncho", "retrieval system: goncho, goncho-no-rank, random, bm25, sqlite-fts5")
 	flag.StringVar(&cfg.DatasetRevision, "dataset-revision", "", "dataset source revision for report metadata")
 	flag.StringVar(&cfg.DatasetSHA256, "dataset-sha256", "", "dataset source sha256 for report metadata")
-	flag.BoolVar(&cfg.FailOnLeakage, "fail-on-leakage", false, "exit non-zero if leakage checks find query/gold-id leakage")
+	flag.BoolVar(&cfg.FailOnLeakage, "fail-on-leakage", false, "exit non-zero if leakage checks find query/gold-id leakage or BEAM rubric-label leakage")
 	flag.StringVar(&cfg.ClassifyReportPath, "classify-report", "", "existing benchmark JSON report to classify instead of running retrieval")
 	flag.StringVar(&cfg.ClassifyFailurePath, "classify-failures", "", "optional existing failure JSONL to validate as a top-10 miss audit reference; classification still uses the full report")
 	flag.StringVar(&cfg.ClassifyJSONLOut, "classify-jsonl-out", "", "JSONL output path for one failure-category row per hard case")
@@ -296,6 +297,11 @@ func runBeamHuggingFaceServiceBenchmark(ctx context.Context, cfg config) error {
 
 func runBeamServiceBenchmarkCases(ctx context.Context, cfg config, cases []goncho.RecallBenchmarkServiceCase) error {
 	runStartedAt := time.Now().UTC()
+	leakageChecks := checkBeamServiceLeakage(cases)
+	cfg.BeamServiceLeakageChecks = &leakageChecks
+	if cfg.FailOnLeakage && beamServiceHasBlockingLeakage(leakageChecks) {
+		return fmt.Errorf("goncho-bench: BEAM leakage check failed: question_text_in_memory=%d relevant_id_in_memory=%d rubric_text_in_memory=%d", leakageChecks.QuestionTextInMemory, leakageChecks.RelevantIDInMemory, leakageChecks.RubricTextInMemory)
+	}
 	databasePath := strings.TrimSpace(cfg.DatabasePath)
 	if databasePath == "" {
 		dir, err := os.MkdirTemp("", "goncho-beam-service-*")

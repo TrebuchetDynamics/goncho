@@ -339,6 +339,58 @@ func testSHA256Hex(raw []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetReportsLeakageChecks(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-leakage.jsonl")
+	rawRecord := `{"conversation_id":"conv-beam-leakage","scale":"100K","chat":[{"role":"user","content":"Leak probe repeats the benchmark question: Who owns LedgerDB? The private judge label says mention secret rubric."}],"probing_questions":"{'IE': [{'id': 'q-beam-leakage', 'question': 'Who owns LedgerDB?', 'ideal_answer': 'Mira owns LedgerDB', 'rubric': ['mention secret rubric'], 'relevant_message_indices': [0]}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
+	if err := run(context.Background(), config{
+		BeamConvertIn:         rawPath,
+		BeamServiceResultsOut: resultsPath,
+		BeamServiceConfigID:   "test-beam-leakage",
+		DatabasePath:          filepath.Join(dir, "beam-leakage.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with leakage diagnostics: %v", err)
+	}
+	rawResults, err := os.ReadFile(resultsPath)
+	if err != nil {
+		t.Fatalf("read BEAM leakage results: %v", err)
+	}
+	var results struct {
+		Metadata struct {
+			Diagnostics map[string]json.RawMessage `json:"diagnostics"`
+		} `json:"metadata"`
+	}
+	if err := json.Unmarshal(rawResults, &results); err != nil {
+		t.Fatalf("decode BEAM leakage results: %v", err)
+	}
+	var leakage struct {
+		QuestionTextInMemory int      `json:"question_text_in_memory"`
+		RubricTextInMemory   int      `json:"rubric_text_in_memory"`
+		Examples             []string `json:"examples"`
+	}
+	if err := json.Unmarshal(results.Metadata.Diagnostics["leakage"], &leakage); err != nil {
+		t.Fatalf("decode BEAM leakage diagnostics: %v", err)
+	}
+	if leakage.QuestionTextInMemory != 1 || leakage.RubricTextInMemory != 1 || len(leakage.Examples) < 2 {
+		t.Fatalf("BEAM leakage diagnostics = %+v, want question and rubric leakage examples", leakage)
+	}
+
+	err = run(context.Background(), config{
+		BeamConvertIn:         rawPath,
+		BeamServiceResultsOut: filepath.Join(dir, "blocked-results.json"),
+		BeamServiceConfigID:   "test-beam-leakage-blocked",
+		DatabasePath:          filepath.Join(dir, "beam-leakage-blocked.db"),
+		FailOnLeakage:         true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "BEAM leakage check failed: question_text_in_memory=1") || !strings.Contains(err.Error(), "rubric_text_in_memory=1") {
+		t.Fatalf("fail-on-leakage error = %v, want BEAM leakage guard with question/rubric counts", err)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetWritesFailureAudit(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-failure-audit.jsonl")

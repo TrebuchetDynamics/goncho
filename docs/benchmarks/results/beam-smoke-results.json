@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "date": "2026-05-24T09:00:04Z",
-    "run_started_at": "2026-05-24T09:00:04Z",
+    "date": "2026-05-24T09:08:32Z",
+    "run_started_at": "2026-05-24T09:08:32Z",
     "config_id": "goncho-smoke",
     "model": "goncho-service-recall",
     "judge_model": "none",
@@ -31,6 +31,14 @@
         "questions_by_ability": {
           "MR": 1
         }
+      },
+      "leakage": {
+        "question_text_in_memory": 0,
+        "relevant_id_in_memory": 0,
+        "ideal_answer_text_in_memory": 0,
+        "rubric_text_in_memory": 0,
+        "blocking_leakage_count": 0,
+        "reported_answer_label_count": 0
       },
       "recall": {
         "case_count": 1,

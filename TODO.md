@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: raw BEAM service artifacts now include leakage diagnostics and a fail-fast guard.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsLeakageChecks -count=1` proves `beam_e2e_results.json.metadata.diagnostics.leakage` reports query-text, stable-ID, ideal-answer-text, and rubric-label leakage examples, while `--fail-on-leakage` rejects blocking query/stable-ID/rubric leakage before scoring.
+  - Result: Goncho's BEAM one-command path now satisfies the benchmark-roadmap leakage-control gate for real HuggingFace samples without indexing answer metadata or hiding contaminated runs.
+
 - 2026-05-24: raw BEAM service artifacts now include a JSONL failure audit.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetWritesFailureAudit -count=1` proves `--beam-service-failures-out` emits failing BEAM questions with config/scale/conversation/qid identity, query, score, failure mode, expected memory IDs, retrieved top 10, rank, evidence kinds, and benchmark gate booleans.
   - Result: Goncho's BEAM path now satisfies the benchmark-roadmap failure-audit control, making real-sample misses inspectable without LLM judges, answer hints, or hand-parsing nested result files.

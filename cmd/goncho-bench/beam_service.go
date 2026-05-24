@@ -141,7 +141,7 @@ type beamServiceRecallProvenance struct {
 func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cfg config, runStartedAt time.Time) error {
 	configID := normalizeBeamServiceConfigID(cfg.BeamServiceConfigID)
 	if path := strings.TrimSpace(cfg.BeamServiceResultsOut); path != "" {
-		if err := writeBeamServiceResults(path, report, configID, runStartedAt, cfg.BeamConversionDiagnostics); err != nil {
+		if err := writeBeamServiceResults(path, report, configID, runStartedAt, cfg.BeamConversionDiagnostics, cfg.BeamServiceLeakageChecks); err != nil {
 			return err
 		}
 	}
@@ -171,8 +171,8 @@ func normalizeBeamServiceConfigID(configID string) string {
 	return configID
 }
 
-func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics) error {
-	results := buildBeamServiceResults(report, configID, runStartedAt, conversionDiagnostics)
+func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks) error {
+	results := buildBeamServiceResults(report, configID, runStartedAt, conversionDiagnostics, leakageChecks)
 	raw, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode BEAM service results: %w", err)
@@ -193,7 +193,7 @@ func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, c
 	return nil
 }
 
-func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics) beamServiceResultsFile {
+func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks) beamServiceResultsFile {
 	type conversationAccumulator struct {
 		conversationID string
 		scale          string
@@ -264,13 +264,13 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 				"full_context":          false,
 				"use_cloud":             false,
 			},
-			Diagnostics: beamServiceResultsDiagnostics(report, conversionDiagnostics),
+			Diagnostics: beamServiceResultsDiagnostics(report, conversionDiagnostics, leakageChecks),
 		},
 		Results: conversationResults,
 	}
 }
 
-func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversionDiagnostics *beamConversionDiagnostics) map[string]interface{} {
+func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks) map[string]interface{} {
 	diagnostics := map[string]interface{}{
 		"recall": map[string]interface{}{
 			"case_count":       report.CaseCount,
@@ -282,6 +282,9 @@ func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversi
 	}
 	if conversionDiagnostics != nil {
 		diagnostics["conversion"] = *conversionDiagnostics
+	}
+	if leakageChecks != nil {
+		diagnostics["leakage"] = *leakageChecks
 	}
 	return diagnostics
 }
