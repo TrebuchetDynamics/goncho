@@ -126,6 +126,98 @@ func TestArchitectureLayoutDynamicAgentRegistryTestsLiveWithModule(t *testing.T)
 	}
 }
 
+func TestArchitectureLayoutWebhooksImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	for _, moduleFile := range []string{"endpoints.go", "delivery.go"} {
+		implPath := filepath.Join(root, "internal", "webhooks", moduleFile)
+		if _, err := os.Stat(implPath); err != nil {
+			t.Fatalf("webhook implementation must live at %s: %v", implPath, err)
+		}
+	}
+
+	for _, facade := range []struct {
+		path      string
+		forbidden map[string]struct{}
+	}{
+		{
+			path: filepath.Join(root, "webhooks.go"),
+			forbidden: map[string]struct{}{
+				"crypto/hmac":   {},
+				"crypto/rand":   {},
+				"crypto/sha256": {},
+				"encoding/hex":  {},
+				"errors":        {},
+				"fmt":           {},
+				"net":           {},
+				"net/url":       {},
+				"strings":       {},
+				"time":          {},
+			},
+		},
+		{
+			path: filepath.Join(root, "webhook_delivery.go"),
+			forbidden: map[string]struct{}{
+				"bytes":         {},
+				"encoding/json": {},
+				"errors":        {},
+				"fmt":           {},
+				"net/url":       {},
+				"strings":       {},
+				"time":          {},
+			},
+		},
+	} {
+		parsed, err := parser.ParseFile(token.NewFileSet(), facade.path, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("ParseFile(%s): %v", facade.path, err)
+		}
+		for _, imp := range parsed.Imports {
+			path, err := strconv.Unquote(imp.Path.Value)
+			if err != nil {
+				t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+			}
+			if _, forbidden := facade.forbidden[path]; forbidden {
+				t.Fatalf("%s imports implementation package %q; keep root webhook files as public facades and put implementation behind internal/webhooks", facade.path, path)
+			}
+		}
+	}
+}
+
+func TestArchitectureLayoutWebhooksTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	for _, moduleTestFile := range []string{"endpoints_test.go", "delivery_test.go"} {
+		moduleTestPath := filepath.Join(root, "internal", "webhooks", moduleTestFile)
+		if _, err := os.Stat(moduleTestPath); err != nil {
+			t.Fatalf("webhook behavior tests must live at %s: %v", moduleTestPath, err)
+		}
+	}
+
+	for _, rootTest := range []struct {
+		file   string
+		prefix string
+	}{
+		{file: "webhooks_test.go", prefix: "TestWebhooksPublicFacade"},
+		{file: "webhook_delivery_test.go", prefix: "TestWebhookDeliveryPublicFacade"},
+	} {
+		rootTestPath := filepath.Join(root, rootTest.file)
+		parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+		if err != nil {
+			t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+		}
+		for _, decl := range parsed.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+				continue
+			}
+			if !strings.HasPrefix(fn.Name.Name, rootTest.prefix) {
+				t.Fatalf("%s keeps %s in the root package; move pure webhook behavior tests to internal/webhooks", rootTestPath, fn.Name.Name)
+			}
+		}
+	}
+}
+
 func TestArchitectureLayoutPluginRuntimeImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 
