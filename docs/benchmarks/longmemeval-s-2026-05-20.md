@@ -19,7 +19,15 @@ This report is generated from `docs/benchmarks/results/longmemeval-s-2026-05-20-
 - CPU count: 22.
 - Runtime evidence: `elapsed=not recorded maxrss=not recorded`.
 
-## Command
+## Reproduction
+
+Use the pinned full-run target to redownload/verify the dataset, convert it, and regenerate date-stamped reports for every deterministic backend:
+
+```sh
+make bench-longmemeval-s
+```
+
+The canonical frozen Goncho evidence below was produced with the equivalent direct command:
 
 ```sh
 go run ./cmd/goncho-bench \
@@ -65,9 +73,8 @@ The one query-text hit in this run is an official LongMemEval case where the pri
 
 ## Interpretation
 
-- Goncho beats the cited BM25-only reference on recall_any@5 and MRR.
-- Goncho is slightly below the cited BM25-only reference on recall_any@10.
-- Goncho beats the cited BM25+Vector reference on recall_any@5, but trails it on recall_any@10 and MRR.
+- Goncho beats the cited BM25-only reference on recall_any@5, recall_any@10, and MRR.
+- Goncho beats the cited BM25+Vector reference on recall_any@5 and MRR, but trails it on recall_any@10.
 - This is retrieval-only, not end-to-end QA with an LLM reader or judge.
 
 ## Validation after code changes

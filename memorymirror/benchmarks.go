@@ -13,6 +13,9 @@ type LongMemEvalTarget struct {
 	ReferenceRecallAnyAt10  float64 `json:"reference_recall_any_at_10"`
 	ReferenceMRR            float64 `json:"reference_mrr"`
 	SimilarRecallAnyAt10Gap float64 `json:"similar_recall_any_at_10_gap"`
+	FrozenReportPath        string  `json:"frozen_report_path"`
+	ReproductionCommand     string  `json:"reproduction_command"`
+	ClaimScope              string  `json:"claim_scope"`
 }
 
 type TokenSavingsTarget struct {
@@ -34,11 +37,13 @@ type LongMemEvalEvidence struct {
 }
 
 type LongMemEvalAssessment struct {
-	MeetsSimilarGate   bool    `json:"meets_similar_gate"`
-	RecallAnyAt5Delta  float64 `json:"recall_any_at_5_delta"`
-	RecallAnyAt10Delta float64 `json:"recall_any_at_10_delta"`
-	MRRDelta           float64 `json:"mrr_delta"`
-	Reason             string  `json:"reason,omitempty"`
+	MeetsSimilarGate    bool    `json:"meets_similar_gate"`
+	RecallAnyAt5Delta   float64 `json:"recall_any_at_5_delta"`
+	RecallAnyAt10Delta  float64 `json:"recall_any_at_10_delta"`
+	MRRDelta            float64 `json:"mrr_delta"`
+	ReproductionCommand string  `json:"reproduction_command,omitempty"`
+	ClaimScope          string  `json:"claim_scope,omitempty"`
+	Reason              string  `json:"reason,omitempty"`
 }
 
 func BenchmarkTargets() BenchmarkTargetSet {
@@ -51,6 +56,9 @@ func BenchmarkTargets() BenchmarkTargetSet {
 			ReferenceRecallAnyAt10:  0.986,
 			ReferenceMRR:            0.882,
 			SimilarRecallAnyAt10Gap: 0.01,
+			FrozenReportPath:        "docs/benchmarks/results/longmemeval-s-2026-05-20-goncho.json",
+			ReproductionCommand:     "make bench-longmemeval-s",
+			ClaimScope:              "retrieval_only_no_llm_reader_or_judge",
 		},
 		TokenSavings: TokenSavingsTarget{
 			PasteFullContextTokensPerYear: 19_500_000,
@@ -65,9 +73,11 @@ func BenchmarkTargets() BenchmarkTargetSet {
 
 func AssessLongMemEval(evidence LongMemEvalEvidence, target LongMemEvalTarget) LongMemEvalAssessment {
 	assessment := LongMemEvalAssessment{
-		RecallAnyAt5Delta:  evidence.RecallAnyAt5 - target.ReferenceRecallAnyAt5,
-		RecallAnyAt10Delta: evidence.RecallAnyAt10 - target.ReferenceRecallAnyAt10,
-		MRRDelta:           evidence.MRR - target.ReferenceMRR,
+		RecallAnyAt5Delta:   evidence.RecallAnyAt5 - target.ReferenceRecallAnyAt5,
+		RecallAnyAt10Delta:  evidence.RecallAnyAt10 - target.ReferenceRecallAnyAt10,
+		MRRDelta:            evidence.MRR - target.ReferenceMRR,
+		ReproductionCommand: target.ReproductionCommand,
+		ClaimScope:          target.ClaimScope,
 	}
 	if target.QuestionCount > 0 && evidence.QuestionCount != target.QuestionCount {
 		assessment.Reason = "question count mismatch"
