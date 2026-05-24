@@ -160,6 +160,11 @@ func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cf
 			return err
 		}
 	}
+	if path := strings.TrimSpace(cfg.BeamServiceJudgeRequestsOut); path != "" {
+		if err := writeBeamServiceJudgeRequests(path, report, configID, runStartedAt); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

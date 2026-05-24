@@ -227,6 +227,8 @@ BEAM failure-audit slice delivered: `goncho-bench --beam-service-failures-out be
 
 BEAM leakage-control slice delivered: `beam_e2e_results.json.metadata.diagnostics.leakage` reports question-text, stable-ID, ideal-answer-text, and rubric-label leakage examples for service-backed BEAM runs; `--fail-on-leakage` rejects blocking question/stable-ID/rubric contamination before scoring.
 
+BEAM judge-export slice delivered: `goncho-bench --beam-service-judge-requests-out beam_judge_requests.jsonl` exports one JSONL row per service-backed BEAM question with selected recall context, answer prompts that exclude ideal-answer/rubric metadata, and separate judge prompts carrying the preserved BEAM ideal answer and rubric.
+
 ## Framing
 
 The public framing should remain:

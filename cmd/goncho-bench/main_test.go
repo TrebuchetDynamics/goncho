@@ -339,6 +339,70 @@ func testSHA256Hex(raw []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetWritesJudgeRequestsWithoutAnswerHints(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-judge-requests.jsonl")
+	rawRecord := `{"conversation_id":"conv-beam-judge","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'IE': [{'id': 'q-beam-judge', 'question': 'Who owns LedgerDB?', 'ideal_answer': 'Mira owns LedgerDB', 'rubric': ['Judge rubric marker: mention Mira as owner'], 'relevant_message_indices': [0]}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	requestsPath := filepath.Join(dir, "beam_judge_requests.jsonl")
+	if err := run(context.Background(), config{
+		BeamConvertIn:               rawPath,
+		BeamServiceJudgeRequestsOut: requestsPath,
+		BeamServiceConfigID:         "test-beam-judge-export",
+		DatabasePath:                filepath.Join(dir, "beam-judge.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with judge request export: %v", err)
+	}
+	rawRequests, err := os.ReadFile(requestsPath)
+	if err != nil {
+		t.Fatalf("read BEAM judge requests: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(rawRequests)), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("judge request rows = %d, want one row: %s", len(lines), rawRequests)
+	}
+	var row struct {
+		ConfigID       string `json:"config_id"`
+		Scale          string `json:"scale"`
+		ConversationID string `json:"conversation_id"`
+		QID            string `json:"qid"`
+		Ability        string `json:"ability"`
+		AnswerRequest  struct {
+			System  string `json:"system"`
+			User    string `json:"user"`
+			Context string `json:"context"`
+		} `json:"answer_request"`
+		JudgeRequest struct {
+			System            string   `json:"system"`
+			User              string   `json:"user"`
+			IdealAnswer       string   `json:"ideal_answer"`
+			Rubric            []string `json:"rubric"`
+			AnswerPlaceholder string   `json:"answer_placeholder"`
+		} `json:"judge_request"`
+		SelectedMemoryIDs []string `json:"selected_memory_ids"`
+	}
+	if err := json.Unmarshal([]byte(lines[0]), &row); err != nil {
+		t.Fatalf("decode BEAM judge request row: %v", err)
+	}
+	if row.ConfigID != "test-beam-judge-export" || row.Scale != "100K" || row.ConversationID != "conv-beam-judge" || row.QID != "q-beam-judge" || row.Ability != "IE" {
+		t.Fatalf("judge request identity = %+v, want source-backed BEAM identity", row)
+	}
+	if !strings.Contains(row.AnswerRequest.Context, "Owner of LedgerDB is Mira") || !strings.Contains(row.AnswerRequest.User, "QUESTION: Who owns LedgerDB?") {
+		t.Fatalf("answer request = %+v, want selected recall context plus question", row.AnswerRequest)
+	}
+	if strings.Contains(row.AnswerRequest.User, "Judge rubric marker") || strings.Contains(row.AnswerRequest.User, "Mira owns LedgerDB") {
+		t.Fatalf("answer request leaked judge metadata: %q", row.AnswerRequest.User)
+	}
+	if row.JudgeRequest.IdealAnswer != "Mira owns LedgerDB" || !slices.Equal(row.JudgeRequest.Rubric, []string{"Judge rubric marker: mention Mira as owner"}) || !strings.Contains(row.JudgeRequest.User, "[AI_ANSWER]") {
+		t.Fatalf("judge request = %+v, want preserved ideal/rubric metadata and answer placeholder", row.JudgeRequest)
+	}
+	if len(row.SelectedMemoryIDs) == 0 {
+		t.Fatalf("judge request selected_memory_ids = %#v, want recall provenance IDs", row.SelectedMemoryIDs)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetReportsLeakageChecks(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-leakage.jsonl")

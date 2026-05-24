@@ -34,6 +34,7 @@
         "mem-auth",
         "mem-db"
       ],
+      "selected_context": "- JWT auth uses jose middleware.\n- Database performance work found an N+1 query.",
       "candidate_evidence_kinds": [
         "graph",
         "keyword",
@@ -76,6 +77,7 @@
       "selected_memory_ids": [
         "golden-pref"
       ],
+      "selected_context": "- When answering about Goncho recall, prefer evidence-first reports and mention RecallTrace when retrieval is involved.",
       "recall_at_5": 1,
       "recall_at_10": 1,
       "context_satisfied": true,

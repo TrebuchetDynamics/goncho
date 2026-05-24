@@ -176,6 +176,7 @@ bench-beam-smoke:
 		--beam-service-summary-out ./docs/benchmarks/results/beam-smoke-summary.json \
 		--beam-service-paired-out ./artifacts/beam-smoke/paired_outcomes.jsonl \
 		--beam-service-failures-out ./docs/benchmarks/failures/beam-smoke-failures.jsonl \
+		--beam-service-judge-requests-out ./docs/benchmarks/results/beam-smoke-judge-requests.jsonl \
 		--beam-service-config-id goncho-smoke \
 		--db ./artifacts/beam-smoke/goncho.db
 	go run ./cmd/goncho-bench \

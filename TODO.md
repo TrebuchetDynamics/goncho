@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: raw BEAM service artifacts now export answer/judge request bundles.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetWritesJudgeRequestsWithoutAnswerHints -count=1` proves `--beam-service-judge-requests-out` emits JSONL rows with source-backed config/scale/conversation/qid identity, selected recall context, answer prompts that exclude ideal-answer/rubric metadata, and separate judge prompts carrying the preserved BEAM ideal answer and rubric.
+  - Result: Goncho can hand a real BEAM sample to an official-style answerer/judge runner without weakening pure-recall scoring or leaking answer hints into retrieval/answer prompts.
+
 - 2026-05-24: raw BEAM service artifacts now include leakage diagnostics and a fail-fast guard.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsLeakageChecks -count=1` proves `beam_e2e_results.json.metadata.diagnostics.leakage` reports query-text, stable-ID, ideal-answer-text, and rubric-label leakage examples, while `--fail-on-leakage` rejects blocking query/stable-ID/rubric leakage before scoring.
   - Result: Goncho's BEAM one-command path now satisfies the benchmark-roadmap leakage-control gate for real HuggingFace samples without indexing answer metadata or hiding contaminated runs.

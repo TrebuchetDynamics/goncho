@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -19,14 +20,16 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
 	summaryPath := filepath.Join(dir, "beam_e2e_summary.json")
 	failuresPath := filepath.Join(dir, "beam_failures.jsonl")
+	judgeRequestsPath := filepath.Join(dir, "beam_judge_requests.jsonl")
 	if err := run(context.Background(), config{
-		BeamConvertIn:          rawFixture,
-		BeamServiceResultsOut:  resultsPath,
-		BeamServiceSummaryOut:  summaryPath,
-		BeamServicePairedOut:   pairedPath,
-		BeamServiceFailuresOut: failuresPath,
-		BeamServiceConfigID:    "goncho-smoke",
-		DatabasePath:           filepath.Join(dir, "beam-smoke.db"),
+		BeamConvertIn:               rawFixture,
+		BeamServiceResultsOut:       resultsPath,
+		BeamServiceSummaryOut:       summaryPath,
+		BeamServicePairedOut:        pairedPath,
+		BeamServiceFailuresOut:      failuresPath,
+		BeamServiceJudgeRequestsOut: judgeRequestsPath,
+		BeamServiceConfigID:         "goncho-smoke",
+		DatabasePath:                filepath.Join(dir, "beam-smoke.db"),
 	}); err != nil {
 		t.Fatalf("run pinned BEAM smoke fixture: %v", err)
 	}
@@ -89,6 +92,13 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 	}
 	if len(failureRaw) != 0 {
 		t.Fatalf("BEAM smoke failure audit = %q, want empty passing smoke failure artifact", failureRaw)
+	}
+	judgeRaw, err := os.ReadFile(judgeRequestsPath)
+	if err != nil {
+		t.Fatalf("read BEAM smoke judge requests: %v", err)
+	}
+	if !strings.Contains(string(judgeRaw), "RETRIEVED MEMORIES") || !strings.Contains(string(judgeRaw), "QUESTION: Who is responsible for storage used by Billing API?") || strings.Contains(string(judgeRaw), "Mira is responsible for LedgerDB storage.\\n\\nQUESTION") {
+		t.Fatalf("BEAM smoke judge request = %s, want answer prompt context/question without ideal answer as prompt prefix", judgeRaw)
 	}
 
 	comparisonPath := filepath.Join(dir, "beam-paired-comparison.json")

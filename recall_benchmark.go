@@ -122,6 +122,7 @@ type RecallBenchmarkCaseReport struct {
 	RubricContextMatches   []string `json:"rubric_context_matches,omitempty"`
 	CandidateMemoryIDs     []string `json:"candidate_memory_ids"`
 	SelectedMemoryIDs      []string `json:"selected_memory_ids"`
+	SelectedContext        string   `json:"selected_context,omitempty"`
 	CandidateEvidenceKinds []string `json:"candidate_evidence_kinds,omitempty"`
 	SelectedEvidenceKinds  []string `json:"selected_evidence_kinds,omitempty"`
 	TopEvidenceKinds       []string `json:"top_evidence_kinds,omitempty"`
@@ -323,6 +324,7 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 		RubricContextMatches:   rubricContextMatches,
 		CandidateMemoryIDs:     candidateIDs,
 		SelectedMemoryIDs:      selectedIDs,
+		SelectedContext:        recallBenchmarkSelectedContext(c.Trace),
 		CandidateEvidenceKinds: recallBenchmarkEvidenceKinds(c.Trace.Candidates),
 		SelectedEvidenceKinds:  recallBenchmarkEvidenceKinds(c.Trace.Selected),
 		TopEvidenceKinds:       recallBenchmarkTopEvidenceKinds(c.Trace.Selected),
@@ -623,6 +625,10 @@ func recallBenchmarkRubricTokens(text string) []string {
 		out = append(out, token)
 	}
 	return out
+}
+
+func recallBenchmarkSelectedContext(trace RecallTrace) string {
+	return strings.TrimSpace((&RecallProjector{}).ProjectContext(trace).Representation)
 }
 
 func recallBenchmarkContextSatisfied(trace RecallTrace, relevantIDs []string, contains []string, expectedNoAnswer bool) bool {
