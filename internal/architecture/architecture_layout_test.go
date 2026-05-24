@@ -46,6 +46,30 @@ func TestArchitectureLayoutScopedKeyImplementationLivesBehindInternalModule(t *t
 	}
 }
 
+func TestArchitectureLayoutScopedKeyTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "scopedkey", "scopedkey_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("scoped-key behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "keys_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestKeys_PublicFacade") {
+			t.Fatalf("%s keeps %s in the root package; move pure scoped-key behavior tests to internal/scopedkey", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
 func TestArchitectureLayoutSearchFilterImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 
