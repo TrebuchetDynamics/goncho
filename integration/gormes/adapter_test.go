@@ -38,6 +38,11 @@ func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
 	if len(status.ToolSpecs) != len(status.ToolNames) {
 		t.Fatalf("tool specs len = %d, tool names len = %d", len(status.ToolSpecs), len(status.ToolNames))
 	}
+	for _, capability := range []string{"context", "search", "recall", "recall_compact", "recall_diagnostics", "remember", "review", "handoff"} {
+		if !contains(status.Capabilities, capability) {
+			t.Fatalf("capabilities = %#v, missing %s", status.Capabilities, capability)
+		}
+	}
 	recallSpec, ok := operationSpecByName(status.ToolSpecs, "goncho_recall")
 	if !ok {
 		t.Fatalf("tool specs = %#v, missing goncho_recall", status.ToolSpecs)
@@ -60,6 +65,9 @@ func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
 	}
 	if !strings.Contains(string(statusJSON), "tool_specs") || !strings.Contains(string(statusJSON), "compact") {
 		t.Fatalf("status json = %s, want tool specs with recall compact schema", statusJSON)
+	}
+	if !strings.Contains(string(statusJSON), "capabilities") || !strings.Contains(string(statusJSON), "recall_compact") {
+		t.Fatalf("status json = %s, want capability summary with compact recall", statusJSON)
 	}
 	if strings.Contains(string(statusJSON), "ToolDescriptor") || strings.Contains(string(statusJSON), "Mutating") {
 		t.Fatalf("status json = %s, leaked internal OperationSpec field names", statusJSON)

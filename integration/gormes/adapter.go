@@ -54,6 +54,7 @@ type Status struct {
 	MemoryMarkdownPath string           `json:"memory_markdown_path,omitempty"`
 	ToolNames          []string         `json:"tool_names"`
 	ToolSpecs          []StatusToolSpec `json:"tool_specs"`
+	Capabilities       []string         `json:"capabilities"`
 }
 
 type StatusToolSpec struct {
@@ -123,6 +124,8 @@ func (r *Runtime) Status() Status {
 	if r == nil {
 		return Status{}
 	}
+	toolNames := []string{r.ContextTool.Name(), r.SearchTool.Name(), r.RecallTool.Name(), r.RememberTool.Name(), r.ReviewTool.Name(), r.HandoffTool.Name()}
+	toolSpecs := statusToolSpecs(r.ContextTool.Spec(), r.SearchTool.Spec(), r.RecallTool.Spec(), r.RememberTool.Spec(), r.ReviewTool.Spec(), r.HandoffTool.Spec())
 	return Status{
 		Ready:              r.Service != nil && r.DB != nil,
 		WorkspaceID:        r.config.WorkspaceID,
@@ -132,8 +135,9 @@ func (r *Runtime) Status() Status {
 		ProfileDirectory:   profileDirectory(r.config.ProfilesDirectory, r.config.ProfileID),
 		DatabasePath:       r.config.DatabasePath,
 		MemoryMarkdownPath: r.config.MemoryMarkdownPath,
-		ToolNames:          []string{r.ContextTool.Name(), r.SearchTool.Name(), r.RecallTool.Name(), r.RememberTool.Name(), r.ReviewTool.Name(), r.HandoffTool.Name()},
-		ToolSpecs:          statusToolSpecs(r.ContextTool.Spec(), r.SearchTool.Spec(), r.RecallTool.Spec(), r.RememberTool.Spec(), r.ReviewTool.Spec(), r.HandoffTool.Spec()),
+		ToolNames:          toolNames,
+		ToolSpecs:          toolSpecs,
+		Capabilities:       statusCapabilities(toolSpecs),
 	}
 }
 
@@ -152,6 +156,30 @@ func statusToolSpecs(specs ...toolmeta.OperationSpec) []StatusToolSpec {
 		})
 	}
 	return out
+}
+
+func statusCapabilities(specs []StatusToolSpec) []string {
+	capabilities := make([]string, 0, len(specs)+2)
+	for _, spec := range specs {
+		switch spec.Name {
+		case "goncho_context":
+			capabilities = append(capabilities, "context")
+		case "goncho_search":
+			capabilities = append(capabilities, "search")
+		case "goncho_recall":
+			capabilities = append(capabilities, "recall", "recall_diagnostics")
+			if strings.Contains(string(spec.Schema), `"compact"`) {
+				capabilities = append(capabilities, "recall_compact")
+			}
+		case "goncho_remember":
+			capabilities = append(capabilities, "remember")
+		case "goncho_review":
+			capabilities = append(capabilities, "review")
+		case "goncho_handoff":
+			capabilities = append(capabilities, "handoff")
+		}
+	}
+	return capabilities
 }
 
 func (c Config) withDefaults() Config {

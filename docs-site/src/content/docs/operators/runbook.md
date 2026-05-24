@@ -66,7 +66,7 @@ Run this at process startup or deployment time:
 2. Run `goncho.RunMigrations(db)` exactly once during initialization.
 3. Construct `goncho.NewService` with explicit `WorkspaceID` and `ObserverPeerID`.
 4. Register only the tools the host wants the model to call.
-5. Emit a startup log line with workspace id, observer id, database path, registered tool names, and JSON-friendly operation specs/schemas from `Status().ToolSpecs`.
+5. Emit a startup log line with workspace id, observer id, database path, registered tool names, `Status().Capabilities`, and JSON-friendly operation specs/schemas from `Status().ToolSpecs`.
 6. Run a context smoke call for a known test peer if the environment supports it.
 
 ## Tool Exposure Policy

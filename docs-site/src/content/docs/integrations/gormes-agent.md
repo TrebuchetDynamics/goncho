@@ -91,7 +91,7 @@ func main() {
 }
 ```
 
-The adapter requires either an explicit `DatabasePath` or the pair `ProfilesDirectory` plus `ProfileID`. With `ProfilesDirectory: ".gormes/profiles"` and `ProfileID: "mineru"`, it opens `.gormes/profiles/mineru/goncho.db`, derives `.gormes/profiles/mineru/GONCHO_MEMORY.md`, runs Goncho migrations, creates `goncho.Service`, wires public tools, and exposes `Status()` for startup logs plus JSON-friendly tool operation specs, including schemas such as `goncho_recall`'s `compact` option.
+The adapter requires either an explicit `DatabasePath` or the pair `ProfilesDirectory` plus `ProfileID`. With `ProfilesDirectory: ".gormes/profiles"` and `ProfileID: "mineru"`, it opens `.gormes/profiles/mineru/goncho.db`, derives `.gormes/profiles/mineru/GONCHO_MEMORY.md`, runs Goncho migrations, creates `goncho.Service`, wires public tools, and exposes `Status()` for startup logs plus a compact capability summary and JSON-friendly tool operation specs, including schemas such as `goncho_recall`'s `compact` option.
 
 If your Gormes host already has a tool registry, register the tool values by their `Name()`, `Schema()`, `Description()`, `Timeout()`, and `Execute(ctx, args)` methods.
 
