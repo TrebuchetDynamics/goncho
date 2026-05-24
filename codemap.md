@@ -16,4 +16,4 @@ Host or service code writes scoped events through `Observe`; Goncho redacts, tru
 
 ## Integration
 
-Gormes and other hosts should call the Go API or service wrappers after running `RunMigrations`. The local `memory` and `session` packages provide extraction-safe compatibility for SQLite setup, memory V1 fixtures, FTS-backed turn search, and in-memory session metadata tests.
+Gormes and other hosts should call the Go API or service wrappers after running `RunMigrations`. The local `memory` and `session` packages provide extraction-safe compatibility for SQLite setup, memory V1 fixtures, FTS-backed turn search, and in-memory session metadata tests. The public `agentmemory` package is a source-pinned architecture mirror/port matrix for rohitg00/agentmemory commit `355124141625ccc0d740ae08ddaaf77fe2c165ae`, mapping its pipeline, tiers, retrieval streams, hooks, and 53 MCP tools onto delivered, partial, adapter-owned, deferred, or excluded Goncho seams; it also exposes agentmemory-compatible executable aliases for save, smart search, recall, and profile backed by the local Goncho service.
