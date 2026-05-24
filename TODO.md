@@ -2,6 +2,14 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA durable annotations now feed RecallCandidate provenance.
+  - Evidence target: `go test . -run TestRecallCandidatesIncludeDurableFactAnnotationProvenance -count=1` proves recall candidate generation hydrates stored `goncho_memory_annotations` facts into `RecallCandidate.Provenance`, assigns `fact_score=1`, and selects the durable annotated fact over a lexical echo.
+  - Result: the append-only fact annotation lane now supports both public search ranking and recall-trace provenance without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
+
+- 2026-05-23: Mnemosyne MEMORIA sequence extraction now feeds Goncho search through durable annotations.
+  - Evidence target: `go test . -run TestServiceConcludeSequenceAnnotationRanksDurableSequence -count=1` proves `Service.Conclude` derives a conservative event-order fact from prose (`first freeze writes, then run migration, finally enable readers`) and `Service.Search` ranks that durable sequence above a question-shaped lexical echo.
+  - Result: the append-only fact annotation lane now covers MEMORIA-style event ordering without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
+
 - 2026-05-23: Mnemosyne MEMORIA metric/version extraction now feeds Goncho search through durable annotations.
   - Evidence target: `go test . -run 'TestServiceConclude(MetricAnnotationRanksDurableMetric|VersionAnnotationRanksDurableVersion)' -count=1` proves `Service.Conclude` derives conservative numeric metric and semantic-version facts from prose (`dashboard API latency is 250ms`, `PostgreSQL version is 14.2`) and `Service.Search` ranks those durable facts above question-shaped lexical echoes.
   - Result: the append-only fact annotation lane now covers MEMORIA-style IE/KU measurement facts without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.

@@ -16,6 +16,7 @@ var (
 	searchVersionValuePattern  = regexp.MustCompile(`(?i)^v?\d+\.\d+(?:\.\d+)?\s*$`)
 	searchVersionIsPattern     = regexp.MustCompile(`(?i)^\s*(.+?)\s+version\s+(?:is|was|=)\s+(v?\d+\.\d+(?:\.\d+)?)\s*$`)
 	searchVersionShortPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+v(\d+\.\d+(?:\.\d+)?)\s*$`)
+	searchSequenceMarkers      = []string{"first", "second", "third", "fourth", "fifth", "finally", "next", "then", "after that"}
 	recallSentencePattern      = regexp.MustCompile(`[^.!?]+[.!?]?`)
 )
 
@@ -39,6 +40,9 @@ func searchFactIntentScore(query, content string) float64 {
 		return score
 	}
 	if score := searchVersionFactIntentScore(query, content); score > 0 {
+		return score
+	}
+	if score := searchSequenceFactIntentScore(query, content); score > 0 {
 		return score
 	}
 	return 0
@@ -337,6 +341,125 @@ func searchVersionAnswerParts(sentence string) (subject, version string, ok bool
 	return "", "", false
 }
 
+func searchSequenceFactIntentScore(query, content string) float64 {
+	querySubject, ok := searchSequenceQuestionSubject(query)
+	if !ok {
+		return 0
+	}
+	queryTokens := searchRankTokenSet(querySubject)
+	if len(queryTokens) == 0 {
+		return 0
+	}
+	if !strings.Contains(content, "?") {
+		subject, steps, ok := searchSequenceAnswerParts(content)
+		if ok && searchSequenceValueLooksAssertive(steps) && searchRankTokenCoverage(queryTokens, subject) >= 0.80 {
+			return 1
+		}
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		subject, steps, ok := searchSequenceAnswerParts(sentence)
+		if !ok || !searchSequenceValueLooksAssertive(steps) {
+			continue
+		}
+		if searchRankTokenCoverage(queryTokens, subject) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func searchSequenceQuestionSubject(query string) (string, bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	lower := strings.ToLower(query)
+	for _, prefix := range []string{"walk me through the ", "walk me through ", "list the order of the ", "list the order of ", "what is the order of the ", "what is the order of ", "what was the order of the ", "what was the order of "} {
+		if strings.HasPrefix(lower, prefix) {
+			subject := cleanFactObject(query[len(prefix):])
+			return subject, subject != ""
+		}
+	}
+	if strings.HasPrefix(lower, "in what order did ") {
+		subject := cleanFactObject(query[len("in what order did "):])
+		return subject, subject != ""
+	}
+	return "", false
+}
+
+func searchSequenceAnswerParts(sentence string) (subject, steps string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", "", false
+	}
+	firstIdx := searchSequenceFirstMarkerIndex(sentence)
+	if firstIdx <= 0 || searchSequenceMarkerCount(sentence) < 2 {
+		return "", "", false
+	}
+	subject = sequenceSubjectBeforeMarker(sentence[:firstIdx])
+	steps = cleanSequenceValue(sentence[firstIdx:])
+	if subject != "" && searchSequenceValueLooksAssertive(steps) {
+		return subject, steps, true
+	}
+	lower := strings.ToLower(sentence)
+	for _, marker := range []string{" sequence is ", " order is "} {
+		idx := strings.Index(lower, marker)
+		if idx <= 0 {
+			continue
+		}
+		subject = cleanFactObject(sentence[:idx] + strings.TrimSpace(marker))
+		steps = cleanSequenceValue(sentence[idx+len(marker):])
+		return subject, steps, searchFactObjectLooksAssertive(subject) && searchSequenceValueLooksAssertive(steps)
+	}
+	return "", "", false
+}
+
+func sequenceSubjectBeforeMarker(prefix string) string {
+	prefix = strings.TrimSpace(prefix)
+	prefix = strings.TrimSpace(strings.TrimRight(prefix, ":;"))
+	if idx := strings.LastIndexAny(prefix, ":;"); idx >= 0 {
+		prefix = strings.TrimSpace(prefix[idx+1:])
+	}
+	return cleanFactObject(prefix)
+}
+
+func searchSequenceFirstMarkerIndex(value string) int {
+	lower := strings.ToLower(value)
+	best := -1
+	for _, marker := range searchSequenceMarkers {
+		idx := strings.Index(lower, marker)
+		if idx < 0 {
+			continue
+		}
+		if best < 0 || idx < best {
+			best = idx
+		}
+	}
+	return best
+}
+
+func searchSequenceMarkerCount(value string) int {
+	lower := strings.ToLower(value)
+	count := 0
+	for _, marker := range searchSequenceMarkers {
+		if strings.Contains(lower, marker) {
+			count++
+		}
+	}
+	return count
+}
+
+func cleanSequenceValue(value string) string {
+	value = strings.Trim(strings.TrimSpace(value), "\"'`“”‘’")
+	for _, sep := range []string{" because ", " but "} {
+		idx := strings.Index(strings.ToLower(value), sep)
+		if idx > 0 {
+			value = strings.TrimSpace(value[:idx])
+		}
+	}
+	return value
+}
+
 func searchInstructionFactIntentScore(query, content string) float64 {
 	querySubject, queryTopic, ok := searchInstructionQuestion(query)
 	if !ok {
@@ -508,6 +631,10 @@ func searchMetricValueLooksAssertive(value string) bool {
 
 func searchVersionValueLooksAssertive(value string) bool {
 	return searchVersionValuePattern.MatchString(strings.TrimSpace(value))
+}
+
+func searchSequenceValueLooksAssertive(value string) bool {
+	return searchSequenceMarkerCount(value) >= 2 && searchFactObjectLooksAssertive(value)
 }
 
 func searchFactObjectLooksAssertive(object string) bool {

@@ -29,7 +29,7 @@ func conclusionFactAnnotations(content string) []string {
 		facts = append(facts, fact)
 	}
 	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
-		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation, conclusionMetricFactAnnotation, conclusionVersionFactAnnotation} {
+		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation, conclusionMetricFactAnnotation, conclusionVersionFactAnnotation, conclusionSequenceFactAnnotation} {
 			addFact(extractor(sentence))
 		}
 	}
@@ -197,6 +197,18 @@ func conclusionVersionFactAnnotation(sentence string) (string, bool) {
 	return versionFactAnnotation(subject, version)
 }
 
+func conclusionSequenceFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	subject, steps, ok := searchSequenceAnswerParts(sentence)
+	if !ok {
+		return "", false
+	}
+	return sequenceFactAnnotation(subject, steps)
+}
+
 func cleanFactObject(value string) string {
 	value = strings.TrimSpace(value)
 	if idx := strings.LastIndexAny(value, ":;"); idx >= 0 {
@@ -287,6 +299,15 @@ func versionFactAnnotation(subject, version string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("%s version is %s", subject, version), true
+}
+
+func sequenceFactAnnotation(subject, steps string) (string, bool) {
+	subject = cleanFactObject(subject)
+	steps = cleanSequenceValue(steps)
+	if !searchFactObjectLooksAssertive(subject) || !searchSequenceValueLooksAssertive(steps) {
+		return "", false
+	}
+	return fmt.Sprintf("%s is %s", subject, steps), true
 }
 
 func storeConclusionFactAnnotations(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, conclusionID int64, facts []string) error {
