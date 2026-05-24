@@ -30,6 +30,7 @@ The root module is a library package, not a CLI binary and not a root `go instal
 | SQLite persistence | `memory.OpenSqlite` initializes service tables; `RunMigrations` initializes observation and audit tables | Clearer operational migration docs and lifecycle guidance |
 | Peer cards | `SetProfile`, `Profile`, directional peer-card support | Richer belief provenance |
 | Search | `Search` over stored conclusions and fallback session turns | Stronger evidence lineage and ranking diagnostics |
+| Recall trace | `Recall` exposes the scored `RecallTrace` with candidates, provenance, selected/rejected memories, and warnings before projection | More host-facing replay and review tooling around trace evidence |
 | Context assembly | `Context` returns peer card, conclusions, summaries, search hits, and recent turns | Compact orientation packs with stronger provenance |
 | Session summaries | Deterministic short and long summary slots | Hook-native consolidation around lifecycle boundaries |
 | Local markdown memory | Shipped local markdown memory store and memory tools | Review and repair workflows around editable memory |

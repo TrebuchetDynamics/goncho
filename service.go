@@ -308,6 +308,22 @@ func (s *Service) Context(ctx context.Context, params ContextParams) (ContextRes
 	return s.retrieval().Context(ctx, params)
 }
 
+// Recall runs the full scored recall pipeline against stored conclusions and
+// returns a deterministic trace with candidates, scores, selection reasoning,
+// and warnings. Unlike Search, which returns flat result rows, Recall exposes
+// the scoring and provenance chain so hosts can audit why each memory was
+// selected or rejected.
+func (s *Service) Recall(ctx context.Context, q RecallQuery) (RecallTrace, error) {
+	if strings.TrimSpace(q.Peer) == "" {
+		return RecallTrace{}, fmt.Errorf("goncho: peer is required")
+	}
+	if strings.TrimSpace(q.WorkspaceID) == "" {
+		q.WorkspaceID = s.workspaceID
+	}
+	engine := newRecallPipelineEngine(s.retrieval(), recallPipelineOptions{})
+	return engine.Run(ctx, q)
+}
+
 func (s *Service) Chat(ctx context.Context, peer string, params ChatParams) (ChatResult, error) {
 	peer = strings.TrimSpace(peer)
 	if peer == "" {

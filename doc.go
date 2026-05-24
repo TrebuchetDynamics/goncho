@@ -81,6 +81,8 @@
 //
 //   - Service.Conclude records evidence-backed conclusions.
 //   - Service.Search retrieves scoped memory candidates.
+//   - Service.Recall returns a scored RecallTrace with provenance, warnings,
+//     and selection/rejection reasoning before projection.
 //   - Service.Context assembles an orientation pack for the next action.
 //   - Service.Profile stores and reads durable profile facts.
 //
@@ -91,8 +93,9 @@
 //
 // On pkg.go.dev, use the rendered pkg.go.dev examples as the shortest checked
 // path through the API: ExampleNewService shows setup, ExampleService_Context
-// shows orientation-pack assembly, and ExampleService_Search shows scoped
-// retrieval against stored conclusions.
+// shows orientation-pack assembly, ExampleService_Search shows scoped retrieval
+// against stored conclusions, and ExampleService_Recall shows auditable recall
+// traces.
 //
 // go.dev package signals to check before adopting: the public module is
 // currently v0.1.1, has a valid go.mod, a redistributable MIT license, and

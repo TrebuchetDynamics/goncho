@@ -16,6 +16,7 @@ This page names the exported symbols used by the current repository and explains
 | `SetProfileForTarget` | Write a directional representation: one peer's view of another. |
 | `Profile` | Read the current peer card. |
 | `Search` | Retrieve conclusions or turn evidence relevant to a query. |
+| `Recall` | Run the scored recall pipeline and return a `RecallTrace` with candidates, provenance, selected/rejected memories, and warnings before projection. |
 | `Context` | Assemble an orientation pack for prompt construction. |
 | `Chat` | Return a local-memory-backed chat result without requiring hosted Honcho, an LLM, or browser dependency. |
 | `Conclude` | Write or delete manual conclusions. |
@@ -48,4 +49,4 @@ That test is the executable version of the happy path for local consumers:
 4. Store profile facts with `SetProfile`.
 5. Persist session evidence with `CreateMessages`.
 6. Record a durable fact with `Conclude`.
-7. Verify `Context`, `Search`, and `Chat` return the expected local memory without any network, hosted Honcho, LLM, or browser dependency.
+7. Verify `Context`, `Search`, `Recall`, and `Chat` return the expected local memory without any network, hosted Honcho, LLM, or browser dependency.

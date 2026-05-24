@@ -44,7 +44,7 @@ If you are evaluating Goncho on pkg.go.dev, start here:
 - **Use when:** your Go agent host needs local SQLite memory, scoped recall, review queues, stale-claim warnings, and verification-first context assembly.
 - **Do not use as:** a hosted memory API, generic vector database, standalone CLI app, or replacement for live checks before tool execution.
 - **First useful call:** wire `memory.OpenSqlite`, run `goncho.RunMigrations`, create `goncho.NewService`, then call `svc.Context` to build an orientation pack.
-- **Runnable reference:** pkg.go.dev renders the compiled `NewService` example, compiled `Service.Context` example, and compiled `Service.Search` example from this module, so setup, orientation packs, and scoped retrieval are checked by `go test` instead of drifting as prose.
+- **Runnable reference:** pkg.go.dev renders the compiled `NewService` example plus compiled `Service.Context`, `Service.Search`, and `Service.Recall` examples from this module, so setup, orientation packs, scoped retrieval, and auditable recall traces are checked by `go test` instead of drifting as prose.
 - **Trust boundary:** Goncho can remember, rank, and warn; the host agent must still verify file paths, APIs, credentials, and deployment state before acting.
 - **What to read next:** use [Quick Start](#quick-start) for a runnable service shape, [Core API](#core-api) for common calls, and [Package Status](#package-status) for release and smoke-test evidence.
 
@@ -62,9 +62,10 @@ Goncho can orient the agent by storing evidence, ranking scoped memory, assembli
 | If you need to... | Start with | Why |
 | --- | --- | --- |
 | Open local memory | `memory.OpenSqlite` plus `goncho.RunMigrations` | Creates the SQLite store and schema Goncho expects. |
-| Embed the service | `goncho.NewService` | Gives your Go host the profile, search, context, chat, and conclude APIs. |
+| Embed the service | `goncho.NewService` | Gives your Go host the profile, search, recall, context, chat, and conclude APIs. |
 | Store durable facts | `svc.SetProfile` or `svc.Conclude` | Separates stable profile facts from current conclusions and evidence. |
 | Retrieve scoped memory | `svc.Search` | Returns peer/profile/session-scoped hits before you decide what to verify. |
+| Audit recall scoring | `svc.Recall` | Returns the scored `RecallTrace` with candidates, selected/rejected memories, warnings, and provenance before any projection. |
 | Build an action primer | `svc.Context` | Produces an orientation pack; hosts still verify live state before acting. |
 | Expose agent tools | `NewGonchoContextTool`, `NewGonchoSearchTool`, `NewGonchoRememberTool`, `NewReviewTool`, `NewGonchoHandoffTool` | Keeps host integrations on the public tool boundary instead of database internals. |
 | Reproduce retrieval evidence | `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` | Installs the benchmark CLI shipped with the public module. |
@@ -77,7 +78,7 @@ Goncho can orient the agent by storing evidence, ranking scoped memory, assembli
 | `github.com/TrebuchetDynamics/goncho/memory` | SQLite opener | `memory.OpenSqlite` when you want a local file-backed store for an embedded host. |
 | `github.com/TrebuchetDynamics/goncho/cmd/goncho-bench` | Command only | `go install .../cmd/goncho-bench@latest` for reproducible retrieval reports; do not import it into an agent host. |
 
-Stay on public service and tool APIs first. If pkg.go.dev shows a lower-level type before the service examples, treat it as implementation detail until `NewService`, `svc.Context`, `svc.Search`, or a public tool constructor cannot express the host need.
+Stay on public service and tool APIs first. If pkg.go.dev shows a lower-level type before the service examples, treat it as implementation detail until `NewService`, `svc.Context`, `svc.Search`, `svc.Recall`, or a public tool constructor cannot express the host need.
 
 ## Minimal Embedded Skeleton
 
@@ -325,6 +326,12 @@ results, err := svc.Search(ctx, goncho.SearchParams{
     Peer:      "telegram:12345",
     Query:     "deployment preferences",
     Limit:     5,
+})
+
+trace, err := svc.Recall(ctx, goncho.RecallQuery{
+    Peer:  "telegram:12345",
+    Query: "deployment preferences",
+    Limit: 5,
 })
 
 pack, err := svc.Context(ctx, goncho.ContextParams{

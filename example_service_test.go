@@ -147,3 +147,47 @@ func ExampleService_Search() {
 	// Output:
 	// conclusion: Keep deployment notes evidence-first and searchable.
 }
+
+func ExampleService_Recall() {
+	ctx := context.Background()
+	dir, err := os.MkdirTemp("", "goncho-recall-example-*")
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = os.RemoveAll(dir) }()
+
+	store, err := memory.OpenSqlite(filepath.Join(dir, "memory.db"), 0, nil)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = store.Close(ctx) }()
+
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		panic(err)
+	}
+
+	svc := goncho.NewService(store.DB(), goncho.Config{
+		WorkspaceID:    "example-agent",
+		ObserverPeerID: "assistant",
+	}, nil)
+
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{
+		Peer:       "user:juan",
+		Conclusion: "Recall traces preserve scoring provenance for deployment notes.",
+	}); err != nil {
+		panic(err)
+	}
+
+	trace, err := svc.Recall(ctx, goncho.RecallQuery{
+		Peer:  "user:juan",
+		Query: "scoring provenance",
+		Limit: 1,
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%s selected=%d provenance=%t\n", trace.PipelineVersion, len(trace.Selected), len(trace.Selected[0].Candidate.Provenance) > 0)
+
+	// Output:
+	// goncho-recall-v1 selected=1 provenance=true
+}

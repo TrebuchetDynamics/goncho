@@ -1323,8 +1323,9 @@ func TestReadmeSurfacesPkgGoDevEvaluationPath(t *testing.T) {
 		"If you are evaluating Goncho on pkg.go.dev",
 		"First useful call",
 		"compiled `NewService` example",
-		"compiled `Service.Context` example",
-		"compiled `Service.Search` example",
+		"compiled `Service.Context`",
+		"`Service.Search`",
+		"`Service.Recall` examples",
 		"What to read next",
 	} {
 		if !strings.Contains(text, want) {
@@ -1346,6 +1347,7 @@ func TestReadmeSurfacesPkgGoDevAPIMap(t *testing.T) {
 		"goncho.NewService",
 		"svc.Conclude",
 		"svc.Search",
+		"svc.Recall",
 		"svc.Context",
 		"NewGonchoContextTool",
 		"goncho-bench@latest",
@@ -1944,6 +1946,7 @@ func TestPackageDocSurfacesPrimaryAPIPath(t *testing.T) {
 		"Primary API path",
 		"Service.Conclude",
 		"Service.Search",
+		"Service.Recall",
 		"Service.Context",
 		"public tool constructors",
 		"NewGonchoContextTool",
