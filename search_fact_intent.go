@@ -16,6 +16,8 @@ var (
 	searchVersionValuePattern  = regexp.MustCompile(`(?i)^v?\d+\.\d+(?:\.\d+)?\s*$`)
 	searchVersionIsPattern     = regexp.MustCompile(`(?i)^\s*(.+?)\s+version\s+(?:is|was|=)\s+(v?\d+\.\d+(?:\.\d+)?)\s*$`)
 	searchVersionShortPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+v(\d+\.\d+(?:\.\d+)?)\s*$`)
+	searchNegationPattern      = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:(?:have|has|had|did)\s+)?(?:never|not)\s+(.+?)\s*$`)
+	searchDecisionPattern      = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:decided to|chose to|opted for|selected|picked|switching to)\s+(.+?)\s*$`)
 	searchSequenceMarkers      = []string{"first", "second", "third", "fourth", "fifth", "finally", "next", "then", "after that"}
 	recallSentencePattern      = regexp.MustCompile(`[^.!?]+[.!?]?`)
 )
@@ -43,6 +45,12 @@ func searchFactIntentScore(query, content string) float64 {
 		return score
 	}
 	if score := searchSequenceFactIntentScore(query, content); score > 0 {
+		return score
+	}
+	if score := searchNegationFactIntentScore(query, content); score > 0 {
+		return score
+	}
+	if score := searchDecisionFactIntentScore(query, content); score > 0 {
 		return score
 	}
 	return 0
@@ -458,6 +466,110 @@ func cleanSequenceValue(value string) string {
 		}
 	}
 	return value
+}
+
+func searchNegationFactIntentScore(query, content string) float64 {
+	queryObject, ok := searchNegationQuestionObject(query)
+	if !ok {
+		return 0
+	}
+	queryTokens := searchRankTokenSet(queryObject)
+	if len(queryTokens) == 0 {
+		return 0
+	}
+	if !strings.Contains(content, "?") {
+		object, ok := searchNegationAnswerParts(content)
+		if ok && searchRankTokenCoverage(queryTokens, object) >= 0.80 {
+			return 1
+		}
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		object, ok := searchNegationAnswerParts(sentence)
+		if !ok {
+			continue
+		}
+		if searchRankTokenCoverage(queryTokens, object) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func searchNegationQuestionObject(query string) (string, bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	lower := strings.ToLower(query)
+	for _, prefix := range []string{"have i ever ", "have i ", "did i ever ", "did i ", "have we ever ", "have we ", "did we ever ", "did we ", "has this ", "am i "} {
+		if strings.HasPrefix(lower, prefix) {
+			object := cleanFactObject(query[len(prefix):])
+			return object, object != ""
+		}
+	}
+	return "", false
+}
+
+func searchNegationAnswerParts(sentence string) (object string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	match := searchNegationPattern.FindStringSubmatch(sentence)
+	if len(match) != 2 {
+		return "", false
+	}
+	object = cleanFactValue(match[1])
+	return object, searchFactObjectLooksAssertive(object)
+}
+
+func searchDecisionFactIntentScore(query, content string) float64 {
+	queryTopic, ok := searchDecisionQuestionTopic(query)
+	if !ok {
+		return 0
+	}
+	queryTokens := searchRankTokenSet(queryTopic)
+	if len(queryTokens) == 0 {
+		return 0
+	}
+	if !strings.Contains(content, "?") {
+		decision, ok := searchDecisionAnswerParts(content)
+		if ok && searchRankTokenCoverage(queryTokens, decision) >= 0.80 {
+			return 1
+		}
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		decision, ok := searchDecisionAnswerParts(sentence)
+		if !ok {
+			continue
+		}
+		if searchRankTokenCoverage(queryTokens, decision) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func searchDecisionQuestionTopic(query string) (string, bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	lower := strings.ToLower(query)
+	for _, prefix := range []string{"what decision did i make about ", "which decision did i make about ", "what decision did we make about ", "which decision did we make about ", "what did i decide about ", "what did we decide about "} {
+		if strings.HasPrefix(lower, prefix) {
+			topic := cleanFactObject(query[len(prefix):])
+			return topic, topic != ""
+		}
+	}
+	return "", false
+}
+
+func searchDecisionAnswerParts(sentence string) (decision string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	match := searchDecisionPattern.FindStringSubmatch(sentence)
+	if len(match) != 2 {
+		return "", false
+	}
+	decision = cleanFactValue(match[1])
+	return decision, searchFactObjectLooksAssertive(decision)
 }
 
 func searchInstructionFactIntentScore(query, content string) float64 {

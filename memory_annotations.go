@@ -29,7 +29,7 @@ func conclusionFactAnnotations(content string) []string {
 		facts = append(facts, fact)
 	}
 	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
-		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation, conclusionMetricFactAnnotation, conclusionVersionFactAnnotation, conclusionSequenceFactAnnotation} {
+		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation, conclusionMetricFactAnnotation, conclusionVersionFactAnnotation, conclusionSequenceFactAnnotation, conclusionNegationFactAnnotation, conclusionDecisionFactAnnotation} {
 			addFact(extractor(sentence))
 		}
 	}
@@ -209,6 +209,30 @@ func conclusionSequenceFactAnnotation(sentence string) (string, bool) {
 	return sequenceFactAnnotation(subject, steps)
 }
 
+func conclusionNegationFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	object, ok := searchNegationAnswerParts(sentence)
+	if !ok {
+		return "", false
+	}
+	return negationFactAnnotation(object)
+}
+
+func conclusionDecisionFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	decision, ok := searchDecisionAnswerParts(sentence)
+	if !ok {
+		return "", false
+	}
+	return decisionFactAnnotation(decision)
+}
+
 func cleanFactObject(value string) string {
 	value = strings.TrimSpace(value)
 	if idx := strings.LastIndexAny(value, ":;"); idx >= 0 {
@@ -308,6 +332,22 @@ func sequenceFactAnnotation(subject, steps string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("%s is %s", subject, steps), true
+}
+
+func negationFactAnnotation(object string) (string, bool) {
+	object = cleanFactValue(object)
+	if !searchFactObjectLooksAssertive(object) {
+		return "", false
+	}
+	return fmt.Sprintf("user never %s", object), true
+}
+
+func decisionFactAnnotation(decision string) (string, bool) {
+	decision = cleanFactValue(decision)
+	if !searchFactObjectLooksAssertive(decision) {
+		return "", false
+	}
+	return fmt.Sprintf("user decided to %s", decision), true
 }
 
 func storeConclusionFactAnnotations(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, conclusionID int64, facts []string) error {
