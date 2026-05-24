@@ -111,6 +111,22 @@ func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
 	}
 }
 
+func TestStatusCapabilityHealthChecks(t *testing.T) {
+	status := gormes.Status{Capabilities: []string{"context", "recall", "recall_compact"}}
+	if !status.SupportsCapability("recall_compact") {
+		t.Fatalf("SupportsCapability(recall_compact) = false, want true")
+	}
+	if status.SupportsCapability("missing_capability") {
+		t.Fatalf("SupportsCapability(missing_capability) = true, want false")
+	}
+	if err := status.RequireCapabilities("context", "recall_compact"); err != nil {
+		t.Fatalf("RequireCapabilities existing: %v", err)
+	}
+	if err := status.RequireCapabilities("context", "review", "handoff"); err == nil || !strings.Contains(err.Error(), "missing Gormes Goncho capabilities: review, handoff") {
+		t.Fatalf("RequireCapabilities missing error = %v", err)
+	}
+}
+
 func TestOpenRuntimeUsesDeploySafeDefaults(t *testing.T) {
 	ctx := context.Background()
 	runtime, err := gormes.Open(ctx, gormes.Config{DatabasePath: filepath.Join(t.TempDir(), "goncho.db")})

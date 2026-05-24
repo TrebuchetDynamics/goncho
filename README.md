@@ -375,7 +375,7 @@ goncho_review
 goncho_handoff
 ```
 
-`goncho_context` has public E2E coverage for generated primer behavior under `max_tokens`: it preserves the newest in-budget turns and excludes older turns outside the budget while returning a representation for the target peer. `goncho_recall` exposes the scored recall trace, compact diagnostics report, formatted diagnostics text, and deterministic replay contract through the same public tool seam; pass `compact: true` to keep diagnostics while omitting full trace/replay payloads. The Gormes adapter `Status()` includes a compact capability summary plus registered tool operation specs with JSON-friendly lowercase fields so hosts can log/discover schemas without reaching into tool instances.
+`goncho_context` has public E2E coverage for generated primer behavior under `max_tokens`: it preserves the newest in-budget turns and excludes older turns outside the budget while returning a representation for the target peer. `goncho_recall` exposes the scored recall trace, compact diagnostics report, formatted diagnostics text, and deterministic replay contract through the same public tool seam; pass `compact: true` to keep diagnostics while omitting full trace/replay payloads. The Gormes adapter `Status()` includes a compact capability summary plus registered tool operation specs with JSON-friendly lowercase fields so hosts can log/discover schemas without reaching into tool instances; use `Status().RequireCapabilities(...)` for startup health gates.
 
 For Navivox, the same boundary applies: the Android app should treat Goncho as the local memory kernel behind the phone-hosted Gormes runtime, not as a separate memory server users must operate.
 

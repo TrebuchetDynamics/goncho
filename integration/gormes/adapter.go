@@ -68,6 +68,34 @@ type StatusToolSpec struct {
 	AuditKind   string          `json:"audit_kind"`
 }
 
+func (s Status) SupportsCapability(capability string) bool {
+	capability = strings.TrimSpace(capability)
+	if capability == "" {
+		return false
+	}
+	for _, available := range s.Capabilities {
+		if available == capability {
+			return true
+		}
+	}
+	return false
+}
+
+func (s Status) RequireCapabilities(required ...string) error {
+	missing := make([]string, 0, len(required))
+	for _, capability := range required {
+		capability = strings.TrimSpace(capability)
+		if capability == "" || s.SupportsCapability(capability) {
+			continue
+		}
+		missing = append(missing, capability)
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("missing Gormes Goncho capabilities: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 func Open(ctx context.Context, cfg Config) (*Runtime, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err

@@ -67,7 +67,8 @@ Run this at process startup or deployment time:
 3. Construct `goncho.NewService` with explicit `WorkspaceID` and `ObserverPeerID`.
 4. Register only the tools the host wants the model to call.
 5. Emit a startup log line with workspace id, observer id, database path, registered tool names, `Status().Capabilities`, and JSON-friendly operation specs/schemas from `Status().ToolSpecs`.
-6. Run a context smoke call for a known test peer if the environment supports it.
+6. Call `Status().RequireCapabilities(...)` for host-required features such as `context`, `recall`, or `recall_compact`.
+7. Run a context smoke call for a known test peer if the environment supports it.
 
 ## Tool Exposure Policy
 
