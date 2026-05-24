@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
@@ -44,6 +45,20 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("import nested Mnemosyne BEAM results as paired outcomes: %v", err)
 	}
+	pairedRaw, err := os.ReadFile(pairedPath)
+	if err != nil {
+		t.Fatalf("read imported paired outcomes: %v", err)
+	}
+	var importedRow struct {
+		SourcePath   string `json:"source_path"`
+		SourceSHA256 string `json:"source_sha256"`
+	}
+	if err := json.Unmarshal(bytes.TrimSpace(pairedRaw), &importedRow); err != nil {
+		t.Fatalf("decode imported paired outcome row: %v", err)
+	}
+	if importedRow.SourcePath != resultsPath || importedRow.SourceSHA256 != testSHA256Hex([]byte(nestedResults)) {
+		t.Fatalf("imported paired outcome source = %+v, want nested result path and checksum", importedRow)
+	}
 	candidateRow := `{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-beam-real","qid":"q-source-beam-id","ability":"IE","question":"Who owns LedgerDB?","score":1,"correct":true}` + "\n"
 	file, err := os.OpenFile(pairedPath, os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -71,11 +86,13 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 		DroppedUnpairedCount int     `json:"dropped_unpaired_count"`
 		ScoreDelta           float64 `json:"score_delta"`
 		Rows                 []struct {
-			MatchKey     string `json:"match_key"`
-			Question     string `json:"question"`
-			BaselineQID  string `json:"baseline_qid"`
-			CandidateQID string `json:"candidate_qid"`
-			QID          string `json:"qid"`
+			MatchKey             string `json:"match_key"`
+			Question             string `json:"question"`
+			BaselineQID          string `json:"baseline_qid"`
+			CandidateQID         string `json:"candidate_qid"`
+			BaselineSourcePath   string `json:"baseline_source_path"`
+			BaselineSourceSHA256 string `json:"baseline_source_sha256"`
+			QID                  string `json:"qid"`
 		} `json:"rows"`
 	}
 	decodeTestJSONFile(t, jsonOut, &report)
@@ -85,6 +102,9 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 	row := report.Rows[0]
 	if row.MatchKey != "question" || row.Question != "Who owns LedgerDB?" || row.BaselineQID != "conv-beam-real:q0" || row.CandidateQID != "q-source-beam-id" || row.QID != "q-source-beam-id" {
 		t.Fatalf("question-key paired row = %+v, want visible qid mismatch matched by question", row)
+	}
+	if row.BaselineSourcePath != resultsPath || row.BaselineSourceSHA256 != testSHA256Hex([]byte(nestedResults)) {
+		t.Fatalf("question-key paired source = %+v, want baseline nested result provenance", row)
 	}
 }
 

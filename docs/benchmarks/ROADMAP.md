@@ -237,7 +237,9 @@ BEAM nested-judgment import delivered: `--beam-service-judgments-in` accepts nes
 
 BEAM Mnemosyne-qid import delivered: nested judged rows can match by exact source qid or by conversation/scale/ability/question when Mnemosyne emits `conversation_id:qN` qids that differ from Goncho's converted BEAM qids, while still reporting missing/unmatched rows through the strict completeness gate.
 
-BEAM result-to-paired import delivered: `--beam-paired-results-in` converts nested Mnemosyne-compatible `beam_e2e_results.json` files into append-only `paired_outcomes.jsonl` rows, and paired comparison now joins exact qids first then exact conversation/scale/ability/question so real Mnemosyne qids can compare against Goncho source qids without rewrite scripts.
+BEAM result-to-paired import delivered: `--beam-paired-results-in` converts nested Mnemosyne-compatible `beam_e2e_results.json` files into append-only `paired_outcomes.jsonl` rows with source path/checksum provenance, and paired comparison now joins exact qids first then exact conversation/scale/ability/question so real Mnemosyne qids can compare against Goncho source qids without rewrite scripts.
+
+BEAM paired-source provenance delivered: imported paired rows carry `source_path` and `source_sha256`, and comparison rows expose baseline/candidate source fields so superiority reports remain traceable to the exact nested result artifact.
 
 ## Framing
 

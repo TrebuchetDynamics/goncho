@@ -46,7 +46,7 @@ func appendBeamPairedOutcomesFromResults(cfg config) error {
 	if err := json.Unmarshal(raw, &results); err != nil {
 		return fmt.Errorf("goncho-bench: decode BEAM paired results: %w", err)
 	}
-	rows, err := beamPairedOutcomesFromResults(results, cfg.BeamPairedResultsConfigID)
+	rows, err := beamPairedOutcomesFromResults(results, cfg.BeamPairedResultsConfigID, inputPath, checksumBytesSHA256(raw))
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func appendBeamPairedOutcomesFromResults(cfg config) error {
 	return nil
 }
 
-func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfigID string) ([]beamServicePairedOutcome, error) {
+func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfigID, sourcePath, sourceSHA256 string) ([]beamServicePairedOutcome, error) {
 	configID := strings.TrimSpace(overrideConfigID)
 	if configID == "" {
 		configID = strings.TrimSpace(results.Metadata.ConfigID)
@@ -103,6 +103,8 @@ func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfig
 				QID:            qid,
 				Ability:        strings.ToUpper(strings.TrimSpace(result.Ability)),
 				Question:       strings.TrimSpace(result.Question),
+				SourcePath:     strings.TrimSpace(sourcePath),
+				SourceSHA256:   strings.TrimSpace(sourceSHA256),
 				Score:          score,
 				Correct:        score >= 0.5,
 			})

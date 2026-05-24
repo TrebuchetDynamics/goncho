@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: BEAM paired rows now retain nested result source checksums.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion -count=1` proves `--beam-paired-results-in` writes `source_path` and `source_sha256` on imported paired rows and carries them into comparison rows as baseline/candidate source provenance.
+  - Result: paired BEAM superiority reports can audit exactly which Mnemosyne `beam_e2e_results.json` artifact produced imported baseline rows, satisfying checksum controls without changing scores or matching.
+
 - 2026-05-24: `make bench-beam-smoke` now exercises nested Mnemosyne result import.
   - Evidence target: `go test ./cmd/goncho-bench -run 'Test(BenchBeamSmokeTargetImportsNestedMnemosyneResults|RunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts)' -count=1` proves the pinned smoke target imports a nested `beam_e2e_results.json` Mnemosyne baseline before appending Goncho outcomes, then paired comparison matches Mnemosyne `conversation_id:q0` to Goncho's source qid by exact question.
   - Result: Goncho's CI-safe BEAM smoke path now covers the same result-to-paired Adapter needed for real Mnemosyne result files, instead of relying on a pre-flattened baseline JSONL.

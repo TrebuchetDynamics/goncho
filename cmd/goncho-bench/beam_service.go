@@ -53,6 +53,8 @@ type beamServicePairedOutcome struct {
 	QID            string  `json:"qid"`
 	Ability        string  `json:"ability"`
 	Question       string  `json:"question,omitempty"`
+	SourcePath     string  `json:"source_path,omitempty"`
+	SourceSHA256   string  `json:"source_sha256,omitempty"`
 	Score          float64 `json:"score"`
 	Correct        bool    `json:"correct"`
 }

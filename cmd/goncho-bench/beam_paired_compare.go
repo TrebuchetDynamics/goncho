@@ -55,20 +55,24 @@ type beamPairedComparisonStats struct {
 }
 
 type beamPairedComparisonRow struct {
-	Scale            string  `json:"scale"`
-	ConversationID   string  `json:"conversation_id"`
-	QID              string  `json:"qid"`
-	BaselineQID      string  `json:"baseline_qid,omitempty"`
-	CandidateQID     string  `json:"candidate_qid,omitempty"`
-	MatchKey         string  `json:"match_key"`
-	Ability          string  `json:"ability"`
-	Question         string  `json:"question,omitempty"`
-	BaselineScore    float64 `json:"baseline_score"`
-	CandidateScore   float64 `json:"candidate_score"`
-	ScoreDelta       float64 `json:"score_delta"`
-	BaselineCorrect  bool    `json:"baseline_correct"`
-	CandidateCorrect bool    `json:"candidate_correct"`
-	Winner           string  `json:"winner"`
+	Scale                 string  `json:"scale"`
+	ConversationID        string  `json:"conversation_id"`
+	QID                   string  `json:"qid"`
+	BaselineQID           string  `json:"baseline_qid,omitempty"`
+	CandidateQID          string  `json:"candidate_qid,omitempty"`
+	BaselineSourcePath    string  `json:"baseline_source_path,omitempty"`
+	BaselineSourceSHA256  string  `json:"baseline_source_sha256,omitempty"`
+	CandidateSourcePath   string  `json:"candidate_source_path,omitempty"`
+	CandidateSourceSHA256 string  `json:"candidate_source_sha256,omitempty"`
+	MatchKey              string  `json:"match_key"`
+	Ability               string  `json:"ability"`
+	Question              string  `json:"question,omitempty"`
+	BaselineScore         float64 `json:"baseline_score"`
+	CandidateScore        float64 `json:"candidate_score"`
+	ScoreDelta            float64 `json:"score_delta"`
+	BaselineCorrect       bool    `json:"baseline_correct"`
+	CandidateCorrect      bool    `json:"candidate_correct"`
+	Winner                string  `json:"winner"`
 }
 
 type beamPairedComparisonKey struct {
@@ -159,20 +163,24 @@ func buildBeamPairedComparison(cfg config) (beamPairedComparisonReport, error) {
 		}
 		delta := roundSignedMetric(cand.Score - base.Score)
 		comparisonRows = append(comparisonRows, beamPairedComparisonRow{
-			Scale:            scale,
-			ConversationID:   conversationID,
-			QID:              qid,
-			BaselineQID:      strings.TrimSpace(base.QID),
-			CandidateQID:     strings.TrimSpace(cand.QID),
-			MatchKey:         matched.matchKey,
-			Ability:          ability,
-			Question:         question,
-			BaselineScore:    roundMetric(base.Score),
-			CandidateScore:   roundMetric(cand.Score),
-			ScoreDelta:       delta,
-			BaselineCorrect:  base.Correct,
-			CandidateCorrect: cand.Correct,
-			Winner:           beamPairedComparisonWinner(base.Score, cand.Score),
+			Scale:                 scale,
+			ConversationID:        conversationID,
+			QID:                   qid,
+			BaselineQID:           strings.TrimSpace(base.QID),
+			CandidateQID:          strings.TrimSpace(cand.QID),
+			BaselineSourcePath:    strings.TrimSpace(base.SourcePath),
+			BaselineSourceSHA256:  strings.TrimSpace(base.SourceSHA256),
+			CandidateSourcePath:   strings.TrimSpace(cand.SourcePath),
+			CandidateSourceSHA256: strings.TrimSpace(cand.SourceSHA256),
+			MatchKey:              matched.matchKey,
+			Ability:               ability,
+			Question:              question,
+			BaselineScore:         roundMetric(base.Score),
+			CandidateScore:        roundMetric(cand.Score),
+			ScoreDelta:            delta,
+			BaselineCorrect:       base.Correct,
+			CandidateCorrect:      cand.Correct,
+			Winner:                beamPairedComparisonWinner(base.Score, cand.Score),
 		})
 	}
 	bootstrapSamples := cfg.BeamPairedCompareBootstrapSamples
