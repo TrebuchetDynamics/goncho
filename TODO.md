@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA fact-intent search ranking has its first public Goncho slice.
+  - Evidence target: `go test . -run 'Test(SearchFactIntentScoresOwnerAnswerButNotLexicalEcho|ServiceSearchFactIntentRanksAnswerOverLexicalEcho)' -count=1` proves a conservative owner-fact intent scorer recognizes an answer-shaped fact, rejects a question-shaped lexical echo, and makes `Service.Search` rank the answer fact first.
+  - Result: public search now uses a MEMORIA-style structured fact signal without changing the Search API, adding LLM extraction, persisting triples, using answer hints, or regenerating benchmark artifacts.
+
 - 2026-05-23: Mnemosyne MEMORIA fact-voice scoring has its first Goncho recall slice.
   - Evidence target: `go test . -run TestRecallFactVoiceRanksStructuredEvidence -count=1` proves structured `fact` evidence contributes to recall scoring, outranks a question-shaped lexical decoy, and surfaces `fact_score`/`fact=` diagnostics in the recall trace/report.
   - Result: Goncho can ingest a Mnemosyne-style structured fact voice through its existing evidence seam without adding LLM extraction, answer hints, benchmark gold IDs, or frozen-artifact changes.
