@@ -31,6 +31,104 @@ func TestRecallProjectorContextIncludesGraphRelationPathCitation(t *testing.T) {
 	}
 }
 
+func TestCognitiveMapSuppressesLowActivationGraphBranches(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 30, 0, 0, time.UTC)
+	base := staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-auth-service",
+			SourceType: "conclusion",
+			Content:    "The authentication service handles login sessions and JWT validation.",
+			ScopeID:    "team",
+			CreatedAt:  now.Add(-2 * time.Hour),
+			Importance: 0.80,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.80, Note: "matched service owner query"}},
+		},
+		{
+			MemoryID:   "mem-billing-service",
+			SourceType: "conclusion",
+			Content:    "The billing service handles invoices and renewal notices.",
+			ScopeID:    "team",
+			CreatedAt:  now.Add(-2 * time.Hour),
+			Importance: 0.80,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.35, Note: "generic service match"}},
+		},
+	}}
+	index := GraphExpansionIndex{
+		Memories: map[string]RecallCandidate{
+			"mem-auth-owner": {
+				MemoryID:   "mem-auth-owner",
+				SourceType: "conclusion",
+				Content:    "Mira owns the authentication service.",
+				ScopeID:    "team",
+				CreatedAt:  now.Add(-90 * time.Minute),
+				Importance: 0.90,
+			},
+			"mem-billing-owner": {
+				MemoryID:   "mem-billing-owner",
+				SourceType: "conclusion",
+				Content:    "Noor owns the billing service.",
+				ScopeID:    "team",
+				CreatedAt:  now.Add(-90 * time.Minute),
+				Importance: 0.90,
+			},
+		},
+		Relations: []GraphRelation{
+			{
+				FromMemoryID:    "mem-auth-service",
+				ToMemoryID:      "mem-auth-owner",
+				Relation:        "owned_by",
+				QueryTerms:      []string{"owner"},
+				ActivationTerms: []string{"authentication"},
+				EvidenceID:      "edge-auth-owned-by-mira",
+				Score:           0.95,
+			},
+			{
+				FromMemoryID:    "mem-billing-service",
+				ToMemoryID:      "mem-billing-owner",
+				Relation:        "owned_by",
+				QueryTerms:      []string{"owner"},
+				ActivationTerms: []string{"billing"},
+				EvidenceID:      "edge-billing-owned-by-noor",
+				Score:           0.95,
+			},
+		},
+	}
+	engine := newRecallPipelineEngine(
+		newGraphExpandingRecallGenerator(base, index),
+		recallPipelineOptions{
+			pipelineVersion: "cognitive-map-test-v1",
+			scoringConfig: RecallScoringConfig{
+				Version:     "cognitive-map-test-v1",
+				Weights:     map[string]float64{"keyword": 0.20, "graph": 0.70, "scope": 0.10},
+				RRFK:        60,
+				MMRLambda:   0.70,
+				TokenBudget: 120,
+			},
+			now: func() time.Time { return now },
+		},
+	)
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "Who is the owner for the authentication service?",
+		ScopeID:     "team",
+		Limit:       3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !traceHasCandidate(trace, "mem-auth-owner") {
+		t.Fatalf("candidate IDs = %v, want activated auth graph owner", recallCandidateIDs(trace))
+	}
+	if traceHasCandidate(trace, "mem-billing-owner") {
+		t.Fatalf("candidate IDs = %v, want low-activation billing graph branch suppressed", recallCandidateIDs(trace))
+	}
+	if slices.Contains(selectedRecallIDs(trace), "mem-billing-owner") {
+		t.Fatalf("selected IDs = %v, want low-activation billing graph branch suppressed", selectedRecallIDs(trace))
+	}
+}
+
 func TestGraphRecallConnectsOwnerThroughServiceRelation(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := staticRecallGenerator{candidates: []RecallCandidate{
@@ -110,6 +208,23 @@ func TestGraphRecallConnectsOwnerThroughServiceRelation(t *testing.T) {
 	if !candidateHasGraphNote(owner, "mem-auth-service -> owned_by -> mem-auth-owner") {
 		t.Fatalf("owner provenance = %+v, want relation path provenance", owner.Provenance)
 	}
+}
+
+func traceHasCandidate(trace RecallTrace, memoryID string) bool {
+	for _, item := range trace.Candidates {
+		if item.Candidate.MemoryID == memoryID {
+			return true
+		}
+	}
+	return false
+}
+
+func recallCandidateIDs(trace RecallTrace) []string {
+	ids := make([]string, 0, len(trace.Candidates))
+	for _, item := range trace.Candidates {
+		ids = append(ids, item.Candidate.MemoryID)
+	}
+	return ids
 }
 
 func selectedRecallCandidate(trace RecallTrace, memoryID string) (RecallCandidate, bool) {

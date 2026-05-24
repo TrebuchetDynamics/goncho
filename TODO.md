@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: Cognitive-map graph expansion now gates low-activation branches.
+  - Evidence target: `go test . -run TestCognitiveMapSuppressesLowActivationGraphBranches -count=1` proves graph relations can carry `ActivationTerms` so an owner query for authentication expands the authentication owner but suppresses an unrelated billing owner branch.
+  - Result: graph-assisted recall can stay conservative around wrong-branch retrieval while preserving stable-ID/no-answer-hint benchmark discipline.
+
 - 2026-05-24: Graph relation-path recall projection now reaches context orientation text.
   - Evidence target: `go test . -run TestRecallProjectorContextIncludesGraphRelationPathCitation -count=1` proves `RecallProjector.ProjectContext` preserves selected graph provenance notes as relation-path citations in the projected orientation pack.
   - Result: graph-assisted recall is explainable through context projection, not only raw `RecallTrace` inspection, while preserving stable-ID/no-answer-hint benchmark discipline.

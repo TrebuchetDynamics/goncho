@@ -11,12 +11,13 @@ type GraphExpansionIndex struct {
 }
 
 type GraphRelation struct {
-	FromMemoryID string
-	ToMemoryID   string
-	Relation     string
-	QueryTerms   []string
-	EvidenceID   string
-	Score        float64
+	FromMemoryID    string
+	ToMemoryID      string
+	Relation        string
+	QueryTerms      []string
+	ActivationTerms []string
+	EvidenceID      string
+	Score           float64
 }
 
 type graphExpandingRecallGenerator struct {
@@ -43,7 +44,7 @@ func (g graphExpandingRecallGenerator) Generate(ctx context.Context, q RecallQue
 		seen[candidate.MemoryID] = true
 	}
 	for _, relation := range g.index.Relations {
-		if !seen[relation.FromMemoryID] || seen[relation.ToMemoryID] || !graphRelationMatchesQuery(q.Query, relation.QueryTerms) {
+		if !seen[relation.FromMemoryID] || seen[relation.ToMemoryID] || !graphRelationMatchesQuery(q.Query, relation.QueryTerms) || !graphRelationMatchesQuery(q.Query, relation.ActivationTerms) {
 			continue
 		}
 		target, ok := g.index.Memories[relation.ToMemoryID]
