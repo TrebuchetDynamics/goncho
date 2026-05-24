@@ -70,6 +70,101 @@ func TestArchitectureLayoutScopedKeyTestsLiveWithModule(t *testing.T) {
 	}
 }
 
+func TestArchitectureLayoutHostIntegrationImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "hostintegration", "integration.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("host-integration implementation must live at %s: %v", implPath, err)
+	}
+
+	facadePath := filepath.Join(root, "host_integration.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), facadePath, nil, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", facadePath, err)
+	}
+	forbiddenImplementationImports := map[string]struct{}{
+		"fmt":     {},
+		"strings": {},
+	}
+	for _, imp := range parsed.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+		}
+		if _, forbidden := forbiddenImplementationImports[path]; forbidden {
+			t.Fatalf("host_integration.go imports implementation package %q; keep root host_integration.go as a public facade and put implementation behind internal/hostintegration", path)
+		}
+	}
+}
+
+func TestArchitectureLayoutHostIntegrationTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "hostintegration", "integration_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("host-integration behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "host_integration_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestHostIntegrationPublicFacade") {
+			t.Fatalf("%s keeps %s in the root package; move pure host-integration behavior tests to internal/hostintegration", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
+func TestArchitectureLayoutSillyTavernIntegrationLivesWithHostIntegrationModule(t *testing.T) {
+	root := repoRoot(t)
+
+	modulePath := filepath.Join(root, "internal", "hostintegration", "sillytavern.go")
+	if _, err := os.Stat(modulePath); err != nil {
+		t.Fatalf("SillyTavern host-integration implementation must live at %s: %v", modulePath, err)
+	}
+	moduleTestPath := filepath.Join(root, "internal", "hostintegration", "sillytavern_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("SillyTavern host-integration behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	facadePath := filepath.Join(root, "sillytavern_mapping.go")
+	parsedFacade, err := parser.ParseFile(token.NewFileSet(), facadePath, nil, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", facadePath, err)
+	}
+	for _, imp := range parsedFacade.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+		}
+		if path == "strings" {
+			t.Fatalf("sillytavern_mapping.go imports implementation package %q; keep root sillytavern_mapping.go as a public facade and put implementation behind internal/hostintegration", path)
+		}
+	}
+
+	rootTestPath := filepath.Join(root, "sillytavern_mapping_test.go")
+	parsedTests, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsedTests.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestSillyTavernPublicFacade") {
+			t.Fatalf("%s keeps %s in the root package; move pure SillyTavern host-integration behavior tests to internal/hostintegration", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
 func TestArchitectureLayoutSearchFilterImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 
