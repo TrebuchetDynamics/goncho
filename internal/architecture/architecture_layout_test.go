@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -70,6 +71,30 @@ func TestArchitectureLayoutSearchFilterImplementationLivesBehindInternalModule(t
 		}
 		if _, forbidden := forbiddenImplementationImports[path]; forbidden {
 			t.Fatalf("filter.go imports implementation package %q; keep root filter.go as a package facade and put implementation behind internal/searchfilter", path)
+		}
+	}
+}
+
+func TestArchitectureLayoutSearchFilterTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "searchfilter", "filter_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("search-filter grammar/compiler tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "filter_grammar_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestService_Search") {
+			t.Fatalf("%s keeps %s in the root package; move pure search-filter module tests to internal/searchfilter", rootTestPath, fn.Name.Name)
 		}
 	}
 }
