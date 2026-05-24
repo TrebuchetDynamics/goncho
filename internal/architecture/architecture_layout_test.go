@@ -187,6 +187,50 @@ func TestArchitectureLayoutReviewLogTestsLiveWithModule(t *testing.T) {
 	}
 }
 
+func TestArchitectureLayoutQueueStatusImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "queuestatus", "status.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("queue status implementation must live at %s: %v", implPath, err)
+	}
+
+	facadePath := filepath.Join(root, "diagnostics.go")
+	content, err := os.ReadFile(facadePath)
+	if err != nil {
+		t.Fatalf("ReadFile(%s): %v", facadePath, err)
+	}
+	for _, token := range []string{"FROM goncho_dreams", "GROUP BY status", "func readDreamQueueStatus", "func readDreamWorkUnitCounts", "func readDreamStatusEvidence", "func scanDreamIntent", "func effectiveQueueStatusConfig"} {
+		if bytes.Contains(content, []byte(token)) {
+			t.Fatalf("%s still contains queue status implementation token %q; move it behind internal/queuestatus", facadePath, token)
+		}
+	}
+}
+
+func TestArchitectureLayoutQueueStatusTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "queuestatus", "status_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("queue status behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "queue_status_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestQueueStatusPublicFacade") {
+			t.Fatalf("%s keeps %s in the root package; move pure queue status behavior tests to internal/queuestatus", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
 func TestArchitectureLayoutDreamSchedulerImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 

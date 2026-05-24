@@ -4,11 +4,11 @@ Goncho is the local memory/service substrate extracted from Gormes. It owns the 
 
 ## Responsibility
 
-Expose a Go-native memory facade for agents and hosts: profile cards, conclusions, session context, recall traces, local memory tools, dynamic agent/webhook helpers, observation/audit capture, review-item governance, skill-learning proposal governance, and local dream work-intent scheduling.
+Expose a Go-native memory facade for agents and hosts: profile cards, conclusions, session context, recall traces, local memory tools, dynamic agent/webhook helpers, observation/audit capture, review-item governance, skill-learning proposal governance, local dream work-intent scheduling, and queue-status diagnostics.
 
 ## Design
 
-Core APIs are package-level functions plus thin `Service` wrappers. `RunMigrations`, `Observe`, `ListObservations`, `AuditTrail`, `CreateReviewItem`, `ListReviewItems`, `ResolveReviewItem`, `SubmitSkillLearningProposal`, `GetSkillLearningProposal`, `ListSkillLearningProposals`, and `ScheduleDream` create a claims/evidence/review/learning-governance/work-intent foundation without feeding raw observations into recall yet. `internal/observationlog` owns observation/audit storage; `internal/reviewlog` owns review-item storage and review-required context evidence; `internal/skillproposals` owns skill-learning proposal storage and review state transitions; `internal/dreamscheduler` owns dream scheduler eligibility, dedupe, cancellation, and work-intent evidence.
+Core APIs are package-level functions plus thin `Service` wrappers. `RunMigrations`, `Observe`, `ListObservations`, `AuditTrail`, `CreateReviewItem`, `ListReviewItems`, `ResolveReviewItem`, `SubmitSkillLearningProposal`, `GetSkillLearningProposal`, `ListSkillLearningProposals`, `ScheduleDream`, and `ReadQueueStatus` create a claims/evidence/review/learning-governance/work-intent/diagnostics foundation without feeding raw observations into recall yet. `internal/observationlog` owns observation/audit storage; `internal/reviewlog` owns review-item storage and review-required context evidence; `internal/skillproposals` owns skill-learning proposal storage and review state transitions; `internal/dreamscheduler` owns dream scheduler eligibility, dedupe, cancellation, and work-intent evidence; `internal/queuestatus` owns queue-status read-model counts and diagnostics evidence.
 
 ## Flow
 

@@ -67,81 +67,6 @@ func TestGonchoDreamContextReportsDisabledAndUnavailableEvidence(t *testing.T) {
 	}
 }
 
-func TestGonchoDreamQueueStatusReportsDreamEvidenceWithoutWaitingForEmptyQueue(t *testing.T) {
-	ctx := context.Background()
-	now := time.Date(2026, 4, 25, 12, 0, 0, 0, time.UTC)
-	svc, cleanup := newDreamTestService(t, Config{DreamEnabled: true})
-	defer cleanup()
-
-	disabled, err := ReadQueueStatus(ctx, svc.db, QueueStatusConfig{DreamEnabled: false, Now: now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if disabled.Dream.Status != "dream_disabled" || !dreamEvidenceHasCode(disabled.Dream.Evidence, "dream_disabled") {
-		t.Fatalf("disabled queue status = %+v, want dream_disabled evidence", disabled.Dream)
-	}
-
-	insertDreamIntentRow(t, svc.db, dreamIntentSeed{
-		WorkspaceID:    svc.workspaceID,
-		ObserverPeerID: svc.observer,
-		ObservedPeerID: "user-pending",
-		Status:         "pending",
-		NewConclusions: 50,
-		CreatedAt:      now.Add(-time.Hour).Unix(),
-		UpdatedAt:      now.Add(-time.Hour).Unix(),
-	})
-	insertDreamIntentRow(t, svc.db, dreamIntentSeed{
-		WorkspaceID:    svc.workspaceID,
-		ObserverPeerID: svc.observer,
-		ObservedPeerID: "user-running",
-		Status:         "in_progress",
-		NewConclusions: 50,
-		CreatedAt:      now.Add(-time.Hour).Unix(),
-		UpdatedAt:      now.Add(-time.Hour).Unix(),
-	})
-	insertDreamIntentRow(t, svc.db, dreamIntentSeed{
-		WorkspaceID:      svc.workspaceID,
-		ObserverPeerID:   svc.observer,
-		ObservedPeerID:   "user-cooldown",
-		Status:           "completed",
-		NewConclusions:   50,
-		CompletedAt:      now.Add(-2 * time.Hour).Unix(),
-		CooldownUntil:    now.Add(6 * time.Hour).Unix(),
-		LastConclusionID: 50,
-		CreatedAt:        now.Add(-2 * time.Hour).Unix(),
-		UpdatedAt:        now.Add(-2 * time.Hour).Unix(),
-	})
-
-	status, err := ReadQueueStatus(ctx, svc.db, QueueStatusConfig{
-		DreamEnabled:     true,
-		WorkspaceID:      svc.workspaceID,
-		ObserverPeerID:   svc.observer,
-		Now:              now,
-		DreamIdleTimeout: time.Hour,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	dreamCounts := status.WorkUnits["dream"]
-	if dreamCounts.PendingWorkUnits != 1 || dreamCounts.InProgressWorkUnits != 1 || dreamCounts.CompletedWorkUnits != 1 || dreamCounts.TotalWorkUnits != 3 {
-		t.Fatalf("dream work counts = %+v, want 1 pending, 1 in-progress, 1 completed, 3 total", dreamCounts)
-	}
-	for _, code := range []string{"dream_pending", "dream_in_progress", "dream_cooldown"} {
-		if !dreamEvidenceHasCode(status.Dream.Evidence, code) {
-			t.Fatalf("dream evidence missing %s: %+v", code, status.Dream.Evidence)
-		}
-	}
-
-	dropDreamTable(t, svc.db)
-	unavailable, err := ReadQueueStatus(ctx, svc.db, QueueStatusConfig{DreamEnabled: true, Now: now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if unavailable.Dream.Status != "dream_unavailable" || !dreamEvidenceHasCode(unavailable.Dream.Evidence, "dream_unavailable") {
-		t.Fatalf("unavailable queue status = %+v, want dream_unavailable evidence", unavailable.Dream)
-	}
-}
-
 func newDreamTestService(t *testing.T, cfg Config) (*Service, func()) {
 	t.Helper()
 
@@ -183,67 +108,6 @@ func seedDreamConclusions(t *testing.T, db *sql.DB, workspaceID, observer, peer 
 	}
 }
 
-type dreamIntentSeed struct {
-	WorkspaceID      string
-	ObserverPeerID   string
-	ObservedPeerID   string
-	Status           string
-	NewConclusions   int
-	LastConclusionID int64
-	CompletedAt      int64
-	CooldownUntil    int64
-	CreatedAt        int64
-	UpdatedAt        int64
-}
-
-func insertDreamIntentRow(t *testing.T, db *sql.DB, row dreamIntentSeed) int64 {
-	t.Helper()
-	if row.Status == "" {
-		row.Status = "pending"
-	}
-	if row.CreatedAt == 0 {
-		row.CreatedAt = time.Now().Unix()
-	}
-	if row.UpdatedAt == 0 {
-		row.UpdatedAt = row.CreatedAt
-	}
-	if row.NewConclusions == 0 {
-		row.NewConclusions = 50
-	}
-	workUnitKey := "dream:consolidation:" + row.WorkspaceID + ":" + row.ObserverPeerID + ":" + row.ObservedPeerID
-	res, err := db.Exec(`
-		INSERT INTO goncho_dreams(
-			workspace_id, observer_peer_id, observed_peer_id, work_unit_key, dream_type,
-			status, manual, reason, new_conclusions, min_conclusions, last_conclusion_id,
-			scheduled_for, completed_at, cooldown_until, idle_until, last_activity_at,
-			created_at, updated_at
-		)
-		VALUES(?, ?, ?, ?, 'consolidation', ?, 0, 'test seed', ?, 50, ?, ?, NULLIF(?, 0), ?, 0, ?, ?, ?)
-	`,
-		row.WorkspaceID,
-		row.ObserverPeerID,
-		row.ObservedPeerID,
-		workUnitKey,
-		row.Status,
-		row.NewConclusions,
-		row.LastConclusionID,
-		row.CreatedAt,
-		row.CompletedAt,
-		row.CooldownUntil,
-		row.CreatedAt,
-		row.CreatedAt,
-		row.UpdatedAt,
-	)
-	if err != nil {
-		t.Fatalf("insert dream intent: %v", err)
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		t.Fatalf("LastInsertId: %v", err)
-	}
-	return id
-}
-
 func countDreamsByStatus(t *testing.T, db *sql.DB, peer, status string) int {
 	t.Helper()
 	var got int
@@ -272,11 +136,5 @@ func dropDreamTable(t *testing.T, db *sql.DB) {
 func contextHasCapability(items []ContextUnavailableEvidence, capability string) bool {
 	return slices.ContainsFunc(items, func(item ContextUnavailableEvidence) bool {
 		return item.Capability == capability
-	})
-}
-
-func dreamEvidenceHasCode(items []DreamStatusEvidence, code string) bool {
-	return slices.ContainsFunc(items, func(item DreamStatusEvidence) bool {
-		return item.Code == code
 	})
 }

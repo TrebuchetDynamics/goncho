@@ -3,13 +3,11 @@ package goncho
 import (
 	"context"
 	"encoding/json"
-	"reflect"
-	"slices"
 	"strings"
 	"testing"
 )
 
-func TestContractQueueWorkUnitStatusJSONShapeIncludesSessionDetails(t *testing.T) {
+func TestQueueStatusPublicFacadeWorkUnitStatusJSONShapeIncludesSessionDetails(t *testing.T) {
 	raw, err := json.Marshal(QueueWorkUnitStatus{
 		CompletedWorkUnits:  2,
 		InProgressWorkUnits: 1,
@@ -40,62 +38,21 @@ func TestContractQueueWorkUnitStatusJSONShapeIncludesSessionDetails(t *testing.T
 	}
 }
 
-func TestReadQueueStatusZeroStateIsDeterministicObservabilityOnly(t *testing.T) {
+func TestQueueStatusPublicFacadeReadQueueStatusUsesGonchoDefaults(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
 
-	first, err := ReadQueueStatus(context.Background(), svc.db)
+	got, err := ReadQueueStatus(context.Background(), svc.db)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := ReadQueueStatus(context.Background(), svc.db)
-	if err != nil {
-		t.Fatal(err)
+	if got.Status != "degraded" || !got.Degraded || !got.ObservabilityOnly {
+		t.Fatalf("ReadQueueStatus = %+v, want degraded observability-only zero state", got)
 	}
-
-	if !reflect.DeepEqual(first, second) {
-		t.Fatalf("ReadQueueStatus returned nondeterministic zero-state:\nfirst=%+v\nsecond=%+v", first, second)
+	if got.Dream.Status != "dream_disabled" || len(got.Dream.Evidence) != 1 {
+		t.Fatalf("Dream status = %+v, want disabled evidence", got.Dream)
 	}
-	if first.Status != "degraded" || !first.Degraded {
-		t.Fatalf("status = %q degraded=%t, want degraded zero-state", first.Status, first.Degraded)
-	}
-	if !first.ObservabilityOnly {
-		t.Fatal("ObservabilityOnly = false, want true")
-	}
-	if !strings.Contains(first.Message, "zero tracked work units") {
-		t.Fatalf("Message = %q, want zero tracked work units evidence", first.Message)
-	}
-	if !strings.Contains(first.Message, "observability") || !strings.Contains(first.Message, "do not wait") {
-		t.Fatalf("Message = %q, want explicit observability-not-synchronization warning", first.Message)
-	}
-
-	for _, taskType := range QueueTaskTypes {
-		counts, ok := first.WorkUnits[taskType]
-		if !ok {
-			t.Fatalf("WorkUnits missing task type %q: %#v", taskType, first.WorkUnits)
-		}
-		if counts.CompletedWorkUnits != 0 || counts.InProgressWorkUnits != 0 || counts.PendingWorkUnits != 0 || counts.TotalWorkUnits != 0 {
-			t.Fatalf("%s counts = %+v, want deterministic zero-state", taskType, counts)
-		}
-		if len(counts.Sessions) != 0 {
-			t.Fatalf("%s sessions = %+v, want no per-session details before a Goncho task queue exists", taskType, counts.Sessions)
-		}
-	}
-}
-
-func TestQueueStatusOnlyReportsHonchoReasoningWorkTypes(t *testing.T) {
-	want := []string{"representation", "summary", "dream"}
-	if !slices.Equal(QueueTaskTypes, want) {
-		t.Fatalf("QueueTaskTypes = %#v, want %#v", QueueTaskTypes, want)
-	}
-
-	status := ZeroQueueStatus()
-	if len(status.WorkUnits) != len(want) {
-		t.Fatalf("WorkUnits len = %d, want only %d Honcho reasoning task types: %#v", len(status.WorkUnits), len(want), status.WorkUnits)
-	}
-	for _, internalTask := range []string{"webhook", "deletion", "vector_reconciliation", "reconciler"} {
-		if _, ok := status.WorkUnits[internalTask]; ok {
-			t.Fatalf("WorkUnits included internal infrastructure task %q: %#v", internalTask, status.WorkUnits)
-		}
+	if got.Dream.Evidence[0].WorkspaceID != DefaultWorkspaceID || got.Dream.Evidence[0].ObserverPeerID != DefaultObserverPeerID {
+		t.Fatalf("Dream evidence defaults = %+v, want workspace/observer defaults", got.Dream.Evidence[0])
 	}
 }
