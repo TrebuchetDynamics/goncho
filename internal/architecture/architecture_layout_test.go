@@ -70,6 +70,86 @@ func TestArchitectureLayoutScopedKeyTestsLiveWithModule(t *testing.T) {
 	}
 }
 
+func TestArchitectureLayoutPluginRuntimeImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	for _, moduleFile := range []string{"config.go", "write.go"} {
+		implPath := filepath.Join(root, "internal", "pluginruntime", moduleFile)
+		if _, err := os.Stat(implPath); err != nil {
+			t.Fatalf("plugin runtime implementation must live at %s: %v", implPath, err)
+		}
+	}
+
+	for _, facade := range []struct {
+		path      string
+		forbidden map[string]struct{}
+	}{
+		{
+			path: filepath.Join(root, "session_config.go"),
+			forbidden: map[string]struct{}{
+				"crypto/sha256": {},
+				"encoding/hex":  {},
+				"fmt":           {},
+				"net/url":       {},
+				"path/filepath": {},
+				"regexp":        {},
+				"strconv":       {},
+				"strings":       {},
+			},
+		},
+		{
+			path: filepath.Join(root, "async_write.go"),
+			forbidden: map[string]struct{}{
+				"strconv": {},
+				"strings": {},
+				"sync":    {},
+			},
+		},
+	} {
+		parsed, err := parser.ParseFile(token.NewFileSet(), facade.path, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("ParseFile(%s): %v", facade.path, err)
+		}
+		for _, imp := range parsed.Imports {
+			path, err := strconv.Unquote(imp.Path.Value)
+			if err != nil {
+				t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+			}
+			if _, forbidden := facade.forbidden[path]; forbidden {
+				t.Fatalf("%s imports implementation package %q; keep root plugin runtime files as public facades and put implementation behind internal/pluginruntime", facade.path, path)
+			}
+		}
+	}
+}
+
+func TestArchitectureLayoutPluginRuntimeTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	for _, moduleTestFile := range []string{"config_test.go", "write_test.go"} {
+		moduleTestPath := filepath.Join(root, "internal", "pluginruntime", moduleTestFile)
+		if _, err := os.Stat(moduleTestPath); err != nil {
+			t.Fatalf("plugin runtime behavior tests must live at %s: %v", moduleTestPath, err)
+		}
+	}
+
+	for _, rootTestFile := range []string{"plugin_session_config_test.go", "async_write_test.go"} {
+		rootTestPath := filepath.Join(root, rootTestFile)
+		parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+		if err != nil {
+			t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+		}
+		for _, decl := range parsed.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+				continue
+			}
+			if !strings.HasPrefix(fn.Name.Name, "TestPluginRuntimePublicFacade") {
+				t.Fatalf("%s keeps %s in the root package; move pure plugin runtime behavior tests to internal/pluginruntime", rootTestPath, fn.Name.Name)
+			}
+		}
+	}
+}
+
 func TestArchitectureLayoutHostIntegrationImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 
