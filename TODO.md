@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-preference and relation-to-instruction recall through durable annotations.
+  - Evidence target: `go test . -run 'TestRecallExpands(Preference|Instruction)ThroughDurableKGRelation' -count=1` proves `Service.Conclude` derives durable relation facts plus preference/instruction annotations, then recall selects the target memory for BEAM-style `storage used by Billing API` preference/rule questions with graph provenance citing both annotation rows.
+  - Result: annotation-backed graph recall now covers multi-hop PF/IF paths without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
+
 - 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-location recall through durable annotations.
   - Evidence target: `go test . -run TestRecallExpandsLocationThroughDurableKGRelation -count=1` proves `Service.Conclude` derives durable `Billing API uses VectorDB` and `VectorDB is located at us-east-1` facts, then recall selects the location memory for `Where is the storage used by Billing API?` with graph provenance citing both annotation rows.
   - Result: annotation-backed graph recall now covers a BEAM-style dependency/location path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.

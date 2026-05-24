@@ -428,6 +428,170 @@ func TestRecallExpandsLocationThroughDurableKGRelation(t *testing.T) {
 	}
 }
 
+func TestRecallExpandsPreferenceThroughDurableKGRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	uses, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Billing API uses VectorDB.",
+		SessionKey: "sess-annotation-graph-preference",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	preference, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: VectorDB's indentation preference is tabs.",
+		SessionKey: "sess-annotation-graph-preference",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "What indentation does the storage used by Billing API prefer? indentation storage used Billing API prefer indentation storage used Billing API. This checklist repeats the retrieval words but names no preference value.",
+		SessionKey: "sess-annotation-graph-preference",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?)
+	`, decoy.ID, uses.ID, preference.ID, decoy.ID, uses.ID, preference.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	usesFactID := lookupAnnotationID(t, svc, uses.ID, "Billing API uses VectorDB")
+	preferenceFactID := lookupAnnotationID(t, svc, preference.ID, "VectorDB prefers tabs for indentation")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-preference-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-preference-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 200,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "What indentation does the storage used by Billing API prefer?",
+		SessionKey:  "sess-annotation-graph-preference",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	preferenceMemoryID := strconv.FormatInt(preference.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, preferenceMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded preference %s", selected, trace.Candidates, trace.Rejected, preferenceMemoryID)
+	}
+	preferenceCandidate, ok := selectedRecallCandidate(trace, preferenceMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want preference candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, preferenceFactID)
+	if !candidateHasGraphProvenance(preferenceCandidate, evidenceID) {
+		t.Fatalf("preference provenance = %+v, want graph evidence %s", preferenceCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> uses -> VectorDB -> preference -> %d", uses.ID, preference.ID)
+	if !candidateHasGraphNote(preferenceCandidate, wantNote) {
+		t.Fatalf("preference provenance = %+v, want relation path %q", preferenceCandidate.Provenance, wantNote)
+	}
+}
+
+func TestRecallExpandsInstructionThroughDurableKGRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	uses, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Billing API uses Exporter.",
+		SessionKey: "sess-annotation-graph-instruction",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	instruction, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Exporter's rule is always encrypt snapshots.",
+		SessionKey: "sess-annotation-graph-instruction",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "What rule did the storage used by Billing API give about snapshots? rule storage used Billing API snapshots rule storage used Billing API snapshots. This checklist repeats the retrieval words but names no rule.",
+		SessionKey: "sess-annotation-graph-instruction",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?)
+	`, decoy.ID, uses.ID, instruction.ID, decoy.ID, uses.ID, instruction.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	usesFactID := lookupAnnotationID(t, svc, uses.ID, "Billing API uses Exporter")
+	instructionFactID := lookupAnnotationID(t, svc, instruction.ID, "Exporter instructed always encrypt snapshots")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-instruction-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-instruction-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 200,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "What rule did the storage used by Billing API give about snapshots?",
+		SessionKey:  "sess-annotation-graph-instruction",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	instructionMemoryID := strconv.FormatInt(instruction.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, instructionMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded instruction %s", selected, trace.Candidates, trace.Rejected, instructionMemoryID)
+	}
+	instructionCandidate, ok := selectedRecallCandidate(trace, instructionMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want instruction candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, instructionFactID)
+	if !candidateHasGraphProvenance(instructionCandidate, evidenceID) {
+		t.Fatalf("instruction provenance = %+v, want graph evidence %s", instructionCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> uses -> Exporter -> instruction -> %d", uses.ID, instruction.ID)
+	if !candidateHasGraphNote(instructionCandidate, wantNote) {
+		t.Fatalf("instruction provenance = %+v, want relation path %q", instructionCandidate.Provenance, wantNote)
+	}
+}
+
 func lookupAnnotationID(t *testing.T, svc *Service, memoryID int64, value string) int64 {
 	t.Helper()
 	var id int64
