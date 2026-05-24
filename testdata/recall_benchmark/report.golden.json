@@ -34,7 +34,7 @@
         "mem-auth",
         "mem-db"
       ],
-      "selected_context": "- JWT auth uses jose middleware.\n- Database performance work found an N+1 query.",
+      "selected_context": "- JWT auth uses jose middleware.\n  relation path: AUTH_USES edge\n- Database performance work found an N+1 query.\n  relation path: database performance edge",
       "candidate_evidence_kinds": [
         "graph",
         "keyword",

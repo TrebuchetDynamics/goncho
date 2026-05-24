@@ -3,9 +3,33 @@ package goncho
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestRecallProjectorContextIncludesGraphRelationPathCitation(t *testing.T) {
+	trace := RecallTrace{
+		Query: RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "owner for authentication service"},
+		Selected: []ScoredRecallCandidate{{
+			Candidate: RecallCandidate{
+				MemoryID:   "mem-auth-owner",
+				SourceType: "conclusion",
+				Content:    "Mira owns component A-17.",
+				Provenance: []EvidenceItem{{Kind: "graph", ID: "edge-auth-owned-by-mira", Note: "mem-auth-service -> owned_by -> mem-auth-owner"}},
+			},
+			Score: RecallScore{FinalScore: 0.98},
+		}},
+	}
+
+	context := (&RecallProjector{}).ProjectContext(trace)
+	if !strings.Contains(context.Representation, "Mira owns component A-17.") {
+		t.Fatalf("context representation = %q, missing selected memory content", context.Representation)
+	}
+	if !strings.Contains(context.Representation, "relation path: mem-auth-service -> owned_by -> mem-auth-owner") {
+		t.Fatalf("context representation = %q, missing graph relation path citation", context.Representation)
+	}
+}
 
 func TestGraphRecallConnectsOwnerThroughServiceRelation(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)

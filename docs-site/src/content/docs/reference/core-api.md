@@ -17,6 +17,7 @@ This page names the exported symbols used by the current repository and explains
 | `Profile` | Read the current peer card. |
 | `Search` | Retrieve conclusions or turn evidence relevant to a query. |
 | `Recall` | Run the scored recall pipeline and return a `RecallTrace` with candidates, provenance, selected/rejected memories, and warnings before projection. |
+| `RecallProjector.ProjectContext` | Project a `RecallTrace` into orientation text while preserving selected graph relation-path citations. |
 | `Context` | Assemble an orientation pack for prompt construction. |
 | `Chat` | Return a local-memory-backed chat result without requiring hosted Honcho, an LLM, or browser dependency. |
 | `Conclude` | Write or delete manual conclusions. |

@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: Graph relation-path recall projection now reaches context orientation text.
+  - Evidence target: `go test . -run TestRecallProjectorContextIncludesGraphRelationPathCitation -count=1` proves `RecallProjector.ProjectContext` preserves selected graph provenance notes as relation-path citations in the projected orientation pack.
+  - Result: graph-assisted recall is explainable through context projection, not only raw `RecallTrace` inspection, while preserving stable-ID/no-answer-hint benchmark discipline.
+
 - 2026-05-24: BEAM paired comparison now fails closed on ambiguous question fallback.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonRejectsAmbiguousQuestionFallback -count=1` proves duplicated conversation/scale/ability/question fallback keys reject comparison instead of silently pairing the first candidate row.
   - Result: BEAM superiority reports cannot be produced from ambiguous Mnemosyne/Goncho qid-mismatch rows; exact-qid matches remain preferred, and exact-question fallback stays available only when unique.

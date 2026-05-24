@@ -44,6 +44,8 @@ First graph-assisted implementation slice delivered: `TestGraphRecallConnectsOwn
 
 Coverage-aware graph companion selection delivered: `TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion` proves selection prefers relation-path companion memories over near-duplicate lexical hits without regenerating LOCOMO full-run artifacts.
 
+Graph relation-path context projection delivered: `TestRecallProjectorContextIncludesGraphRelationPathCitation` proves recall-to-context projection preserves graph relation path citations in orientation text without regenerating LOCOMO full-run artifacts.
+
 Query-decomposition recall slice delivered: `TestRecallQueryDecompositionRetrievesEachSubQuestionFact` proves multi-part questions can split into subqueries, retrieve each required stable-ID fact, and merge results before scoring without regenerating LOCOMO full-run artifacts.
 
 Temporal current-truth routing slice delivered: `TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence` proves current facts can outrank superseded evidence while preserving superseded candidates and stable-ID memories without regenerating LOCOMO full-run artifacts.

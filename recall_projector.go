@@ -32,7 +32,13 @@ func (p *RecallProjector) ProjectContext(trace RecallTrace) ContextResult {
 	search := p.ProjectSearch(trace)
 	conclusions := make([]string, 0, len(search.Results))
 	var representation strings.Builder
-	for _, hit := range search.Results {
+	for _, item := range trace.Selected {
+		hit := SearchHit{
+			ID:         parseRecallMemoryID(item.Candidate.MemoryID),
+			Source:     item.Candidate.SourceType,
+			Content:    item.Candidate.Content,
+			SessionKey: item.Candidate.SessionID,
+		}
 		if hit.Source == "conclusion" {
 			conclusions = append(conclusions, hit.Content)
 		}
@@ -44,6 +50,10 @@ func (p *RecallProjector) ProjectContext(trace RecallTrace) ContextResult {
 		}
 		representation.WriteString("- ")
 		representation.WriteString(hit.Content)
+		for _, note := range graphRelationPathNotes(item.Candidate.Provenance) {
+			representation.WriteString("\n  relation path: ")
+			representation.WriteString(note)
+		}
 	}
 	return ContextResult{
 		WorkspaceID:    trace.Query.WorkspaceID,
@@ -53,6 +63,20 @@ func (p *RecallProjector) ProjectContext(trace RecallTrace) ContextResult {
 		Conclusions:    conclusions,
 		SearchResults:  search.Results,
 	}
+}
+
+func graphRelationPathNotes(provenance []EvidenceItem) []string {
+	notes := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, item := range provenance {
+		note := strings.TrimSpace(item.Note)
+		if item.Kind != "graph" || note == "" || seen[note] {
+			continue
+		}
+		notes = append(notes, note)
+		seen[note] = true
+	}
+	return notes
 }
 
 func parseRecallMemoryID(id string) int64 {
