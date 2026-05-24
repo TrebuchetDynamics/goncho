@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/TrebuchetDynamics/goncho"
@@ -40,6 +41,85 @@ func TestRunBeamServiceRecallOracleWritesAbilityReport(t *testing.T) {
 	}
 	if report.RecallAt5 != 1 || report.RecallAt10 != 1 || report.ContextHitRate != 1 || report.TokenBudgetPassRate != 1 || report.WarningCount != 0 {
 		t.Fatalf("BEAM service report = %+v, want perfect deterministic local oracle", report)
+	}
+}
+
+func TestRunBeamServiceRecallOracleWritesMnemosyneCompatibleArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	summaryPath := filepath.Join(dir, "beam_e2e_summary.json")
+	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
+	if err := run(context.Background(), config{
+		BeamServiceOut:        filepath.Join(dir, "beam-service-report.json"),
+		BeamServiceSummaryOut: summaryPath,
+		BeamServicePairedOut:  pairedPath,
+		BeamServiceConfigID:   "test-beam-service",
+		DatabasePath:          filepath.Join(dir, "beam-service.db"),
+	}); err != nil {
+		t.Fatalf("run BEAM service oracle: %v", err)
+	}
+
+	summaryRaw, err := os.ReadFile(summaryPath)
+	if err != nil {
+		t.Fatalf("read summary: %v", err)
+	}
+	var summary struct {
+		Date           string         `json:"date"`
+		Metadata       map[string]any `json:"metadata"`
+		AbilitySummary map[string]map[string]struct {
+			AvgScore float64 `json:"avg_score"`
+			Count    int     `json:"count"`
+		} `json:"ability_summary"`
+	}
+	if err := json.Unmarshal(summaryRaw, &summary); err != nil {
+		t.Fatalf("decode summary: %v", err)
+	}
+	if summary.Date == "" || summary.Metadata["model"] != "goncho-service-recall" || summary.Metadata["judge_model"] != "none" {
+		t.Fatalf("summary metadata = %+v date=%q, want Mnemosyne-compatible local recall metadata", summary.Metadata, summary.Date)
+	}
+	scale := summary.AbilitySummary["100K"]
+	wantAbilities := []string{"CR", "EO", "IE", "IF", "KU", "MR", "PF", "TR"}
+	for _, ability := range wantAbilities {
+		stats, ok := scale[ability]
+		if !ok || stats.Count != 1 || stats.AvgScore != 1 {
+			t.Fatalf("summary ability %s = %+v ok=%v, want avg_score=1 count=1", ability, stats, ok)
+		}
+	}
+	if overall := scale["OVERALL"]; overall.Count != len(wantAbilities) || overall.AvgScore != 1 {
+		t.Fatalf("summary OVERALL = %+v, want avg_score=1 count=%d", overall, len(wantAbilities))
+	}
+
+	pairedRaw, err := os.ReadFile(pairedPath)
+	if err != nil {
+		t.Fatalf("read paired outcomes: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(pairedRaw)), "\n")
+	if len(lines) != len(wantAbilities) {
+		t.Fatalf("paired rows = %d, want %d: %s", len(lines), len(wantAbilities), pairedRaw)
+	}
+	seen := map[string]bool{}
+	for _, line := range lines {
+		var row struct {
+			ConfigID       string  `json:"config_id"`
+			RunStartedAt   string  `json:"run_started_at"`
+			Scale          string  `json:"scale"`
+			ConversationID string  `json:"conversation_id"`
+			QID            string  `json:"qid"`
+			Ability        string  `json:"ability"`
+			Score          float64 `json:"score"`
+			Correct        bool    `json:"correct"`
+		}
+		if err := json.Unmarshal([]byte(line), &row); err != nil {
+			t.Fatalf("decode paired row %q: %v", line, err)
+		}
+		if row.ConfigID != "test-beam-service" || row.RunStartedAt == "" || row.Scale != "100K" || row.ConversationID != "goncho-service-memoria-fixtures" || !strings.HasPrefix(row.QID, "beam-") || row.Score != 1 || !row.Correct {
+			t.Fatalf("paired row = %+v, want Mnemosyne-compatible correct service recall outcome", row)
+		}
+		seen[row.Ability] = true
+	}
+	for _, ability := range wantAbilities {
+		if !seen[ability] {
+			t.Fatalf("paired outcomes missing ability %s in rows %s", ability, pairedRaw)
+		}
 	}
 }
 

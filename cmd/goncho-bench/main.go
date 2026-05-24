@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/TrebuchetDynamics/goncho"
 	"github.com/TrebuchetDynamics/goncho/memory"
@@ -44,6 +45,9 @@ type config struct {
 	LocomoAgentMemoryResults        string
 	LocomoMem0Results               string
 	BeamServiceOut                  string
+	BeamServiceSummaryOut           string
+	BeamServicePairedOut            string
+	BeamServiceConfigID             string
 }
 
 type dataset struct {
@@ -137,6 +141,9 @@ func main() {
 	flag.StringVar(&cfg.LocomoAgentMemoryResults, "locomo-agentmemory-results", "", "optional JSONL results from scripts/bench_agentmemory_locomo.py")
 	flag.StringVar(&cfg.LocomoMem0Results, "locomo-mem0-results", "", "optional JSONL results from scripts/bench_mem0_locomo.py")
 	flag.StringVar(&cfg.BeamServiceOut, "beam-service-out", "", "JSON output path for Goncho's deterministic service-backed BEAM-style recall oracle")
+	flag.StringVar(&cfg.BeamServiceSummaryOut, "beam-service-summary-out", "", "Mnemosyne-compatible beam_e2e_summary.json output path for the service-backed BEAM-style oracle")
+	flag.StringVar(&cfg.BeamServicePairedOut, "beam-service-paired-out", "", "Mnemosyne-compatible paired_outcomes.jsonl append path for the service-backed BEAM-style oracle")
+	flag.StringVar(&cfg.BeamServiceConfigID, "beam-service-config-id", "", "config_id written to service-backed BEAM paired outcomes and summary metadata")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
@@ -147,7 +154,7 @@ func main() {
 }
 
 func run(ctx context.Context, cfg config) error {
-	if strings.TrimSpace(cfg.BeamServiceOut) != "" {
+	if strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" {
 		return runBeamServiceBenchmark(ctx, cfg)
 	}
 	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
@@ -220,6 +227,7 @@ func run(ctx context.Context, cfg config) error {
 }
 
 func runBeamServiceBenchmark(ctx context.Context, cfg config) error {
+	runStartedAt := time.Now().UTC()
 	databasePath := strings.TrimSpace(cfg.DatabasePath)
 	if databasePath == "" {
 		dir, err := os.MkdirTemp("", "goncho-beam-service-*")
@@ -241,23 +249,26 @@ func runBeamServiceBenchmark(ctx context.Context, cfg config) error {
 	if err != nil {
 		return fmt.Errorf("goncho-bench: evaluate BEAM service oracle: %w", err)
 	}
-	raw, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
-		return fmt.Errorf("goncho-bench: encode BEAM service report: %w", err)
+	if outPath := strings.TrimSpace(cfg.BeamServiceOut); outPath != "" {
+		raw, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			return fmt.Errorf("goncho-bench: encode BEAM service report: %w", err)
+		}
+		raw = append(raw, '\n')
+		if outPath == "-" {
+			if _, err := os.Stdout.Write(raw); err != nil {
+				return err
+			}
+		} else {
+			if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+				return fmt.Errorf("goncho-bench: create BEAM service report dir: %w", err)
+			}
+			if err := os.WriteFile(outPath, raw, 0o644); err != nil {
+				return fmt.Errorf("goncho-bench: write BEAM service report: %w", err)
+			}
+		}
 	}
-	raw = append(raw, '\n')
-	outPath := strings.TrimSpace(cfg.BeamServiceOut)
-	if outPath == "-" {
-		_, err = os.Stdout.Write(raw)
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM service report dir: %w", err)
-	}
-	if err := os.WriteFile(outPath, raw, 0o644); err != nil {
-		return fmt.Errorf("goncho-bench: write BEAM service report: %w", err)
-	}
-	return nil
+	return writeBeamServiceComparisonArtifacts(report, cfg, runStartedAt)
 }
 
 func evaluateOnce(ctx context.Context, data dataset, cfg config) (BenchmarkReport, error) {

@@ -31,7 +31,7 @@ From a checkout, verify the reproducible benchmark CLI builds and starts when yo
 make install-smoke
 ```
 
-The root module is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.1, published May 22, 2026, and includes the benchmark CLI. From a checkout, `go run ./cmd/goncho-bench --beam-service-out beam-service-report.json` writes a deterministic local BEAM-style MEMORIA recall report for the delivered IE, MR, TR, PF, IF, EO, CR, and KU service-backed fixtures.
+The root module is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.1, published May 22, 2026, and includes the benchmark CLI. From a checkout, `go run ./cmd/goncho-bench --beam-service-out beam-service-report.json --beam-service-summary-out beam_e2e_summary.json --beam-service-paired-out paired_outcomes.jsonl` writes deterministic local BEAM-style MEMORIA recall artifacts for the delivered IE, MR, TR, PF, IF, EO, CR, and KU service-backed fixtures, including Mnemosyne-compatible summary and paired-outcome files.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho.svg)](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
