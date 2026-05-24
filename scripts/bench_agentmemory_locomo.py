@@ -19,7 +19,7 @@ from typing import Any
 
 BACKEND = "agentmemory"
 PR_COMMIT = "9b18a80c9d2839b025279978d3f4b5e1f9bc6e74"
-SOURCE_LABEL = "@agentmemory/agentmemory 0.9.20 stable external_id PR #583"
+SOURCE_LABEL = "rohitg00/agentmemory @agentmemory/agentmemory 0.9.20 stable external_id PR #583"
 REASON_NO_SOURCE = (
     "not comparable: agentmemory source with stable external_id support was not provided; "
     "set AGENTMEMORY_SOURCE_DIR or pass --agentmemory-source"
@@ -60,8 +60,8 @@ def package_status(source: Path | None = None) -> dict[str, Any]:
         "node_version": subprocess.check_output(["node", "--version"], text=True).strip(),
         "source": source_version(source),
         "install_commands": [
-            "git clone --branch feature/stable-external-memory-ids https://github.com/XelHaku/agentmemory.git",
-            "npm install --legacy-peer-deps",
+            "git clone https://github.com/rohitg00/agentmemory.git",
+            f"cd agentmemory && git checkout {PR_COMMIT} && npm install --legacy-peer-deps",
         ],
     }
 

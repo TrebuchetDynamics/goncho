@@ -70,7 +70,7 @@ LOCOMO contains duplicate and near-duplicate content, including repeated content
 | Goncho no-rank | local Go harness | yes | Native LOCOMO `memory_id` | Local deterministic no-ranking baseline that uses recency order before current Goncho ranking. |
 | BM25 | local Go harness | yes | Native LOCOMO `memory_id` | Local deterministic lexical baseline. |
 | SQLite FTS5 | local Go SQLite FTS5 | yes | Native LOCOMO `memory_id` column | Local deterministic lexical baseline. |
-| agentmemory | `@agentmemory/agentmemory 0.9.20`, PR #583 commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` | yes, standalone fallback | `memory_save.external_id` plus `metadata.memory_id` returned by `memory_smart_search` | Stable IDs work. LOCOMO full score is `0.0` for the standalone InMemoryKV fallback because it uses strict all-term substring matching; this is not the full running agentmemory server. |
+| agentmemory | `https://github.com/rohitg00/agentmemory`, `@agentmemory/agentmemory 0.9.20`, PR #583 commit `9b18a80c9d2839b025279978d3f4b5e1f9bc6e74` | yes, standalone fallback | `memory_save.external_id` plus `metadata.memory_id` returned by `memory_smart_search` | Stable IDs work. LOCOMO full score is `0.0` for the standalone InMemoryKV fallback because it uses strict all-term substring matching; this is not the full running agentmemory server. |
 | mem0 | Python `3.12.3`; package not installed locally | no | Not executed | `mem0`/`mem0ai` is not installed in this environment; no stable-ID run can be produced. |
 
 ## Setup commands
@@ -78,7 +78,7 @@ LOCOMO contains duplicate and near-duplicate content, including repeated content
 agentmemory candidate setup:
 
 ```bash
-git clone --branch feature/stable-external-memory-ids https://github.com/XelHaku/agentmemory.git
+git clone https://github.com/rohitg00/agentmemory.git
 cd agentmemory
 git checkout 9b18a80c9d2839b025279978d3f4b5e1f9bc6e74
 npm install --legacy-peer-deps

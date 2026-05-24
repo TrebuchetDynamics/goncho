@@ -218,6 +218,30 @@ func TestPublicDocsSurfaceExternalAdapterContract(t *testing.T) {
 	}
 }
 
+func TestAgentMemoryBenchmarkDocsUseUpstreamSourceURL(t *testing.T) {
+	const upstreamURL = "https://github.com/rohitg00/agentmemory"
+	for _, path := range []string{
+		"scripts/bench_agentmemory_locomo.py",
+		"cmd/goncho-bench/locomo_backend_comparison.go",
+		"docs/benchmarks/external-backend-adapters.md",
+		"docs-site/src/content/docs/operators/runbook.md",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			text := string(raw)
+			if !strings.Contains(text, upstreamURL) {
+				t.Fatalf("%s does not point agentmemory benchmark setup at upstream source %s", path, upstreamURL)
+			}
+			if strings.Contains(text, "github.com/XelHaku/agentmemory") {
+				t.Fatalf("%s still points agentmemory benchmark setup at fork source", path)
+			}
+		})
+	}
+}
+
 func TestPublicDocsMentionBackendComparisonSmoke(t *testing.T) {
 	const smokeCommand = "make bench-locomo-backends-smoke"
 	for _, path := range []string{
