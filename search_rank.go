@@ -67,7 +67,7 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 	scored := make([]scoredHit, 0, len(hits))
 	for i, hit := range hits {
 		score := baseScores[i]
-		factScore := searchFactIntentScore(query, hit.Content)
+		factScore := searchHitFactIntentScore(query, hit)
 		if score == 0 && factScore == 0 {
 			continue
 		}

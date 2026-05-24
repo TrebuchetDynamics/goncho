@@ -559,6 +559,10 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("goncho: iterate conclusions: %w", err)
 	}
+	hits, err = attachConclusionFactAnnotations(ctx, db, hits)
+	if err != nil {
+		return nil, err
+	}
 	if trimmedQuery != "" {
 		hits = rankConclusionHitsByLexicalOverlap(trimmedQuery, hits)
 	}

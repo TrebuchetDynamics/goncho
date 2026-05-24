@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA-style append-only fact annotations now feed Goncho search.
+  - Evidence target: `go test . -run 'Test(RunMigrationsCreatesMemoryAnnotationTableIdempotently|ServiceConcludeFactAnnotationsRankInverseOwnerFact)' -count=1` proves migrations create the annotation lane idempotently and `Service.Search` ranks an inverse owner fact from a durable annotation above a question-shaped lexical echo.
+  - Result: `Service.Conclude` now preserves raw conclusion text while deriving conservative `fact` annotations, then `findConclusions` hydrates those annotations as hidden ranking evidence without changing the public Search JSON shape, using LLM extraction, or regenerating benchmark artifacts.
+
 - 2026-05-23: Mnemosyne MEMORIA fact-intent search ranking has its first public Goncho slice.
   - Evidence target: `go test . -run 'Test(SearchFactIntentScoresOwnerAnswerButNotLexicalEcho|ServiceSearchFactIntentRanksAnswerOverLexicalEcho)' -count=1` proves a conservative owner-fact intent scorer recognizes an answer-shaped fact, rejects a question-shaped lexical echo, and makes `Service.Search` rank the answer fact first.
   - Result: public search now uses a MEMORIA-style structured fact signal without changing the Search API, adding LLM extraction, persisting triples, using answer hints, or regenerating benchmark artifacts.

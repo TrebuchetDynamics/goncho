@@ -282,6 +282,9 @@ func (s *Service) Conclude(ctx context.Context, params ConcludeParams) (Conclude
 	if err != nil {
 		return ConcludeResult{}, err
 	}
+	if err := storeConclusionFactAnnotations(ctx, s.db, s.workspaceID, profileID, s.observer, peer, id, conclusionFactAnnotations(conclusion)); err != nil {
+		return ConcludeResult{}, err
+	}
 	if s.dreamEnabled {
 		if _, err := s.cancelPendingDreamsForObserved(ctx, peer, time.Now().Unix(), "new_activity"); err != nil {
 			return ConcludeResult{}, err

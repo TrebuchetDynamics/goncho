@@ -19,6 +19,16 @@ func searchFactIntentScore(query, content string) float64 {
 	return 0
 }
 
+func searchHitFactIntentScore(query string, hit SearchHit) float64 {
+	score := searchFactIntentScore(query, hit.Content)
+	for _, fact := range hit.factAnnotations {
+		if factScore := searchFactIntentScore(query, fact); factScore > score {
+			score = factScore
+		}
+	}
+	return score
+}
+
 func searchOwnerFactIntentScore(query, content string) float64 {
 	queryObject, ok := searchOwnerQuestionObject(query)
 	if !ok {
