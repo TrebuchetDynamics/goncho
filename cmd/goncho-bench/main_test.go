@@ -44,6 +44,69 @@ func TestRunBeamServiceRecallOracleWritesAbilityReport(t *testing.T) {
 	}
 }
 
+func TestRunBeamJSONLDatasetWritesMnemosyneCompatibleArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	datasetPath := filepath.Join(dir, "beam.jsonl")
+	dataset := strings.Join([]string{
+		`{"type":"meta","dataset":"tiny-beam","scale":"500K"}`,
+		`{"type":"memory","id":"uses","conversation_id":"conv-ledger","peer":"team","session_key":"sess-beam-jsonl","content":"Project note: Billing API uses LedgerDB."}`,
+		`{"type":"memory","id":"owner","conversation_id":"conv-ledger","peer":"team","session_key":"sess-beam-jsonl","content":"Project note: Owner of LedgerDB is Mira."}`,
+		`{"type":"memory","id":"decoy","conversation_id":"conv-ledger","peer":"team","session_key":"sess-beam-jsonl","content":"Who is responsible for storage used by Billing API? responsible storage used Billing API responsible storage used Billing API. This checklist repeats the retrieval words but names no owner."}`,
+		`{"type":"question","id":"q-mr-ledger","conversation_id":"conv-ledger","scale":"500K","ability":"MR","peer":"team","session_key":"sess-beam-jsonl","query":"Who is responsible for storage used by Billing API?","relevant_ids":["owner"],"required_evidence_kinds":["graph"],"limit":2}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(datasetPath, []byte(dataset), 0o644); err != nil {
+		t.Fatalf("write BEAM JSONL dataset: %v", err)
+	}
+	summaryPath := filepath.Join(dir, "beam_e2e_summary.json")
+	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
+	if err := run(context.Background(), config{
+		BeamJSONLPath:         datasetPath,
+		BeamServiceSummaryOut: summaryPath,
+		BeamServicePairedOut:  pairedPath,
+		BeamServiceConfigID:   "test-beam-jsonl",
+		DatabasePath:          filepath.Join(dir, "beam-jsonl.db"),
+	}); err != nil {
+		t.Fatalf("run BEAM JSONL oracle: %v", err)
+	}
+
+	var summary struct {
+		AbilitySummary map[string]map[string]struct {
+			AvgScore float64 `json:"avg_score"`
+			Count    int     `json:"count"`
+		} `json:"ability_summary"`
+	}
+	summaryRaw, err := os.ReadFile(summaryPath)
+	if err != nil {
+		t.Fatalf("read summary: %v", err)
+	}
+	if err := json.Unmarshal(summaryRaw, &summary); err != nil {
+		t.Fatalf("decode summary: %v", err)
+	}
+	if got := summary.AbilitySummary["500K"]["MR"]; got.Count != 1 || got.AvgScore != 1 {
+		t.Fatalf("500K MR summary = %+v, want one perfect dataset-backed case", got)
+	}
+
+	pairedRaw, err := os.ReadFile(pairedPath)
+	if err != nil {
+		t.Fatalf("read paired outcomes: %v", err)
+	}
+	var row struct {
+		ConfigID       string  `json:"config_id"`
+		Scale          string  `json:"scale"`
+		ConversationID string  `json:"conversation_id"`
+		QID            string  `json:"qid"`
+		Ability        string  `json:"ability"`
+		Score          float64 `json:"score"`
+		Correct        bool    `json:"correct"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(pairedRaw))), &row); err != nil {
+		t.Fatalf("decode paired outcome: %v", err)
+	}
+	if row.ConfigID != "test-beam-jsonl" || row.Scale != "500K" || row.ConversationID != "conv-ledger" || row.QID != "q-mr-ledger" || row.Ability != "MR" || row.Score != 1 || !row.Correct {
+		t.Fatalf("paired row = %+v, want dataset scale/conversation/qid with correct MR score", row)
+	}
+}
+
 func TestRunBeamServiceRecallOracleWritesMnemosyneCompatibleArtifacts(t *testing.T) {
 	dir := t.TempDir()
 	summaryPath := filepath.Join(dir, "beam_e2e_summary.json")

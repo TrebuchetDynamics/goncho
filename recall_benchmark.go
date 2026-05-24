@@ -23,6 +23,8 @@ const (
 type RecallBenchmarkCase struct {
 	ID                    string
 	Ability               string
+	Scale                 string
+	ConversationID        string
 	Trace                 RecallTrace
 	RelevantIDs           []string
 	ContextContains       []string
@@ -48,6 +50,8 @@ type RecallBenchmarkServiceMemory struct {
 type RecallBenchmarkServiceCase struct {
 	ID                    string
 	Ability               string
+	Scale                 string
+	ConversationID        string
 	Peer                  string
 	SessionKey            string
 	Query                 string
@@ -98,6 +102,8 @@ type RecallBenchmarkAbilityReport struct {
 type RecallBenchmarkCaseReport struct {
 	ID                    string   `json:"id"`
 	Ability               string   `json:"ability,omitempty"`
+	Scale                 string   `json:"scale,omitempty"`
+	ConversationID        string   `json:"conversation_id,omitempty"`
 	TraceID               string   `json:"trace_id"`
 	PipelineVersion       string   `json:"pipeline_version"`
 	ScoringConfigVersion  string   `json:"scoring_config_version"`
@@ -224,6 +230,8 @@ func runServiceRecallBenchmarkCase(ctx context.Context, svc *Service, index int,
 	return RecallBenchmarkCase{
 		ID:                    id,
 		Ability:               c.Ability,
+		Scale:                 c.Scale,
+		ConversationID:        c.ConversationID,
 		Trace:                 trace,
 		RelevantIDs:           relevantIDs,
 		ContextContains:       append([]string(nil), c.ContextContains...),
@@ -284,6 +292,8 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 	caseReport := RecallBenchmarkCaseReport{
 		ID:                    id,
 		Ability:               normalizeRecallBenchmarkAbility(c.Ability),
+		Scale:                 strings.TrimSpace(c.Scale),
+		ConversationID:        strings.TrimSpace(c.ConversationID),
 		TraceID:               c.Trace.TraceID,
 		PipelineVersion:       c.Trace.PipelineVersion,
 		ScoringConfigVersion:  c.Trace.ScoringConfig.Version,

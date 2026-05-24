@@ -44,6 +44,7 @@ type config struct {
 	LocomoBackendComparisonFailures string
 	LocomoAgentMemoryResults        string
 	LocomoMem0Results               string
+	BeamJSONLPath                   string
 	BeamServiceOut                  string
 	BeamServiceSummaryOut           string
 	BeamServicePairedOut            string
@@ -140,6 +141,7 @@ func main() {
 	flag.StringVar(&cfg.LocomoBackendComparisonFailures, "locomo-backend-comparison-failures-out", "", "JSONL failure output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoAgentMemoryResults, "locomo-agentmemory-results", "", "optional JSONL results from scripts/bench_agentmemory_locomo.py")
 	flag.StringVar(&cfg.LocomoMem0Results, "locomo-mem0-results", "", "optional JSONL results from scripts/bench_mem0_locomo.py")
+	flag.StringVar(&cfg.BeamJSONLPath, "beam-jsonl", "", "BEAM-style JSONL dataset path for service-backed recall evaluation")
 	flag.StringVar(&cfg.BeamServiceOut, "beam-service-out", "", "JSON output path for Goncho's deterministic service-backed BEAM-style recall oracle")
 	flag.StringVar(&cfg.BeamServiceSummaryOut, "beam-service-summary-out", "", "Mnemosyne-compatible beam_e2e_summary.json output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServicePairedOut, "beam-service-paired-out", "", "Mnemosyne-compatible paired_outcomes.jsonl append path for the service-backed BEAM-style oracle")
@@ -154,7 +156,7 @@ func main() {
 }
 
 func run(ctx context.Context, cfg config) error {
-	if strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" {
+	if strings.TrimSpace(cfg.BeamJSONLPath) != "" || strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" {
 		return runBeamServiceBenchmark(ctx, cfg)
 	}
 	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
@@ -245,7 +247,15 @@ func runBeamServiceBenchmark(ctx context.Context, cfg config) error {
 		return fmt.Errorf("goncho-bench: run BEAM service migrations: %w", err)
 	}
 	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-beam-service", ObserverPeerID: "goncho-bench", RecentMessages: 0}, nil)
-	report, err := goncho.EvaluateServiceRecallBenchmark(ctx, svc, goncho.DefaultRecallBenchmarkServiceCases())
+	cases := goncho.DefaultRecallBenchmarkServiceCases()
+	if datasetPath := strings.TrimSpace(cfg.BeamJSONLPath); datasetPath != "" {
+		loaded, err := loadBeamServiceJSONLCases(datasetPath)
+		if err != nil {
+			return err
+		}
+		cases = loaded
+	}
+	report, err := goncho.EvaluateServiceRecallBenchmark(ctx, svc, cases)
 	if err != nil {
 		return fmt.Errorf("goncho-bench: evaluate BEAM service oracle: %w", err)
 	}

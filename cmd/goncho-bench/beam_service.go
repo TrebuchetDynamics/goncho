@@ -95,25 +95,40 @@ func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, c
 }
 
 func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) beamServiceSummaryFile {
-	abilityTotals := map[string]float64{}
-	abilityCounts := map[string]int{}
-	var overallTotal float64
+	type scaleStats struct {
+		abilityTotals map[string]float64
+		abilityCounts map[string]int
+		overallTotal  float64
+		overallCount  int
+	}
+	stats := map[string]*scaleStats{}
 	for _, c := range report.Cases {
 		ability := strings.ToUpper(strings.TrimSpace(c.Ability))
 		if ability == "" {
 			continue
 		}
+		scale := beamServiceCaseScale(c)
+		acc := stats[scale]
+		if acc == nil {
+			acc = &scaleStats{abilityTotals: map[string]float64{}, abilityCounts: map[string]int{}}
+			stats[scale] = acc
+		}
 		score := beamServiceCaseScore(c)
-		abilityTotals[ability] += score
-		abilityCounts[ability]++
-		overallTotal += score
+		acc.abilityTotals[ability] += score
+		acc.abilityCounts[ability]++
+		acc.overallTotal += score
+		acc.overallCount++
 	}
-	byAbility := map[string]beamAbilityStats{}
-	for ability, count := range abilityCounts {
-		byAbility[ability] = beamAbilityStats{AvgScore: roundMetric(abilityTotals[ability] / float64(count)), Count: count}
-	}
-	if len(report.Cases) > 0 {
-		byAbility["OVERALL"] = beamAbilityStats{AvgScore: roundMetric(overallTotal / float64(len(report.Cases))), Count: len(report.Cases)}
+	abilitySummary := map[string]map[string]beamAbilityStats{}
+	for scale, acc := range stats {
+		byAbility := map[string]beamAbilityStats{}
+		for ability, count := range acc.abilityCounts {
+			byAbility[ability] = beamAbilityStats{AvgScore: roundMetric(acc.abilityTotals[ability] / float64(count)), Count: count}
+		}
+		if acc.overallCount > 0 {
+			byAbility["OVERALL"] = beamAbilityStats{AvgScore: roundMetric(acc.overallTotal / float64(acc.overallCount)), Count: acc.overallCount}
+		}
+		abilitySummary[scale] = byAbility
 	}
 	return beamServiceSummaryFile{
 		Date: runStartedAt.UTC().Format(beamServiceSummaryDateFormat),
@@ -128,7 +143,7 @@ func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID strin
 			CaseCount:   report.CaseCount,
 			Description: "deterministic service-backed BEAM-style MEMORIA recall oracle; no LLM answerer or judge",
 		},
-		AbilitySummary: map[string]map[string]beamAbilityStats{beamServiceScale: byAbility},
+		AbilitySummary: abilitySummary,
 	}
 }
 
@@ -158,8 +173,8 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 		out = append(out, beamServicePairedOutcome{
 			ConfigID:       configID,
 			RunStartedAt:   started,
-			Scale:          beamServiceScale,
-			ConversationID: beamServiceConversationID,
+			Scale:          beamServiceCaseScale(c),
+			ConversationID: beamServiceCaseConversationID(c),
 			QID:            c.ID,
 			Ability:        strings.ToUpper(strings.TrimSpace(c.Ability)),
 			Score:          score,
@@ -167,6 +182,22 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 		})
 	}
 	return out
+}
+
+func beamServiceCaseScale(c goncho.RecallBenchmarkCaseReport) string {
+	scale := strings.TrimSpace(c.Scale)
+	if scale == "" {
+		return beamServiceScale
+	}
+	return scale
+}
+
+func beamServiceCaseConversationID(c goncho.RecallBenchmarkCaseReport) string {
+	conversationID := strings.TrimSpace(c.ConversationID)
+	if conversationID == "" {
+		return beamServiceConversationID
+	}
+	return conversationID
 }
 
 func beamServiceCaseScore(c goncho.RecallBenchmarkCaseReport) float64 {

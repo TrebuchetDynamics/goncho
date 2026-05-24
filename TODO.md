@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `goncho-bench --beam-jsonl` now runs external BEAM-style JSONL conversions through the service oracle.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamJSONLDatasetWritesMnemosyneCompatibleArtifacts -count=1` proves a converted JSONL file with stable memory IDs, conversation IDs, scale, ability, relevant IDs, and required graph evidence is ingested through `Service.Conclude`, recalled through the service oracle, and exported as Mnemosyne-compatible summary and paired-outcome artifacts.
+  - Result: Goncho now has a dataset Adapter seam for real BEAM conversions instead of only built-in deterministic fixtures, while preserving no-answer-hint, no-LLM-judge, stable-ID recall discipline.
+
 - 2026-05-24: service-backed BEAM oracle now covers ABS and SUM fixtures plus expected-no-answer scoring.
   - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunBeamServiceRecallOracleWrites(AbilityReport|MnemosyneCompatibleArtifacts)' -count=1` proves the CLI summary and paired outcomes include all ten BEAM abilities (ABS, CR, EO, IE, IF, KU, MR, PF, SUM, TR) with perfect deterministic service-backed recall, context, token-budget, and provenance gates.
   - Result: Goncho can now produce local Mnemosyne-compatible BEAM-style artifacts for every BEAM ability dimension while still avoiding answer hints, LLM judges, external datasets, or final BEAM superiority claims.
