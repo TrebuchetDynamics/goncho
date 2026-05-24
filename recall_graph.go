@@ -10,6 +10,11 @@ type GraphExpansionIndex struct {
 	Relations []GraphRelation
 }
 
+const (
+	GraphRelationAccepted = "accepted"
+	GraphRelationPending  = "pending"
+)
+
 type GraphRelation struct {
 	FromMemoryID    string
 	ToMemoryID      string
@@ -18,6 +23,7 @@ type GraphRelation struct {
 	ActivationTerms []string
 	EvidenceID      string
 	Score           float64
+	State           string
 }
 
 type graphExpandingRecallGenerator struct {
@@ -44,7 +50,7 @@ func (g graphExpandingRecallGenerator) Generate(ctx context.Context, q RecallQue
 		seen[candidate.MemoryID] = true
 	}
 	for _, relation := range g.index.Relations {
-		if !seen[relation.FromMemoryID] || seen[relation.ToMemoryID] || !graphRelationMatchesQuery(q.Query, relation.QueryTerms) || !graphRelationMatchesQuery(q.Query, relation.ActivationTerms) {
+		if !graphRelationIsAccepted(relation) || !seen[relation.FromMemoryID] || seen[relation.ToMemoryID] || !graphRelationMatchesQuery(q.Query, relation.QueryTerms) || !graphRelationMatchesQuery(q.Query, relation.ActivationTerms) {
 			continue
 		}
 		target, ok := g.index.Memories[relation.ToMemoryID]
@@ -62,6 +68,11 @@ func (g graphExpandingRecallGenerator) Generate(ctx context.Context, q RecallQue
 		seen[target.MemoryID] = true
 	}
 	return out, nil
+}
+
+func graphRelationIsAccepted(relation GraphRelation) bool {
+	state := strings.ToLower(strings.TrimSpace(relation.State))
+	return state == "" || state == GraphRelationAccepted
 }
 
 func graphRelationMatchesQuery(query string, terms []string) bool {

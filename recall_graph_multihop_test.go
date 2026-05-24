@@ -31,6 +31,90 @@ func TestRecallProjectorContextIncludesGraphRelationPathCitation(t *testing.T) {
 	}
 }
 
+func TestRelationCandidatesRemainPendingBeforeReview(t *testing.T) {
+	now := time.Date(2026, 5, 22, 13, 0, 0, 0, time.UTC)
+	base := staticRecallGenerator{candidates: []RecallCandidate{{
+		MemoryID:   "mem-auth-service",
+		SourceType: "conclusion",
+		Content:    "The authentication service handles login sessions and JWT validation.",
+		ScopeID:    "team",
+		CreatedAt:  now.Add(-2 * time.Hour),
+		Importance: 0.80,
+		Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.80, Note: "matched authentication owner query"}},
+	}}}
+	index := GraphExpansionIndex{
+		Memories: map[string]RecallCandidate{
+			"mem-auth-owner-accepted": {
+				MemoryID:   "mem-auth-owner-accepted",
+				SourceType: "conclusion",
+				Content:    "Mira owns the authentication service.",
+				ScopeID:    "team",
+				CreatedAt:  now.Add(-90 * time.Minute),
+				Importance: 0.90,
+			},
+			"mem-auth-owner-pending": {
+				MemoryID:   "mem-auth-owner-pending",
+				SourceType: "conclusion",
+				Content:    "Speculative extraction says Noor owns the authentication service.",
+				ScopeID:    "team",
+				CreatedAt:  now.Add(-80 * time.Minute),
+				Importance: 0.95,
+			},
+		},
+		Relations: []GraphRelation{
+			{
+				FromMemoryID: "mem-auth-service",
+				ToMemoryID:   "mem-auth-owner-accepted",
+				Relation:     "owned_by",
+				QueryTerms:   []string{"owner"},
+				EvidenceID:   "edge-auth-owned-by-mira",
+				Score:        0.95,
+				State:        GraphRelationAccepted,
+			},
+			{
+				FromMemoryID: "mem-auth-service",
+				ToMemoryID:   "mem-auth-owner-pending",
+				Relation:     "owned_by",
+				QueryTerms:   []string{"owner"},
+				EvidenceID:   "edge-auth-owned-by-noor-pending",
+				Score:        1.00,
+				State:        GraphRelationPending,
+			},
+		},
+	}
+	engine := newRecallPipelineEngine(
+		newGraphExpandingRecallGenerator(base, index),
+		recallPipelineOptions{
+			pipelineVersion: "graph-review-test-v1",
+			scoringConfig: RecallScoringConfig{
+				Version:     "graph-review-test-v1",
+				Weights:     map[string]float64{"keyword": 0.20, "graph": 0.70, "scope": 0.10},
+				RRFK:        60,
+				MMRLambda:   0.70,
+				TokenBudget: 120,
+			},
+			now: func() time.Time { return now },
+		},
+	)
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "Who is the owner for the authentication service?",
+		ScopeID:     "team",
+		Limit:       3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !traceHasCandidate(trace, "mem-auth-owner-accepted") {
+		t.Fatalf("candidate IDs = %v, want accepted relation to expand", recallCandidateIDs(trace))
+	}
+	if traceHasCandidate(trace, "mem-auth-owner-pending") {
+		t.Fatalf("candidate IDs = %v, want pending relation candidate withheld before review", recallCandidateIDs(trace))
+	}
+}
+
 func TestCognitiveMapSuppressesLowActivationGraphBranches(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 30, 0, 0, time.UTC)
 	base := staticRecallGenerator{candidates: []RecallCandidate{

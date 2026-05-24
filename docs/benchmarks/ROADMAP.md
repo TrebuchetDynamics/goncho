@@ -48,6 +48,8 @@ Graph relation-path context projection delivered: `TestRecallProjectorContextInc
 
 Cognitive-map branch gating delivered: `TestCognitiveMapSuppressesLowActivationGraphBranches` proves graph expansion can require branch activation terms, retrieving the requested owner branch while suppressing unrelated graph memories without regenerating LOCOMO full-run artifacts.
 
+Graph relation review-state gating delivered: `TestRelationCandidatesRemainPendingBeforeReview` proves pending relation candidates stay out of recall expansion until accepted, without regenerating LOCOMO full-run artifacts.
+
 Query-decomposition recall slice delivered: `TestRecallQueryDecompositionRetrievesEachSubQuestionFact` proves multi-part questions can split into subqueries, retrieve each required stable-ID fact, and merge results before scoring without regenerating LOCOMO full-run artifacts.
 
 Temporal current-truth routing slice delivered: `TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence` proves current facts can outrank superseded evidence while preserving superseded candidates and stable-ID memories without regenerating LOCOMO full-run artifacts.

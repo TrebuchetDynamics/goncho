@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: Graph relation candidates now remain pending before review.
+  - Evidence target: `go test . -run TestRelationCandidatesRemainPendingBeforeReview -count=1` proves graph relations can carry an accepted/pending state and pending relation candidates do not expand recall before review even with a higher score.
+  - Result: conservative graph recall can ingest speculative relation candidates without presenting them as retrieved truth until accepted.
+
 - 2026-05-24: Cognitive-map graph expansion now gates low-activation branches.
   - Evidence target: `go test . -run TestCognitiveMapSuppressesLowActivationGraphBranches -count=1` proves graph relations can carry `ActivationTerms` so an owner query for authentication expands the authentication owner but suppresses an unrelated billing owner branch.
   - Result: graph-assisted recall can stay conservative around wrong-branch retrieval while preserving stable-ID/no-answer-hint benchmark discipline.
