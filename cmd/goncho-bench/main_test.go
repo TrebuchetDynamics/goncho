@@ -44,6 +44,58 @@ func TestRunBeamServiceRecallOracleWritesAbilityReport(t *testing.T) {
 	}
 }
 
+func TestConvertBeamHuggingFaceJSONLWritesStableIDDataset(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam.jsonl")
+	convertedPath := filepath.Join(dir, "converted-beam.jsonl")
+	rawRecord := `{"conversation_id":"conv-ledger","scale":"500K","chat":[[{"role":"user","content":"Project note: Billing API uses LedgerDB."},{"role":"assistant","content":"Project note: Owner of LedgerDB is Mira."}]],"probing_questions":"{'IE': [{'id': 'q-owner', 'question': 'Who owns LedgerDB?', 'relevant_message_indices': [1], 'required_evidence_kinds': ['fact']}], 'ABS': [{'id': 'q-secret', 'question': 'What is the launch code for Vault Kestrel?'}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	if err := run(context.Background(), config{
+		BeamConvertIn:    rawPath,
+		BeamConvertOut:   convertedPath,
+		BeamConvertScale: "100K",
+	}); err != nil {
+		t.Fatalf("convert BEAM record: %v", err)
+	}
+
+	rawConverted, err := os.ReadFile(convertedPath)
+	if err != nil {
+		t.Fatalf("read converted BEAM JSONL: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(rawConverted)), "\n")
+	if len(lines) != 5 {
+		t.Fatalf("converted lines = %d, want meta + two memories + two questions: %s", len(lines), rawConverted)
+	}
+	var memory beamJSONLRecord
+	if err := json.Unmarshal([]byte(lines[2]), &memory); err != nil {
+		t.Fatalf("decode converted memory: %v", err)
+	}
+	if memory.Type != "memory" || memory.ID != "conv-ledger-mem-000002" || memory.ConversationID != "conv-ledger" || memory.Peer != "beam" || memory.SessionKey != "conv-ledger" || !strings.Contains(memory.Content, "Owner of LedgerDB is Mira") {
+		t.Fatalf("converted memory = %+v, want stable second message memory", memory)
+	}
+	var question, abstention beamJSONLRecord
+	for _, line := range lines[3:] {
+		var record beamJSONLRecord
+		if err := json.Unmarshal([]byte(line), &record); err != nil {
+			t.Fatalf("decode converted question: %v", err)
+		}
+		switch record.Ability {
+		case "IE":
+			question = record
+		case "ABS":
+			abstention = record
+		}
+	}
+	if question.Type != "question" || question.ID != "q-owner" || question.Scale != "500K" || !slices.Equal(question.RelevantIDs, []string{"conv-ledger-mem-000002"}) || !slices.Equal(question.RequiredEvidenceKinds, []string{"fact"}) {
+		t.Fatalf("converted question = %+v, want stable evidence-linked IE question", question)
+	}
+	if abstention.Type != "question" || !abstention.ExpectedNoAnswer || len(abstention.RelevantIDs) != 0 {
+		t.Fatalf("converted ABS question = %+v, want expected-no-answer question without fake relevant IDs", abstention)
+	}
+}
+
 func TestRunBeamJSONLDatasetWritesMnemosyneCompatibleArtifacts(t *testing.T) {
 	dir := t.TempDir()
 	datasetPath := filepath.Join(dir, "beam.jsonl")

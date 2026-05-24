@@ -44,6 +44,9 @@ type config struct {
 	LocomoBackendComparisonFailures string
 	LocomoAgentMemoryResults        string
 	LocomoMem0Results               string
+	BeamConvertIn                   string
+	BeamConvertOut                  string
+	BeamConvertScale                string
 	BeamJSONLPath                   string
 	BeamServiceOut                  string
 	BeamServiceSummaryOut           string
@@ -141,6 +144,9 @@ func main() {
 	flag.StringVar(&cfg.LocomoBackendComparisonFailures, "locomo-backend-comparison-failures-out", "", "JSONL failure output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoAgentMemoryResults, "locomo-agentmemory-results", "", "optional JSONL results from scripts/bench_agentmemory_locomo.py")
 	flag.StringVar(&cfg.LocomoMem0Results, "locomo-mem0-results", "", "optional JSONL results from scripts/bench_mem0_locomo.py")
+	flag.StringVar(&cfg.BeamConvertIn, "beam-convert-in", "", "HuggingFace BEAM JSONL export to convert into Goncho's BEAM service JSONL format")
+	flag.StringVar(&cfg.BeamConvertOut, "beam-convert-out", "", "output path for --beam-convert-in; use - for stdout")
+	flag.StringVar(&cfg.BeamConvertScale, "beam-convert-scale", "", "fallback BEAM scale for converted records when the source record omits scale")
 	flag.StringVar(&cfg.BeamJSONLPath, "beam-jsonl", "", "BEAM-style JSONL dataset path for service-backed recall evaluation")
 	flag.StringVar(&cfg.BeamServiceOut, "beam-service-out", "", "JSON output path for Goncho's deterministic service-backed BEAM-style recall oracle")
 	flag.StringVar(&cfg.BeamServiceSummaryOut, "beam-service-summary-out", "", "Mnemosyne-compatible beam_e2e_summary.json output path for the service-backed BEAM-style oracle")
@@ -156,6 +162,9 @@ func main() {
 }
 
 func run(ctx context.Context, cfg config) error {
+	if strings.TrimSpace(cfg.BeamConvertIn) != "" {
+		return convertBeamHuggingFaceJSONL(cfg.BeamConvertIn, cfg.BeamConvertOut, cfg.BeamConvertScale)
+	}
 	if strings.TrimSpace(cfg.BeamJSONLPath) != "" || strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" {
 		return runBeamServiceBenchmark(ctx, cfg)
 	}

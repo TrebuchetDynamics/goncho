@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `goncho-bench --beam-convert-in/--beam-convert-out` now converts HuggingFace BEAM JSONL exports into Goncho's service-oracle format.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestConvertBeamHuggingFaceJSONLWritesStableIDDataset -count=1` proves nested BEAM chat plus Python-literal `probing_questions` convert into stable memory IDs, conversation-scoped question rows, mapped relevant message indices, required evidence kinds, and ABS expected-no-answer rows without importing ideal answers as retrieval hints.
+  - Result: Goncho now has the missing raw-dataset conversion step before `--beam-jsonl`, preserving stable-ID and no-answer-hint discipline while moving closer to real BEAM sample runs.
+
 - 2026-05-24: `goncho-bench --beam-jsonl` now runs external BEAM-style JSONL conversions through the service oracle.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamJSONLDatasetWritesMnemosyneCompatibleArtifacts -count=1` proves a converted JSONL file with stable memory IDs, conversation IDs, scale, ability, relevant IDs, and required graph evidence is ingested through `Service.Conclude`, recalled through the service oracle, and exported as Mnemosyne-compatible summary and paired-outcome artifacts.
   - Result: Goncho now has a dataset Adapter seam for real BEAM conversions instead of only built-in deterministic fixtures, while preserving no-answer-hint, no-LLM-judge, stable-ID recall discipline.
