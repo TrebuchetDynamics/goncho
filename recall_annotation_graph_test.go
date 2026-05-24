@@ -346,6 +346,88 @@ func TestRecallExpandsMetricThroughDurableKGRelation(t *testing.T) {
 	}
 }
 
+func TestRecallExpandsLocationThroughDurableKGRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	uses, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Billing API uses VectorDB.",
+		SessionKey: "sess-annotation-graph-location",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	location, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: VectorDB location is us-east-1.",
+		SessionKey: "sess-annotation-graph-location",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Where is the storage used by Billing API? where storage used Billing API location where storage used Billing API. This checklist repeats the retrieval words but names no location.",
+		SessionKey: "sess-annotation-graph-location",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?)
+	`, decoy.ID, uses.ID, location.ID, decoy.ID, uses.ID, location.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	usesFactID := lookupAnnotationID(t, svc, uses.ID, "Billing API uses VectorDB")
+	locationFactID := lookupAnnotationID(t, svc, location.ID, "VectorDB is located at us-east-1")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-location-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-location-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 200,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "Where is the storage used by Billing API?",
+		SessionKey:  "sess-annotation-graph-location",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	locationMemoryID := strconv.FormatInt(location.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, locationMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded location %s", selected, trace.Candidates, trace.Rejected, locationMemoryID)
+	}
+	locationCandidate, ok := selectedRecallCandidate(trace, locationMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want location candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, locationFactID)
+	if !candidateHasGraphProvenance(locationCandidate, evidenceID) {
+		t.Fatalf("location provenance = %+v, want graph evidence %s", locationCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> uses -> VectorDB -> location -> %d", uses.ID, location.ID)
+	if !candidateHasGraphNote(locationCandidate, wantNote) {
+		t.Fatalf("location provenance = %+v, want relation path %q", locationCandidate.Provenance, wantNote)
+	}
+}
+
 func lookupAnnotationID(t *testing.T, svc *Service, memoryID int64, value string) int64 {
 	t.Helper()
 	var id int64
