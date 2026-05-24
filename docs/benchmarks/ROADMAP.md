@@ -235,6 +235,8 @@ BEAM judgment-completeness gate delivered: judged imports fail by default on mis
 
 BEAM nested-judgment import delivered: `--beam-service-judgments-in` accepts nested Mnemosyne-compatible `beam_e2e_results.json` files as well as flat JSONL rows, inheriting conversation/scale identity from result groups before applying the same completeness gate.
 
+BEAM Mnemosyne-qid import delivered: nested judged rows can match by exact source qid or by conversation/scale/ability/question when Mnemosyne emits `conversation_id:qN` qids that differ from Goncho's converted BEAM qids, while still reporting missing/unmatched rows through the strict completeness gate.
+
 ## Framing
 
 The public framing should remain:

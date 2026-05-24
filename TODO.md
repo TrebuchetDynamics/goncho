@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: BEAM judged imports now tolerate Mnemosyne-generated qids.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetImportsNestedMnemosyneQIDByQuestion -count=1` proves nested `beam_e2e_results.json` rows with Mnemosyne's `conversation_id:qN` qids can still apply to Goncho's source/generated BEAM qids by exact conversation/scale/ability/question match, without weakening the strict completeness gate.
+  - Result: real Mnemosyne BEAM result files no longer need qid rewriting before Goncho can import official-style judged scores for paired comparison.
+
 - 2026-05-24: BEAM judged imports now accept nested Mnemosyne-compatible result files.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetImportsNestedBeamResultsAsJudgments -count=1` proves `--beam-service-judgments-in` can read a nested `beam_e2e_results.json`, inherit conversation/scale identity, and merge imported official-style scores into Goncho results, summary, and paired outcomes.
   - Result: real BEAM judge output no longer needs a separate flattening script before Goncho can produce comparable judged artifacts against Mnemosyne.

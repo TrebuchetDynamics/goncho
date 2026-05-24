@@ -17,6 +17,8 @@ type beamServiceJudgment struct {
 	Scale          string   `json:"scale,omitempty"`
 	ConversationID string   `json:"conversation_id,omitempty"`
 	QID            string   `json:"qid"`
+	Ability        string   `json:"ability,omitempty"`
+	Question       string   `json:"question,omitempty"`
 	AIAnswer       string   `json:"ai_answer,omitempty"`
 	Score          float64  `json:"score"`
 	Nuggets        []string `json:"nuggets,omitempty"`
@@ -29,6 +31,7 @@ type beamServiceJudgmentSet struct {
 	Source       string
 	SourceSHA256 string
 	Rows         map[string]beamServiceJudgment
+	QuestionRows map[string]beamServiceJudgment
 	RowCount     int
 }
 
@@ -50,18 +53,19 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 	}
 	sum := sha256.Sum256(raw)
 	rows := map[string]beamServiceJudgment{}
+	questionRows := map[string]beamServiceJudgment{}
 	trimmed := bytes.TrimSpace(raw)
 	if len(trimmed) > 0 && trimmed[0] == '{' && bytes.Contains(trimmed, []byte(`"results"`)) {
-		if err := loadNestedBeamServiceJudgments(trimmed, rows); err != nil {
+		if err := loadNestedBeamServiceJudgments(trimmed, rows, questionRows); err != nil {
 			return nil, err
 		}
-	} else if err := loadJSONLBeamServiceJudgments(raw, rows); err != nil {
+	} else if err := loadJSONLBeamServiceJudgments(raw, rows, questionRows); err != nil {
 		return nil, err
 	}
-	return &beamServiceJudgmentSet{Source: "beam-service-judgments", SourceSHA256: hex.EncodeToString(sum[:]), Rows: rows, RowCount: len(rows)}, nil
+	return &beamServiceJudgmentSet{Source: "beam-service-judgments", SourceSHA256: hex.EncodeToString(sum[:]), Rows: rows, QuestionRows: questionRows, RowCount: len(rows)}, nil
 }
 
-func loadJSONLBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment) error {
+func loadJSONLBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment, questionRows map[string]beamServiceJudgment) error {
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
 	lineNo := 0
@@ -75,7 +79,7 @@ func loadJSONLBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgme
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
 			return fmt.Errorf("goncho-bench: decode BEAM service judgment line %d: %w", lineNo, err)
 		}
-		if err := addBeamServiceJudgment(rows, row, fmt.Sprintf("line %d", lineNo)); err != nil {
+		if err := addBeamServiceJudgment(rows, questionRows, row, fmt.Sprintf("line %d", lineNo)); err != nil {
 			return err
 		}
 	}
@@ -85,7 +89,7 @@ func loadJSONLBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgme
 	return nil
 }
 
-func loadNestedBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment) error {
+func loadNestedBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment, questionRows map[string]beamServiceJudgment) error {
 	var file struct {
 		Results []struct {
 			Scale          string                `json:"scale"`
@@ -104,7 +108,7 @@ func loadNestedBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgm
 			if strings.TrimSpace(row.ConversationID) == "" {
 				row.ConversationID = conv.ConversationID
 			}
-			if err := addBeamServiceJudgment(rows, row, fmt.Sprintf("conversation %d result %d", conversationIndex+1, resultIndex+1)); err != nil {
+			if err := addBeamServiceJudgment(rows, questionRows, row, fmt.Sprintf("conversation %d result %d", conversationIndex+1, resultIndex+1)); err != nil {
 				return err
 			}
 		}
@@ -112,14 +116,20 @@ func loadNestedBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgm
 	return nil
 }
 
-func addBeamServiceJudgment(rows map[string]beamServiceJudgment, row beamServiceJudgment, location string) error {
+func addBeamServiceJudgment(rows map[string]beamServiceJudgment, questionRows map[string]beamServiceJudgment, row beamServiceJudgment, location string) error {
 	row.Scale = strings.TrimSpace(row.Scale)
 	row.ConversationID = strings.TrimSpace(row.ConversationID)
 	row.QID = strings.TrimSpace(row.QID)
+	row.Ability = strings.ToUpper(strings.TrimSpace(row.Ability))
+	row.Question = strings.TrimSpace(row.Question)
 	if row.QID == "" {
 		return fmt.Errorf("goncho-bench: BEAM service judgment %s missing qid", location)
 	}
 	rows[beamServiceJudgmentKey(row.Scale, row.ConversationID, row.QID)] = row
+	if row.Question != "" {
+		questionRows[beamServiceJudgmentQuestionKey(row.Scale, row.ConversationID, row.Ability, row.Question)] = row
+		questionRows[beamServiceJudgmentQuestionKey(row.Scale, row.ConversationID, "", row.Question)] = row
+	}
 	return nil
 }
 
@@ -135,6 +145,25 @@ func (s *beamServiceJudgmentSet) find(c goncho.RecallBenchmarkCaseReport) (beamS
 		beamServiceJudgmentKey("", "", qid),
 	} {
 		if row, ok := s.Rows[key]; ok {
+			return row, true
+		}
+	}
+	ability := strings.ToUpper(strings.TrimSpace(c.Ability))
+	question := strings.TrimSpace(c.Question)
+	if question == "" {
+		return beamServiceJudgment{}, false
+	}
+	for _, key := range []string{
+		beamServiceJudgmentQuestionKey(beamServiceCaseScale(c), beamServiceCaseConversationID(c), ability, question),
+		beamServiceJudgmentQuestionKey("", beamServiceCaseConversationID(c), ability, question),
+		beamServiceJudgmentQuestionKey(beamServiceCaseScale(c), "", ability, question),
+		beamServiceJudgmentQuestionKey("", "", ability, question),
+		beamServiceJudgmentQuestionKey(beamServiceCaseScale(c), beamServiceCaseConversationID(c), "", question),
+		beamServiceJudgmentQuestionKey("", beamServiceCaseConversationID(c), "", question),
+		beamServiceJudgmentQuestionKey(beamServiceCaseScale(c), "", "", question),
+		beamServiceJudgmentQuestionKey("", "", "", question),
+	} {
+		if row, ok := s.QuestionRows[key]; ok {
 			return row, true
 		}
 	}
@@ -177,4 +206,8 @@ func requireCompleteBeamServiceJudgments(judgments beamServiceJudgmentSet, repor
 
 func beamServiceJudgmentKey(scale, conversationID, qid string) string {
 	return strings.TrimSpace(scale) + "\x00" + strings.TrimSpace(conversationID) + "\x00" + strings.TrimSpace(qid)
+}
+
+func beamServiceJudgmentQuestionKey(scale, conversationID, ability, question string) string {
+	return strings.TrimSpace(scale) + "\x00" + strings.TrimSpace(conversationID) + "\x00" + strings.ToUpper(strings.TrimSpace(ability)) + "\x00" + strings.Join(strings.Fields(strings.ToLower(question)), " ")
 }

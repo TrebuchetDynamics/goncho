@@ -573,6 +573,100 @@ func TestRunBeamHuggingFaceJSONLDatasetImportsNestedBeamResultsAsJudgments(t *te
 	}
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetImportsNestedMnemosyneQIDByQuestion(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-mnemosyne-qid-results.jsonl")
+	rawRecord := `{"conversation_id":"conv-beam-mnemosyne-qid-results","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'IE': [{'id': 'q-source-beam-id', 'question': 'Who owns LedgerDB?', 'ideal_answer': 'Mira owns LedgerDB', 'rubric': ['mentions Mira'], 'relevant_message_indices': [0]}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	judgmentsPath := filepath.Join(dir, "mnemosyne_beam_e2e_results.json")
+	nestedResults := `{
+  "metadata": {"config_id": "mnemosyne-v3"},
+  "results": [
+    {
+      "conversation_id": "conv-beam-mnemosyne-qid-results",
+      "scale": "100K",
+      "results": [
+        {
+          "qid": "conv-beam-mnemosyne-qid-results:q0",
+          "ability": "IE",
+          "question": "Who owns LedgerDB?",
+          "ai_answer": "Mira owns LedgerDB.",
+          "score": 0.25,
+          "nuggets": ["mentions Mira"],
+          "assessment": "Mnemosyne qid judged score"
+        }
+      ]
+    }
+  ]
+}
+`
+	if err := os.WriteFile(judgmentsPath, []byte(nestedResults), 0o644); err != nil {
+		t.Fatalf("write nested Mnemosyne BEAM results: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_mnemosyne_qid_results.json")
+	summaryPath := filepath.Join(dir, "beam_mnemosyne_qid_summary.json")
+	pairedPath := filepath.Join(dir, "beam_mnemosyne_qid_paired.jsonl")
+	if err := run(context.Background(), config{
+		BeamConvertIn:          rawPath,
+		BeamServiceResultsOut:  resultsPath,
+		BeamServiceSummaryOut:  summaryPath,
+		BeamServicePairedOut:   pairedPath,
+		BeamServiceJudgmentsIn: judgmentsPath,
+		BeamServiceConfigID:    "test-beam-mnemosyne-qid-results",
+		DatabasePath:           filepath.Join(dir, "beam-mnemosyne-qid-results.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with Mnemosyne qid judgment import: %v", err)
+	}
+	var results struct {
+		Metadata struct {
+			Diagnostics map[string]json.RawMessage `json:"diagnostics"`
+		} `json:"metadata"`
+		Results []struct {
+			Results []struct {
+				QID        string  `json:"qid"`
+				AIAnswer   string  `json:"ai_answer"`
+				Score      float64 `json:"score"`
+				Assessment string  `json:"assessment"`
+			} `json:"results"`
+		} `json:"results"`
+	}
+	decodeTestJSONFile(t, resultsPath, &results)
+	row := results.Results[0].Results[0]
+	if row.QID != "q-source-beam-id" || row.AIAnswer != "Mira owns LedgerDB." || row.Score != 0.25 || row.Assessment != "Mnemosyne qid judged score" {
+		t.Fatalf("Mnemosyne qid judged row = %+v, want imported by exact question/ability match onto source qid", row)
+	}
+	var diag struct {
+		AppliedCount   int `json:"applied_count"`
+		MissingCount   int `json:"missing_count"`
+		UnmatchedCount int `json:"unmatched_count"`
+	}
+	if err := json.Unmarshal(results.Metadata.Diagnostics["judgments"], &diag); err != nil {
+		t.Fatalf("decode Mnemosyne qid judgment diagnostics: %v", err)
+	}
+	if diag.AppliedCount != 1 || diag.MissingCount != 0 || diag.UnmatchedCount != 0 {
+		t.Fatalf("Mnemosyne qid judgment diagnostics = %+v, want exact question/ability match without incompleteness", diag)
+	}
+	var summary struct {
+		AbilitySummary map[string]map[string]struct {
+			AvgScore float64 `json:"avg_score"`
+			Count    int     `json:"count"`
+		} `json:"ability_summary"`
+	}
+	decodeTestJSONFile(t, summaryPath, &summary)
+	if got := summary.AbilitySummary["100K"]["IE"]; got.Count != 1 || got.AvgScore != 0.25 {
+		t.Fatalf("Mnemosyne qid summary IE = %+v, want question-matched judged score", got)
+	}
+	pairedRaw, err := os.ReadFile(pairedPath)
+	if err != nil {
+		t.Fatalf("read Mnemosyne qid paired outcomes: %v", err)
+	}
+	if !strings.Contains(string(pairedRaw), `"score":0.25`) || strings.Contains(string(pairedRaw), `"score":1`) {
+		t.Fatalf("Mnemosyne qid paired outcomes = %s, want imported judged score instead of fallback recall score", pairedRaw)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetWritesJudgeRequestsWithoutAnswerHints(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-judge-requests.jsonl")
