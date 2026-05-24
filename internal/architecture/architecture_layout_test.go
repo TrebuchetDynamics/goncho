@@ -45,6 +45,35 @@ func TestArchitectureLayoutScopedKeyImplementationLivesBehindInternalModule(t *t
 	}
 }
 
+func TestArchitectureLayoutSearchFilterImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "searchfilter", "filter.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("search-filter implementation must live at %s: %v", implPath, err)
+	}
+
+	filterPath := filepath.Join(root, "filter.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), filterPath, nil, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", filterPath, err)
+	}
+	forbiddenImplementationImports := map[string]struct{}{
+		"fmt":     {},
+		"slices":  {},
+		"strings": {},
+	}
+	for _, imp := range parsed.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+		}
+		if _, forbidden := forbiddenImplementationImports[path]; forbidden {
+			t.Fatalf("filter.go imports implementation package %q; keep root filter.go as a package facade and put implementation behind internal/searchfilter", path)
+		}
+	}
+}
+
 func TestArchitectureLayoutWorkspaceDetectionLivesInWorkspacePackage(t *testing.T) {
 	root := repoRoot(t)
 
