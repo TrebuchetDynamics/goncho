@@ -1,87 +1,43 @@
 package goncho
 
-import (
-	"fmt"
-	"strings"
-)
+import "github.com/TrebuchetDynamics/goncho/internal/memorypolicy"
 
-type MemoryTier string
+type MemoryTier = memorypolicy.Tier
 
 const (
-	TierGlobal    MemoryTier = "global"
-	TierProject   MemoryTier = "project"
-	TierTask      MemoryTier = "task"
-	TierWorkspace MemoryTier = "workspace"
-	TierDecision  MemoryTier = "decision"
+	TierGlobal    = memorypolicy.TierGlobal
+	TierProject   = memorypolicy.TierProject
+	TierTask      = memorypolicy.TierTask
+	TierWorkspace = memorypolicy.TierWorkspace
+	TierDecision  = memorypolicy.TierDecision
 )
 
-var ValidMemoryTiers = []MemoryTier{
-	TierGlobal, TierProject, TierTask, TierWorkspace, TierDecision,
-}
+var ValidMemoryTiers = memorypolicy.ValidTiers
 
 func ValidTier(t string) bool {
-	switch MemoryTier(strings.ToLower(strings.TrimSpace(t))) {
-	case TierGlobal, TierProject, TierTask, TierWorkspace, TierDecision:
-		return true
-	default:
-		return false
-	}
+	return memorypolicy.ValidTier(t)
 }
 
 func NormalizeTier(raw string) MemoryTier {
-	t := MemoryTier(strings.ToLower(strings.TrimSpace(raw)))
-	if !ValidTier(string(t)) {
-		return TierGlobal
-	}
-	return t
+	return memorypolicy.NormalizeTier(raw)
 }
 
 func TierHierarchy() []MemoryTier {
-	return []MemoryTier{TierGlobal, TierProject, TierTask, TierWorkspace, TierDecision}
+	return memorypolicy.Hierarchy()
 }
 
 func TiersReadableBy(agentTier MemoryTier) []MemoryTier {
-	switch agentTier {
-	case TierGlobal:
-		return []MemoryTier{TierGlobal}
-	case TierProject:
-		return []MemoryTier{TierGlobal, TierProject}
-	case TierTask:
-		return []MemoryTier{TierGlobal, TierProject, TierTask}
-	case TierWorkspace:
-		return []MemoryTier{TierGlobal, TierProject, TierTask, TierWorkspace}
-	case TierDecision:
-		return []MemoryTier{TierGlobal, TierProject, TierTask, TierWorkspace, TierDecision}
-	default:
-		return nil
-	}
+	return memorypolicy.ReadableBy(agentTier)
 }
 
 func TiersWritableBy(isParent bool) []MemoryTier {
-	if isParent {
-		return TierHierarchy()
-	}
-	return []MemoryTier{TierWorkspace}
+	return memorypolicy.WritableBy(isParent)
 }
 
 func DefaultTierForSource(sourceKind string) MemoryTier {
-	switch strings.ToLower(strings.TrimSpace(sourceKind)) {
-	case "manual", "import":
-		return TierProject
-	case "tool", "runtime":
-		return TierTask
-	case "derived":
-		return TierDecision
-	case "reviewed_proposal":
-		return TierProject
-	default:
-		return TierGlobal
-	}
+	return memorypolicy.DefaultTierForSource(sourceKind)
 }
 
 func ValidateTierOrErr(raw string) error {
-	if !ValidTier(raw) {
-		return fmt.Errorf("invalid memory tier %q: must be one of global, project, task, workspace, decision", raw)
-	}
-	return nil
+	return memorypolicy.ValidateTierOrErr(raw)
 }
