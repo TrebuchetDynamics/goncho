@@ -339,6 +339,60 @@ func testSHA256Hex(raw []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetWritesFailureAudit(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-failure-audit.jsonl")
+	rawRecord := `{"conversation_id":"conv-failure-audit","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'MR': [{'id': 'q-owner-needs-graph', 'question': 'Who owns LedgerDB?', 'relevant_message_indices': [0], 'required_evidence_kinds': ['graph']}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	failuresPath := filepath.Join(dir, "beam_failures.jsonl")
+	if err := run(context.Background(), config{
+		BeamConvertIn:          rawPath,
+		BeamServiceFailuresOut: failuresPath,
+		BeamServiceConfigID:    "test-beam-failure-audit",
+		DatabasePath:           filepath.Join(dir, "beam-failure-audit.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with failure audit: %v", err)
+	}
+	rawFailures, err := os.ReadFile(failuresPath)
+	if err != nil {
+		t.Fatalf("read BEAM failure audit: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(rawFailures)), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("failure rows = %d, want one provenance failure row: %s", len(lines), rawFailures)
+	}
+	var row struct {
+		ConfigID              string   `json:"config_id"`
+		Scale                 string   `json:"scale"`
+		ConversationID        string   `json:"conversation_id"`
+		QID                   string   `json:"qid"`
+		Ability               string   `json:"ability"`
+		Question              string   `json:"question"`
+		Score                 float64  `json:"score"`
+		FailureMode           string   `json:"failure_mode"`
+		Rank                  int      `json:"rank"`
+		RelevantIDs           []string `json:"relevant_ids"`
+		CandidateMemoryIDs    []string `json:"candidate_memory_ids"`
+		RetrievedTop10        []string `json:"retrieved_top_10"`
+		RequiredEvidenceKinds []string `json:"required_evidence_kinds"`
+		TopEvidenceKinds      []string `json:"top_evidence_kinds"`
+	}
+	if err := json.Unmarshal([]byte(lines[0]), &row); err != nil {
+		t.Fatalf("decode BEAM failure audit row: %v", err)
+	}
+	if row.ConfigID != "test-beam-failure-audit" || row.Scale != "100K" || row.ConversationID != "conv-failure-audit" || row.QID != "q-owner-needs-graph" || row.Ability != "MR" || row.Question != "Who owns LedgerDB?" {
+		t.Fatalf("failure audit identity = %+v, want source-backed BEAM question identity", row)
+	}
+	if row.Score != 0 || row.FailureMode != "provenance_unsatisfied" || row.Rank != 1 || !slices.Equal(row.RequiredEvidenceKinds, []string{"graph"}) || !slices.Equal(row.TopEvidenceKinds, []string{"fact"}) {
+		t.Fatalf("failure audit row = %+v, want graph provenance failure with ranked relevant fact candidate", row)
+	}
+	if len(row.RelevantIDs) != 1 || len(row.CandidateMemoryIDs) == 0 || !slices.Equal(row.RetrievedTop10, row.CandidateMemoryIDs) {
+		t.Fatalf("failure audit IDs = %+v, want relevant ID plus retrieved top 10 candidate IDs", row)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetReportsUnscorableQuestions(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-unscorable.jsonl")

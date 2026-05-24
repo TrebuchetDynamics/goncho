@@ -18,13 +18,15 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 
 	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
 	summaryPath := filepath.Join(dir, "beam_e2e_summary.json")
+	failuresPath := filepath.Join(dir, "beam_failures.jsonl")
 	if err := run(context.Background(), config{
-		BeamConvertIn:         rawFixture,
-		BeamServiceResultsOut: resultsPath,
-		BeamServiceSummaryOut: summaryPath,
-		BeamServicePairedOut:  pairedPath,
-		BeamServiceConfigID:   "goncho-smoke",
-		DatabasePath:          filepath.Join(dir, "beam-smoke.db"),
+		BeamConvertIn:          rawFixture,
+		BeamServiceResultsOut:  resultsPath,
+		BeamServiceSummaryOut:  summaryPath,
+		BeamServicePairedOut:   pairedPath,
+		BeamServiceFailuresOut: failuresPath,
+		BeamServiceConfigID:    "goncho-smoke",
+		DatabasePath:           filepath.Join(dir, "beam-smoke.db"),
 	}); err != nil {
 		t.Fatalf("run pinned BEAM smoke fixture: %v", err)
 	}
@@ -72,6 +74,13 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 	decodeTestJSONFile(t, summaryPath, &summary)
 	if got := summary.AbilitySummary["100K"]["MR"]; got.Count != 1 || got.AvgScore != 1 {
 		t.Fatalf("BEAM smoke summary MR = %+v, want one perfect MR case", got)
+	}
+	failureRaw, err := os.ReadFile(failuresPath)
+	if err != nil {
+		t.Fatalf("read BEAM smoke failure audit: %v", err)
+	}
+	if len(failureRaw) != 0 {
+		t.Fatalf("BEAM smoke failure audit = %q, want empty passing smoke failure artifact", failureRaw)
 	}
 
 	comparisonPath := filepath.Join(dir, "beam-paired-comparison.json")

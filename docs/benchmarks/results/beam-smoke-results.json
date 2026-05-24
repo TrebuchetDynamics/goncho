@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "date": "2026-05-24T08:54:35Z",
-    "run_started_at": "2026-05-24T08:54:35Z",
+    "date": "2026-05-24T09:00:04Z",
+    "run_started_at": "2026-05-24T09:00:04Z",
     "config_id": "goncho-smoke",
     "model": "goncho-service-recall",
     "judge_model": "none",

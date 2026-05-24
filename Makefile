@@ -168,13 +168,14 @@ bench-locomo-backends: prepare-locomo
 		--locomo-backend-comparison-md-out ./docs/benchmarks/locomo-backend-comparison.md
 
 bench-beam-smoke:
-	@mkdir -p artifacts/beam-smoke docs/benchmarks/results
+	@mkdir -p artifacts/beam-smoke docs/benchmarks/results docs/benchmarks/failures
 	@cp $(BEAM_SMOKE_BASELINE_PAIRED) ./artifacts/beam-smoke/paired_outcomes.jsonl
 	go run ./cmd/goncho-bench \
 		--beam-convert-in $(BEAM_SMOKE_RAW) \
 		--beam-service-results-out ./docs/benchmarks/results/beam-smoke-results.json \
 		--beam-service-summary-out ./docs/benchmarks/results/beam-smoke-summary.json \
 		--beam-service-paired-out ./artifacts/beam-smoke/paired_outcomes.jsonl \
+		--beam-service-failures-out ./docs/benchmarks/failures/beam-smoke-failures.jsonl \
 		--beam-service-config-id goncho-smoke \
 		--db ./artifacts/beam-smoke/goncho.db
 	go run ./cmd/goncho-bench \

@@ -56,6 +56,33 @@ type beamServicePairedOutcome struct {
 	Correct        bool    `json:"correct"`
 }
 
+type beamServiceFailureAuditRow struct {
+	ConfigID              string   `json:"config_id"`
+	RunStartedAt          string   `json:"run_started_at"`
+	Scale                 string   `json:"scale"`
+	ConversationID        string   `json:"conversation_id"`
+	QID                   string   `json:"qid"`
+	Ability               string   `json:"ability"`
+	Question              string   `json:"question"`
+	Score                 float64  `json:"score"`
+	FailureMode           string   `json:"failure_mode"`
+	Rank                  int      `json:"rank"`
+	RelevantIDs           []string `json:"relevant_ids"`
+	RequiredEvidenceKinds []string `json:"required_evidence_kinds,omitempty"`
+	ExpectedNoAnswer      bool     `json:"expected_no_answer,omitempty"`
+	CandidateMemoryIDs    []string `json:"candidate_memory_ids"`
+	SelectedMemoryIDs     []string `json:"selected_memory_ids"`
+	RetrievedTop10        []string `json:"retrieved_top_10"`
+	SelectedEvidenceKinds []string `json:"selected_evidence_kinds,omitempty"`
+	TopEvidenceKinds      []string `json:"top_evidence_kinds,omitempty"`
+	RecallAt5             float64  `json:"recall_at_5"`
+	RecallAt10            float64  `json:"recall_at_10"`
+	ContextSatisfied      bool     `json:"context_satisfied"`
+	ProvenanceSatisfied   bool     `json:"provenance_satisfied"`
+	TokenBudgetWithin     bool     `json:"token_budget_within"`
+	WarningCodes          []string `json:"warning_codes,omitempty"`
+}
+
 type beamServiceResultsFile struct {
 	Metadata beamServiceResultsMetadata       `json:"metadata"`
 	Results  []beamServiceConversationResults `json:"results"`
@@ -125,6 +152,11 @@ func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cf
 	}
 	if path := strings.TrimSpace(cfg.BeamServicePairedOut); path != "" {
 		if err := appendBeamServicePairedOutcomes(path, report, configID, runStartedAt); err != nil {
+			return err
+		}
+	}
+	if path := strings.TrimSpace(cfg.BeamServiceFailuresOut); path != "" {
+		if err := writeBeamServiceFailureAudit(path, report, configID, runStartedAt); err != nil {
 			return err
 		}
 	}
@@ -404,6 +436,110 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 		})
 	}
 	return out
+}
+
+func writeBeamServiceFailureAudit(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("goncho-bench: create BEAM service failure audit dir: %w", err)
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("goncho-bench: create BEAM service failure audit: %w", err)
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+	for _, row := range buildBeamServiceFailureAuditRows(report, configID, runStartedAt) {
+		if err := encoder.Encode(row); err != nil {
+			return fmt.Errorf("goncho-bench: write BEAM service failure audit row: %w", err)
+		}
+	}
+	return nil
+}
+
+func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceFailureAuditRow {
+	out := []beamServiceFailureAuditRow{}
+	started := runStartedAt.UTC().Format(beamServicePairedDateTimeFormat)
+	for _, c := range report.Cases {
+		score := beamServiceCaseScore(c)
+		if score >= 1 {
+			continue
+		}
+		out = append(out, beamServiceFailureAuditRow{
+			ConfigID:              configID,
+			RunStartedAt:          started,
+			Scale:                 beamServiceCaseScale(c),
+			ConversationID:        beamServiceCaseConversationID(c),
+			QID:                   c.ID,
+			Ability:               strings.ToUpper(strings.TrimSpace(c.Ability)),
+			Question:              strings.TrimSpace(c.Question),
+			Score:                 score,
+			FailureMode:           beamServiceFailureMode(c, score),
+			Rank:                  beamServiceFirstRelevantRank(c.CandidateMemoryIDs, c.RelevantIDs),
+			RelevantIDs:           append([]string(nil), c.RelevantIDs...),
+			RequiredEvidenceKinds: append([]string(nil), c.RequiredEvidenceKinds...),
+			ExpectedNoAnswer:      c.ExpectedNoAnswer,
+			CandidateMemoryIDs:    append([]string(nil), c.CandidateMemoryIDs...),
+			SelectedMemoryIDs:     append([]string(nil), c.SelectedMemoryIDs...),
+			RetrievedTop10:        topN(c.CandidateMemoryIDs, 10),
+			SelectedEvidenceKinds: append([]string(nil), c.SelectedEvidenceKinds...),
+			TopEvidenceKinds:      append([]string(nil), c.TopEvidenceKinds...),
+			RecallAt5:             c.RecallAt5,
+			RecallAt10:            c.RecallAt10,
+			ContextSatisfied:      c.ContextSatisfied,
+			ProvenanceSatisfied:   c.ProvenanceSatisfied,
+			TokenBudgetWithin:     c.TokenBudgetWithin,
+			WarningCodes:          append([]string(nil), c.WarningCodes...),
+		})
+	}
+	return out
+}
+
+func beamServiceFirstRelevantRank(candidateIDs, relevantIDs []string) int {
+	relevant := map[string]struct{}{}
+	for _, id := range relevantIDs {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			relevant[id] = struct{}{}
+		}
+	}
+	for i, id := range candidateIDs {
+		if _, ok := relevant[strings.TrimSpace(id)]; ok {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func beamServiceFailureMode(c goncho.RecallBenchmarkCaseReport, score float64) string {
+	if len(c.RelevantIDs) == 0 && !c.ExpectedNoAnswer {
+		return "unscorable_missing_relevant_ids"
+	}
+	if c.ExpectedNoAnswer && len(c.SelectedMemoryIDs) > 0 {
+		return "abstention_failed"
+	}
+	rank := beamServiceFirstRelevantRank(c.CandidateMemoryIDs, c.RelevantIDs)
+	if c.RecallAt5 <= 0 {
+		if rank == 0 {
+			return "missing_candidate"
+		}
+		return "rank_too_low"
+	}
+	if !c.ContextSatisfied {
+		return "context_unsatisfied"
+	}
+	if len(c.RequiredEvidenceKinds) > 0 && !c.ProvenanceSatisfied {
+		return "provenance_unsatisfied"
+	}
+	if !c.TokenBudgetWithin {
+		return "token_budget_exceeded"
+	}
+	if len(c.WarningCodes) > 0 {
+		return "recall_warning"
+	}
+	if score < 1 {
+		return "partial_recall"
+	}
+	return "unknown"
 }
 
 func beamServiceCaseScale(c goncho.RecallBenchmarkCaseReport) string {

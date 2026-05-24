@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: raw BEAM service artifacts now include a JSONL failure audit.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetWritesFailureAudit -count=1` proves `--beam-service-failures-out` emits failing BEAM questions with config/scale/conversation/qid identity, query, score, failure mode, expected memory IDs, retrieved top 10, rank, evidence kinds, and benchmark gate booleans.
+  - Result: Goncho's BEAM path now satisfies the benchmark-roadmap failure-audit control, making real-sample misses inspectable without LLM judges, answer hints, or hand-parsing nested result files.
+
 - 2026-05-24: `make bench-beam-smoke` now runs a pinned BEAM artifact smoke path end to end.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts -count=1` proves the checked-in raw BEAM fixture plus Mnemosyne-style baseline paired row produce per-question results, summary, appended Goncho paired outcomes, and a paired-comparison verdict with conversion checksums, graph provenance, and rubric context coverage.
   - Result: Goncho now has a CI-safe one-command BEAM smoke target before running larger HuggingFace samples or claiming superiority against Mnemosyne.

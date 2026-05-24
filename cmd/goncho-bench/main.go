@@ -52,6 +52,7 @@ type config struct {
 	BeamServiceResultsOut             string
 	BeamServiceSummaryOut             string
 	BeamServicePairedOut              string
+	BeamServiceFailuresOut            string
 	BeamServiceConfigID               string
 	BeamPairedComparePath             string
 	BeamPairedBaselineConfigID        string
@@ -161,6 +162,7 @@ func main() {
 	flag.StringVar(&cfg.BeamServiceResultsOut, "beam-service-results-out", "", "Mnemosyne-compatible beam_e2e_results.json output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceSummaryOut, "beam-service-summary-out", "", "Mnemosyne-compatible beam_e2e_summary.json output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServicePairedOut, "beam-service-paired-out", "", "Mnemosyne-compatible paired_outcomes.jsonl append path for the service-backed BEAM-style oracle")
+	flag.StringVar(&cfg.BeamServiceFailuresOut, "beam-service-failures-out", "", "JSONL failure audit output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceConfigID, "beam-service-config-id", "", "config_id written to service-backed BEAM paired outcomes and summary metadata")
 	flag.StringVar(&cfg.BeamPairedComparePath, "beam-paired-compare", "", "Mnemosyne-compatible paired_outcomes.jsonl path to compare two BEAM config_id arms")
 	flag.StringVar(&cfg.BeamPairedBaselineConfigID, "beam-paired-baseline-config-id", "", "baseline config_id for --beam-paired-compare")
@@ -261,7 +263,7 @@ func run(ctx context.Context, cfg config) error {
 }
 
 func beamServiceArtifactRequested(cfg config) bool {
-	return strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceResultsOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != ""
+	return strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceResultsOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" || strings.TrimSpace(cfg.BeamServiceFailuresOut) != ""
 }
 
 func runBeamServiceBenchmark(ctx context.Context, cfg config) error {
