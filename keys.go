@@ -1,23 +1,18 @@
 package goncho
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/internal/scopedkey"
 )
 
 var (
-	ErrKeyAuthDisabled  = errors.New("goncho: key creation is disabled when auth is off")
-	ErrKeyAdminRequired = errors.New("goncho: scoped key creation requires admin credentials")
-	ErrKeyScopeRequired = errors.New("goncho: at least one of workspace_id, peer_id, or session_id is required")
-	ErrKeySecretMissing = errors.New("goncho: jwt secret is required")
-	ErrKeyInvalid       = errors.New("goncho: invalid scoped key")
-	ErrKeyExpired       = errors.New("goncho: scoped key expired")
+	ErrKeyAuthDisabled  = scopedkey.ErrAuthDisabled
+	ErrKeyAdminRequired = scopedkey.ErrAdminRequired
+	ErrKeyScopeRequired = scopedkey.ErrScopeRequired
+	ErrKeySecretMissing = scopedkey.ErrSecretMissing
+	ErrKeyInvalid       = scopedkey.ErrInvalid
+	ErrKeyExpired       = scopedkey.ErrExpired
 )
 
 type ScopedKeyParams struct {
@@ -46,88 +41,40 @@ type ScopedKeyClaims struct {
 }
 
 func CreateScopedKey(params ScopedKeyParams) (ScopedKeyResult, error) {
-	if !params.AuthEnabled {
-		return ScopedKeyResult{}, ErrKeyAuthDisabled
-	}
-	if !params.Admin {
-		return ScopedKeyResult{}, ErrKeyAdminRequired
-	}
-	claims := ScopedKeyClaims{
-		WorkspaceID: strings.TrimSpace(params.WorkspaceID),
-		PeerID:      strings.TrimSpace(params.PeerID),
-		SessionID:   strings.TrimSpace(params.SessionID),
-	}
-	if claims.WorkspaceID == "" && claims.PeerID == "" && claims.SessionID == "" {
-		return ScopedKeyResult{}, ErrKeyScopeRequired
-	}
-	now := params.Now.UTC()
-	if now.IsZero() {
-		now = time.Now().UTC()
-	}
-	claims.Timestamp = now.Format(time.RFC3339)
-	if !params.ExpiresAt.IsZero() {
-		claims.ExpiresAt = params.ExpiresAt.UTC().Format(time.RFC3339)
-	}
-	key, err := signScopedKey(claims, params.Secret)
+	result, err := scopedkey.Create(scopedkey.Params{
+		WorkspaceID: params.WorkspaceID,
+		PeerID:      params.PeerID,
+		SessionID:   params.SessionID,
+		ExpiresAt:   params.ExpiresAt,
+		AuthEnabled: params.AuthEnabled,
+		Admin:       params.Admin,
+		Secret:      params.Secret,
+		Now:         params.Now,
+	})
 	if err != nil {
 		return ScopedKeyResult{}, err
 	}
-	return ScopedKeyResult{Key: key, Claims: claims}, nil
+	return ScopedKeyResult{
+		Key:    result.Key,
+		Claims: scopedKeyClaimsFromInternal(result.Claims),
+	}, nil
 }
 
 func VerifyScopedKey(token, secret string, now time.Time) (ScopedKeyClaims, error) {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return ScopedKeyClaims{}, ErrKeyInvalid
-	}
-	if strings.TrimSpace(secret) == "" {
-		return ScopedKeyClaims{}, ErrKeySecretMissing
-	}
-	wantSig := scopedKeySignature(parts[0]+"."+parts[1], secret)
-	if !hmac.Equal([]byte(parts[2]), []byte(wantSig)) {
-		return ScopedKeyClaims{}, ErrKeyInvalid
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	claims, err := scopedkey.Verify(token, secret, now)
 	if err != nil {
-		return ScopedKeyClaims{}, fmt.Errorf("%w: decode payload", ErrKeyInvalid)
+		return ScopedKeyClaims{}, err
 	}
-	var claims ScopedKeyClaims
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return ScopedKeyClaims{}, fmt.Errorf("%w: decode claims", ErrKeyInvalid)
-	}
-	if claims.ExpiresAt != "" {
-		exp, err := time.Parse(time.RFC3339, claims.ExpiresAt)
-		if err != nil {
-			return ScopedKeyClaims{}, fmt.Errorf("%w: invalid expiration", ErrKeyInvalid)
-		}
-		if now.IsZero() {
-			now = time.Now().UTC()
-		}
-		if exp.Before(now.UTC()) {
-			return ScopedKeyClaims{}, ErrKeyExpired
-		}
-	}
-	return claims, nil
+	return scopedKeyClaimsFromInternal(claims), nil
 }
 
-func signScopedKey(claims ScopedKeyClaims, secret string) (string, error) {
-	if strings.TrimSpace(secret) == "" {
-		return "", ErrKeySecretMissing
+func scopedKeyClaimsFromInternal(claims scopedkey.Claims) ScopedKeyClaims {
+	return ScopedKeyClaims{
+		Timestamp:   claims.Timestamp,
+		ExpiresAt:   claims.ExpiresAt,
+		Admin:       claims.Admin,
+		WorkspaceID: claims.WorkspaceID,
+		PeerID:      claims.PeerID,
+		SessionID:   claims.SessionID,
 	}
-	header, err := json.Marshal(map[string]string{"alg": "HS256", "typ": "JWT"})
-	if err != nil {
-		return "", err
-	}
-	payload, err := json.Marshal(claims)
-	if err != nil {
-		return "", err
-	}
-	unsigned := base64.RawURLEncoding.EncodeToString(header) + "." + base64.RawURLEncoding.EncodeToString(payload)
-	return unsigned + "." + scopedKeySignature(unsigned, secret), nil
-}
-
-func scopedKeySignature(unsigned, secret string) string {
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(unsigned))
-	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
