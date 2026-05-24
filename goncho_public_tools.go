@@ -104,7 +104,7 @@ func (t *GonchoRecallTool) Description() string {
 	return "Run auditable Goncho recall and return the scored trace with replay evidence."
 }
 func (t *GonchoRecallTool) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"workspace_id":{"type":"string"},"peer_id":{"type":"string"},"peer":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"},"scope_id":{"type":"string"},"sources":{"type":"array","items":{"type":"string"}},"limit":{"type":"integer"},"max_tokens":{"type":"integer"}},"required":["peer_id","query"]}`)
+	return json.RawMessage(`{"type":"object","properties":{"workspace_id":{"type":"string"},"peer_id":{"type":"string"},"peer":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"},"scope_id":{"type":"string"},"sources":{"type":"array","items":{"type":"string"}},"limit":{"type":"integer"},"max_tokens":{"type":"integer"},"compact":{"type":"boolean"}},"required":["peer_id","query"]}`)
 }
 func (t *GonchoRecallTool) Spec() toolmeta.OperationSpec {
 	return gonchoPublicToolSpec(t.Name(), t.Description(), t.Schema(), false, true)
@@ -124,6 +124,7 @@ func (t *GonchoRecallTool) Execute(ctx context.Context, args json.RawMessage) (j
 		Sources     []string `json:"sources"`
 		Limit       int      `json:"limit"`
 		MaxTokens   int      `json:"max_tokens"`
+		Compact     bool     `json:"compact"`
 	}
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("goncho_recall: %w", err)
@@ -143,7 +144,7 @@ func (t *GonchoRecallTool) Execute(ctx context.Context, args json.RawMessage) (j
 	}
 	replay := BuildRecallReplay(trace)
 	diagnostics := BuildRecallDiagnostics(trace)
-	return json.Marshal(map[string]any{
+	out := map[string]any{
 		"action":             "recall",
 		"trace_id":           trace.TraceID,
 		"pipeline_version":   trace.PipelineVersion,
@@ -154,16 +155,19 @@ func (t *GonchoRecallTool) Execute(ctx context.Context, args json.RawMessage) (j
 		"selected_count":     len(trace.Selected),
 		"rejected_count":     len(trace.Rejected),
 		"warning_count":      len(trace.Warnings),
-		"selected":           trace.Selected,
-		"warnings":           trace.Warnings,
-		"trace":              trace,
-		"replay":             replay,
 		"diagnostics":        diagnostics,
-		"diagnostics_text":   FormatRecallDiagnosticsReport(diagnostics),
 		"replay_contract":    replay.ReplayContract,
 		"projection_ready":   true,
 		"projection_warning": "recall trace is orientation evidence; hosts must verify live state before acting",
-	})
+	}
+	if !in.Compact {
+		out["selected"] = trace.Selected
+		out["warnings"] = trace.Warnings
+		out["trace"] = trace
+		out["replay"] = replay
+		out["diagnostics_text"] = FormatRecallDiagnosticsReport(diagnostics)
+	}
+	return json.Marshal(out)
 }
 
 func (t *GonchoRememberTool) Name() string           { return "goncho_remember" }

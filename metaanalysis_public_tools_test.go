@@ -54,6 +54,38 @@ func TestGonchoGoalPublicContextToolGeneratesPrimerWithinTokenBudgetE2E(t *testi
 	}
 }
 
+func TestGonchoRecallToolCompactOutputKeepsDiagnosticsWithoutLargeTracePayload(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+	peer := "peer-recall-compact"
+	sessionKey := "session-recall-compact"
+
+	if _, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       peer,
+		Conclusion: "Compact recall output should keep diagnostics without full trace payloads.",
+		SessionKey: sessionKey,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	recalled := executeMemoryTool(t, ctx, NewGonchoRecallTool(svc), `{"peer_id":"`+peer+`","query":"compact diagnostics","session_key":"`+sessionKey+`","limit":3,"compact":true}`)
+	if stringField(t, recalled, "action") != "recall" || intField(t, recalled, "selected_count") != 1 {
+		t.Fatalf("recall output = %+v, want one compact selected result", recalled)
+	}
+	if stringField(t, recalled, "trace_id") == "" || stringField(t, recalled, "replay_contract") != "deterministic_replay_from_recall_trace" {
+		t.Fatalf("recall output = %+v, want trace identity and replay contract", recalled)
+	}
+	if _, ok := recalled["diagnostics"].(map[string]any); !ok {
+		t.Fatalf("diagnostics = %#v, want compact diagnostics object", recalled["diagnostics"])
+	}
+	for _, omitted := range []string{"trace", "replay", "selected", "warnings", "diagnostics_text"} {
+		if _, ok := recalled[omitted]; ok {
+			t.Fatalf("compact recall output included %q: %+v", omitted, recalled)
+		}
+	}
+}
+
 func TestGonchoGoalMetaanalysisPublicToolSurfaceWorksEndToEnd(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
