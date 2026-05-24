@@ -70,6 +70,91 @@ func TestRecallBenchmarkCorpusWarningsAreCodeFirst(t *testing.T) {
 	}
 }
 
+func TestRecallBenchmarkReportsBeamAbilityBreakdownAndProvenance(t *testing.T) {
+	cases := []RecallBenchmarkCase{
+		{
+			ID:                    "beam-ie-fact",
+			Ability:               "IE",
+			Trace:                 recallBenchmarkAbilityTrace("trace-beam-ie", "mem-fact", []EvidenceItem{{Kind: "fact", ID: "annotation:1", Score: 1}}),
+			RelevantIDs:           []string{"mem-fact"},
+			RequiredEvidenceKinds: []string{"fact"},
+			Latency:               7 * time.Millisecond,
+		},
+		{
+			ID:                    "beam-mr-graph-hit",
+			Ability:               "MR",
+			Trace:                 recallBenchmarkAbilityTrace("trace-beam-mr-hit", "mem-graph", []EvidenceItem{{Kind: "fact", ID: "annotation:2", Score: 1}, {Kind: "graph", ID: "annotation:1->annotation:2", Score: 1}}),
+			RelevantIDs:           []string{"mem-graph"},
+			RequiredEvidenceKinds: []string{"graph"},
+			Latency:               11 * time.Millisecond,
+		},
+		{
+			ID:                    "beam-mr-graph-miss",
+			Ability:               "MR",
+			Trace:                 recallBenchmarkAbilityTrace("trace-beam-mr-miss", "mem-wrong", []EvidenceItem{{Kind: "keyword", ID: "decoy", Score: 1}}),
+			RelevantIDs:           []string{"mem-missing"},
+			RequiredEvidenceKinds: []string{"graph"},
+			Latency:               13 * time.Millisecond,
+		},
+	}
+
+	report := EvaluateRecallBenchmark(cases)
+	if len(report.Abilities) != 2 {
+		t.Fatalf("abilities = %+v, want IE and MR breakdowns", report.Abilities)
+	}
+	ie := recallBenchmarkAbilityReportByName(t, report, "IE")
+	if ie.CaseCount != 1 || ie.RecallAt5 != 1 || ie.RecallAt10 != 1 || ie.ProvenanceHitRate != 1 {
+		t.Fatalf("IE ability = %+v, want perfect fact-provenance hit", ie)
+	}
+	mr := recallBenchmarkAbilityReportByName(t, report, "MR")
+	if mr.CaseCount != 2 || mr.RecallAt5 != 0.5 || mr.RecallAt10 != 0.5 || mr.ProvenanceHitRate != 0.5 {
+		t.Fatalf("MR ability = %+v, want half recall and half graph-provenance hit", mr)
+	}
+	if report.Cases[0].Ability != "IE" || !report.Cases[0].ProvenanceSatisfied || report.Cases[0].RequiredEvidenceKinds[0] != "fact" {
+		t.Fatalf("case ability/provenance = %+v, want IE fact-provenance case", report.Cases[0])
+	}
+}
+
+func recallBenchmarkAbilityTrace(traceID, memoryID string, provenance []EvidenceItem) RecallTrace {
+	candidate := ScoredRecallCandidate{
+		Candidate: RecallCandidate{
+			MemoryID:   memoryID,
+			SourceType: "conclusion",
+			Content:    "BEAM-style selected memory " + memoryID,
+			SessionID:  "sess-beam-oracle",
+			ScopeID:    MemoryScopeWorkspace,
+			Provenance: provenance,
+		},
+		Score: RecallScore{FinalScore: 1},
+	}
+	return RecallTrace{
+		TraceID:         traceID,
+		PipelineVersion: "beam-oracle-test-v1",
+		Query: RecallQuery{
+			WorkspaceID: "default",
+			Peer:        "team",
+			Query:       "BEAM-style question",
+			SessionKey:  "sess-beam-oracle",
+			ScopeID:     MemoryScopeWorkspace,
+			Limit:       5,
+		},
+		ScoringConfig: RecallScoringConfig{Version: "beam-oracle-test-v1", TokenBudget: 200},
+		Candidates:    []ScoredRecallCandidate{candidate},
+		Selected:      []ScoredRecallCandidate{candidate},
+	}
+}
+
+func recallBenchmarkAbilityReportByName(t *testing.T, report RecallBenchmarkReport, ability string) RecallBenchmarkAbilityReport {
+	t.Helper()
+	for _, item := range report.Abilities {
+		if item.Ability == ability {
+			return item
+		}
+	}
+	t.Fatalf("ability %q not found in %+v", ability, report.Abilities)
+	return RecallBenchmarkAbilityReport{}
+}
+
 func loadRecallBenchmarkTrace(t *testing.T, path string) RecallTrace {
 	t.Helper()
 	raw, err := os.ReadFile(path)

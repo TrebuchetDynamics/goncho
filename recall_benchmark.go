@@ -18,25 +18,28 @@ const (
 // RecallBenchmarkCase is one hermetic retrieval-evaluation case. It consumes
 // an already-produced RecallTrace; it never runs retrieval or opens storage.
 type RecallBenchmarkCase struct {
-	ID              string
-	Trace           RecallTrace
-	RelevantIDs     []string
-	ContextContains []string
-	Latency         time.Duration
+	ID                    string
+	Ability               string
+	Trace                 RecallTrace
+	RelevantIDs           []string
+	ContextContains       []string
+	RequiredEvidenceKinds []string
+	Latency               time.Duration
 }
 
 type RecallBenchmarkReport struct {
-	Service             string                      `json:"service"`
-	CorpusVersion       string                      `json:"corpus_version"`
-	CaseCount           int                         `json:"case_count"`
-	RecallAt5           float64                     `json:"recall_at_5"`
-	RecallAt10          float64                     `json:"recall_at_10"`
-	ContextHitRate      float64                     `json:"context_hit_rate"`
-	TokenBudgetPassRate float64                     `json:"token_budget_pass_rate"`
-	Latency             RecallBenchmarkLatency      `json:"latency"`
-	WarningCount        int                         `json:"warning_count"`
-	Warnings            []RecallWarning             `json:"warnings"`
-	Cases               []RecallBenchmarkCaseReport `json:"cases"`
+	Service             string                         `json:"service"`
+	CorpusVersion       string                         `json:"corpus_version"`
+	CaseCount           int                            `json:"case_count"`
+	RecallAt5           float64                        `json:"recall_at_5"`
+	RecallAt10          float64                        `json:"recall_at_10"`
+	ContextHitRate      float64                        `json:"context_hit_rate"`
+	TokenBudgetPassRate float64                        `json:"token_budget_pass_rate"`
+	Latency             RecallBenchmarkLatency         `json:"latency"`
+	WarningCount        int                            `json:"warning_count"`
+	Warnings            []RecallWarning                `json:"warnings"`
+	Abilities           []RecallBenchmarkAbilityReport `json:"abilities,omitempty"`
+	Cases               []RecallBenchmarkCaseReport    `json:"cases"`
 }
 
 type RecallBenchmarkLatency struct {
@@ -46,22 +49,35 @@ type RecallBenchmarkLatency struct {
 	MaxMS int `json:"max_ms"`
 }
 
+type RecallBenchmarkAbilityReport struct {
+	Ability             string  `json:"ability"`
+	CaseCount           int     `json:"case_count"`
+	RecallAt5           float64 `json:"recall_at_5"`
+	RecallAt10          float64 `json:"recall_at_10"`
+	ContextHitRate      float64 `json:"context_hit_rate"`
+	TokenBudgetPassRate float64 `json:"token_budget_pass_rate"`
+	ProvenanceHitRate   float64 `json:"provenance_hit_rate"`
+}
+
 type RecallBenchmarkCaseReport struct {
-	ID                   string   `json:"id"`
-	TraceID              string   `json:"trace_id"`
-	PipelineVersion      string   `json:"pipeline_version"`
-	ScoringConfigVersion string   `json:"scoring_config_version"`
-	RelevantIDs          []string `json:"relevant_ids"`
-	CandidateMemoryIDs   []string `json:"candidate_memory_ids"`
-	SelectedMemoryIDs    []string `json:"selected_memory_ids"`
-	RecallAt5            float64  `json:"recall_at_5"`
-	RecallAt10           float64  `json:"recall_at_10"`
-	ContextSatisfied     bool     `json:"context_satisfied"`
-	TokenBudget          int      `json:"token_budget"`
-	SelectedTokens       int      `json:"selected_tokens"`
-	TokenBudgetWithin    bool     `json:"token_budget_within"`
-	LatencyMS            int      `json:"latency_ms"`
-	WarningCodes         []string `json:"warning_codes"`
+	ID                    string   `json:"id"`
+	Ability               string   `json:"ability,omitempty"`
+	TraceID               string   `json:"trace_id"`
+	PipelineVersion       string   `json:"pipeline_version"`
+	ScoringConfigVersion  string   `json:"scoring_config_version"`
+	RelevantIDs           []string `json:"relevant_ids"`
+	RequiredEvidenceKinds []string `json:"required_evidence_kinds,omitempty"`
+	CandidateMemoryIDs    []string `json:"candidate_memory_ids"`
+	SelectedMemoryIDs     []string `json:"selected_memory_ids"`
+	RecallAt5             float64  `json:"recall_at_5"`
+	RecallAt10            float64  `json:"recall_at_10"`
+	ContextSatisfied      bool     `json:"context_satisfied"`
+	ProvenanceSatisfied   bool     `json:"provenance_satisfied,omitempty"`
+	TokenBudget           int      `json:"token_budget"`
+	SelectedTokens        int      `json:"selected_tokens"`
+	TokenBudgetWithin     bool     `json:"token_budget_within"`
+	LatencyMS             int      `json:"latency_ms"`
+	WarningCodes          []string `json:"warning_codes"`
 }
 
 func EvaluateRecallBenchmark(cases []RecallBenchmarkCase) RecallBenchmarkReport {
@@ -98,6 +114,7 @@ func EvaluateRecallBenchmark(cases []RecallBenchmarkCase) RecallBenchmarkReport 
 	report.TokenBudgetPassRate = roundRecallFloat(tokenBudgetPasses / float64(len(cases)))
 	report.Latency = summarizeRecallBenchmarkLatency(latencies)
 	report.WarningCount = len(report.Warnings)
+	report.Abilities = summarizeRecallBenchmarkAbilities(report.Cases)
 	return report
 }
 
@@ -110,22 +127,26 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 	selectedIDs := recallBenchmarkSelectedIDs(c.Trace.Selected)
 	budget := recallBenchmarkTokenBudget(c.Trace)
 	selectedTokens := recallBenchmarkSelectedTokens(c.Trace.Selected)
+	requiredEvidenceKinds := normalizeRecallBenchmarkEvidenceKinds(c.RequiredEvidenceKinds)
 	caseReport := RecallBenchmarkCaseReport{
-		ID:                   id,
-		TraceID:              c.Trace.TraceID,
-		PipelineVersion:      c.Trace.PipelineVersion,
-		ScoringConfigVersion: c.Trace.ScoringConfig.Version,
-		RelevantIDs:          append([]string(nil), c.RelevantIDs...),
-		CandidateMemoryIDs:   candidateIDs,
-		SelectedMemoryIDs:    selectedIDs,
-		RecallAt5:            recallAtK(candidateIDs, c.RelevantIDs, 5),
-		RecallAt10:           recallAtK(candidateIDs, c.RelevantIDs, 10),
-		ContextSatisfied:     recallBenchmarkContextSatisfied(c.Trace, c.RelevantIDs, c.ContextContains),
-		TokenBudget:          budget,
-		SelectedTokens:       selectedTokens,
-		TokenBudgetWithin:    budget <= 0 || selectedTokens <= budget,
-		LatencyMS:            int(c.Latency / time.Millisecond),
-		WarningCodes:         recallBenchmarkWarningCodes(c.Trace.Warnings),
+		ID:                    id,
+		Ability:               normalizeRecallBenchmarkAbility(c.Ability),
+		TraceID:               c.Trace.TraceID,
+		PipelineVersion:       c.Trace.PipelineVersion,
+		ScoringConfigVersion:  c.Trace.ScoringConfig.Version,
+		RelevantIDs:           append([]string(nil), c.RelevantIDs...),
+		RequiredEvidenceKinds: requiredEvidenceKinds,
+		CandidateMemoryIDs:    candidateIDs,
+		SelectedMemoryIDs:     selectedIDs,
+		RecallAt5:             recallAtK(candidateIDs, c.RelevantIDs, 5),
+		RecallAt10:            recallAtK(candidateIDs, c.RelevantIDs, 10),
+		ContextSatisfied:      recallBenchmarkContextSatisfied(c.Trace, c.RelevantIDs, c.ContextContains),
+		ProvenanceSatisfied:   len(requiredEvidenceKinds) > 0 && recallBenchmarkProvenanceSatisfied(c.Trace, c.RelevantIDs, requiredEvidenceKinds),
+		TokenBudget:           budget,
+		SelectedTokens:        selectedTokens,
+		TokenBudgetWithin:     budget <= 0 || selectedTokens <= budget,
+		LatencyMS:             int(c.Latency / time.Millisecond),
+		WarningCodes:          recallBenchmarkWarningCodes(c.Trace.Warnings),
 	}
 	if caseReport.RelevantIDs == nil {
 		caseReport.RelevantIDs = []string{}
@@ -150,6 +171,135 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 		})
 	}
 	return caseReport, warnings
+}
+
+type recallBenchmarkAbilityAccumulator struct {
+	caseCount           int
+	recallAt5           float64
+	recallAt10          float64
+	contextHits         float64
+	tokenBudgetPasses   float64
+	provenanceSatisfied float64
+}
+
+func summarizeRecallBenchmarkAbilities(cases []RecallBenchmarkCaseReport) []RecallBenchmarkAbilityReport {
+	stats := map[string]*recallBenchmarkAbilityAccumulator{}
+	for _, c := range cases {
+		ability := strings.TrimSpace(c.Ability)
+		if ability == "" {
+			continue
+		}
+		acc := stats[ability]
+		if acc == nil {
+			acc = &recallBenchmarkAbilityAccumulator{}
+			stats[ability] = acc
+		}
+		acc.caseCount++
+		acc.recallAt5 += c.RecallAt5
+		acc.recallAt10 += c.RecallAt10
+		if c.ContextSatisfied {
+			acc.contextHits++
+		}
+		if c.TokenBudgetWithin {
+			acc.tokenBudgetPasses++
+		}
+		if len(c.RequiredEvidenceKinds) == 0 || c.ProvenanceSatisfied {
+			acc.provenanceSatisfied++
+		}
+	}
+	if len(stats) == 0 {
+		return nil
+	}
+	abilities := make([]string, 0, len(stats))
+	for ability := range stats {
+		abilities = append(abilities, ability)
+	}
+	sort.Strings(abilities)
+	out := make([]RecallBenchmarkAbilityReport, 0, len(abilities))
+	for _, ability := range abilities {
+		acc := stats[ability]
+		denom := float64(acc.caseCount)
+		out = append(out, RecallBenchmarkAbilityReport{
+			Ability:             ability,
+			CaseCount:           acc.caseCount,
+			RecallAt5:           roundRecallFloat(acc.recallAt5 / denom),
+			RecallAt10:          roundRecallFloat(acc.recallAt10 / denom),
+			ContextHitRate:      roundRecallFloat(acc.contextHits / denom),
+			TokenBudgetPassRate: roundRecallFloat(acc.tokenBudgetPasses / denom),
+			ProvenanceHitRate:   roundRecallFloat(acc.provenanceSatisfied / denom),
+		})
+	}
+	return out
+}
+
+func normalizeRecallBenchmarkAbility(ability string) string {
+	return strings.ToUpper(strings.TrimSpace(ability))
+}
+
+func normalizeRecallBenchmarkEvidenceKinds(kinds []string) []string {
+	seen := map[string]struct{}{}
+	out := []string{}
+	for _, kind := range kinds {
+		kind = strings.ToLower(strings.TrimSpace(kind))
+		if kind == "" {
+			continue
+		}
+		if _, ok := seen[kind]; ok {
+			continue
+		}
+		seen[kind] = struct{}{}
+		out = append(out, kind)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	sort.Strings(out)
+	return out
+}
+
+func recallBenchmarkProvenanceSatisfied(trace RecallTrace, relevantIDs, requiredKinds []string) bool {
+	required := map[string]struct{}{}
+	for _, kind := range requiredKinds {
+		kind = strings.ToLower(strings.TrimSpace(kind))
+		if kind != "" {
+			required[kind] = struct{}{}
+		}
+	}
+	if len(required) == 0 {
+		return false
+	}
+	relevant := map[string]struct{}{}
+	for _, id := range relevantIDs {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			relevant[id] = struct{}{}
+		}
+	}
+	for _, item := range trace.Selected {
+		if len(relevant) > 0 {
+			if _, ok := relevant[item.Candidate.MemoryID]; !ok {
+				continue
+			}
+		}
+		seen := map[string]struct{}{}
+		for _, evidence := range item.Candidate.Provenance {
+			kind := strings.ToLower(strings.TrimSpace(evidence.Kind))
+			if kind != "" {
+				seen[kind] = struct{}{}
+			}
+		}
+		matchedAll := true
+		for kind := range required {
+			if _, ok := seen[kind]; !ok {
+				matchedAll = false
+				break
+			}
+		}
+		if matchedAll {
+			return true
+		}
+	}
+	return false
 }
 
 func recallBenchmarkCandidateIDs(items []ScoredRecallCandidate) []string {
