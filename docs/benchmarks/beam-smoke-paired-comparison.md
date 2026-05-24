@@ -1,6 +1,6 @@
 # BEAM Paired Outcome Comparison
 
-Deterministic paired comparison over Mnemosyne-compatible `paired_outcomes.jsonl` rows. Scores are joined by scale, conversation, and qid; unpaired rows are dropped.
+Deterministic paired comparison over Mnemosyne-compatible `paired_outcomes.jsonl` rows. Scores are joined by exact scale/conversation/qid first, then by exact scale/conversation/ability/question when result qids differ; unpaired rows are dropped.
 
 - Source: `./artifacts/beam-smoke/paired_outcomes.jsonl`
 - Baseline config: `mnemosyne-smoke`

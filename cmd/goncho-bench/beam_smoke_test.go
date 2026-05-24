@@ -13,9 +13,15 @@ import (
 func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 	dir := t.TempDir()
 	rawFixture := filepath.Join("testdata", "beam-smoke", "hf-beam-smoke.jsonl")
-	baselineFixture := filepath.Join("testdata", "beam-smoke", "mnemosyne-smoke-paired_outcomes.jsonl")
+	baselineResultsFixture := filepath.Join("testdata", "beam-smoke", "mnemosyne-smoke-beam_e2e_results.json")
 	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
-	copyTestFile(t, baselineFixture, pairedPath)
+	if err := run(context.Background(), config{
+		BeamPairedResultsIn:       baselineResultsFixture,
+		BeamPairedResultsOut:      pairedPath,
+		BeamPairedResultsConfigID: "mnemosyne-smoke",
+	}); err != nil {
+		t.Fatalf("import pinned Mnemosyne BEAM smoke results: %v", err)
+	}
 
 	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
 	summaryPath := filepath.Join(dir, "beam_e2e_summary.json")
@@ -120,12 +126,31 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 		ConclusionReason     string  `json:"conclusion_reason"`
 		CandidateWins        int     `json:"candidate_wins"`
 		DroppedUnpairedCount int     `json:"dropped_unpaired_count"`
+		Rows                 []struct {
+			MatchKey     string `json:"match_key"`
+			BaselineQID  string `json:"baseline_qid"`
+			CandidateQID string `json:"candidate_qid"`
+		} `json:"rows"`
 	}
 	decodeTestJSONFile(t, comparisonPath, &comparison)
 	if comparison.PairedCount != 1 || comparison.DroppedUnpairedCount != 0 || comparison.ScoreDelta != 0.5 || comparison.CandidateWins != 1 || comparison.Conclusion != "candidate_superior" || comparison.ConclusionReason != "candidate_ci_above_effect_floor" {
 		t.Fatalf("BEAM smoke comparison = %+v, want paired candidate-superior smoke verdict", comparison)
 	}
+	if len(comparison.Rows) != 1 || comparison.Rows[0].MatchKey != "question" || comparison.Rows[0].BaselineQID != "conv-beam-smoke:q0" || comparison.Rows[0].CandidateQID != "q-mr-ledger-smoke" {
+		t.Fatalf("BEAM smoke comparison rows = %+v, want nested Mnemosyne qid paired to Goncho source qid by question", comparison.Rows)
+	}
 	assertBenchFileContains(t, comparisonMDPath, "# BEAM Paired Outcome Comparison")
+}
+
+func TestBenchBeamSmokeTargetImportsNestedMnemosyneResults(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "Makefile"))
+	if err != nil {
+		t.Fatalf("read Makefile: %v", err)
+	}
+	text := string(raw)
+	if !strings.Contains(text, "BEAM_SMOKE_BASELINE_RESULTS") || !strings.Contains(text, "--beam-paired-results-in $(BEAM_SMOKE_BASELINE_RESULTS)") || !strings.Contains(text, "--beam-paired-results-out ./artifacts/beam-smoke/paired_outcomes.jsonl") {
+		t.Fatalf("bench-beam-smoke target must import nested Mnemosyne BEAM results before paired comparison:\n%s", text)
+	}
 }
 
 func copyTestFile(t *testing.T, src, dst string) {

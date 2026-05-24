@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-24T09:14:46Z",
+  "generated_at": "2026-05-24T09:51:55Z",
   "source_path": "./artifacts/beam-smoke/paired_outcomes.jsonl",
   "baseline_config_id": "mnemosyne-smoke",
   "candidate_config_id": "goncho-smoke",
@@ -38,7 +38,11 @@
       "scale": "100K",
       "conversation_id": "conv-beam-smoke",
       "qid": "q-mr-ledger-smoke",
+      "baseline_qid": "conv-beam-smoke:q0",
+      "candidate_qid": "q-mr-ledger-smoke",
+      "match_key": "question",
       "ability": "MR",
+      "question": "Who is responsible for storage used by Billing API?",
       "baseline_score": 0.5,
       "candidate_score": 1,
       "score_delta": 0.5,

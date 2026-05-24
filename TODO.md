@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `make bench-beam-smoke` now exercises nested Mnemosyne result import.
+  - Evidence target: `go test ./cmd/goncho-bench -run 'Test(BenchBeamSmokeTargetImportsNestedMnemosyneResults|RunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts)' -count=1` proves the pinned smoke target imports a nested `beam_e2e_results.json` Mnemosyne baseline before appending Goncho outcomes, then paired comparison matches Mnemosyne `conversation_id:q0` to Goncho's source qid by exact question.
+  - Result: Goncho's CI-safe BEAM smoke path now covers the same result-to-paired Adapter needed for real Mnemosyne result files, instead of relying on a pre-flattened baseline JSONL.
+
 - 2026-05-24: BEAM paired comparison now imports nested Mnemosyne result files and pairs qid mismatches by question.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion -count=1` proves `--beam-paired-results-in` converts nested `beam_e2e_results.json` rows into paired outcomes and `--beam-paired-compare` matches Mnemosyne `conversation_id:qN` rows to Goncho source qids by exact conversation/scale/ability/question, surfacing the qid mismatch in comparison rows.
   - Result: a real Mnemosyne BEAM result file plus a Goncho judged artifact can now feed paired comparison without separate flattening or qid-rewrite scripts.

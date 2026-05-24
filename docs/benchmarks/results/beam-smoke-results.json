@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "date": "2026-05-24T09:14:46Z",
-    "run_started_at": "2026-05-24T09:14:46Z",
+    "date": "2026-05-24T09:51:55Z",
+    "run_started_at": "2026-05-24T09:51:55Z",
     "config_id": "goncho-smoke",
     "model": "goncho-service-recall",
     "judge_model": "none",
@@ -14,6 +14,7 @@
     "pure_recall": true,
     "config": {
       "allow_harness_oracles": false,
+      "external_judgments": false,
       "full_context": false,
       "pure_recall": true,
       "use_cloud": false

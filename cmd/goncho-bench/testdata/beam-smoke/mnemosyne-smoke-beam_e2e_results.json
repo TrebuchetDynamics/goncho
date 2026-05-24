@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "config_id": "mnemosyne-smoke",
+    "run_started_at": "2026-05-24T00:00:00Z",
+    "model": "mnemosyne-smoke-fixture",
+    "judge_model": "mnemosyne-smoke-fixture"
+  },
+  "results": [
+    {
+      "conversation_id": "conv-beam-smoke",
+      "scale": "100K",
+      "num_questions": 1,
+      "num_evaluated": 1,
+      "results": [
+        {
+          "qid": "conv-beam-smoke:q0",
+          "ability": "MR",
+          "question": "Who is responsible for storage used by Billing API?",
+          "ideal_answer": "Mira is responsible for LedgerDB storage.",
+          "ai_answer": "Mira owns LedgerDB, but the answer did not mention the Billing API storage chain.",
+          "score": 0.5,
+          "nuggets": ["mentions Mira"],
+          "assessment": "Pinned Mnemosyne smoke baseline with partial multi-hop answer."
+        }
+      ]
+    }
+  ]
+}

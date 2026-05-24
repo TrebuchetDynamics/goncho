@@ -9,7 +9,7 @@ LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jso
 LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
 BEAM_SMOKE_RAW := ./cmd/goncho-bench/testdata/beam-smoke/hf-beam-smoke.jsonl
-BEAM_SMOKE_BASELINE_PAIRED := ./cmd/goncho-bench/testdata/beam-smoke/mnemosyne-smoke-paired_outcomes.jsonl
+BEAM_SMOKE_BASELINE_RESULTS := ./cmd/goncho-bench/testdata/beam-smoke/mnemosyne-smoke-beam_e2e_results.json
 PUBLIC_LATEST_VERSION := v0.1.1
 PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-22
 
@@ -169,7 +169,11 @@ bench-locomo-backends: prepare-locomo
 
 bench-beam-smoke:
 	@mkdir -p artifacts/beam-smoke docs/benchmarks/results docs/benchmarks/failures
-	@cp $(BEAM_SMOKE_BASELINE_PAIRED) ./artifacts/beam-smoke/paired_outcomes.jsonl
+	@: > ./artifacts/beam-smoke/paired_outcomes.jsonl
+	go run ./cmd/goncho-bench \
+		--beam-paired-results-in $(BEAM_SMOKE_BASELINE_RESULTS) \
+		--beam-paired-results-out ./artifacts/beam-smoke/paired_outcomes.jsonl \
+		--beam-paired-results-config-id mnemosyne-smoke
 	go run ./cmd/goncho-bench \
 		--beam-convert-in $(BEAM_SMOKE_RAW) \
 		--beam-service-results-out ./docs/benchmarks/results/beam-smoke-results.json \

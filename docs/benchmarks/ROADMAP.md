@@ -221,7 +221,7 @@ Every benchmark should include:
 9. One-command clean-room reproduction where licensing permits.
 10. CI-safe smoke target with tiny pinned fixtures.
 
-BEAM smoke slice delivered: `make bench-beam-smoke` runs the pinned raw HuggingFace-style fixture at `cmd/goncho-bench/testdata/beam-smoke/hf-beam-smoke.jsonl`, emits Mnemosyne-compatible results/summary/paired outcomes, and compares against the checked-in `mnemosyne-smoke` paired baseline with checksum diagnostics and a bootstrap-gated superiority verdict.
+BEAM smoke slice delivered: `make bench-beam-smoke` runs the pinned raw HuggingFace-style fixture at `cmd/goncho-bench/testdata/beam-smoke/hf-beam-smoke.jsonl`, imports the checked-in nested `mnemosyne-smoke` `beam_e2e_results.json` baseline through `--beam-paired-results-in`, emits Mnemosyne-compatible results/summary/paired outcomes, and compares by exact qid or exact question with checksum diagnostics and a bootstrap-gated superiority verdict.
 
 BEAM failure-audit slice delivered: `goncho-bench --beam-service-failures-out beam_failures.jsonl` writes one JSONL row per failed service-backed BEAM question, including query, expected memory IDs, retrieved top 10, rank of the first expected ID, likely failure mode, provenance/context/token-budget gates, and warning codes.
 
