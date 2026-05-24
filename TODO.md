@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `goncho-bench --beam-paired-compare` now compares Mnemosyne-compatible BEAM paired outcomes.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonWritesBootstrapReport -count=1` proves Goncho can read append-only `paired_outcomes.jsonl`, pair baseline and candidate `config_id` rows by scale/conversation/qid, report score deltas, ability breakdowns, win/tie counts, dropped-unpaired counts, and deterministic bootstrap 95% confidence intervals.
+  - Result: Goncho now has the local arm-comparison oracle needed to make future BEAM superiority claims falsifiable against Mnemosyne-style artifacts instead of hand-comparing summaries.
+
 - 2026-05-24: raw BEAM service artifacts now score retrieved-context coverage against BEAM rubrics.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetScoresRubricContextCoverage -count=1` proves `beam_e2e_results.json` keeps Goncho's pure-recall score while adding local `rubric_context_score` and `rubric_context_matches` diagnostics derived only from selected context and BEAM rubric text.
   - Result: Goncho now has a deterministic offline rubric-coverage signal to compare with optional BEAM judge results without using ideal answers as retrieval hints or weakening stable-ID recall scoring.

@@ -18,42 +18,48 @@ import (
 )
 
 type config struct {
-	DatasetPath                     string
-	OutPath                         string
-	FailurePath                     string
-	DatabasePath                    string
-	Limit                           int
-	Runs                            int
-	System                          string
-	DatasetRevision                 string
-	DatasetSHA256                   string
-	FailOnLeakage                   bool
-	ClassifyReportPath              string
-	ClassifyFailurePath             string
-	ClassifyJSONLOut                string
-	ClassifyMarkdownOut             string
-	LocomoMemoriesPath              string
-	LocomoQuestionsPath             string
-	LocomoMarkdownOut               string
-	LocomoName                      string
-	LocomoCompareReport             string
-	LocomoCompareJSONL              string
-	LocomoCompareMD                 string
-	LocomoBackendComparisonJSON     string
-	LocomoBackendComparisonMD       string
-	LocomoBackendComparisonFailures string
-	LocomoAgentMemoryResults        string
-	LocomoMem0Results               string
-	BeamConvertIn                   string
-	BeamConvertOut                  string
-	BeamConvertScale                string
-	BeamJSONLPath                   string
-	BeamServiceOut                  string
-	BeamServiceResultsOut           string
-	BeamServiceSummaryOut           string
-	BeamServicePairedOut            string
-	BeamServiceConfigID             string
-	BeamConversionDiagnostics       *beamConversionDiagnostics
+	DatasetPath                       string
+	OutPath                           string
+	FailurePath                       string
+	DatabasePath                      string
+	Limit                             int
+	Runs                              int
+	System                            string
+	DatasetRevision                   string
+	DatasetSHA256                     string
+	FailOnLeakage                     bool
+	ClassifyReportPath                string
+	ClassifyFailurePath               string
+	ClassifyJSONLOut                  string
+	ClassifyMarkdownOut               string
+	LocomoMemoriesPath                string
+	LocomoQuestionsPath               string
+	LocomoMarkdownOut                 string
+	LocomoName                        string
+	LocomoCompareReport               string
+	LocomoCompareJSONL                string
+	LocomoCompareMD                   string
+	LocomoBackendComparisonJSON       string
+	LocomoBackendComparisonMD         string
+	LocomoBackendComparisonFailures   string
+	LocomoAgentMemoryResults          string
+	LocomoMem0Results                 string
+	BeamConvertIn                     string
+	BeamConvertOut                    string
+	BeamConvertScale                  string
+	BeamJSONLPath                     string
+	BeamServiceOut                    string
+	BeamServiceResultsOut             string
+	BeamServiceSummaryOut             string
+	BeamServicePairedOut              string
+	BeamServiceConfigID               string
+	BeamPairedComparePath             string
+	BeamPairedBaselineConfigID        string
+	BeamPairedCandidateConfigID       string
+	BeamPairedCompareJSONOut          string
+	BeamPairedCompareMarkdownOut      string
+	BeamPairedCompareBootstrapSamples int
+	BeamConversionDiagnostics         *beamConversionDiagnostics
 }
 
 type dataset struct {
@@ -155,6 +161,12 @@ func main() {
 	flag.StringVar(&cfg.BeamServiceSummaryOut, "beam-service-summary-out", "", "Mnemosyne-compatible beam_e2e_summary.json output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServicePairedOut, "beam-service-paired-out", "", "Mnemosyne-compatible paired_outcomes.jsonl append path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceConfigID, "beam-service-config-id", "", "config_id written to service-backed BEAM paired outcomes and summary metadata")
+	flag.StringVar(&cfg.BeamPairedComparePath, "beam-paired-compare", "", "Mnemosyne-compatible paired_outcomes.jsonl path to compare two BEAM config_id arms")
+	flag.StringVar(&cfg.BeamPairedBaselineConfigID, "beam-paired-baseline-config-id", "", "baseline config_id for --beam-paired-compare")
+	flag.StringVar(&cfg.BeamPairedCandidateConfigID, "beam-paired-candidate-config-id", "", "candidate config_id for --beam-paired-compare")
+	flag.StringVar(&cfg.BeamPairedCompareJSONOut, "beam-paired-json-out", "", "JSON report output path for --beam-paired-compare; defaults to stdout when no outputs are set")
+	flag.StringVar(&cfg.BeamPairedCompareMarkdownOut, "beam-paired-md-out", "", "Markdown report output path for --beam-paired-compare")
+	flag.IntVar(&cfg.BeamPairedCompareBootstrapSamples, "beam-paired-bootstrap-samples", 5000, "deterministic bootstrap samples for --beam-paired-compare 95% CI")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
@@ -165,6 +177,9 @@ func main() {
 }
 
 func run(ctx context.Context, cfg config) error {
+	if strings.TrimSpace(cfg.BeamPairedComparePath) != "" {
+		return runBeamPairedComparison(cfg)
+	}
 	if strings.TrimSpace(cfg.BeamConvertIn) != "" {
 		if beamServiceArtifactRequested(cfg) {
 			return runBeamHuggingFaceServiceBenchmark(ctx, cfg)
