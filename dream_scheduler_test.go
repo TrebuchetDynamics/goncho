@@ -12,7 +12,7 @@ import (
 	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
-func TestGonchoDreamSchedulerRequiresThresholdCooldownAndIdle(t *testing.T) {
+func TestGonchoDreamPublicFacadeSchedulesAndCancelsViaService(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 4, 25, 12, 0, 0, 0, time.UTC)
 	svc, cleanup := newDreamTestService(t, Config{
@@ -21,158 +21,23 @@ func TestGonchoDreamSchedulerRequiresThresholdCooldownAndIdle(t *testing.T) {
 	})
 	defer cleanup()
 
-	seedDreamConclusions(t, svc.db, svc.workspaceID, svc.observer, "user-threshold", 49, now.Add(-2*time.Hour))
-	got, err := svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-threshold", Now: now})
+	seedDreamConclusions(t, svc.db, svc.workspaceID, svc.observer, "user-facade", 50, now.Add(-2*time.Hour))
+	created, err := svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-facade", Now: now})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Action != "rejected" || got.Evidence.Code != "dream_threshold" || got.NewConclusions != 49 {
-		t.Fatalf("threshold result = %+v, want rejected dream_threshold with 49 new conclusions", got)
+	if created.Action != "created" || created.Status != "pending" || created.ID == 0 || created.Evidence.Code != "dream_pending" {
+		t.Fatalf("ScheduleDream = %+v, want created pending dream intent", created)
 	}
 
-	seedDreamConclusions(t, svc.db, svc.workspaceID, svc.observer, "user-idle", 49, now.Add(-2*time.Hour))
-	seedDreamConclusions(t, svc.db, svc.workspaceID, svc.observer, "user-idle", 1, now.Add(-30*time.Minute))
-	got, err = svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-idle", Now: now})
-	if err != nil {
+	if _, err := svc.Conclude(ctx, ConcludeParams{Peer: "user-facade", Conclusion: "new activity cancels stale dream"}); err != nil {
 		t.Fatal(err)
 	}
-	if got.Action != "rejected" || got.Evidence.Code != "dream_idle" {
-		t.Fatalf("idle result = %+v, want rejected dream_idle", got)
-	}
-	wantIdleUntil := now.Add(30 * time.Minute).Unix()
-	if got.Evidence.IdleUntil != wantIdleUntil {
-		t.Fatalf("IdleUntil = %d, want %d", got.Evidence.IdleUntil, wantIdleUntil)
-	}
-
-	seedDreamConclusions(t, svc.db, svc.workspaceID, svc.observer, "user-ready", 50, now.Add(-2*time.Hour))
-	got, err = svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-ready", Now: now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Action != "created" || got.Status != "pending" || got.ID == 0 {
-		t.Fatalf("eligible result = %+v, want created pending dream intent", got)
-	}
-
-	seedDreamConclusions(t, svc.db, svc.workspaceID, svc.observer, "user-cooldown", 100, now.Add(-2*time.Hour))
-	insertDreamIntentRow(t, svc.db, dreamIntentSeed{
-		WorkspaceID:      svc.workspaceID,
-		ObserverPeerID:   svc.observer,
-		ObservedPeerID:   "user-cooldown",
-		Status:           "completed",
-		LastConclusionID: 50,
-		NewConclusions:   50,
-		CompletedAt:      now.Add(-7 * time.Hour).Unix(),
-		CooldownUntil:    now.Add(time.Hour).Unix(),
-		CreatedAt:        now.Add(-7 * time.Hour).Unix(),
-		UpdatedAt:        now.Add(-7 * time.Hour).Unix(),
-	})
-	got, err = svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-cooldown", Now: now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Action != "rejected" || got.Evidence.Code != "dream_cooldown" {
-		t.Fatalf("cooldown result = %+v, want rejected dream_cooldown", got)
-	}
-	if got.Evidence.CooldownUntil != now.Add(time.Hour).Unix() {
-		t.Fatalf("CooldownUntil = %d, want %d", got.Evidence.CooldownUntil, now.Add(time.Hour).Unix())
-	}
-}
-
-func TestGonchoDreamSchedulerDedupesActiveIntentAndStalesPendingOnNewActivity(t *testing.T) {
-	ctx := context.Background()
-	now := time.Date(2026, 4, 25, 12, 0, 0, 0, time.UTC)
-	svc, cleanup := newDreamTestService(t, Config{
-		DreamEnabled:     true,
-		DreamIdleTimeout: time.Hour,
-	})
-	defer cleanup()
-
-	seedDreamConclusions(t, svc.db, svc.workspaceID, svc.observer, "user-active", 50, now.Add(-2*time.Hour))
-	created, err := svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-active", Now: now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	reused, err := svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-active", Now: now.Add(time.Minute)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reused.Action != "reused" || reused.ID != created.ID || reused.Evidence.Code != "dream_pending" {
-		t.Fatalf("second schedule = %+v, want reused pending dream %d", reused, created.ID)
-	}
-	if got := countDreamsByStatus(t, svc.db, "user-active", "pending") + countDreamsByStatus(t, svc.db, "user-active", "in_progress"); got != 1 {
-		t.Fatalf("active dream count = %d, want 1", got)
-	}
-
-	setDreamStatus(t, svc.db, created.ID, "in_progress", now.Add(2*time.Minute).Unix())
-	reused, err = svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-active", Now: now.Add(3 * time.Minute), Manual: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reused.Action != "reused" || reused.ID != created.ID || reused.Evidence.Code != "dream_in_progress" {
-		t.Fatalf("manual during in-progress = %+v, want reused dream_in_progress", reused)
-	}
-
-	seedDreamConclusions(t, svc.db, svc.workspaceID, svc.observer, "user-stale", 50, now.Add(-2*time.Hour))
-	pending, err := svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-stale", Now: now})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := svc.Conclude(ctx, ConcludeParams{Peer: "user-stale", Conclusion: "new activity cancels stale dream"}); err != nil {
-		t.Fatal(err)
-	}
-	if got := countDreamsByStatus(t, svc.db, "user-stale", "stale"); got != 1 {
+	if got := countDreamsByStatus(t, svc.db, "user-facade", "stale"); got != 1 {
 		t.Fatalf("stale dream count = %d, want 1", got)
 	}
-	if got := countDreamsByStatus(t, svc.db, "user-stale", "pending"); got != 0 {
-		t.Fatalf("pending dream count after new activity = %d, want 0", got)
-	}
-	if got := countDreamsForPeer(t, svc.db, "user-stale"); got != 1 {
-		t.Fatalf("dream history count = %d, want stale history preserved", got)
-	}
-	if status := dreamStatusByID(t, svc.db, pending.ID); status != "stale" {
-		t.Fatalf("dream %d status = %q, want stale", pending.ID, status)
-	}
-}
-
-func TestGonchoDreamManualScheduleReportsCreatedReusedAndRejected(t *testing.T) {
-	ctx := context.Background()
-	now := time.Date(2026, 4, 25, 12, 0, 0, 0, time.UTC)
-	svc, cleanup := newDreamTestService(t, Config{DreamEnabled: true})
-	defer cleanup()
-
-	created, err := svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-manual", Now: now, Manual: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if created.Action != "created" || created.ID == 0 || created.Evidence.Code != "dream_pending" {
-		t.Fatalf("manual created = %+v, want created pending evidence", created)
-	}
-
-	reused, err := svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-manual", Now: now.Add(time.Minute), Manual: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reused.Action != "reused" || reused.ID != created.ID || reused.Evidence.Code != "dream_pending" {
-		t.Fatalf("manual reused = %+v, want reused pending dream %d", reused, created.ID)
-	}
-
-	disabled, disabledCleanup := newDreamTestService(t, Config{DreamEnabled: false})
-	defer disabledCleanup()
-	rejected, err := disabled.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-manual", Now: now, Manual: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if rejected.Action != "rejected" || rejected.Evidence.Code != "dream_disabled" {
-		t.Fatalf("manual disabled = %+v, want rejected dream_disabled", rejected)
-	}
-
-	dropDreamTable(t, svc.db)
-	rejected, err = svc.ScheduleDream(ctx, DreamScheduleParams{Peer: "user-manual", Now: now, Manual: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if rejected.Action != "rejected" || rejected.Evidence.Code != "dream_unavailable" {
-		t.Fatalf("manual unavailable = %+v, want rejected dream_unavailable", rejected)
+	if status := dreamStatusByID(t, svc.db, created.ID); status != "stale" {
+		t.Fatalf("dream %d status = %q, want stale", created.ID, status)
 	}
 }
 
@@ -386,22 +251,6 @@ func countDreamsByStatus(t *testing.T, db *sql.DB, peer, status string) int {
 		t.Fatalf("count dreams by status: %v", err)
 	}
 	return got
-}
-
-func countDreamsForPeer(t *testing.T, db *sql.DB, peer string) int {
-	t.Helper()
-	var got int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM goncho_dreams WHERE observed_peer_id = ?`, peer).Scan(&got); err != nil {
-		t.Fatalf("count dreams for peer: %v", err)
-	}
-	return got
-}
-
-func setDreamStatus(t *testing.T, db *sql.DB, id int64, status string, updatedAt int64) {
-	t.Helper()
-	if _, err := db.Exec(`UPDATE goncho_dreams SET status = ?, updated_at = ?, started_at = ? WHERE id = ?`, status, updatedAt, updatedAt, id); err != nil {
-		t.Fatalf("set dream status: %v", err)
-	}
 }
 
 func dreamStatusByID(t *testing.T, db *sql.DB, id int64) string {

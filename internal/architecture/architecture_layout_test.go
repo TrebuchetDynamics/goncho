@@ -187,6 +187,50 @@ func TestArchitectureLayoutReviewLogTestsLiveWithModule(t *testing.T) {
 	}
 }
 
+func TestArchitectureLayoutDreamSchedulerImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "dreamscheduler", "scheduler.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("dream scheduler implementation must live at %s: %v", implPath, err)
+	}
+
+	facadePath := filepath.Join(root, "dream_scheduler.go")
+	content, err := os.ReadFile(facadePath)
+	if err != nil {
+		t.Fatalf("ReadFile(%s): %v", facadePath, err)
+	}
+	for _, token := range []string{"INSERT INTO goncho_dreams", "UPDATE goncho_dreams", "FROM goncho_dreams", "FROM goncho_conclusions", "func readDreamEligibility", "func findActiveDreamIntent", "func latestCompletedDream", "func insertDreamIntent"} {
+		if bytes.Contains(content, []byte(token)) {
+			t.Fatalf("%s still contains dream scheduler implementation token %q; move it behind internal/dreamscheduler", facadePath, token)
+		}
+	}
+}
+
+func TestArchitectureLayoutDreamSchedulerTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "dreamscheduler", "scheduler_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("dream scheduler behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "dream_scheduler_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestGonchoDreamPublicFacade") && !strings.HasPrefix(fn.Name.Name, "TestGonchoDreamContext") && !strings.HasPrefix(fn.Name.Name, "TestGonchoDreamQueueStatus") {
+			t.Fatalf("%s keeps %s in the root package; move pure dream scheduler behavior tests to internal/dreamscheduler", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
 func TestArchitectureLayoutSkillLearningProposalsImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 
