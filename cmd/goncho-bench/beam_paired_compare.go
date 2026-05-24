@@ -58,7 +58,11 @@ type beamPairedComparisonRow struct {
 	Scale            string  `json:"scale"`
 	ConversationID   string  `json:"conversation_id"`
 	QID              string  `json:"qid"`
+	BaselineQID      string  `json:"baseline_qid,omitempty"`
+	CandidateQID     string  `json:"candidate_qid,omitempty"`
+	MatchKey         string  `json:"match_key"`
 	Ability          string  `json:"ability"`
+	Question         string  `json:"question,omitempty"`
 	BaselineScore    float64 `json:"baseline_score"`
 	CandidateScore   float64 `json:"candidate_score"`
 	ScoreDelta       float64 `json:"score_delta"`
@@ -71,6 +75,19 @@ type beamPairedComparisonKey struct {
 	scale          string
 	conversationID string
 	qid            string
+}
+
+type beamPairedComparisonQuestionKey struct {
+	scale          string
+	conversationID string
+	ability        string
+	question       string
+}
+
+type beamPairedMatchedOutcome struct {
+	baseline  beamServicePairedOutcome
+	candidate beamServicePairedOutcome
+	matchKey  string
 }
 
 func runBeamPairedComparison(cfg config) error {
@@ -101,54 +118,55 @@ func buildBeamPairedComparison(cfg config) (beamPairedComparisonReport, error) {
 	if err != nil {
 		return beamPairedComparisonReport{}, err
 	}
-	baselineRows, candidateRows := map[beamPairedComparisonKey]beamServicePairedOutcome{}, map[beamPairedComparisonKey]beamServicePairedOutcome{}
+	baselineRows, candidateRows := []beamServicePairedOutcome{}, []beamServicePairedOutcome{}
 	for _, row := range rows {
-		key := beamPairedOutcomeKey(row)
-		if key.qid == "" {
+		if strings.TrimSpace(row.QID) == "" {
 			continue
 		}
 		switch strings.TrimSpace(row.ConfigID) {
 		case baselineID:
-			baselineRows[key] = row
+			baselineRows = append(baselineRows, row)
 		case candidateID:
-			candidateRows[key] = row
+			candidateRows = append(candidateRows, row)
 		}
 	}
-	pairedKeys := make([]beamPairedComparisonKey, 0)
-	dropped := 0
-	seen := map[beamPairedComparisonKey]struct{}{}
-	for key := range baselineRows {
-		seen[key] = struct{}{}
-		if _, ok := candidateRows[key]; ok {
-			pairedKeys = append(pairedKeys, key)
-		} else {
-			dropped++
-		}
-	}
-	for key := range candidateRows {
-		if _, ok := seen[key]; !ok {
-			dropped++
-		}
-	}
-	sort.Slice(pairedKeys, func(i, j int) bool {
-		return beamPairedComparisonKeyLess(pairedKeys[i], pairedKeys[j])
-	})
-	if len(pairedKeys) == 0 {
+	matchedRows, dropped := matchBeamPairedOutcomes(baselineRows, candidateRows)
+	if len(matchedRows) == 0 {
 		return beamPairedComparisonReport{}, fmt.Errorf("goncho-bench: no paired BEAM outcomes for config_id %q vs %q", baselineID, candidateID)
 	}
-	comparisonRows := make([]beamPairedComparisonRow, 0, len(pairedKeys))
-	for _, key := range pairedKeys {
-		base, cand := baselineRows[key], candidateRows[key]
+	comparisonRows := make([]beamPairedComparisonRow, 0, len(matchedRows))
+	for _, matched := range matchedRows {
+		base, cand := matched.baseline, matched.candidate
 		ability := strings.ToUpper(strings.TrimSpace(cand.Ability))
 		if ability == "" {
 			ability = strings.ToUpper(strings.TrimSpace(base.Ability))
 		}
+		question := strings.TrimSpace(cand.Question)
+		if question == "" {
+			question = strings.TrimSpace(base.Question)
+		}
+		scale := strings.TrimSpace(cand.Scale)
+		if scale == "" {
+			scale = strings.TrimSpace(base.Scale)
+		}
+		conversationID := strings.TrimSpace(cand.ConversationID)
+		if conversationID == "" {
+			conversationID = strings.TrimSpace(base.ConversationID)
+		}
+		qid := strings.TrimSpace(cand.QID)
+		if qid == "" {
+			qid = strings.TrimSpace(base.QID)
+		}
 		delta := roundSignedMetric(cand.Score - base.Score)
 		comparisonRows = append(comparisonRows, beamPairedComparisonRow{
-			Scale:            key.scale,
-			ConversationID:   key.conversationID,
-			QID:              key.qid,
+			Scale:            scale,
+			ConversationID:   conversationID,
+			QID:              qid,
+			BaselineQID:      strings.TrimSpace(base.QID),
+			CandidateQID:     strings.TrimSpace(cand.QID),
+			MatchKey:         matched.matchKey,
 			Ability:          ability,
+			Question:         question,
 			BaselineScore:    roundMetric(base.Score),
 			CandidateScore:   roundMetric(cand.Score),
 			ScoreDelta:       delta,
@@ -207,6 +225,78 @@ func beamPairedOutcomeKey(row beamServicePairedOutcome) beamPairedComparisonKey 
 		conversationID: strings.TrimSpace(row.ConversationID),
 		qid:            strings.TrimSpace(row.QID),
 	}
+}
+
+func beamPairedOutcomeQuestionKey(row beamServicePairedOutcome) beamPairedComparisonQuestionKey {
+	question := strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(row.Question))), " ")
+	if question == "" {
+		return beamPairedComparisonQuestionKey{}
+	}
+	return beamPairedComparisonQuestionKey{
+		scale:          strings.TrimSpace(row.Scale),
+		conversationID: strings.TrimSpace(row.ConversationID),
+		ability:        strings.ToUpper(strings.TrimSpace(row.Ability)),
+		question:       question,
+	}
+}
+
+func matchBeamPairedOutcomes(baselineRows, candidateRows []beamServicePairedOutcome) ([]beamPairedMatchedOutcome, int) {
+	sort.Slice(baselineRows, func(i, j int) bool { return beamServicePairedOutcomeLess(baselineRows[i], baselineRows[j]) })
+	sort.Slice(candidateRows, func(i, j int) bool { return beamServicePairedOutcomeLess(candidateRows[i], candidateRows[j]) })
+	candidateByQID := map[beamPairedComparisonKey]int{}
+	candidateByQuestion := map[beamPairedComparisonQuestionKey]int{}
+	for i, row := range candidateRows {
+		if key := beamPairedOutcomeKey(row); key.qid != "" {
+			if _, ok := candidateByQID[key]; !ok {
+				candidateByQID[key] = i
+			}
+		}
+		if key := beamPairedOutcomeQuestionKey(row); key.question != "" {
+			if _, ok := candidateByQuestion[key]; !ok {
+				candidateByQuestion[key] = i
+			}
+		}
+	}
+	usedCandidates := map[int]struct{}{}
+	matched := []beamPairedMatchedOutcome{}
+	dropped := 0
+	for _, base := range baselineRows {
+		if idx, ok := candidateByQID[beamPairedOutcomeKey(base)]; ok {
+			if _, used := usedCandidates[idx]; !used {
+				usedCandidates[idx] = struct{}{}
+				matched = append(matched, beamPairedMatchedOutcome{baseline: base, candidate: candidateRows[idx], matchKey: "qid"})
+				continue
+			}
+		}
+		if questionKey := beamPairedOutcomeQuestionKey(base); questionKey.question != "" {
+			if idx, ok := candidateByQuestion[questionKey]; ok {
+				if _, used := usedCandidates[idx]; !used {
+					usedCandidates[idx] = struct{}{}
+					matched = append(matched, beamPairedMatchedOutcome{baseline: base, candidate: candidateRows[idx], matchKey: "question"})
+					continue
+				}
+			}
+		}
+		dropped++
+	}
+	dropped += len(candidateRows) - len(usedCandidates)
+	return matched, dropped
+}
+
+func beamServicePairedOutcomeLess(a, b beamServicePairedOutcome) bool {
+	ak, bk := beamPairedOutcomeKey(a), beamPairedOutcomeKey(b)
+	if !beamPairedComparisonKeyEqual(ak, bk) {
+		return beamPairedComparisonKeyLess(ak, bk)
+	}
+	aq, bq := beamPairedOutcomeQuestionKey(a), beamPairedOutcomeQuestionKey(b)
+	if aq.question != bq.question {
+		return aq.question < bq.question
+	}
+	return strings.TrimSpace(a.ConfigID) < strings.TrimSpace(b.ConfigID)
+}
+
+func beamPairedComparisonKeyEqual(a, b beamPairedComparisonKey) bool {
+	return a.scale == b.scale && a.conversationID == b.conversationID && a.qid == b.qid
 }
 
 func beamPairedComparisonKeyLess(a, b beamPairedComparisonKey) bool {
@@ -374,7 +464,7 @@ func writeBeamPairedComparisonMarkdown(path, jsonPath string, report beamPairedC
 	}
 	var b strings.Builder
 	b.WriteString("# BEAM Paired Outcome Comparison\n\n")
-	b.WriteString("Deterministic paired comparison over Mnemosyne-compatible `paired_outcomes.jsonl` rows. Scores are joined by scale, conversation, and qid; unpaired rows are dropped.\n\n")
+	b.WriteString("Deterministic paired comparison over Mnemosyne-compatible `paired_outcomes.jsonl` rows. Scores are joined by exact scale/conversation/qid first, then by exact scale/conversation/ability/question when result qids differ; unpaired rows are dropped.\n\n")
 	fmt.Fprintf(&b, "- Source: `%s`\n", report.SourcePath)
 	fmt.Fprintf(&b, "- Baseline config: `%s`\n", report.BaselineConfigID)
 	fmt.Fprintf(&b, "- Candidate config: `%s`\n", report.CandidateConfigID)

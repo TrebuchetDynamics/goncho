@@ -9,6 +9,85 @@ import (
 	"testing"
 )
 
+func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
+	dir := t.TempDir()
+	resultsPath := filepath.Join(dir, "mnemosyne-beam_e2e_results.json")
+	nestedResults := `{
+  "metadata": {
+    "config_id": "mnemosyne-v3",
+    "run_started_at": "2026-05-24T00:00:00Z"
+  },
+  "results": [
+    {
+      "conversation_id": "conv-beam-real",
+      "scale": "100K",
+      "results": [
+        {
+          "qid": "conv-beam-real:q0",
+          "ability": "IE",
+          "question": "Who owns LedgerDB?",
+          "score": 0.25
+        }
+      ]
+    }
+  ]
+}
+`
+	if err := os.WriteFile(resultsPath, []byte(nestedResults), 0o644); err != nil {
+		t.Fatalf("write nested Mnemosyne BEAM results: %v", err)
+	}
+	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
+	if err := run(context.Background(), config{
+		BeamPairedResultsIn:       resultsPath,
+		BeamPairedResultsOut:      pairedPath,
+		BeamPairedResultsConfigID: "mnemosyne-v3",
+	}); err != nil {
+		t.Fatalf("import nested Mnemosyne BEAM results as paired outcomes: %v", err)
+	}
+	candidateRow := `{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-beam-real","qid":"q-source-beam-id","ability":"IE","question":"Who owns LedgerDB?","score":1,"correct":true}` + "\n"
+	file, err := os.OpenFile(pairedPath, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatalf("open paired outcomes for candidate append: %v", err)
+	}
+	if _, err := file.WriteString(candidateRow); err != nil {
+		_ = file.Close()
+		t.Fatalf("append candidate paired outcome: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("close paired outcomes: %v", err)
+	}
+	jsonOut := filepath.Join(dir, "beam-paired-real-qids.json")
+	if err := run(context.Background(), config{
+		BeamPairedComparePath:             pairedPath,
+		BeamPairedBaselineConfigID:        "mnemosyne-v3",
+		BeamPairedCandidateConfigID:       "goncho-current",
+		BeamPairedCompareJSONOut:          jsonOut,
+		BeamPairedCompareBootstrapSamples: 200,
+	}); err != nil {
+		t.Fatalf("compare question-key paired BEAM outcomes: %v", err)
+	}
+	var report struct {
+		PairedCount          int     `json:"paired_count"`
+		DroppedUnpairedCount int     `json:"dropped_unpaired_count"`
+		ScoreDelta           float64 `json:"score_delta"`
+		Rows                 []struct {
+			MatchKey     string `json:"match_key"`
+			Question     string `json:"question"`
+			BaselineQID  string `json:"baseline_qid"`
+			CandidateQID string `json:"candidate_qid"`
+			QID          string `json:"qid"`
+		} `json:"rows"`
+	}
+	decodeTestJSONFile(t, jsonOut, &report)
+	if report.PairedCount != 1 || report.DroppedUnpairedCount != 0 || report.ScoreDelta != 0.75 || len(report.Rows) != 1 {
+		t.Fatalf("question-key paired report = %+v, want one paired +0.75 comparison", report)
+	}
+	row := report.Rows[0]
+	if row.MatchKey != "question" || row.Question != "Who owns LedgerDB?" || row.BaselineQID != "conv-beam-real:q0" || row.CandidateQID != "q-source-beam-id" || row.QID != "q-source-beam-id" {
+		t.Fatalf("question-key paired row = %+v, want visible qid mismatch matched by question", row)
+	}
+}
+
 func TestRunBeamPairedComparisonReportsSuperiorityVerdict(t *testing.T) {
 	dir := t.TempDir()
 	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")

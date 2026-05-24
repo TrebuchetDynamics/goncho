@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: BEAM paired comparison now imports nested Mnemosyne result files and pairs qid mismatches by question.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion -count=1` proves `--beam-paired-results-in` converts nested `beam_e2e_results.json` rows into paired outcomes and `--beam-paired-compare` matches Mnemosyne `conversation_id:qN` rows to Goncho source qids by exact conversation/scale/ability/question, surfacing the qid mismatch in comparison rows.
+  - Result: a real Mnemosyne BEAM result file plus a Goncho judged artifact can now feed paired comparison without separate flattening or qid-rewrite scripts.
+
 - 2026-05-24: BEAM judged imports now tolerate Mnemosyne-generated qids.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetImportsNestedMnemosyneQIDByQuestion -count=1` proves nested `beam_e2e_results.json` rows with Mnemosyne's `conversation_id:qN` qids can still apply to Goncho's source/generated BEAM qids by exact conversation/scale/ability/question match, without weakening the strict completeness gate.
   - Result: real Mnemosyne BEAM result files no longer need qid rewriting before Goncho can import official-style judged scores for paired comparison.

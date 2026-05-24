@@ -52,6 +52,7 @@ type beamServicePairedOutcome struct {
 	ConversationID string  `json:"conversation_id"`
 	QID            string  `json:"qid"`
 	Ability        string  `json:"ability"`
+	Question       string  `json:"question,omitempty"`
 	Score          float64 `json:"score"`
 	Correct        bool    `json:"correct"`
 }
@@ -459,6 +460,7 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 			ConversationID: beamServiceCaseConversationID(c),
 			QID:            c.ID,
 			Ability:        strings.ToUpper(strings.TrimSpace(c.Ability)),
+			Question:       strings.TrimSpace(c.Question),
 			Score:          score,
 			Correct:        score >= 0.5,
 		})

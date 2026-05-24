@@ -57,6 +57,9 @@ type config struct {
 	BeamServiceJudgmentsIn            string
 	BeamServiceAllowPartialJudgments  bool
 	BeamServiceConfigID               string
+	BeamPairedResultsIn               string
+	BeamPairedResultsOut              string
+	BeamPairedResultsConfigID         string
 	BeamPairedComparePath             string
 	BeamPairedBaselineConfigID        string
 	BeamPairedCandidateConfigID       string
@@ -172,6 +175,9 @@ func main() {
 	flag.StringVar(&cfg.BeamServiceJudgmentsIn, "beam-service-judgments-in", "", "official BEAM answer/judge results to merge into service-backed BEAM artifacts; accepts flat JSONL rows or nested Mnemosyne-compatible beam_e2e_results.json")
 	flag.BoolVar(&cfg.BeamServiceAllowPartialJudgments, "beam-service-allow-partial-judgments", false, "allow --beam-service-judgments-in to leave missing/unmatched judgment rows as diagnostics instead of failing")
 	flag.StringVar(&cfg.BeamServiceConfigID, "beam-service-config-id", "", "config_id written to service-backed BEAM paired outcomes and summary metadata")
+	flag.StringVar(&cfg.BeamPairedResultsIn, "beam-paired-results-in", "", "nested Mnemosyne-compatible beam_e2e_results.json to append as paired_outcomes.jsonl rows")
+	flag.StringVar(&cfg.BeamPairedResultsOut, "beam-paired-results-out", "", "paired_outcomes.jsonl append path for --beam-paired-results-in")
+	flag.StringVar(&cfg.BeamPairedResultsConfigID, "beam-paired-results-config-id", "", "config_id for --beam-paired-results-in rows; defaults to results metadata config_id")
 	flag.StringVar(&cfg.BeamPairedComparePath, "beam-paired-compare", "", "Mnemosyne-compatible paired_outcomes.jsonl path to compare two BEAM config_id arms")
 	flag.StringVar(&cfg.BeamPairedBaselineConfigID, "beam-paired-baseline-config-id", "", "baseline config_id for --beam-paired-compare")
 	flag.StringVar(&cfg.BeamPairedCandidateConfigID, "beam-paired-candidate-config-id", "", "candidate config_id for --beam-paired-compare")
@@ -191,6 +197,9 @@ func main() {
 func run(ctx context.Context, cfg config) error {
 	if strings.TrimSpace(cfg.BeamPairedComparePath) != "" {
 		return runBeamPairedComparison(cfg)
+	}
+	if strings.TrimSpace(cfg.BeamPairedResultsIn) != "" {
+		return appendBeamPairedOutcomesFromResults(cfg)
 	}
 	if strings.TrimSpace(cfg.BeamConvertIn) != "" {
 		if beamServiceArtifactRequested(cfg) {
