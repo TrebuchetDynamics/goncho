@@ -126,6 +126,36 @@ func TestArchitectureLayoutDynamicAgentRegistryTestsLiveWithModule(t *testing.T)
 	}
 }
 
+func TestArchitectureLayoutConclusionWriteImplementationLivesBehindModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "conclusion_module.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("conclusion write implementation must live at %s: %v", implPath, err)
+	}
+	implContent, err := os.ReadFile(implPath)
+	if err != nil {
+		t.Fatalf("ReadFile(%s): %v", implPath, err)
+	}
+	if !bytes.Contains(implContent, []byte("type conclusionModule struct")) {
+		t.Fatalf("%s must define the unexported conclusionModule seam", implPath)
+	}
+
+	servicePath := filepath.Join(root, "service.go")
+	content, err := os.ReadFile(servicePath)
+	if err != nil {
+		t.Fatalf("ReadFile(%s): %v", servicePath, err)
+	}
+	if !bytes.Contains(content, []byte("return s.conclusions().Conclude(ctx, params)")) {
+		t.Fatalf("%s must keep Service.Conclude as a public facade delegating to conclusionModule", servicePath)
+	}
+	for _, token := range []string{"upsertConclusion(ctx", "deleteConclusion(ctx", "storeConclusionFactAnnotations(ctx", "cancelPendingDreamsForObserved(ctx"} {
+		if bytes.Contains(content, []byte(token)) {
+			t.Fatalf("%s still contains conclusion write implementation token %q; move it behind conclusionModule", servicePath, token)
+		}
+	}
+}
+
 func TestArchitectureLayoutReviewLogImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 

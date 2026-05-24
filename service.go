@@ -235,69 +235,7 @@ func normalizePeerCard(card []string) []string {
 }
 
 func (s *Service) Conclude(ctx context.Context, params ConcludeParams) (ConcludeResult, error) {
-	peer := strings.TrimSpace(params.Peer)
-	if peer == "" {
-		return ConcludeResult{}, fmt.Errorf("goncho: peer is required")
-	}
-	profileID := strings.TrimSpace(params.ProfileID)
-	memoryScope := normalizeMemoryScope(params.Scope, profileID)
-	if params.DeleteID > 0 {
-		deleted, err := deleteConclusion(ctx, s.db, s.workspaceID, profileID, s.observer, peer, params.DeleteID)
-		if err != nil {
-			return ConcludeResult{}, err
-		}
-		if !deleted {
-			return ConcludeResult{}, fmt.Errorf("goncho: conclusion %d not found", params.DeleteID)
-		}
-		return ConcludeResult{
-			WorkspaceID: s.workspaceID,
-			ProfileID:   profileID,
-			Peer:        peer,
-			ID:          params.DeleteID,
-			Status:      "processed",
-			Deleted:     true,
-		}, nil
-	}
-
-	conclusion := strings.TrimSpace(params.Conclusion)
-	if conclusion == "" {
-		return ConcludeResult{}, fmt.Errorf("goncho: conclusion is required when delete_id is absent")
-	}
-
-	idempotencyKey := makeIdempotencyKey(s.workspaceID, profileID, s.observer, peer, params.SessionKey, conclusion)
-	id, status, err := upsertConclusion(ctx, s.db, conclusionRow{
-		WorkspaceID:    s.workspaceID,
-		ProfileID:      profileID,
-		ObserverPeerID: s.observer,
-		PeerID:         peer,
-		SessionKey:     params.SessionKey,
-		Content:        conclusion,
-		Kind:           "manual",
-		Status:         "processed",
-		Source:         "manual",
-		IdempotencyKey: idempotencyKey,
-		EvidenceJSON:   "[]",
-		Scope:          memoryScope,
-	})
-	if err != nil {
-		return ConcludeResult{}, err
-	}
-	if err := storeConclusionFactAnnotations(ctx, s.db, s.workspaceID, profileID, s.observer, peer, id, conclusionFactAnnotations(conclusion)); err != nil {
-		return ConcludeResult{}, err
-	}
-	if s.dreamEnabled {
-		if _, err := s.cancelPendingDreamsForObserved(ctx, peer, time.Now().Unix(), "new_activity"); err != nil {
-			return ConcludeResult{}, err
-		}
-	}
-
-	return ConcludeResult{
-		WorkspaceID: s.workspaceID,
-		ProfileID:   profileID,
-		Peer:        peer,
-		ID:          id,
-		Status:      status,
-	}, nil
+	return s.conclusions().Conclude(ctx, params)
 }
 
 func (s *Service) Search(ctx context.Context, params SearchParams) (SearchResultSet, error) {
