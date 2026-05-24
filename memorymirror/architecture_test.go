@@ -1,4 +1,4 @@
-package agentmemory
+package memorymirror
 
 import "testing"
 

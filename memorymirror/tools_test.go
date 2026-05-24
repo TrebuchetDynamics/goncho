@@ -1,4 +1,4 @@
-package agentmemory
+package memorymirror
 
 import (
 	"context"
@@ -11,19 +11,19 @@ import (
 	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
-func TestAgentMemoryCompatibleToolRegistryExecutesCoreAliases(t *testing.T) {
+func TestBroadMemoryCompatibleToolRegistryExecutesCoreAliases(t *testing.T) {
 	ctx := context.Background()
-	svc, cleanup := newAgentMemoryTestService(t)
+	svc, cleanup := newMemoryMirrorTestService(t)
 	defer cleanup()
 
-	tools := NewToolRegistry(svc, ToolRegistryOptions{DefaultPeerID: "peer-agentmemory", DefaultSessionKey: "session-agentmemory"})
+	tools := NewToolRegistry(svc, ToolRegistryOptions{DefaultPeerID: "peer-memorymirror", DefaultSessionKey: "session-memorymirror"})
 	for _, want := range []string{"memory_save", "memory_smart_search", "memory_recall"} {
 		if _, ok := findTool(tools, want); !ok {
 			t.Fatalf("tool registry missing %s; names=%v", want, toolNames(tools))
 		}
 	}
 
-	saved := executeAgentMemoryTool(t, ctx, tools, "memory_save", map[string]any{
+	saved := executeMemoryMirrorTool(t, ctx, tools, "memory_save", map[string]any{
 		"content":  "Agentmemory-compatible auth architecture uses jose middleware.",
 		"type":     "architecture",
 		"concepts": "auth,jose,middleware",
@@ -36,7 +36,7 @@ func TestAgentMemoryCompatibleToolRegistryExecutesCoreAliases(t *testing.T) {
 		t.Fatalf("memory_save id = %#v", saved["id"])
 	}
 
-	searched := executeAgentMemoryTool(t, ctx, tools, "memory_smart_search", map[string]any{
+	searched := executeMemoryMirrorTool(t, ctx, tools, "memory_smart_search", map[string]any{
 		"query": "jose auth middleware",
 		"limit": 5,
 	})
@@ -47,7 +47,7 @@ func TestAgentMemoryCompatibleToolRegistryExecutesCoreAliases(t *testing.T) {
 		t.Fatalf("memory_smart_search retrieval = %#v", searched["retrieval"])
 	}
 
-	recalled := executeAgentMemoryTool(t, ctx, tools, "memory_recall", map[string]any{
+	recalled := executeMemoryMirrorTool(t, ctx, tools, "memory_recall", map[string]any{
 		"query":        "What auth middleware did we choose?",
 		"limit":        5,
 		"format":       "compact",
@@ -61,8 +61,8 @@ func TestAgentMemoryCompatibleToolRegistryExecutesCoreAliases(t *testing.T) {
 	}
 }
 
-func TestAgentMemoryCompatibleToolsExposeUpstreamSchemasAndSpecs(t *testing.T) {
-	svc, cleanup := newAgentMemoryTestService(t)
+func TestBroadMemoryCompatibleToolsExposeUpstreamSchemasAndSpecs(t *testing.T) {
+	svc, cleanup := newMemoryMirrorTestService(t)
 	defer cleanup()
 
 	tools := NewToolRegistry(svc, ToolRegistryOptions{})
@@ -95,16 +95,16 @@ func TestAgentMemoryCompatibleToolsExposeUpstreamSchemasAndSpecs(t *testing.T) {
 	}
 }
 
-func newAgentMemoryTestService(t *testing.T) (*goncho.Service, func()) {
+func newMemoryMirrorTestService(t *testing.T) (*goncho.Service, func()) {
 	t.Helper()
-	store, err := memory.OpenSqlite(t.TempDir()+"/agentmemory.db", 0, nil)
+	store, err := memory.OpenSqlite(t.TempDir()+"/memorymirror.db", 0, nil)
 	if err != nil {
 		t.Fatalf("OpenSqlite: %v", err)
 	}
 	if err := goncho.RunMigrations(store.DB()); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
-	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "agentmemory-test", ObserverPeerID: "agentmemory-adapter"}, nil)
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "memorymirror-test", ObserverPeerID: "memorymirror-adapter"}, nil)
 	return svc, func() { _ = store.Close(context.Background()) }
 }
 
@@ -126,7 +126,7 @@ func toolNames(tools []toolmeta.Tool) []string {
 	return out
 }
 
-func executeAgentMemoryTool(t *testing.T, ctx context.Context, tools []toolmeta.Tool, name string, args map[string]any) map[string]any {
+func executeMemoryMirrorTool(t *testing.T, ctx context.Context, tools []toolmeta.Tool, name string, args map[string]any) map[string]any {
 	t.Helper()
 	tool, ok := findTool(tools, name)
 	if !ok {

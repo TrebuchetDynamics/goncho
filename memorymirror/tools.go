@@ -1,4 +1,4 @@
-package agentmemory
+package memorymirror
 
 import (
 	"context"
@@ -21,16 +21,16 @@ type ToolRegistryOptions struct {
 
 func NewToolRegistry(svc *goncho.Service, opts ToolRegistryOptions) []toolmeta.Tool {
 	return []toolmeta.Tool{
-		newServiceTool("memory_save", "Explicitly save an important insight, decision, or pattern to Goncho long-term memory using agentmemory-compatible arguments.", json.RawMessage(`{"type":"object","properties":{"content":{"type":"string","description":"The insight or decision to remember"},"type":{"type":"string","description":"Memory type: pattern, preference, architecture, bug, workflow, or fact"},"concepts":{"type":"string","description":"Comma-separated key concepts"},"files":{"type":"string","description":"Comma-separated relevant file paths"},"peer_id":{"type":"string","description":"Optional Goncho peer id"},"session_id":{"type":"string","description":"Optional session id"}},"required":["content"]}`), true, false, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+		newServiceTool("memory_save", "Explicitly save an important insight, decision, or pattern to Goncho long-term memory using broad-memory-compatible arguments.", json.RawMessage(`{"type":"object","properties":{"content":{"type":"string","description":"The insight or decision to remember"},"type":{"type":"string","description":"Memory type: pattern, preference, architecture, bug, workflow, or fact"},"concepts":{"type":"string","description":"Comma-separated key concepts"},"files":{"type":"string","description":"Comma-separated relevant file paths"},"peer_id":{"type":"string","description":"Optional Goncho peer id"},"session_id":{"type":"string","description":"Optional session id"}},"required":["content"]}`), true, false, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 			return executeMemorySave(ctx, svc, opts, args)
 		}),
-		newServiceTool("memory_smart_search", "Hybrid Goncho search exposed through agentmemory's memory_smart_search name.", json.RawMessage(`{"type":"object","properties":{"query":{"type":"string","description":"Search query"},"expandIds":{"type":"string","description":"Comma-separated observation IDs to expand"},"limit":{"type":"number","description":"Max results (default 10)"},"peer_id":{"type":"string","description":"Optional Goncho peer id"},"session_id":{"type":"string","description":"Optional session id"}},"required":["query"]}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+		newServiceTool("memory_smart_search", "Hybrid Goncho search exposed through the compatible memory_smart_search name.", json.RawMessage(`{"type":"object","properties":{"query":{"type":"string","description":"Search query"},"expandIds":{"type":"string","description":"Comma-separated observation IDs to expand"},"limit":{"type":"number","description":"Max results (default 10)"},"peer_id":{"type":"string","description":"Optional Goncho peer id"},"session_id":{"type":"string","description":"Optional session id"}},"required":["query"]}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 			return executeMemorySmartSearch(ctx, svc, opts, args)
 		}),
-		newServiceTool("memory_recall", "Search past Goncho memory for relevant context using agentmemory's memory_recall name.", json.RawMessage(`{"type":"object","properties":{"query":{"type":"string","description":"Search query"},"limit":{"type":"number","description":"Max results to return (default 10)"},"format":{"type":"string","description":"Result format: full, compact, or narrative (default full)"},"token_budget":{"type":"number","description":"Optional token budget to trim returned results"},"peer_id":{"type":"string","description":"Optional Goncho peer id"},"session_id":{"type":"string","description":"Optional session id"}},"required":["query"]}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+		newServiceTool("memory_recall", "Search past Goncho memory for relevant context using the compatible memory_recall name.", json.RawMessage(`{"type":"object","properties":{"query":{"type":"string","description":"Search query"},"limit":{"type":"number","description":"Max results to return (default 10)"},"format":{"type":"string","description":"Result format: full, compact, or narrative (default full)"},"token_budget":{"type":"number","description":"Optional token budget to trim returned results"},"peer_id":{"type":"string","description":"Optional Goncho peer id"},"session_id":{"type":"string","description":"Optional session id"}},"required":["query"]}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 			return executeMemoryRecall(ctx, svc, opts, args)
 		}),
-		newServiceTool("memory_profile", "Return the Goncho peer profile through agentmemory's memory_profile name.", json.RawMessage(`{"type":"object","properties":{"peer_id":{"type":"string","description":"Optional Goncho peer id"}}}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+		newServiceTool("memory_profile", "Return the Goncho peer profile through the compatible memory_profile name.", json.RawMessage(`{"type":"object","properties":{"peer_id":{"type":"string","description":"Optional Goncho peer id"}}}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 			return executeMemoryProfile(ctx, svc, opts, args)
 		}),
 	}
@@ -63,7 +63,7 @@ func (t *serviceTool) Spec() toolmeta.OperationSpec {
 
 func (t *serviceTool) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	if t == nil || t.execute == nil {
-		return nil, errors.New("agentmemory: tool executor is required")
+		return nil, errors.New("memorymirror: tool executor is required")
 	}
 	return t.execute(ctx, args)
 }
@@ -88,7 +88,7 @@ func executeMemorySave(ctx context.Context, svc *goncho.Service, opts ToolRegist
 	if content == "" {
 		return nil, errors.New("memory_save: content is required")
 	}
-	if extra := agentMemoryMetadataSuffix(in.Type, in.Concepts, in.Files); extra != "" {
+	if extra := upstreamMetadataSuffix(in.Type, in.Concepts, in.Files); extra != "" {
 		content += "\n" + extra
 	}
 	out, err := svc.Conclude(ctx, goncho.ConcludeParams{ProfileID: opts.DefaultProfileID, Peer: peerFromInputs(opts, in.PeerID, in.Peer), Conclusion: content, SessionKey: firstNonEmpty(in.SessionID, opts.DefaultSessionKey), Scope: strings.TrimSpace(in.Type)})
@@ -171,16 +171,16 @@ func executeMemoryProfile(ctx context.Context, svc *goncho.Service, opts ToolReg
 	return json.Marshal(map[string]any{"success": true, "tool": "memory_profile", "backend": "goncho", "profile": out, "local_first": true})
 }
 
-func agentMemoryMetadataSuffix(memoryType, concepts, files string) string {
+func upstreamMetadataSuffix(memoryType, concepts, files string) string {
 	var parts []string
 	if strings.TrimSpace(memoryType) != "" {
-		parts = append(parts, "agentmemory.type="+strings.TrimSpace(memoryType))
+		parts = append(parts, "upstream_memory.type="+strings.TrimSpace(memoryType))
 	}
 	if strings.TrimSpace(concepts) != "" {
-		parts = append(parts, "agentmemory.concepts="+strings.TrimSpace(concepts))
+		parts = append(parts, "upstream_memory.concepts="+strings.TrimSpace(concepts))
 	}
 	if strings.TrimSpace(files) != "" {
-		parts = append(parts, "agentmemory.files="+strings.TrimSpace(files))
+		parts = append(parts, "upstream_memory.files="+strings.TrimSpace(files))
 	}
 	if len(parts) == 0 {
 		return ""
@@ -189,7 +189,7 @@ func agentMemoryMetadataSuffix(memoryType, concepts, files string) string {
 }
 
 func peerFromInputs(opts ToolRegistryOptions, values ...string) string {
-	return firstNonEmpty(append(values, opts.DefaultPeerID, "agentmemory")...)
+	return firstNonEmpty(append(values, opts.DefaultPeerID, "memorymirror")...)
 }
 
 func firstNonEmpty(values ...string) string {

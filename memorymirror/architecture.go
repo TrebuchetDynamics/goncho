@@ -1,6 +1,6 @@
-// Package agentmemory records Goncho's Go-native architecture mirror of the
-// upstream agentmemory system without importing its TypeScript runtime.
-package agentmemory
+// Package memorymirror records Goncho's Go-native architecture mirror of the
+// upstream broad-memory reference system without importing its TypeScript runtime.
+package memorymirror
 
 import "strings"
 
