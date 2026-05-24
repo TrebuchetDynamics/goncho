@@ -142,6 +142,7 @@ func (t *GonchoRecallTool) Execute(ctx context.Context, args json.RawMessage) (j
 		return nil, fmt.Errorf("goncho_recall: %w", err)
 	}
 	replay := BuildRecallReplay(trace)
+	diagnostics := BuildRecallDiagnostics(trace)
 	return json.Marshal(map[string]any{
 		"action":             "recall",
 		"trace_id":           trace.TraceID,
@@ -157,6 +158,8 @@ func (t *GonchoRecallTool) Execute(ctx context.Context, args json.RawMessage) (j
 		"warnings":           trace.Warnings,
 		"trace":              trace,
 		"replay":             replay,
+		"diagnostics":        diagnostics,
+		"diagnostics_text":   FormatRecallDiagnosticsReport(diagnostics),
 		"replay_contract":    replay.ReplayContract,
 		"projection_ready":   true,
 		"projection_warning": "recall trace is orientation evidence; hosts must verify live state before acting",

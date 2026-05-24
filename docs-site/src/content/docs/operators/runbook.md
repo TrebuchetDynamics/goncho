@@ -77,7 +77,7 @@ Expose a small surface first.
 | --- | --- | --- |
 | `goncho_context` | No | Safe default. Use before prompt construction. |
 | `goncho_search` | No | Safe default. Use for flat explicit memory search. |
-| `goncho_recall` | No | Safe default for audit/debug flows that need scored trace and replay evidence. |
+| `goncho_recall` | No | Safe default for audit/debug flows that need scored trace, diagnostics, and replay evidence. |
 | `goncho_remember` | Yes | Gate behind operator policy or explicit host rules. |
 | `goncho_review` | Yes for resolve actions | Operator/system only. |
 | `goncho_handoff` | Yes for save actions | Agent or operator, depending on session policy. |

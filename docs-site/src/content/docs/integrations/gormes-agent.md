@@ -133,7 +133,7 @@ Register these first:
 | --- | --- |
 | `goncho_context` | Build orientation before model calls. |
 | `goncho_search` | Let the agent ask flat explicit memory questions. |
-| `goncho_recall` | Let audit/debug flows inspect scored recall traces and replay evidence. |
+| `goncho_recall` | Let audit/debug flows inspect scored recall traces, diagnostics reports, and replay evidence. |
 | `goncho_remember` | Store deliberate conclusions after user-visible decisions. |
 | `goncho_review` | Let operator/system flows inspect stale/conflict review items. |
 | `goncho_handoff` | Save/load session handoff details during compaction or transfer. |

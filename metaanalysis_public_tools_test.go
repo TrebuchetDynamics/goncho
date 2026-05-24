@@ -101,6 +101,16 @@ func TestGonchoGoalMetaanalysisPublicToolSurfaceWorksEndToEnd(t *testing.T) {
 	if stringField(t, recalled, "trace_id") == "" || stringField(t, recalled, "replay_contract") != "deterministic_replay_from_recall_trace" {
 		t.Fatalf("recall output = %+v, want trace and replay contract", recalled)
 	}
+	diagnostics, ok := recalled["diagnostics"].(map[string]any)
+	if !ok {
+		t.Fatalf("recall diagnostics = %#v, want JSON object", recalled["diagnostics"])
+	}
+	if stringField(t, diagnostics, "projection_invariant") != "no_projection_without_recall_trace" || intField(t, diagnostics, "selected_count") != 1 {
+		t.Fatalf("diagnostics = %+v, want projection invariant and one selected item", diagnostics)
+	}
+	if text := stringField(t, recalled, "diagnostics_text"); !strings.Contains(text, "Goncho recall diagnostics") || !strings.Contains(text, "selected candidates") {
+		t.Fatalf("diagnostics_text = %q, want formatted recall diagnostics", text)
+	}
 
 	contexted := executeMemoryTool(t, ctx, contextTool, `{"peer_id":"`+peer+`","query":"local-first claims","session_key":"`+sessionKey+`"}`)
 	if stringField(t, contexted, "peer") != peer || stringField(t, contexted, "representation") == "" {
