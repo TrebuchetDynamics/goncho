@@ -592,6 +592,252 @@ func TestRecallExpandsInstructionThroughDurableKGRelation(t *testing.T) {
 	}
 }
 
+func TestRecallExpandsSequenceThroughDurableKGRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	uses, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Billing API uses VectorDB migration.",
+		SessionKey: "sess-annotation-graph-sequence",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sequence, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: VectorDB migration: first freeze writes, then run migration, finally enable readers.",
+		SessionKey: "sess-annotation-graph-sequence",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "What is the order of the migration used by Billing API? order migration used Billing API order migration used Billing API. This checklist repeats the retrieval words but names no steps.",
+		SessionKey: "sess-annotation-graph-sequence",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?)
+	`, decoy.ID, uses.ID, sequence.ID, decoy.ID, uses.ID, sequence.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	usesFactID := lookupAnnotationID(t, svc, uses.ID, "Billing API uses VectorDB migration")
+	sequenceFactID := lookupAnnotationID(t, svc, sequence.ID, "VectorDB migration is first freeze writes, then run migration, finally enable readers")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-sequence-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-sequence-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 220,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "What is the order of the migration used by Billing API?",
+		SessionKey:  "sess-annotation-graph-sequence",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sequenceMemoryID := strconv.FormatInt(sequence.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, sequenceMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded sequence %s", selected, trace.Candidates, trace.Rejected, sequenceMemoryID)
+	}
+	sequenceCandidate, ok := selectedRecallCandidate(trace, sequenceMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want sequence candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, sequenceFactID)
+	if !candidateHasGraphProvenance(sequenceCandidate, evidenceID) {
+		t.Fatalf("sequence provenance = %+v, want graph evidence %s", sequenceCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> uses -> VectorDB migration -> sequence -> %d", uses.ID, sequence.ID)
+	if !candidateHasGraphNote(sequenceCandidate, wantNote) {
+		t.Fatalf("sequence provenance = %+v, want relation path %q", sequenceCandidate.Provenance, wantNote)
+	}
+}
+
+func TestRecallExpandsDecisionThroughDurableKGRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	uses, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Billing API uses VectorDB snapshots.",
+		SessionKey: "sess-annotation-graph-decision",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decision, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: We decided to keep VectorDB snapshots encrypted.",
+		SessionKey: "sess-annotation-graph-decision",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "What did we decide about the storage used by Billing API? decision storage used Billing API decision storage used Billing API. This checklist repeats the retrieval words but names no decision.",
+		SessionKey: "sess-annotation-graph-decision",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?)
+	`, decoy.ID, uses.ID, decision.ID, decoy.ID, uses.ID, decision.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	usesFactID := lookupAnnotationID(t, svc, uses.ID, "Billing API uses VectorDB snapshots")
+	decisionFactID := lookupAnnotationID(t, svc, decision.ID, "user decided to keep VectorDB snapshots encrypted")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-decision-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-decision-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 220,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "What did we decide about the storage used by Billing API?",
+		SessionKey:  "sess-annotation-graph-decision",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decisionMemoryID := strconv.FormatInt(decision.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, decisionMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded decision %s", selected, trace.Candidates, trace.Rejected, decisionMemoryID)
+	}
+	decisionCandidate, ok := selectedRecallCandidate(trace, decisionMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want decision candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, decisionFactID)
+	if !candidateHasGraphProvenance(decisionCandidate, evidenceID) {
+		t.Fatalf("decision provenance = %+v, want graph evidence %s", decisionCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> uses -> VectorDB snapshots -> decision -> %d", uses.ID, decision.ID)
+	if !candidateHasGraphNote(decisionCandidate, wantNote) {
+		t.Fatalf("decision provenance = %+v, want relation path %q", decisionCandidate.Provenance, wantNote)
+	}
+}
+
+func TestRecallExpandsNegationThroughDurableKGRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	uses, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Billing API uses VectorDB snapshots.",
+		SessionKey: "sess-annotation-graph-negation",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	negation, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: We never auto-delete VectorDB snapshots.",
+		SessionKey: "sess-annotation-graph-negation",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Did we ever auto-delete the storage used by Billing API? auto-delete storage used Billing API auto-delete storage used Billing API. This checklist repeats the retrieval words but names no denial.",
+		SessionKey: "sess-annotation-graph-negation",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?)
+	`, decoy.ID, uses.ID, negation.ID, decoy.ID, uses.ID, negation.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	usesFactID := lookupAnnotationID(t, svc, uses.ID, "Billing API uses VectorDB snapshots")
+	negationFactID := lookupAnnotationID(t, svc, negation.ID, "user never auto-delete VectorDB snapshots")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-negation-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-negation-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 220,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "Did we ever auto-delete the storage used by Billing API?",
+		SessionKey:  "sess-annotation-graph-negation",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	negationMemoryID := strconv.FormatInt(negation.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, negationMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded negation %s", selected, trace.Candidates, trace.Rejected, negationMemoryID)
+	}
+	negationCandidate, ok := selectedRecallCandidate(trace, negationMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want negation candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, negationFactID)
+	if !candidateHasGraphProvenance(negationCandidate, evidenceID) {
+		t.Fatalf("negation provenance = %+v, want graph evidence %s", negationCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> uses -> VectorDB snapshots -> negation -> %d", uses.ID, negation.ID)
+	if !candidateHasGraphNote(negationCandidate, wantNote) {
+		t.Fatalf("negation provenance = %+v, want relation path %q", negationCandidate.Provenance, wantNote)
+	}
+}
+
 func lookupAnnotationID(t *testing.T, svc *Service, memoryID int64, value string) int64 {
 	t.Helper()
 	var id int64

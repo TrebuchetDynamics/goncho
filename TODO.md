@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-sequence, relation-to-decision, and relation-to-negation recall through durable annotations.
+  - Evidence target: `go test . -run 'TestRecallExpands(Sequence|Decision|Negation)ThroughDurableKGRelation' -count=1` proves `Service.Conclude` derives durable relation facts plus sequence/decision/negation annotations, then recall selects the target memory for BEAM-style event-order and contradiction-resolution questions with graph provenance citing both annotation rows.
+  - Result: annotation-backed graph recall now covers multi-hop EO/CR paths without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
+
 - 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-preference and relation-to-instruction recall through durable annotations.
   - Evidence target: `go test . -run 'TestRecallExpands(Preference|Instruction)ThroughDurableKGRelation' -count=1` proves `Service.Conclude` derives durable relation facts plus preference/instruction annotations, then recall selects the target memory for BEAM-style `storage used by Billing API` preference/rule questions with graph provenance citing both annotation rows.
   - Result: annotation-backed graph recall now covers multi-hop PF/IF paths without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.

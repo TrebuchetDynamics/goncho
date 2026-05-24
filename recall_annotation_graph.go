@@ -57,6 +57,22 @@ type annotationGraphInstructionTarget struct {
 	Entity          string
 }
 
+type annotationGraphSequenceTarget struct {
+	Candidate    RecallCandidate
+	SequenceFact memoryFactAnnotation
+	Entity       string
+}
+
+type annotationGraphDecisionTarget struct {
+	Candidate    RecallCandidate
+	DecisionFact memoryFactAnnotation
+}
+
+type annotationGraphNegationTarget struct {
+	Candidate    RecallCandidate
+	NegationFact memoryFactAnnotation
+}
+
 func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope string, base []RecallCandidate) ([]RecallCandidate, error) {
 	ownerQuery := annotationGraphOwnerQuery(q.Query)
 	versionQuery := annotationGraphVersionQuery(q.Query)
@@ -65,7 +81,10 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 	locationQuery := annotationGraphLocationQuery(q.Query)
 	preferenceQuery := annotationGraphPreferenceQuery(q.Query)
 	instructionQuery := annotationGraphInstructionQuery(q.Query)
-	if len(base) == 0 || (!ownerQuery && !versionQuery && !timelineQuery && !metricQuery && !locationQuery && !preferenceQuery && !instructionQuery) {
+	sequenceQuery := annotationGraphSequenceQuery(q.Query)
+	decisionQuery := annotationGraphDecisionQuery(q.Query)
+	negationQuery := annotationGraphNegationQuery(q.Query)
+	if len(base) == 0 || (!ownerQuery && !versionQuery && !timelineQuery && !metricQuery && !locationQuery && !preferenceQuery && !instructionQuery && !sequenceQuery && !decisionQuery && !negationQuery) {
 		return base, nil
 	}
 	out := make([]RecallCandidate, len(base))
@@ -154,6 +173,36 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 				}
 				for _, target := range targets {
 					graphEvidence := annotationGraphInstructionEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, target.Entity, evidence.ID, target.InstructionFact.ID)
+					out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
+				}
+			}
+			if sequenceQuery {
+				targets, err := r.findAnnotationGraphSequenceTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
+				if err != nil {
+					return nil, err
+				}
+				for _, target := range targets {
+					graphEvidence := annotationGraphSequenceEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, target.Entity, evidence.ID, target.SequenceFact.ID)
+					out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
+				}
+			}
+			if decisionQuery {
+				targets, err := r.findAnnotationGraphDecisionTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
+				if err != nil {
+					return nil, err
+				}
+				for _, target := range targets {
+					graphEvidence := annotationGraphDecisionEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, evidence.ID, target.DecisionFact.ID)
+					out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
+				}
+			}
+			if negationQuery {
+				targets, err := r.findAnnotationGraphNegationTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
+				if err != nil {
+					return nil, err
+				}
+				for _, target := range targets {
+					graphEvidence := annotationGraphNegationEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, evidence.ID, target.NegationFact.ID)
 					out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
 				}
 			}
@@ -366,6 +415,93 @@ func (r retrievalModule) findAnnotationGraphInstructionTargets(ctx context.Conte
 			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, instructionFact.memoryFactAnnotation)},
 		}
 		out = append(out, annotationGraphInstructionTarget{Candidate: candidate, InstructionFact: instructionFact.memoryFactAnnotation, Entity: subject})
+	}
+	return out, nil
+}
+
+func (r retrievalModule) findAnnotationGraphSequenceTargets(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope, entity, sourceMemoryID string) ([]annotationGraphSequenceTarget, error) {
+	facts, err := r.queryAnnotationGraphFacts(ctx, workspaceID, peer, memoryScope, q.SessionKey)
+	if err != nil {
+		return nil, err
+	}
+	out := []annotationGraphSequenceTarget{}
+	for _, sequenceFact := range facts {
+		memoryID := strconv.FormatInt(sequenceFact.MemoryID, 10)
+		if memoryID == sourceMemoryID {
+			continue
+		}
+		subject, _, ok := searchSequenceAnswerParts(sequenceFact.Value)
+		if !ok || !annotationGraphEntityMentionedInFact(entity, subject) {
+			continue
+		}
+		candidate := RecallCandidate{
+			MemoryID:   memoryID,
+			SourceType: memoryAnnotationSourceConclusion,
+			Content:    sequenceFact.Content,
+			SessionID:  sequenceFact.SessionKey,
+			AgentID:    r.observer,
+			ScopeID:    normalizeMemoryScope(memoryScope, ""),
+			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, sequenceFact.memoryFactAnnotation)},
+		}
+		out = append(out, annotationGraphSequenceTarget{Candidate: candidate, SequenceFact: sequenceFact.memoryFactAnnotation, Entity: subject})
+	}
+	return out, nil
+}
+
+func (r retrievalModule) findAnnotationGraphDecisionTargets(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope, entity, sourceMemoryID string) ([]annotationGraphDecisionTarget, error) {
+	facts, err := r.queryAnnotationGraphFacts(ctx, workspaceID, peer, memoryScope, q.SessionKey)
+	if err != nil {
+		return nil, err
+	}
+	out := []annotationGraphDecisionTarget{}
+	for _, decisionFact := range facts {
+		memoryID := strconv.FormatInt(decisionFact.MemoryID, 10)
+		if memoryID == sourceMemoryID {
+			continue
+		}
+		decision, ok := searchDecisionAnswerParts(decisionFact.Value)
+		if !ok || !annotationGraphEntityMentionedInFact(entity, decision) {
+			continue
+		}
+		candidate := RecallCandidate{
+			MemoryID:   memoryID,
+			SourceType: memoryAnnotationSourceConclusion,
+			Content:    decisionFact.Content,
+			SessionID:  decisionFact.SessionKey,
+			AgentID:    r.observer,
+			ScopeID:    normalizeMemoryScope(memoryScope, ""),
+			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, decisionFact.memoryFactAnnotation)},
+		}
+		out = append(out, annotationGraphDecisionTarget{Candidate: candidate, DecisionFact: decisionFact.memoryFactAnnotation})
+	}
+	return out, nil
+}
+
+func (r retrievalModule) findAnnotationGraphNegationTargets(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope, entity, sourceMemoryID string) ([]annotationGraphNegationTarget, error) {
+	facts, err := r.queryAnnotationGraphFacts(ctx, workspaceID, peer, memoryScope, q.SessionKey)
+	if err != nil {
+		return nil, err
+	}
+	out := []annotationGraphNegationTarget{}
+	for _, negationFact := range facts {
+		memoryID := strconv.FormatInt(negationFact.MemoryID, 10)
+		if memoryID == sourceMemoryID {
+			continue
+		}
+		object, ok := searchNegationAnswerParts(negationFact.Value)
+		if !ok || !annotationGraphEntityMentionedInFact(entity, object) {
+			continue
+		}
+		candidate := RecallCandidate{
+			MemoryID:   memoryID,
+			SourceType: memoryAnnotationSourceConclusion,
+			Content:    negationFact.Content,
+			SessionID:  negationFact.SessionKey,
+			AgentID:    r.observer,
+			ScopeID:    normalizeMemoryScope(memoryScope, ""),
+			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, negationFact.memoryFactAnnotation)},
+		}
+		out = append(out, annotationGraphNegationTarget{Candidate: candidate, NegationFact: negationFact.memoryFactAnnotation})
 	}
 	return out, nil
 }
@@ -614,6 +750,61 @@ func annotationGraphInstructionEvidence(sourceMemoryID, targetMemoryID, relation
 	}
 }
 
+func annotationGraphSequenceEvidence(sourceMemoryID, targetMemoryID, relation, entity, sequenceEntity, sourceFactID string, sequenceFactID int64) EvidenceItem {
+	sequenceFactIDText := strconv.FormatInt(sequenceFactID, 10)
+	return EvidenceItem{
+		Kind:   "graph",
+		Source: sourceMemoryID,
+		ID:     "annotation:" + sourceFactID + "->annotation:" + sequenceFactIDText,
+		Score:  1,
+		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> sequence -> " + targetMemoryID,
+		Metadata: map[string]string{
+			"entity":          entity,
+			"relation":        relation,
+			"sequence_entity": sequenceEntity,
+			"source_fact_id":  sourceFactID,
+			"target_fact_id":  sequenceFactIDText,
+			"target_relation": "sequence",
+		},
+	}
+}
+
+func annotationGraphDecisionEvidence(sourceMemoryID, targetMemoryID, relation, entity, sourceFactID string, decisionFactID int64) EvidenceItem {
+	decisionFactIDText := strconv.FormatInt(decisionFactID, 10)
+	return EvidenceItem{
+		Kind:   "graph",
+		Source: sourceMemoryID,
+		ID:     "annotation:" + sourceFactID + "->annotation:" + decisionFactIDText,
+		Score:  1,
+		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> decision -> " + targetMemoryID,
+		Metadata: map[string]string{
+			"entity":          entity,
+			"relation":        relation,
+			"source_fact_id":  sourceFactID,
+			"target_fact_id":  decisionFactIDText,
+			"target_relation": "decision",
+		},
+	}
+}
+
+func annotationGraphNegationEvidence(sourceMemoryID, targetMemoryID, relation, entity, sourceFactID string, negationFactID int64) EvidenceItem {
+	negationFactIDText := strconv.FormatInt(negationFactID, 10)
+	return EvidenceItem{
+		Kind:   "graph",
+		Source: sourceMemoryID,
+		ID:     "annotation:" + sourceFactID + "->annotation:" + negationFactIDText,
+		Score:  1,
+		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> negation -> " + targetMemoryID,
+		Metadata: map[string]string{
+			"entity":          entity,
+			"relation":        relation,
+			"source_fact_id":  sourceFactID,
+			"target_fact_id":  negationFactIDText,
+			"target_relation": "negation",
+		},
+	}
+}
+
 func annotationGraphMetricEvidence(sourceMemoryID, targetMemoryID, relation, entity, metricEntity, sourceFactID string, metricFactID int64) EvidenceItem {
 	metricFactIDText := strconv.FormatInt(metricFactID, 10)
 	return EvidenceItem{
@@ -714,6 +905,30 @@ func annotationGraphPreferenceQuery(query string) bool {
 func annotationGraphInstructionQuery(query string) bool {
 	query = strings.ToLower(query)
 	return strings.Contains(query, "instruction") || strings.Contains(query, "rule")
+}
+
+func annotationGraphSequenceQuery(query string) bool {
+	if _, ok := searchSequenceQuestionSubject(query); ok {
+		return true
+	}
+	query = strings.ToLower(query)
+	return strings.Contains(query, "sequence") || strings.Contains(query, "order")
+}
+
+func annotationGraphDecisionQuery(query string) bool {
+	if _, ok := searchDecisionQuestionTopic(query); ok {
+		return true
+	}
+	query = strings.ToLower(query)
+	return strings.Contains(query, "decision") || strings.Contains(query, "decide")
+}
+
+func annotationGraphNegationQuery(query string) bool {
+	if _, ok := searchNegationQuestionObject(query); ok {
+		return true
+	}
+	query = strings.ToLower(query)
+	return strings.Contains(query, "never") || strings.Contains(query, " not ")
 }
 
 func annotationGraphQueryMatchesOwnerFact(query, owner string) bool {
