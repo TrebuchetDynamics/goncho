@@ -234,6 +234,49 @@ func TestRunBeamHuggingFaceJSONLDatasetPreservesRubricMetadata(t *testing.T) {
 	}
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetScoresRubricContextCoverage(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-rubric-score.jsonl")
+	rawRecord := `{"conversation_id":"conv-rubric-score","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'IE': [{'id': 'q-owner-rubric-score', 'question': 'Who owns LedgerDB?', 'ideal_answer': 'Mira owns LedgerDB.', 'rubric': ['mentions Mira', 'mentions LedgerDB'], 'relevant_message_indices': [0], 'required_evidence_kinds': ['fact']}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
+	if err := run(context.Background(), config{
+		BeamConvertIn:         rawPath,
+		BeamServiceResultsOut: resultsPath,
+		BeamServiceConfigID:   "test-beam-rubric-score",
+		DatabasePath:          filepath.Join(dir, "beam-rubric-score.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with rubric scoring: %v", err)
+	}
+
+	var results struct {
+		Results []struct {
+			Results []struct {
+				QID                  string   `json:"qid"`
+				Score                float64  `json:"score"`
+				RubricContextScore   float64  `json:"rubric_context_score"`
+				RubricContextMatches []string `json:"rubric_context_matches"`
+			} `json:"results"`
+		} `json:"results"`
+	}
+	rawResults, err := os.ReadFile(resultsPath)
+	if err != nil {
+		t.Fatalf("read rubric coverage results: %v", err)
+	}
+	if err := json.Unmarshal(rawResults, &results); err != nil {
+		t.Fatalf("decode rubric coverage results: %v", err)
+	}
+	if len(results.Results) != 1 || len(results.Results[0].Results) != 1 {
+		t.Fatalf("rubric coverage results = %+v, want one question row", results.Results)
+	}
+	row := results.Results[0].Results[0]
+	if row.QID != "q-owner-rubric-score" || row.Score != 1 || row.RubricContextScore != 1 || !slices.Equal(row.RubricContextMatches, []string{"mentions Mira", "mentions LedgerDB"}) {
+		t.Fatalf("rubric coverage row = %+v, want pure-recall score plus full rubric context coverage", row)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetReportsUnscorableQuestions(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-unscorable.jsonl")

@@ -85,18 +85,20 @@ type beamServiceConversationResults struct {
 }
 
 type beamServiceQuestionResult struct {
-	QID              string                      `json:"qid"`
-	Ability          string                      `json:"ability"`
-	Question         string                      `json:"question,omitempty"`
-	IdealAnswer      string                      `json:"ideal_answer,omitempty"`
-	Rubric           []string                    `json:"rubric,omitempty"`
-	AIAnswer         string                      `json:"ai_answer"`
-	RecallProvenance beamServiceRecallProvenance `json:"recall_provenance"`
-	Score            float64                     `json:"score"`
-	Nuggets          []string                    `json:"nuggets"`
-	Assessment       string                      `json:"assessment"`
-	AnswerTimeMS     int                         `json:"answer_time_ms"`
-	JudgeTimeMS      int                         `json:"judge_time_ms"`
+	QID                  string                      `json:"qid"`
+	Ability              string                      `json:"ability"`
+	Question             string                      `json:"question,omitempty"`
+	IdealAnswer          string                      `json:"ideal_answer,omitempty"`
+	Rubric               []string                    `json:"rubric,omitempty"`
+	RubricContextScore   float64                     `json:"rubric_context_score,omitempty"`
+	RubricContextMatches []string                    `json:"rubric_context_matches,omitempty"`
+	AIAnswer             string                      `json:"ai_answer"`
+	RecallProvenance     beamServiceRecallProvenance `json:"recall_provenance"`
+	Score                float64                     `json:"score"`
+	Nuggets              []string                    `json:"nuggets"`
+	Assessment           string                      `json:"assessment"`
+	AnswerTimeMS         int                         `json:"answer_time_ms"`
+	JudgeTimeMS          int                         `json:"judge_time_ms"`
 }
 
 type beamServiceRecallProvenance struct {
@@ -181,16 +183,18 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 		scales[scale] = struct{}{}
 		score := beamServiceCaseScore(c)
 		acc.results = append(acc.results, beamServiceQuestionResult{
-			QID:              c.ID,
-			Ability:          strings.ToUpper(strings.TrimSpace(c.Ability)),
-			Question:         strings.TrimSpace(c.Question),
-			IdealAnswer:      strings.TrimSpace(c.IdealAnswer),
-			Rubric:           append([]string(nil), c.Rubric...),
-			AIAnswer:         "",
-			RecallProvenance: beamServiceCaseRecallProvenance(c),
-			Score:            score,
-			Nuggets:          []string{},
-			Assessment:       beamServiceCaseAssessment(c, score),
+			QID:                  c.ID,
+			Ability:              strings.ToUpper(strings.TrimSpace(c.Ability)),
+			Question:             strings.TrimSpace(c.Question),
+			IdealAnswer:          strings.TrimSpace(c.IdealAnswer),
+			Rubric:               append([]string(nil), c.Rubric...),
+			RubricContextScore:   c.RubricContextScore,
+			RubricContextMatches: append([]string(nil), c.RubricContextMatches...),
+			AIAnswer:             "",
+			RecallProvenance:     beamServiceCaseRecallProvenance(c),
+			Score:                score,
+			Nuggets:              []string{},
+			Assessment:           beamServiceCaseAssessment(c, score),
 		})
 	}
 	conversationResults := make([]beamServiceConversationResults, 0, len(conversationOrder))

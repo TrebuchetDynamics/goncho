@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const (
@@ -117,6 +118,8 @@ type RecallBenchmarkCaseReport struct {
 	RelevantIDs            []string `json:"relevant_ids"`
 	RequiredEvidenceKinds  []string `json:"required_evidence_kinds,omitempty"`
 	ExpectedNoAnswer       bool     `json:"expected_no_answer,omitempty"`
+	RubricContextScore     float64  `json:"rubric_context_score,omitempty"`
+	RubricContextMatches   []string `json:"rubric_context_matches,omitempty"`
 	CandidateMemoryIDs     []string `json:"candidate_memory_ids"`
 	SelectedMemoryIDs      []string `json:"selected_memory_ids"`
 	CandidateEvidenceKinds []string `json:"candidate_evidence_kinds,omitempty"`
@@ -301,6 +304,7 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 	budget := recallBenchmarkTokenBudget(c.Trace)
 	selectedTokens := recallBenchmarkSelectedTokens(c.Trace.Selected)
 	requiredEvidenceKinds := normalizeRecallBenchmarkEvidenceKinds(c.RequiredEvidenceKinds)
+	rubricContextScore, rubricContextMatches := recallBenchmarkRubricContextCoverage(c.Trace, c.Rubric)
 	caseReport := RecallBenchmarkCaseReport{
 		ID:                     id,
 		Ability:                normalizeRecallBenchmarkAbility(c.Ability),
@@ -315,6 +319,8 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 		RelevantIDs:            append([]string(nil), c.RelevantIDs...),
 		RequiredEvidenceKinds:  requiredEvidenceKinds,
 		ExpectedNoAnswer:       c.ExpectedNoAnswer,
+		RubricContextScore:     rubricContextScore,
+		RubricContextMatches:   rubricContextMatches,
 		CandidateMemoryIDs:     candidateIDs,
 		SelectedMemoryIDs:      selectedIDs,
 		CandidateEvidenceKinds: recallBenchmarkEvidenceKinds(c.Trace.Candidates),
@@ -555,6 +561,68 @@ func recallAtK(candidateIDs, relevantIDs []string, k int) float64 {
 		}
 	}
 	return roundRecallFloat(float64(len(found)) / float64(len(relevant)))
+}
+
+func recallBenchmarkRubricContextCoverage(trace RecallTrace, rubric []string) (float64, []string) {
+	if len(rubric) == 0 {
+		return 0, nil
+	}
+	contextTokens := map[string]struct{}{}
+	for _, item := range trace.Selected {
+		for _, token := range recallBenchmarkRubricTokens(item.Candidate.Content) {
+			contextTokens[token] = struct{}{}
+		}
+	}
+	matched := []string{}
+	denom := 0
+	for _, item := range rubric {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		tokens := recallBenchmarkRubricTokens(item)
+		if len(tokens) == 0 {
+			continue
+		}
+		denom++
+		allPresent := true
+		for _, token := range tokens {
+			if _, ok := contextTokens[token]; !ok {
+				allPresent = false
+				break
+			}
+		}
+		if allPresent {
+			matched = append(matched, item)
+		}
+	}
+	if denom == 0 {
+		return 0, nil
+	}
+	return roundRecallFloat(float64(len(matched)) / float64(denom)), matched
+}
+
+func recallBenchmarkRubricTokens(text string) []string {
+	stop := map[string]struct{}{
+		"about": {}, "answer": {}, "contain": {}, "contains": {}, "correct": {}, "correctly": {}, "from": {}, "identify": {}, "identifies": {}, "include": {}, "includes": {}, "mention": {}, "mentions": {}, "name": {}, "names": {}, "note": {}, "project": {}, "say": {}, "says": {}, "state": {}, "states": {}, "that": {}, "the": {}, "with": {},
+	}
+	seen := map[string]struct{}{}
+	out := []string{}
+	for _, token := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) }) {
+		token = strings.TrimSpace(token)
+		if len(token) < 2 {
+			continue
+		}
+		if _, skip := stop[token]; skip {
+			continue
+		}
+		if _, ok := seen[token]; ok {
+			continue
+		}
+		seen[token] = struct{}{}
+		out = append(out, token)
+	}
+	return out
 }
 
 func recallBenchmarkContextSatisfied(trace RecallTrace, relevantIDs []string, contains []string, expectedNoAnswer bool) bool {
