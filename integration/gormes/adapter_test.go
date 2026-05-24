@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	gormes "github.com/TrebuchetDynamics/goncho/integration/gormes"
+	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
 func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
@@ -33,6 +35,32 @@ func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
 		if !contains(status.ToolNames, want) {
 			t.Fatalf("tool names = %#v, missing %s", status.ToolNames, want)
 		}
+	}
+	if len(status.ToolSpecs) != len(status.ToolNames) {
+		t.Fatalf("tool specs len = %d, tool names len = %d", len(status.ToolSpecs), len(status.ToolNames))
+	}
+	recallSpec, ok := operationSpecByName(status.ToolSpecs, "goncho_recall")
+	if !ok {
+		t.Fatalf("tool specs = %#v, missing goncho_recall", status.ToolSpecs)
+	}
+	if recallSpec.Mutating || !recallSpec.Idempotent || recallSpec.AuditKind != "memory" {
+		t.Fatalf("goncho_recall spec = %+v, want read-only idempotent memory tool", recallSpec)
+	}
+	var recallSchema struct {
+		Properties map[string]any `json:"properties"`
+	}
+	if err := json.Unmarshal(recallSpec.Schema, &recallSchema); err != nil {
+		t.Fatalf("recall schema json: %v", err)
+	}
+	if _, ok := recallSchema.Properties["compact"]; !ok {
+		t.Fatalf("goncho_recall schema properties = %#v, missing compact", recallSchema.Properties)
+	}
+	statusJSON, err := json.Marshal(status)
+	if err != nil {
+		t.Fatalf("marshal status: %v", err)
+	}
+	if !strings.Contains(string(statusJSON), "tool_specs") || !strings.Contains(string(statusJSON), "compact") {
+		t.Fatalf("status json = %s, want tool specs with recall compact schema", statusJSON)
 	}
 
 	remembered, err := runtime.RememberTool.Execute(ctx, json.RawMessage(`{"peer_id":"user-1","session_key":"session-1","content":"User prefers local SQLite memory."}`))
@@ -124,4 +152,13 @@ func contains(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func operationSpecByName(specs []toolmeta.OperationSpec, want string) (toolmeta.OperationSpec, bool) {
+	for _, spec := range specs {
+		if spec.Name == want {
+			return spec, true
+		}
+	}
+	return toolmeta.OperationSpec{}, false
 }

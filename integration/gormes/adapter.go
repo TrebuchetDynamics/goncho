@@ -10,6 +10,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho"
 	"github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
 const (
@@ -42,15 +43,16 @@ type Runtime struct {
 }
 
 type Status struct {
-	Ready              bool     `json:"ready"`
-	WorkspaceID        string   `json:"workspace_id"`
-	ObserverID         string   `json:"observer_id"`
-	ProfileID          string   `json:"profile_id,omitempty"`
-	ProfilesDirectory  string   `json:"profiles_directory,omitempty"`
-	ProfileDirectory   string   `json:"profile_directory,omitempty"`
-	DatabasePath       string   `json:"database_path"`
-	MemoryMarkdownPath string   `json:"memory_markdown_path,omitempty"`
-	ToolNames          []string `json:"tool_names"`
+	Ready              bool                     `json:"ready"`
+	WorkspaceID        string                   `json:"workspace_id"`
+	ObserverID         string                   `json:"observer_id"`
+	ProfileID          string                   `json:"profile_id,omitempty"`
+	ProfilesDirectory  string                   `json:"profiles_directory,omitempty"`
+	ProfileDirectory   string                   `json:"profile_directory,omitempty"`
+	DatabasePath       string                   `json:"database_path"`
+	MemoryMarkdownPath string                   `json:"memory_markdown_path,omitempty"`
+	ToolNames          []string                 `json:"tool_names"`
+	ToolSpecs          []toolmeta.OperationSpec `json:"tool_specs"`
 }
 
 func Open(ctx context.Context, cfg Config) (*Runtime, error) {
@@ -119,6 +121,7 @@ func (r *Runtime) Status() Status {
 		DatabasePath:       r.config.DatabasePath,
 		MemoryMarkdownPath: r.config.MemoryMarkdownPath,
 		ToolNames:          []string{r.ContextTool.Name(), r.SearchTool.Name(), r.RecallTool.Name(), r.RememberTool.Name(), r.ReviewTool.Name(), r.HandoffTool.Name()},
+		ToolSpecs:          []toolmeta.OperationSpec{r.ContextTool.Spec(), r.SearchTool.Spec(), r.RecallTool.Spec(), r.RememberTool.Spec(), r.ReviewTool.Spec(), r.HandoffTool.Spec()},
 	}
 }
 
