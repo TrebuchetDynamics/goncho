@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	gormes "github.com/TrebuchetDynamics/goncho/integration/gormes"
-	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
 func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
@@ -61,6 +60,24 @@ func TestOpenRuntimeBuildsGormesReadyServiceAndTools(t *testing.T) {
 	}
 	if !strings.Contains(string(statusJSON), "tool_specs") || !strings.Contains(string(statusJSON), "compact") {
 		t.Fatalf("status json = %s, want tool specs with recall compact schema", statusJSON)
+	}
+	if strings.Contains(string(statusJSON), "ToolDescriptor") || strings.Contains(string(statusJSON), "Mutating") {
+		t.Fatalf("status json = %s, leaked internal OperationSpec field names", statusJSON)
+	}
+	var statusDocument struct {
+		ToolSpecs []map[string]any `json:"tool_specs"`
+	}
+	if err := json.Unmarshal(statusJSON, &statusDocument); err != nil {
+		t.Fatalf("status json document: %v", err)
+	}
+	jsonRecallSpec, ok := statusToolSpecByName(statusDocument.ToolSpecs, "goncho_recall")
+	if !ok {
+		t.Fatalf("status json tool specs = %#v, missing goncho_recall", statusDocument.ToolSpecs)
+	}
+	for _, key := range []string{"name", "description", "schema", "mutating", "idempotent", "prompt_safe", "trust_class", "audit_kind"} {
+		if _, ok := jsonRecallSpec[key]; !ok {
+			t.Fatalf("status json goncho_recall spec = %#v, missing %q", jsonRecallSpec, key)
+		}
 	}
 
 	remembered, err := runtime.RememberTool.Execute(ctx, json.RawMessage(`{"peer_id":"user-1","session_key":"session-1","content":"User prefers local SQLite memory."}`))
@@ -154,11 +171,20 @@ func contains(values []string, want string) bool {
 	return false
 }
 
-func operationSpecByName(specs []toolmeta.OperationSpec, want string) (toolmeta.OperationSpec, bool) {
+func operationSpecByName(specs []gormes.StatusToolSpec, want string) (gormes.StatusToolSpec, bool) {
 	for _, spec := range specs {
 		if spec.Name == want {
 			return spec, true
 		}
 	}
-	return toolmeta.OperationSpec{}, false
+	return gormes.StatusToolSpec{}, false
+}
+
+func statusToolSpecByName(specs []map[string]any, want string) (map[string]any, bool) {
+	for _, spec := range specs {
+		if spec["name"] == want {
+			return spec, true
+		}
+	}
+	return nil, false
 }

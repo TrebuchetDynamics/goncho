@@ -3,6 +3,7 @@ package gormes
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -43,16 +44,27 @@ type Runtime struct {
 }
 
 type Status struct {
-	Ready              bool                     `json:"ready"`
-	WorkspaceID        string                   `json:"workspace_id"`
-	ObserverID         string                   `json:"observer_id"`
-	ProfileID          string                   `json:"profile_id,omitempty"`
-	ProfilesDirectory  string                   `json:"profiles_directory,omitempty"`
-	ProfileDirectory   string                   `json:"profile_directory,omitempty"`
-	DatabasePath       string                   `json:"database_path"`
-	MemoryMarkdownPath string                   `json:"memory_markdown_path,omitempty"`
-	ToolNames          []string                 `json:"tool_names"`
-	ToolSpecs          []toolmeta.OperationSpec `json:"tool_specs"`
+	Ready              bool             `json:"ready"`
+	WorkspaceID        string           `json:"workspace_id"`
+	ObserverID         string           `json:"observer_id"`
+	ProfileID          string           `json:"profile_id,omitempty"`
+	ProfilesDirectory  string           `json:"profiles_directory,omitempty"`
+	ProfileDirectory   string           `json:"profile_directory,omitempty"`
+	DatabasePath       string           `json:"database_path"`
+	MemoryMarkdownPath string           `json:"memory_markdown_path,omitempty"`
+	ToolNames          []string         `json:"tool_names"`
+	ToolSpecs          []StatusToolSpec `json:"tool_specs"`
+}
+
+type StatusToolSpec struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Schema      json.RawMessage `json:"schema"`
+	Mutating    bool            `json:"mutating"`
+	Idempotent  bool            `json:"idempotent"`
+	PromptSafe  bool            `json:"prompt_safe"`
+	TrustClass  []string        `json:"trust_class"`
+	AuditKind   string          `json:"audit_kind"`
 }
 
 func Open(ctx context.Context, cfg Config) (*Runtime, error) {
@@ -121,8 +133,25 @@ func (r *Runtime) Status() Status {
 		DatabasePath:       r.config.DatabasePath,
 		MemoryMarkdownPath: r.config.MemoryMarkdownPath,
 		ToolNames:          []string{r.ContextTool.Name(), r.SearchTool.Name(), r.RecallTool.Name(), r.RememberTool.Name(), r.ReviewTool.Name(), r.HandoffTool.Name()},
-		ToolSpecs:          []toolmeta.OperationSpec{r.ContextTool.Spec(), r.SearchTool.Spec(), r.RecallTool.Spec(), r.RememberTool.Spec(), r.ReviewTool.Spec(), r.HandoffTool.Spec()},
+		ToolSpecs:          statusToolSpecs(r.ContextTool.Spec(), r.SearchTool.Spec(), r.RecallTool.Spec(), r.RememberTool.Spec(), r.ReviewTool.Spec(), r.HandoffTool.Spec()),
 	}
+}
+
+func statusToolSpecs(specs ...toolmeta.OperationSpec) []StatusToolSpec {
+	out := make([]StatusToolSpec, 0, len(specs))
+	for _, spec := range specs {
+		out = append(out, StatusToolSpec{
+			Name:        spec.Name,
+			Description: spec.Description,
+			Schema:      spec.Schema,
+			Mutating:    spec.Mutating,
+			Idempotent:  spec.Idempotent,
+			PromptSafe:  spec.PromptSafe,
+			TrustClass:  append([]string(nil), spec.TrustClass...),
+			AuditKind:   spec.AuditKind,
+		})
+	}
+	return out
 }
 
 func (c Config) withDefaults() Config {
