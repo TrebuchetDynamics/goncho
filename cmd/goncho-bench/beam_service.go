@@ -89,6 +89,7 @@ type beamServiceQuestionResult struct {
 	Ability          string                      `json:"ability"`
 	Question         string                      `json:"question,omitempty"`
 	IdealAnswer      string                      `json:"ideal_answer,omitempty"`
+	Rubric           []string                    `json:"rubric,omitempty"`
 	AIAnswer         string                      `json:"ai_answer"`
 	RecallProvenance beamServiceRecallProvenance `json:"recall_provenance"`
 	Score            float64                     `json:"score"`
@@ -183,6 +184,8 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 			QID:              c.ID,
 			Ability:          strings.ToUpper(strings.TrimSpace(c.Ability)),
 			Question:         strings.TrimSpace(c.Question),
+			IdealAnswer:      strings.TrimSpace(c.IdealAnswer),
+			Rubric:           append([]string(nil), c.Rubric...),
 			AIAnswer:         "",
 			RecallProvenance: beamServiceCaseRecallProvenance(c),
 			Score:            score,

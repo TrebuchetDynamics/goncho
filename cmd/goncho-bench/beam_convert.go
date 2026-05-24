@@ -35,6 +35,11 @@ type beamConvertedQuestion struct {
 	Question              string   `json:"question"`
 	Prompt                string   `json:"prompt"`
 	Query                 string   `json:"query"`
+	IdealAnswer           string   `json:"ideal_answer"`
+	IdealResponse         string   `json:"ideal_response"`
+	Answer                string   `json:"answer"`
+	IdealSummary          string   `json:"ideal_summary"`
+	Rubric                []string `json:"rubric"`
 	RelevantIDs           []string `json:"relevant_ids"`
 	RelevantMessageIdxs   []int    `json:"relevant_message_indices"`
 	EvidenceMessageIdxs   []int    `json:"evidence_message_indices"`
@@ -198,6 +203,8 @@ func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fall
 				SessionKey:            sessionKey,
 				Ability:               strings.ToUpper(strings.TrimSpace(ability)),
 				Query:                 query,
+				IdealAnswer:           firstNonEmpty(question.IdealAnswer, question.IdealResponse, question.Answer, question.IdealSummary),
+				Rubric:                append([]string(nil), question.Rubric...),
 				RelevantIDs:           relevantIDs,
 				RequiredEvidenceKinds: append([]string(nil), question.RequiredEvidenceKinds...),
 				ExpectedNoAnswer:      expectedNoAnswer,

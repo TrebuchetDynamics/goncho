@@ -21,6 +21,8 @@ type beamJSONLRecord struct {
 	Content               string   `json:"content,omitempty"`
 	Ability               string   `json:"ability,omitempty"`
 	Query                 string   `json:"query,omitempty"`
+	IdealAnswer           string   `json:"ideal_answer,omitempty"`
+	Rubric                []string `json:"rubric,omitempty"`
 	RelevantIDs           []string `json:"relevant_ids,omitempty"`
 	ContextContains       []string `json:"context_contains,omitempty"`
 	RequiredEvidenceKinds []string `json:"required_evidence_kinds,omitempty"`
@@ -37,6 +39,8 @@ type beamJSONLQuestion struct {
 	SessionKey            string
 	Ability               string
 	Query                 string
+	IdealAnswer           string
+	Rubric                []string
 	RelevantIDs           []string
 	ContextContains       []string
 	RequiredEvidenceKinds []string
@@ -118,6 +122,8 @@ func beamServiceCasesFromJSONLRecords(records []beamJSONLRecord) ([]goncho.Recal
 			Peer:                  question.Peer,
 			SessionKey:            question.SessionKey,
 			Query:                 question.Query,
+			IdealAnswer:           question.IdealAnswer,
+			Rubric:                append([]string(nil), question.Rubric...),
 			Memories:              append([]goncho.RecallBenchmarkServiceMemory(nil), memories...),
 			RelevantRefs:          append([]string(nil), question.RelevantIDs...),
 			ContextContains:       append([]string(nil), question.ContextContains...),
@@ -173,6 +179,8 @@ func beamJSONLQuestionFromRecord(record beamJSONLRecord, defaultScale string, li
 		SessionKey:            strings.TrimSpace(record.SessionKey),
 		Ability:               strings.ToUpper(strings.TrimSpace(record.Ability)),
 		Query:                 query,
+		IdealAnswer:           strings.TrimSpace(record.IdealAnswer),
+		Rubric:                append([]string(nil), record.Rubric...),
 		RelevantIDs:           append([]string(nil), record.RelevantIDs...),
 		ContextContains:       append([]string(nil), record.ContextContains...),
 		RequiredEvidenceKinds: append([]string(nil), record.RequiredEvidenceKinds...),

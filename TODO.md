@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: raw BEAM service artifacts now preserve ideal-answer and rubric metadata.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetPreservesRubricMetadata -count=1` proves HuggingFace-style BEAM `ideal_answer` and `rubric` fields survive conversion, service recall, and `beam_e2e_results.json` emission without entering retrieval or changing pure-recall scores.
+  - Result: Goncho now retains the official BEAM judging inputs needed for future optional LLM-judge/full BEAM comparisons while preserving no-answer-hint discipline in the recall oracle.
+
 - 2026-05-24: raw BEAM service artifacts now report conversion diagnostics for unscorable questions.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsUnscorableQuestions -count=1` proves `beam_e2e_results.json.metadata.diagnostics.conversion` names conversation/question counts and warns when a raw HuggingFace-style BEAM question lacks stable `relevant_ids` or `context_contains` for pure-recall scoring.
   - Result: Goncho now distinguishes recall failures from dataset-conversion evidence gaps when running raw BEAM samples, preserving no-answer-hint discipline while making real-BEAM readiness auditable.

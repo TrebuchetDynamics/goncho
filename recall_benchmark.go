@@ -25,6 +25,8 @@ type RecallBenchmarkCase struct {
 	Ability               string
 	Scale                 string
 	ConversationID        string
+	IdealAnswer           string
+	Rubric                []string
 	Trace                 RecallTrace
 	RelevantIDs           []string
 	ContextContains       []string
@@ -55,6 +57,8 @@ type RecallBenchmarkServiceCase struct {
 	Peer                  string
 	SessionKey            string
 	Query                 string
+	IdealAnswer           string
+	Rubric                []string
 	ScopeID               string
 	Memories              []RecallBenchmarkServiceMemory
 	RelevantRefs          []string
@@ -105,6 +109,8 @@ type RecallBenchmarkCaseReport struct {
 	Scale                  string   `json:"scale,omitempty"`
 	ConversationID         string   `json:"conversation_id,omitempty"`
 	Question               string   `json:"question,omitempty"`
+	IdealAnswer            string   `json:"ideal_answer,omitempty"`
+	Rubric                 []string `json:"rubric,omitempty"`
 	TraceID                string   `json:"trace_id"`
 	PipelineVersion        string   `json:"pipeline_version"`
 	ScoringConfigVersion   string   `json:"scoring_config_version"`
@@ -236,6 +242,8 @@ func runServiceRecallBenchmarkCase(ctx context.Context, svc *Service, index int,
 		Ability:               c.Ability,
 		Scale:                 c.Scale,
 		ConversationID:        c.ConversationID,
+		IdealAnswer:           c.IdealAnswer,
+		Rubric:                append([]string(nil), c.Rubric...),
 		Trace:                 trace,
 		RelevantIDs:           relevantIDs,
 		ContextContains:       append([]string(nil), c.ContextContains...),
@@ -299,6 +307,8 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 		Scale:                  strings.TrimSpace(c.Scale),
 		ConversationID:         strings.TrimSpace(c.ConversationID),
 		Question:               strings.TrimSpace(c.Trace.Query.Query),
+		IdealAnswer:            strings.TrimSpace(c.IdealAnswer),
+		Rubric:                 append([]string(nil), c.Rubric...),
 		TraceID:                c.Trace.TraceID,
 		PipelineVersion:        c.Trace.PipelineVersion,
 		ScoringConfigVersion:   c.Trace.ScoringConfig.Version,

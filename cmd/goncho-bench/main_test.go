@@ -191,6 +191,49 @@ func TestRunBeamHuggingFaceJSONLDatasetWritesServiceArtifactsDirectly(t *testing
 	}
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetPreservesRubricMetadata(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-rubric.jsonl")
+	rawRecord := `{"conversation_id":"conv-rubric","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'IE': [{'id': 'q-owner-rubric', 'question': 'Who owns LedgerDB?', 'ideal_answer': 'Mira owns LedgerDB.', 'rubric': ['mentions Mira', 'mentions LedgerDB'], 'relevant_message_indices': [0], 'required_evidence_kinds': ['fact']}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
+	if err := run(context.Background(), config{
+		BeamConvertIn:         rawPath,
+		BeamServiceResultsOut: resultsPath,
+		BeamServiceConfigID:   "test-beam-rubric",
+		DatabasePath:          filepath.Join(dir, "beam-rubric.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with rubric metadata: %v", err)
+	}
+
+	var results struct {
+		Results []struct {
+			Results []struct {
+				QID         string   `json:"qid"`
+				IdealAnswer string   `json:"ideal_answer"`
+				Rubric      []string `json:"rubric"`
+				Score       float64  `json:"score"`
+			} `json:"results"`
+		} `json:"results"`
+	}
+	rawResults, err := os.ReadFile(resultsPath)
+	if err != nil {
+		t.Fatalf("read rubric results: %v", err)
+	}
+	if err := json.Unmarshal(rawResults, &results); err != nil {
+		t.Fatalf("decode rubric results: %v", err)
+	}
+	if len(results.Results) != 1 || len(results.Results[0].Results) != 1 {
+		t.Fatalf("rubric results = %+v, want one question row", results.Results)
+	}
+	row := results.Results[0].Results[0]
+	if row.QID != "q-owner-rubric" || row.IdealAnswer != "Mira owns LedgerDB." || !slices.Equal(row.Rubric, []string{"mentions Mira", "mentions LedgerDB"}) || row.Score != 1 {
+		t.Fatalf("rubric row = %+v, want BEAM ideal answer and rubric preserved without changing recall score", row)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetReportsUnscorableQuestions(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-unscorable.jsonl")
