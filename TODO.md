@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA KG relation facts now expand Goncho recall through annotation-backed graph provenance.
+  - Evidence target: `go test . -run TestRecallExpandsOwnerThroughDurableKGRelation -count=1` proves `Service.Conclude` derives a durable `Billing API uses LedgerDB` KG fact, joins it to the durable owner fact `Mira owns LedgerDB`, and recall selects the owner memory for `Who is responsible for storage used by Billing API?` with `graph` provenance citing the source and target annotation rows.
+  - Result: the MEMORIA annotation lane now supports a deterministic knowledge-graph recall path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
+
 - 2026-05-23: Agentmemory/MEMORIA citation provenance now follows durable annotation rows into recall.
   - Evidence target: `go test . -run TestRecallCandidatesIncludeDurableFactAnnotationProvenance -count=1` proves `RecallCandidate.Provenance` fact evidence cites the real `goncho_memory_annotations.id`, carries `memory_source`, `memory_id`, extractor `source`, and confidence metadata, and still contributes to recall `fact_score`.
   - Result: durable annotation search ranking now has traceable recall citations, borrowing agentmemory's citation-provenance pattern without changing public Search JSON, adding LLM extraction, or claiming BEAM superiority.

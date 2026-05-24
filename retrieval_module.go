@@ -50,6 +50,10 @@ func (r retrievalModule) Generate(ctx context.Context, q RecallQuery) ([]RecallC
 	for _, hit := range hits {
 		out = append(out, recallCandidateFromSearchHit(q, hit, r.observer, memoryScope))
 	}
+	out, err = r.expandAnnotationGraphRecall(ctx, q, workspaceID, peer, memoryScope, out)
+	if err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -88,23 +92,10 @@ func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeI
 		})
 	}
 	for _, fact := range hit.factAnnotations {
-		value := strings.TrimSpace(fact.Value)
-		if value == "" {
+		if strings.TrimSpace(fact.Value) == "" {
 			continue
 		}
-		provenance = append(provenance, EvidenceItem{
-			Kind:   "fact",
-			Source: "goncho_memory_annotations",
-			ID:     strconv.FormatInt(fact.ID, 10),
-			Score:  roundRecallFloat(searchFactIntentScore(q.Query, value)),
-			Note:   "fact=" + value,
-			Metadata: map[string]string{
-				"memory_source": fact.MemorySource,
-				"memory_id":     strconv.FormatInt(fact.MemoryID, 10),
-				"source":        fact.Source,
-				"confidence":    fmt.Sprintf("%.3f", fact.Confidence),
-			},
-		})
+		provenance = append(provenance, annotationFactEvidence(q.Query, fact))
 	}
 	return RecallCandidate{
 		MemoryID:   strconv.FormatInt(hit.ID, 10),

@@ -38,7 +38,7 @@ func conclusionFactAnnotations(content string) []string {
 		facts = append(facts, fact)
 	}
 	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
-		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation, conclusionMetricFactAnnotation, conclusionVersionFactAnnotation, conclusionSequenceFactAnnotation, conclusionNegationFactAnnotation, conclusionDecisionFactAnnotation} {
+		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation, conclusionMetricFactAnnotation, conclusionVersionFactAnnotation, conclusionSequenceFactAnnotation, conclusionNegationFactAnnotation, conclusionDecisionFactAnnotation, conclusionKGRelationFactAnnotation} {
 			addFact(extractor(sentence))
 		}
 	}
@@ -218,6 +218,18 @@ func conclusionSequenceFactAnnotation(sentence string) (string, bool) {
 	return sequenceFactAnnotation(subject, steps)
 }
 
+func conclusionKGRelationFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	subject, relation, object, ok := kgRelationAnswerParts(sentence)
+	if !ok {
+		return "", false
+	}
+	return kgRelationFactAnnotation(subject, relation, object)
+}
+
 func conclusionNegationFactAnnotation(sentence string) (string, bool) {
 	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
 	if sentence == "" || strings.Contains(sentence, "?") {
@@ -341,6 +353,19 @@ func sequenceFactAnnotation(subject, steps string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("%s is %s", subject, steps), true
+}
+
+func kgRelationFactAnnotation(subject, relation, object string) (string, bool) {
+	subject = cleanFactObject(subject)
+	object = cleanFactValue(object)
+	if !searchFactObjectLooksAssertive(subject) || !searchFactObjectLooksAssertive(object) {
+		return "", false
+	}
+	phrase := kgRelationPhrase(relation)
+	if phrase == "" {
+		return "", false
+	}
+	return fmt.Sprintf("%s %s %s", subject, phrase, object), true
 }
 
 func negationFactAnnotation(object string) (string, bool) {
