@@ -122,6 +122,14 @@ func (s *beamServiceJudgmentSet) diagnostics(report goncho.RecallBenchmarkReport
 	return diag
 }
 
+func requireCompleteBeamServiceJudgments(judgments beamServiceJudgmentSet, report goncho.RecallBenchmarkReport) error {
+	diag := judgments.diagnostics(report)
+	if diag.MissingCount == 0 && diag.UnmatchedCount == 0 {
+		return nil
+	}
+	return fmt.Errorf("goncho-bench: BEAM service judgments incomplete: missing=%d unmatched=%d missing_qids=%s unmatched_qids=%s", diag.MissingCount, diag.UnmatchedCount, strings.Join(diag.MissingQIDs, ","), strings.Join(diag.UnmatchedQIDs, ","))
+}
+
 func beamServiceJudgmentKey(scale, conversationID, qid string) string {
 	return strings.TrimSpace(scale) + "\x00" + strings.TrimSpace(conversationID) + "\x00" + strings.TrimSpace(qid)
 }

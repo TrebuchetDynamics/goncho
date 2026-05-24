@@ -55,6 +55,7 @@ type config struct {
 	BeamServiceFailuresOut            string
 	BeamServiceJudgeRequestsOut       string
 	BeamServiceJudgmentsIn            string
+	BeamServiceAllowPartialJudgments  bool
 	BeamServiceConfigID               string
 	BeamPairedComparePath             string
 	BeamPairedBaselineConfigID        string
@@ -169,6 +170,7 @@ func main() {
 	flag.StringVar(&cfg.BeamServiceFailuresOut, "beam-service-failures-out", "", "JSONL failure audit output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceJudgeRequestsOut, "beam-service-judge-requests-out", "", "JSONL answer/judge request export path for official BEAM-compatible evaluation; answer prompts exclude ideal answers and rubrics")
 	flag.StringVar(&cfg.BeamServiceJudgmentsIn, "beam-service-judgments-in", "", "JSONL official BEAM answer/judge results to merge into service-backed BEAM results, summary, and paired outcomes")
+	flag.BoolVar(&cfg.BeamServiceAllowPartialJudgments, "beam-service-allow-partial-judgments", false, "allow --beam-service-judgments-in to leave missing/unmatched judgment rows as diagnostics instead of failing")
 	flag.StringVar(&cfg.BeamServiceConfigID, "beam-service-config-id", "", "config_id written to service-backed BEAM paired outcomes and summary metadata")
 	flag.StringVar(&cfg.BeamPairedComparePath, "beam-paired-compare", "", "Mnemosyne-compatible paired_outcomes.jsonl path to compare two BEAM config_id arms")
 	flag.StringVar(&cfg.BeamPairedBaselineConfigID, "beam-paired-baseline-config-id", "", "baseline config_id for --beam-paired-compare")
@@ -334,6 +336,11 @@ func runBeamServiceBenchmarkCases(ctx context.Context, cfg config, cases []gonch
 	report, err := goncho.EvaluateServiceRecallBenchmark(ctx, svc, cases)
 	if err != nil {
 		return fmt.Errorf("goncho-bench: evaluate BEAM service oracle: %w", err)
+	}
+	if cfg.BeamServiceJudgments != nil && !cfg.BeamServiceAllowPartialJudgments {
+		if err := requireCompleteBeamServiceJudgments(*cfg.BeamServiceJudgments, report); err != nil {
+			return err
+		}
 	}
 	if outPath := strings.TrimSpace(cfg.BeamServiceOut); outPath != "" {
 		raw, err := json.MarshalIndent(report, "", "  ")

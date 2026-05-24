@@ -339,6 +339,57 @@ func testSHA256Hex(raw []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetRejectsIncompleteJudgeResults(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-incomplete-judgments.jsonl")
+	rawRecord := `{"conversation_id":"conv-beam-incomplete-judgments","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'IE': [{'id': 'q-needs-judgment', 'question': 'Who owns LedgerDB?', 'ideal_answer': 'Mira owns LedgerDB', 'rubric': ['mentions Mira'], 'relevant_message_indices': [0]}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	judgmentsPath := filepath.Join(dir, "beam_incomplete_judge_results.jsonl")
+	judgmentRow := `{"scale":"100K","conversation_id":"conv-beam-incomplete-judgments","qid":"q-unmatched-judgment","ai_answer":"Mira owns LedgerDB.","score":1}` + "\n"
+	if err := os.WriteFile(judgmentsPath, []byte(judgmentRow), 0o644); err != nil {
+		t.Fatalf("write incomplete BEAM judge results: %v", err)
+	}
+	err := run(context.Background(), config{
+		BeamConvertIn:          rawPath,
+		BeamServiceResultsOut:  filepath.Join(dir, "beam_e2e_results.json"),
+		BeamServiceJudgmentsIn: judgmentsPath,
+		BeamServiceConfigID:    "test-beam-incomplete-judgments",
+		DatabasePath:           filepath.Join(dir, "beam-incomplete-judgments.db"),
+	})
+	if err == nil || !strings.Contains(err.Error(), "BEAM service judgments incomplete: missing=1 unmatched=1") || !strings.Contains(err.Error(), "q-needs-judgment") || !strings.Contains(err.Error(), "q-unmatched-judgment") {
+		t.Fatalf("incomplete judgment error = %v, want missing/unmatched qid guard", err)
+	}
+	partialResultsPath := filepath.Join(dir, "beam_partial_results.json")
+	if err := run(context.Background(), config{
+		BeamConvertIn:                    rawPath,
+		BeamServiceResultsOut:            partialResultsPath,
+		BeamServiceJudgmentsIn:           judgmentsPath,
+		BeamServiceAllowPartialJudgments: true,
+		BeamServiceConfigID:              "test-beam-partial-judgments",
+		DatabasePath:                     filepath.Join(dir, "beam-partial-judgments.db"),
+	}); err != nil {
+		t.Fatalf("run partial BEAM judgments in diagnostic mode: %v", err)
+	}
+	var partial struct {
+		Metadata struct {
+			Diagnostics map[string]json.RawMessage `json:"diagnostics"`
+		} `json:"metadata"`
+	}
+	decodeTestJSONFile(t, partialResultsPath, &partial)
+	var diag struct {
+		MissingCount   int `json:"missing_count"`
+		UnmatchedCount int `json:"unmatched_count"`
+	}
+	if err := json.Unmarshal(partial.Metadata.Diagnostics["judgments"], &diag); err != nil {
+		t.Fatalf("decode partial judgment diagnostics: %v", err)
+	}
+	if diag.MissingCount != 1 || diag.UnmatchedCount != 1 {
+		t.Fatalf("partial judgment diagnostics = %+v, want explicit missing/unmatched counts", diag)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetImportsJudgeResultsIntoArtifacts(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-judge-results.jsonl")

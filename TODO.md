@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: BEAM judged imports now fail on incomplete official-style outcome sets.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetRejectsIncompleteJudgeResults -count=1` proves `--beam-service-judgments-in` rejects missing or unmatched judgment rows before writing comparable artifacts, while `--beam-service-allow-partial-judgments` keeps partial runs diagnostic-only with explicit missing/unmatched counts.
+  - Result: Goncho no longer silently mixes pure-recall scores with official-style judged scores when preparing BEAM paired comparisons against Mnemosyne.
+
 - 2026-05-24: raw BEAM service artifacts now import official-style answer/judge results.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetImportsJudgeResultsIntoArtifacts -count=1` proves `--beam-service-judgments-in` merges external BEAM `ai_answer`, score, nuggets, assessment, and timing rows into `beam_e2e_results.json`, `beam_e2e_summary.json`, and `paired_outcomes.jsonl` while retaining recall provenance and emitting source checksum/application diagnostics.
   - Result: Goncho can round-trip a real BEAM sample from recall export through an external official-style judge and back into Mnemosyne-compatible paired comparison artifacts without changing retrieval or leaking answers.

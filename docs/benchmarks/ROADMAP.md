@@ -231,6 +231,8 @@ BEAM judge-export slice delivered: `goncho-bench --beam-service-judge-requests-o
 
 BEAM judged-artifact import slice delivered: `goncho-bench --beam-service-judgments-in beam_judge_results.jsonl` merges external official-style answer/judge rows into Mnemosyne-compatible results, summary, and paired outcomes while keeping recall provenance and judge-source diagnostics.
 
+BEAM judgment-completeness gate delivered: judged imports fail by default on missing or unmatched rows before comparable artifacts are written; `--beam-service-allow-partial-judgments` is available only for diagnostic partial runs that keep missing/unmatched counts in metadata.
+
 ## Framing
 
 The public framing should remain:
