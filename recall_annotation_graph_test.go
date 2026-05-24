@@ -91,6 +91,97 @@ func TestRecallExpandsOwnerThroughDurableKGRelation(t *testing.T) {
 	}
 }
 
+func TestRecallExpandsVersionThroughMultiHopDurableKGRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	uses, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Billing API uses LedgerDB.",
+		SessionKey: "sess-annotation-graph-version",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runs, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: LedgerDB runs on PostgreSQL.",
+		SessionKey: "sess-annotation-graph-version",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	version, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: PostgreSQL version is 14.2.",
+		SessionKey: "sess-annotation-graph-version",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "What version is used by Billing API storage? version used Billing API storage version used Billing API storage. This checklist repeats the retrieval words but names no database version.",
+		SessionKey: "sess-annotation-graph-version",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 400 WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?, ?)
+	`, decoy.ID, uses.ID, runs.ID, version.ID, decoy.ID, uses.ID, runs.ID, version.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	usesFactID := lookupAnnotationID(t, svc, uses.ID, "Billing API uses LedgerDB")
+	runsFactID := lookupAnnotationID(t, svc, runs.ID, "LedgerDB runs on PostgreSQL")
+	versionFactID := lookupAnnotationID(t, svc, version.ID, "PostgreSQL version is 14.2")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-version-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-version-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 220,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "What version is used by Billing API storage?",
+		SessionKey:  "sess-annotation-graph-version",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	versionMemoryID := strconv.FormatInt(version.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, versionMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded version %s", selected, trace.Candidates, trace.Rejected, versionMemoryID)
+	}
+	versionCandidate, ok := selectedRecallCandidate(trace, versionMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want version candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d->annotation:%d", usesFactID, runsFactID, versionFactID)
+	if !candidateHasGraphProvenance(versionCandidate, evidenceID) {
+		t.Fatalf("version provenance = %+v, want graph evidence %s", versionCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> uses -> LedgerDB -> runs on -> PostgreSQL -> version -> %d", uses.ID, version.ID)
+	if !candidateHasGraphNote(versionCandidate, wantNote) {
+		t.Fatalf("version provenance = %+v, want relation path %q", versionCandidate.Provenance, wantNote)
+	}
+}
+
 func lookupAnnotationID(t *testing.T, svc *Service, memoryID int64, value string) int64 {
 	t.Helper()
 	var id int64

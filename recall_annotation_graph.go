@@ -18,8 +18,18 @@ type annotationGraphOwnerTarget struct {
 	Fact      memoryFactAnnotation
 }
 
+type annotationGraphVersionTarget struct {
+	Candidate    RecallCandidate
+	RelationFact memoryFactAnnotation
+	VersionFact  memoryFactAnnotation
+	Relation     string
+	Entity       string
+}
+
 func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope string, base []RecallCandidate) ([]RecallCandidate, error) {
-	if len(base) == 0 || !annotationGraphOwnerQuery(q.Query) {
+	ownerQuery := annotationGraphOwnerQuery(q.Query)
+	versionQuery := annotationGraphVersionQuery(q.Query)
+	if len(base) == 0 || (!ownerQuery && !versionQuery) {
 		return base, nil
 	}
 	out := make([]RecallCandidate, len(base))
@@ -38,21 +48,25 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 			if !ok || !annotationGraphQueryMatchesKGRelation(q.Query, subject, relation) {
 				continue
 			}
-			targets, err := r.findAnnotationGraphOwnerTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
-			if err != nil {
-				return nil, err
-			}
-			for _, target := range targets {
-				graphEvidence := annotationGraphEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, evidence.ID, target.Fact.ID)
-				if idx, exists := indexByID[target.Candidate.MemoryID]; exists {
-					if !recallCandidateHasEvidence(out[idx], graphEvidence.Kind, graphEvidence.ID) {
-						out[idx].Provenance = append(out[idx].Provenance, graphEvidence)
-					}
-					continue
+			if ownerQuery {
+				targets, err := r.findAnnotationGraphOwnerTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
+				if err != nil {
+					return nil, err
 				}
-				target.Candidate.Provenance = append(target.Candidate.Provenance, graphEvidence)
-				out = append(out, target.Candidate)
-				indexByID[target.Candidate.MemoryID] = len(out) - 1
+				for _, target := range targets {
+					graphEvidence := annotationGraphEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, evidence.ID, target.Fact.ID)
+					out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
+				}
+			}
+			if versionQuery {
+				targets, err := r.findAnnotationGraphVersionTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
+				if err != nil {
+					return nil, err
+				}
+				for _, target := range targets {
+					graphEvidence := annotationGraphVersionEvidence(source.MemoryID, target.Candidate.MemoryID, relation, entity, target.Relation, target.Entity, evidence.ID, target.RelationFact.ID, target.VersionFact.ID)
+					out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
+				}
 			}
 		}
 	}
@@ -141,6 +155,111 @@ func (r retrievalModule) findAnnotationGraphOwnerTargets(ctx context.Context, q 
 	return out, nil
 }
 
+func (r retrievalModule) findAnnotationGraphVersionTargets(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope, entity, sourceMemoryID string) ([]annotationGraphVersionTarget, error) {
+	facts, err := r.queryAnnotationGraphFacts(ctx, workspaceID, peer, memoryScope, q.SessionKey)
+	if err != nil {
+		return nil, err
+	}
+	out := []annotationGraphVersionTarget{}
+	for _, relationFact := range facts {
+		memoryID := strconv.FormatInt(relationFact.MemoryID, 10)
+		if memoryID == sourceMemoryID {
+			continue
+		}
+		subject, relation, nextEntity, ok := kgRelationAnswerParts(relationFact.Value)
+		if !ok || !annotationGraphEntityMatches(entity, subject) {
+			continue
+		}
+		for _, versionFact := range facts {
+			versionSubject, _, ok := searchVersionAnswerParts(versionFact.Value)
+			if !ok || !annotationGraphEntityMatches(nextEntity, versionSubject) {
+				continue
+			}
+			candidate := RecallCandidate{
+				MemoryID:   strconv.FormatInt(versionFact.MemoryID, 10),
+				SourceType: memoryAnnotationSourceConclusion,
+				Content:    versionFact.Content,
+				SessionID:  versionFact.SessionKey,
+				AgentID:    r.observer,
+				ScopeID:    normalizeMemoryScope(memoryScope, ""),
+				Provenance: []EvidenceItem{annotationFactEvidence(q.Query, versionFact.memoryFactAnnotation)},
+			}
+			out = append(out, annotationGraphVersionTarget{Candidate: candidate, RelationFact: relationFact.memoryFactAnnotation, VersionFact: versionFact.memoryFactAnnotation, Relation: relation, Entity: versionSubject})
+		}
+	}
+	return out, nil
+}
+
+type annotationGraphFactRow struct {
+	memoryFactAnnotation
+	Content    string
+	SessionKey string
+}
+
+func (r retrievalModule) queryAnnotationGraphFacts(ctx context.Context, workspaceID, peer, memoryScope, sessionKey string) ([]annotationGraphFactRow, error) {
+	present, err := sqliteTableExists(ctx, r.db, "goncho_memory_annotations")
+	if err != nil {
+		return nil, err
+	}
+	if !present {
+		return nil, nil
+	}
+
+	query := `
+		SELECT a.id, a.memory_source, a.memory_id, a.value, a.source, a.confidence,
+		       c.content, COALESCE(c.session_key, '')
+		FROM goncho_memory_annotations a
+		JOIN goncho_conclusions c ON c.id = a.memory_id
+		WHERE a.workspace_id = ?
+		  AND a.profile_id = ''
+		  AND a.observer_peer_id = ?
+		  AND a.peer_id = ?
+		  AND a.memory_source = 'conclusion'
+		  AND a.kind = 'fact'
+	`
+	args := []any{workspaceID, r.observer, peer}
+	switch normalizeMemoryScope(memoryScope, "") {
+	case MemoryScopeWorkspace:
+		query += ` AND ((c.workspace_id = ? AND c.scope = 'workspace') OR c.scope = 'global')`
+		args = append(args, workspaceID)
+	case MemoryScopeShared:
+		query += ` AND c.workspace_id = ? AND c.scope = 'shared'`
+		args = append(args, workspaceID)
+	case MemoryScopeSession:
+		query += ` AND c.workspace_id = ? AND c.profile_id = '' AND c.scope = 'session'`
+		args = append(args, workspaceID)
+	case MemoryScopeGlobal:
+		query += ` AND c.scope = 'global'`
+	case MemoryScopeProfile:
+		query += ` AND c.workspace_id = ? AND c.profile_id = '' AND c.scope = 'profile'`
+		args = append(args, workspaceID)
+	}
+	if sessionKey := strings.TrimSpace(sessionKey); sessionKey != "" {
+		query += ` AND (c.session_key = ? OR c.session_key IS NULL)`
+		args = append(args, sessionKey)
+	}
+	query += ` ORDER BY a.id ASC LIMIT 200`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("goncho: query annotation graph facts: %w", err)
+	}
+	defer rows.Close()
+
+	out := []annotationGraphFactRow{}
+	for rows.Next() {
+		var fact annotationGraphFactRow
+		if err := rows.Scan(&fact.ID, &fact.MemorySource, &fact.MemoryID, &fact.Value, &fact.Source, &fact.Confidence, &fact.Content, &fact.SessionKey); err != nil {
+			return nil, fmt.Errorf("goncho: scan annotation graph fact: %w", err)
+		}
+		out = append(out, fact)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("goncho: iterate annotation graph facts: %w", err)
+	}
+	return out, nil
+}
+
 func annotationFactEvidence(query string, fact memoryFactAnnotation) EvidenceItem {
 	return EvidenceItem{
 		Kind:   "fact",
@@ -175,6 +294,39 @@ func annotationGraphEvidence(sourceMemoryID, targetMemoryID, relation, entity, s
 	}
 }
 
+func annotationGraphVersionEvidence(sourceMemoryID, targetMemoryID, firstRelation, firstEntity, secondRelation, secondEntity, sourceFactID string, relationFactID, versionFactID int64) EvidenceItem {
+	relationFactIDText := strconv.FormatInt(relationFactID, 10)
+	versionFactIDText := strconv.FormatInt(versionFactID, 10)
+	return EvidenceItem{
+		Kind:   "graph",
+		Source: sourceMemoryID,
+		ID:     "annotation:" + sourceFactID + "->annotation:" + relationFactIDText + "->annotation:" + versionFactIDText,
+		Score:  1,
+		Note:   sourceMemoryID + " -> " + kgRelationPhrase(firstRelation) + " -> " + firstEntity + " -> " + kgRelationPhrase(secondRelation) + " -> " + secondEntity + " -> version -> " + targetMemoryID,
+		Metadata: map[string]string{
+			"entity":               firstEntity,
+			"relation":             firstRelation,
+			"source_fact_id":       sourceFactID,
+			"intermediate_fact_id": relationFactIDText,
+			"target_fact_id":       versionFactIDText,
+			"target_relation":      "version",
+		},
+	}
+}
+
+func appendAnnotationGraphCandidate(out []RecallCandidate, indexByID map[string]int, candidate RecallCandidate, evidence EvidenceItem) []RecallCandidate {
+	if idx, exists := indexByID[candidate.MemoryID]; exists {
+		if !recallCandidateHasEvidence(out[idx], evidence.Kind, evidence.ID) {
+			out[idx].Provenance = append(out[idx].Provenance, evidence)
+		}
+		return out
+	}
+	candidate.Provenance = append(candidate.Provenance, evidence)
+	out = append(out, candidate)
+	indexByID[candidate.MemoryID] = len(out) - 1
+	return out
+}
+
 func recallCandidateHasEvidence(candidate RecallCandidate, kind, id string) bool {
 	for _, item := range candidate.Provenance {
 		if item.Kind == kind && item.ID == id {
@@ -190,6 +342,11 @@ func annotationGraphOwnerQuery(query string) bool {
 		return false
 	}
 	return strings.Contains(query, "who") || strings.Contains(query, "which") || strings.Contains(query, "what")
+}
+
+func annotationGraphVersionQuery(query string) bool {
+	query = strings.ToLower(query)
+	return strings.Contains(query, "version") && (strings.Contains(query, "what") || strings.Contains(query, "which"))
 }
 
 func annotationGraphQueryMatchesKGRelation(query, subject, relation string) bool {
