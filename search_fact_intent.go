@@ -59,7 +59,7 @@ func searchFactIntentScore(query, content string) float64 {
 func searchHitFactIntentScore(query string, hit SearchHit) float64 {
 	score := searchFactIntentScore(query, hit.Content)
 	for _, fact := range hit.factAnnotations {
-		if factScore := searchFactIntentScore(query, fact); factScore > score {
+		if factScore := searchFactIntentScore(query, fact.Value); factScore > score {
 			score = factScore
 		}
 	}

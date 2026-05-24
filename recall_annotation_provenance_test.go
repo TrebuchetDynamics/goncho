@@ -72,19 +72,51 @@ func TestRecallCandidatesIncludeDurableFactAnnotationProvenance(t *testing.T) {
 	if selected.Score.FactScore != 1 {
 		t.Fatalf("fact score = %v, want durable annotation to feed recall scoring", selected.Score.FactScore)
 	}
-	if !recallCandidateHasFactAnnotation(selected.Candidate, "Mira prefers tabs for indentation") {
+	factEvidence, ok := recallCandidateFactEvidence(selected.Candidate, "Mira prefers tabs for indentation")
+	if !ok {
 		t.Fatalf("candidate provenance = %+v, want durable fact annotation provenance", selected.Candidate.Provenance)
+	}
+
+	var annotationID int64
+	var annotationSource string
+	var annotationConfidence float64
+	if err := svc.db.QueryRowContext(ctx, `
+		SELECT id, source, confidence
+		FROM goncho_memory_annotations
+		WHERE memory_source = 'conclusion'
+		  AND memory_id = ?
+		  AND kind = 'fact'
+		  AND value = 'Mira prefers tabs for indentation'
+	`, answer.ID).Scan(&annotationID, &annotationSource, &annotationConfidence); err != nil {
+		t.Fatalf("lookup annotation citation: %v", err)
+	}
+	if factEvidence.ID != strconv.FormatInt(annotationID, 10) {
+		t.Fatalf("fact evidence ID = %q, want durable annotation row id %d", factEvidence.ID, annotationID)
+	}
+	wantMetadata := map[string]string{
+		"memory_source": "conclusion",
+		"memory_id":     strconv.FormatInt(answer.ID, 10),
+		"source":        annotationSource,
+		"confidence":    "0.800",
+	}
+	for key, want := range wantMetadata {
+		if got := factEvidence.Metadata[key]; got != want {
+			t.Fatalf("fact evidence metadata[%q] = %q, want %q in %+v", key, got, want, factEvidence.Metadata)
+		}
+	}
+	if annotationConfidence != 0.8 {
+		t.Fatalf("annotation confidence = %v, want deterministic extractor confidence", annotationConfidence)
 	}
 }
 
-func recallCandidateHasFactAnnotation(candidate RecallCandidate, fact string) bool {
+func recallCandidateFactEvidence(candidate RecallCandidate, fact string) (EvidenceItem, bool) {
 	for _, item := range candidate.Provenance {
 		if item.Kind != "fact" || item.Source != "goncho_memory_annotations" || item.Score != 1 {
 			continue
 		}
 		if strings.Contains(item.Note, "fact="+fact) {
-			return true
+			return item, true
 		}
 	}
-	return false
+	return EvidenceItem{}, false
 }

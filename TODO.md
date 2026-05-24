@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Agentmemory/MEMORIA citation provenance now follows durable annotation rows into recall.
+  - Evidence target: `go test . -run TestRecallCandidatesIncludeDurableFactAnnotationProvenance -count=1` proves `RecallCandidate.Provenance` fact evidence cites the real `goncho_memory_annotations.id`, carries `memory_source`, `memory_id`, extractor `source`, and confidence metadata, and still contributes to recall `fact_score`.
+  - Result: durable annotation search ranking now has traceable recall citations, borrowing agentmemory's citation-provenance pattern without changing public Search JSON, adding LLM extraction, or claiming BEAM superiority.
+
 - 2026-05-23: Mnemosyne MEMORIA negation/decision extraction now feeds Goncho search through durable annotations.
   - Evidence target: `go test . -run 'TestServiceConclude(NegationAnnotationRanksDurableDenial|DecisionAnnotationRanksDurableDecision)' -count=1` proves `Service.Conclude` derives conservative negation and decision facts from prose (`I never approved auto-deleting audit logs`, `I decided to keep PostgreSQL for audit logs`) and `Service.Search` ranks those durable facts above question-shaped lexical echoes.
   - Result: the append-only fact annotation lane now covers MEMORIA-style contradiction-resolution and decision-recall signals without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.

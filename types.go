@@ -200,7 +200,7 @@ type SearchHit struct {
 	SessionKey   string         `json:"session_key,omitempty"`
 	Lineage      *SearchLineage `json:"lineage,omitempty"`
 
-	factAnnotations []string
+	factAnnotations []memoryFactAnnotation
 }
 
 // SearchLineage is operator evidence for the session lineage attached to a

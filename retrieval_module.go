@@ -87,17 +87,23 @@ func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeI
 			Note:   "matched conclusion content",
 		})
 	}
-	for i, fact := range hit.factAnnotations {
-		fact = strings.TrimSpace(fact)
-		if fact == "" {
+	for _, fact := range hit.factAnnotations {
+		value := strings.TrimSpace(fact.Value)
+		if value == "" {
 			continue
 		}
 		provenance = append(provenance, EvidenceItem{
 			Kind:   "fact",
 			Source: "goncho_memory_annotations",
-			ID:     fmt.Sprintf("conclusion:%d#fact:%d", hit.ID, i+1),
-			Score:  roundRecallFloat(searchFactIntentScore(q.Query, fact)),
-			Note:   "fact=" + fact,
+			ID:     strconv.FormatInt(fact.ID, 10),
+			Score:  roundRecallFloat(searchFactIntentScore(q.Query, value)),
+			Note:   "fact=" + value,
+			Metadata: map[string]string{
+				"memory_source": fact.MemorySource,
+				"memory_id":     strconv.FormatInt(fact.MemoryID, 10),
+				"source":        fact.Source,
+				"confidence":    fmt.Sprintf("%.3f", fact.Confidence),
+			},
 		})
 	}
 	return RecallCandidate{

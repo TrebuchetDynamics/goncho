@@ -14,6 +14,15 @@ const memoryAnnotationSourceConclusion = "conclusion"
 
 var memoryAnnotationDDL = memoryannotations.DDL
 
+type memoryFactAnnotation struct {
+	ID           int64
+	MemorySource string
+	MemoryID     int64
+	Value        string
+	Source       string
+	Confidence   float64
+}
+
 func conclusionFactAnnotations(content string) []string {
 	seen := map[string]struct{}{}
 	facts := []string{}
@@ -401,7 +410,7 @@ func attachConclusionFactAnnotations(ctx context.Context, db *sql.DB, hits []Sea
 
 	var b strings.Builder
 	b.WriteString(`
-		SELECT memory_id, value
+		SELECT id, memory_source, memory_id, value, source, confidence
 		FROM goncho_memory_annotations
 		WHERE memory_source = 'conclusion'
 		  AND kind = 'fact'
@@ -417,13 +426,12 @@ func attachConclusionFactAnnotations(ctx context.Context, db *sql.DB, hits []Sea
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id int64
-		var value string
-		if err := rows.Scan(&id, &value); err != nil {
+		var annotation memoryFactAnnotation
+		if err := rows.Scan(&annotation.ID, &annotation.MemorySource, &annotation.MemoryID, &annotation.Value, &annotation.Source, &annotation.Confidence); err != nil {
 			return nil, fmt.Errorf("goncho: scan conclusion fact annotation: %w", err)
 		}
-		for _, index := range indexes[id] {
-			hits[index].factAnnotations = append(hits[index].factAnnotations, value)
+		for _, index := range indexes[annotation.MemoryID] {
+			hits[index].factAnnotations = append(hits[index].factAnnotations, annotation)
 		}
 	}
 	if err := rows.Err(); err != nil {
