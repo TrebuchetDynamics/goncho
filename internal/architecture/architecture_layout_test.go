@@ -491,6 +491,53 @@ func TestArchitectureLayoutObservationAuditTestsLiveWithModule(t *testing.T) {
 	}
 }
 
+func TestArchitectureLayoutMemoryAnnotationsImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "memoryannotations", "annotations.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("memory annotations implementation must live at %s: %v", implPath, err)
+	}
+
+	facadePath := filepath.Join(root, "memory_annotations.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), facadePath, nil, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", facadePath, err)
+	}
+	forbiddenImplementationImports := map[string]struct{}{
+		"fmt":     {},
+		"strings": {},
+		"time":    {},
+	}
+	for _, imp := range parsed.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+		}
+		if _, forbidden := forbiddenImplementationImports[path]; forbidden {
+			t.Fatalf("memory_annotations.go imports implementation package %q; keep root memory_annotations.go as a package facade and put implementation behind internal/memoryannotations", path)
+		}
+	}
+	content, err := os.ReadFile(facadePath)
+	if err != nil {
+		t.Fatalf("ReadFile(%s): %v", facadePath, err)
+	}
+	for _, token := range []string{"func conclusionOwnerFactAnnotation", "func cleanFactObject", "func ownerFactAnnotation", "INSERT OR IGNORE INTO goncho_memory_annotations", "SELECT id, memory_source"} {
+		if bytes.Contains(content, []byte(token)) {
+			t.Fatalf("memory_annotations.go still contains memory annotation implementation token %q; move it behind internal/memoryannotations", token)
+		}
+	}
+}
+
+func TestArchitectureLayoutMemoryAnnotationsTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "memoryannotations", "annotations_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("memory annotation behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+}
+
 func TestArchitectureLayoutImportanceScoringImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 

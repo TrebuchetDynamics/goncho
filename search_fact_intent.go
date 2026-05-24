@@ -721,6 +721,31 @@ func searchPreferenceAnswerParts(sentence string) (subject, value, attribute str
 	return subject, value, attribute, true
 }
 
+func cleanFactObject(value string) string {
+	value = strings.TrimSpace(value)
+	if idx := strings.LastIndexAny(value, ":;"); idx >= 0 {
+		value = strings.TrimSpace(value[idx+1:])
+	}
+	value = strings.Trim(strings.TrimSpace(value), "\"'`“”‘’")
+	for _, prefix := range []string{"the ", "a ", "an "} {
+		if strings.HasPrefix(strings.ToLower(value), prefix) {
+			value = strings.TrimSpace(value[len(prefix):])
+		}
+	}
+	return value
+}
+
+func cleanFactValue(value string) string {
+	value = strings.Trim(strings.TrimSpace(value), "\"'`“”‘’")
+	for _, sep := range []string{";", ",", " because ", " but ", " and "} {
+		idx := strings.Index(strings.ToLower(value), sep)
+		if idx > 0 {
+			value = strings.TrimSpace(value[:idx])
+		}
+	}
+	return value
+}
+
 func searchFactSubjectLooksAssertive(subject string) bool {
 	tokens := searchRankTokens(subject)
 	if len(tokens) == 0 {
