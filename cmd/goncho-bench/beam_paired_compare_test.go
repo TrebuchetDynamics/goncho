@@ -9,6 +9,66 @@ import (
 	"testing"
 )
 
+func TestRunBeamPairedComparisonReportsSuperiorityVerdict(t *testing.T) {
+	dir := t.TempDir()
+	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
+	pairedRows := strings.Join([]string{
+		`{"config_id":"mnemosyne-v3","run_started_at":"2026-05-24T00:00:00Z","scale":"100K","conversation_id":"conv-a","qid":"q-ie-1","ability":"IE","score":0.7,"correct":true}`,
+		`{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-a","qid":"q-ie-1","ability":"IE","score":0.8,"correct":true}`,
+		`{"config_id":"mnemosyne-v3","run_started_at":"2026-05-24T00:00:00Z","scale":"100K","conversation_id":"conv-a","qid":"q-ie-2","ability":"IE","score":0.6,"correct":true}`,
+		`{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-a","qid":"q-ie-2","ability":"IE","score":0.7,"correct":true}`,
+		`{"config_id":"mnemosyne-v3","run_started_at":"2026-05-24T00:00:00Z","scale":"100K","conversation_id":"conv-a","qid":"q-mr-1","ability":"MR","score":0.5,"correct":true}`,
+		`{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-a","qid":"q-mr-1","ability":"MR","score":0.6,"correct":true}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(pairedPath, []byte(pairedRows), 0o644); err != nil {
+		t.Fatalf("write paired outcomes: %v", err)
+	}
+	jsonOut := filepath.Join(dir, "beam-paired-verdict.json")
+	mdOut := filepath.Join(dir, "beam-paired-verdict.md")
+	if err := run(context.Background(), config{
+		BeamPairedComparePath:             pairedPath,
+		BeamPairedBaselineConfigID:        "mnemosyne-v3",
+		BeamPairedCandidateConfigID:       "goncho-current",
+		BeamPairedCompareJSONOut:          jsonOut,
+		BeamPairedCompareMarkdownOut:      mdOut,
+		BeamPairedCompareBootstrapSamples: 200,
+	}); err != nil {
+		t.Fatalf("run BEAM paired verdict comparison: %v", err)
+	}
+
+	raw, err := os.ReadFile(jsonOut)
+	if err != nil {
+		t.Fatalf("read paired verdict JSON: %v", err)
+	}
+	var report struct {
+		EffectSizeFloor  float64 `json:"effect_size_floor"`
+		Conclusion       string  `json:"conclusion"`
+		ConclusionReason string  `json:"conclusion_reason"`
+		ScoreDeltaCI95   struct {
+			Lower float64 `json:"lower"`
+			Upper float64 `json:"upper"`
+		} `json:"score_delta_ci95"`
+		ByAbility map[string]struct {
+			Conclusion       string `json:"conclusion"`
+			ConclusionReason string `json:"conclusion_reason"`
+		} `json:"by_ability"`
+	}
+	if err := json.Unmarshal(raw, &report); err != nil {
+		t.Fatalf("decode paired verdict JSON: %v", err)
+	}
+	if report.EffectSizeFloor != 0.02 || report.Conclusion != "candidate_superior" || report.ConclusionReason != "candidate_ci_above_effect_floor" {
+		t.Fatalf("paired verdict = floor %.4f conclusion %q reason %q, want candidate superiority above 2pp noise floor", report.EffectSizeFloor, report.Conclusion, report.ConclusionReason)
+	}
+	if report.ScoreDeltaCI95.Lower <= report.EffectSizeFloor {
+		t.Fatalf("paired verdict CI = %+v, want lower bound above effect floor %.4f", report.ScoreDeltaCI95, report.EffectSizeFloor)
+	}
+	if got := report.ByAbility["IE"]; got.Conclusion != "candidate_superior" || got.ConclusionReason != "candidate_delta_above_effect_floor" {
+		t.Fatalf("IE ability verdict = %+v, want candidate superiority verdict", got)
+	}
+	assertBenchFileContains(t, mdOut, "- Verdict: `candidate_superior` (`candidate_ci_above_effect_floor`)")
+	assertBenchFileContains(t, mdOut, "- Effect-size floor: `0.0200`")
+}
+
 func TestRunBeamPairedComparisonWritesBootstrapReport(t *testing.T) {
 	dir := t.TempDir()
 	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")

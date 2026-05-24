@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: BEAM paired comparison now reports a superiority verdict with a noise-floor gate.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonReportsSuperiorityVerdict -count=1` proves `--beam-paired-compare` emits `effect_size_floor`, `conclusion`, and `conclusion_reason` fields and requires the bootstrap 95% CI to clear the default 2pp floor before reporting candidate or baseline superiority.
+  - Result: Goncho's local BEAM comparison oracle now encodes Mnemosyne's analysis guidance instead of encouraging overclaims from tiny paired deltas.
+
 - 2026-05-24: `goncho-bench --beam-paired-compare` now compares Mnemosyne-compatible BEAM paired outcomes.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonWritesBootstrapReport -count=1` proves Goncho can read append-only `paired_outcomes.jsonl`, pair baseline and candidate `config_id` rows by scale/conversation/qid, report score deltas, ability breakdowns, win/tie counts, dropped-unpaired counts, and deterministic bootstrap 95% confidence intervals.
   - Result: Goncho now has the local arm-comparison oracle needed to make future BEAM superiority claims falsifiable against Mnemosyne-style artifacts instead of hand-comparing summaries.

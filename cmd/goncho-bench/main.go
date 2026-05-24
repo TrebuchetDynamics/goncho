@@ -59,6 +59,7 @@ type config struct {
 	BeamPairedCompareJSONOut          string
 	BeamPairedCompareMarkdownOut      string
 	BeamPairedCompareBootstrapSamples int
+	BeamPairedCompareEffectSizeFloor  float64
 	BeamConversionDiagnostics         *beamConversionDiagnostics
 }
 
@@ -167,6 +168,7 @@ func main() {
 	flag.StringVar(&cfg.BeamPairedCompareJSONOut, "beam-paired-json-out", "", "JSON report output path for --beam-paired-compare; defaults to stdout when no outputs are set")
 	flag.StringVar(&cfg.BeamPairedCompareMarkdownOut, "beam-paired-md-out", "", "Markdown report output path for --beam-paired-compare")
 	flag.IntVar(&cfg.BeamPairedCompareBootstrapSamples, "beam-paired-bootstrap-samples", 5000, "deterministic bootstrap samples for --beam-paired-compare 95% CI")
+	flag.Float64Var(&cfg.BeamPairedCompareEffectSizeFloor, "beam-paired-effect-size-floor", 0.02, "minimum absolute score delta for a BEAM paired-comparison superiority verdict")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()

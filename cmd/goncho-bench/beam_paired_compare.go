@@ -24,6 +24,9 @@ type beamPairedComparisonReport struct {
 	BaselineAvgScore     float64                              `json:"baseline_avg_score"`
 	CandidateAvgScore    float64                              `json:"candidate_avg_score"`
 	ScoreDelta           float64                              `json:"score_delta"`
+	EffectSizeFloor      float64                              `json:"effect_size_floor"`
+	Conclusion           string                               `json:"conclusion"`
+	ConclusionReason     string                               `json:"conclusion_reason"`
 	BaselineWins         int                                  `json:"baseline_wins"`
 	CandidateWins        int                                  `json:"candidate_wins"`
 	Ties                 int                                  `json:"ties"`
@@ -44,6 +47,8 @@ type beamPairedComparisonStats struct {
 	BaselineAvgScore  float64 `json:"baseline_avg_score"`
 	CandidateAvgScore float64 `json:"candidate_avg_score"`
 	ScoreDelta        float64 `json:"score_delta"`
+	Conclusion        string  `json:"conclusion"`
+	ConclusionReason  string  `json:"conclusion_reason"`
 	BaselineWins      int     `json:"baseline_wins"`
 	CandidateWins     int     `json:"candidate_wins"`
 	Ties              int     `json:"ties"`
@@ -156,7 +161,11 @@ func buildBeamPairedComparison(cfg config) (beamPairedComparisonReport, error) {
 	if bootstrapSamples <= 0 {
 		bootstrapSamples = 5000
 	}
-	report := summarizeBeamPairedComparison(comparisonRows, bootstrapSamples)
+	effectSizeFloor := cfg.BeamPairedCompareEffectSizeFloor
+	if effectSizeFloor <= 0 {
+		effectSizeFloor = 0.02
+	}
+	report := summarizeBeamPairedComparison(comparisonRows, bootstrapSamples, effectSizeFloor)
 	report.GeneratedAt = time.Now().UTC().Format(time.RFC3339)
 	report.SourcePath = path
 	report.BaselineConfigID = baselineID
@@ -221,9 +230,10 @@ func beamPairedComparisonWinner(baseScore, candidateScore float64) string {
 	}
 }
 
-func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamples int) beamPairedComparisonReport {
+func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamples int, effectSizeFloor float64) beamPairedComparisonReport {
 	report := beamPairedComparisonReport{
 		PairedCount:      len(rows),
+		EffectSizeFloor:  roundMetric(effectSizeFloor),
 		BootstrapSamples: bootstrapSamples,
 		BootstrapSeed:    beamPairedComparisonBootstrapSeed,
 		ByAbility:        map[string]beamPairedComparisonStats{},
@@ -251,13 +261,14 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 	report.CandidateAvgScore = roundMetric(candidateTotal / n)
 	report.ScoreDelta = roundSignedMetric(report.CandidateAvgScore - report.BaselineAvgScore)
 	report.ScoreDeltaCI95 = bootstrapMeanCI(diffs, bootstrapSamples)
+	report.Conclusion, report.ConclusionReason = beamPairedComparisonConclusion(report.ScoreDeltaCI95, report.EffectSizeFloor)
 	for ability, rows := range abilityRows {
-		report.ByAbility[ability] = beamPairedComparisonStatsForRows(rows)
+		report.ByAbility[ability] = beamPairedComparisonStatsForRows(rows, report.EffectSizeFloor)
 	}
 	return report
 }
 
-func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow) beamPairedComparisonStats {
+func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow, effectSizeFloor float64) beamPairedComparisonStats {
 	stats := beamPairedComparisonStats{PairedCount: len(rows)}
 	baseTotal, candidateTotal := 0.0, 0.0
 	for _, row := range rows {
@@ -276,7 +287,28 @@ func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow) beamPaired
 	stats.BaselineAvgScore = roundMetric(baseTotal / n)
 	stats.CandidateAvgScore = roundMetric(candidateTotal / n)
 	stats.ScoreDelta = roundSignedMetric(stats.CandidateAvgScore - stats.BaselineAvgScore)
+	stats.Conclusion, stats.ConclusionReason = beamPairedComparisonPointConclusion(stats.ScoreDelta, effectSizeFloor)
 	return stats
+}
+
+func beamPairedComparisonConclusion(ci beamPairedComparisonCI, effectSizeFloor float64) (string, string) {
+	if ci.Lower > effectSizeFloor {
+		return "candidate_superior", "candidate_ci_above_effect_floor"
+	}
+	if ci.Upper < -effectSizeFloor {
+		return "baseline_superior", "baseline_ci_below_negative_effect_floor"
+	}
+	return "inconclusive", "ci_overlaps_effect_floor"
+}
+
+func beamPairedComparisonPointConclusion(delta, effectSizeFloor float64) (string, string) {
+	if delta > effectSizeFloor {
+		return "candidate_superior", "candidate_delta_above_effect_floor"
+	}
+	if delta < -effectSizeFloor {
+		return "baseline_superior", "baseline_delta_below_negative_effect_floor"
+	}
+	return "inconclusive", "delta_within_effect_floor"
 }
 
 func roundSignedMetric(v float64) float64 {
@@ -349,6 +381,8 @@ func writeBeamPairedComparisonMarkdown(path, jsonPath string, report beamPairedC
 	fmt.Fprintf(&b, "- JSON report: `%s`\n", jsonPath)
 	fmt.Fprintf(&b, "- Paired questions: `%d`\n", report.PairedCount)
 	fmt.Fprintf(&b, "- Dropped unpaired rows: `%d`\n", report.DroppedUnpairedCount)
+	fmt.Fprintf(&b, "- Effect-size floor: `%.4f`\n", report.EffectSizeFloor)
+	fmt.Fprintf(&b, "- Verdict: `%s` (`%s`)\n", report.Conclusion, report.ConclusionReason)
 	fmt.Fprintf(&b, "- Bootstrap: `%d` samples, seed `%d`, score-delta 95%% CI [`%+.4f`, `%+.4f`]\n\n", report.BootstrapSamples, report.BootstrapSeed, report.ScoreDeltaCI95.Lower, report.ScoreDeltaCI95.Upper)
 	b.WriteString("## Score summary\n\n")
 	b.WriteString("| Ability | Paired | Baseline avg | Candidate avg | Δ score | Candidate wins | Baseline wins | Ties |\n")
