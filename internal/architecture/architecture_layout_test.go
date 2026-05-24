@@ -126,6 +126,61 @@ func TestArchitectureLayoutDynamicAgentRegistryTestsLiveWithModule(t *testing.T)
 	}
 }
 
+func TestArchitectureLayoutImportanceScoringImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "importance", "importance.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("importance scoring implementation must live at %s: %v", implPath, err)
+	}
+
+	for _, facade := range []string{"importance_scorer.go", "decay.go"} {
+		facadePath := filepath.Join(root, facade)
+		parsed, err := parser.ParseFile(token.NewFileSet(), facadePath, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("ParseFile(%s): %v", facadePath, err)
+		}
+		forbiddenImplementationImports := map[string]struct{}{
+			"math":    {},
+			"sort":    {},
+			"strings": {},
+		}
+		for _, imp := range parsed.Imports {
+			path, err := strconv.Unquote(imp.Path.Value)
+			if err != nil {
+				t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+			}
+			if _, forbidden := forbiddenImplementationImports[path]; forbidden {
+				t.Fatalf("%s imports implementation package %q; keep root importance scoring files as public facades and put implementation behind internal/importance", facadePath, path)
+			}
+		}
+	}
+}
+
+func TestArchitectureLayoutImportanceScoringTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "importance", "importance_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("importance scoring behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "importance_scorer_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestImportancePublicFacade") {
+			t.Fatalf("%s keeps %s in the root package; move pure importance-scoring behavior tests to internal/importance", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
 func TestArchitectureLayoutMemoryToolsImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 

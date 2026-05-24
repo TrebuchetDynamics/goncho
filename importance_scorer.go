@@ -1,19 +1,15 @@
 package goncho
 
 import (
-	"math"
-	"sort"
-	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/internal/importance"
 )
 
-const defaultDecayHalfLife = 30 * 24 * time.Hour // 30 days
+const defaultDecayHalfLife = importance.DefaultDecayHalfLife
 
 type ImportanceScorer struct {
-	alphaRecency   float64
-	betaImportance float64
-	gammaRelevance float64
-	decayHalfLife  time.Duration
+	inner *importance.Scorer
 }
 
 type ScoredMemory struct {
@@ -25,133 +21,90 @@ type ScoredMemory struct {
 }
 
 func NewImportanceScorer() *ImportanceScorer {
-	return &ImportanceScorer{
-		alphaRecency:   0.3,
-		betaImportance: 0.5,
-		gammaRelevance: 0.2,
-		decayHalfLife:  defaultDecayHalfLife,
-	}
+	return &ImportanceScorer{inner: importance.NewScorer()}
 }
 
 func (s *ImportanceScorer) Score(entry MemoryToolEntry, relevanceScore float64, now time.Time) float64 {
-	recency := s.recencyScore(memoryReferenceTime(entry), now)
-	effectiveImportance := s.EffectiveImportance(entry, now)
-	score := s.alphaRecency*recency + s.betaImportance*effectiveImportance + s.gammaRelevance*clamp01(relevanceScore)
-	return clamp01(score)
+	return s.module().Score(toImportanceEntry(entry), relevanceScore, now)
 }
 
 func (s *ImportanceScorer) Rank(entries []MemoryToolEntry, relevanceByID map[string]float64, now time.Time) []ScoredMemory {
-	if s == nil {
-		s = NewImportanceScorer()
+	ranked := s.module().Rank(toImportanceEntries(entries), relevanceByID, now)
+	out := make([]ScoredMemory, 0, len(ranked))
+	for _, item := range ranked {
+		out = append(out, fromScoredImportanceEntry(item))
 	}
-	out := make([]ScoredMemory, 0, len(entries))
-	for _, entry := range entries {
-		relevance := relevanceByID[entry.ID]
-		out = append(out, ScoredMemory{
-			Entry:               entry,
-			Relevance:           clamp01(relevance),
-			Recency:             s.recencyScore(memoryReferenceTime(entry), now),
-			EffectiveImportance: s.EffectiveImportance(entry, now),
-			Score:               s.Score(entry, relevance, now),
-		})
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Score != out[j].Score {
-			return out[i].Score > out[j].Score
-		}
-		if out[i].EffectiveImportance != out[j].EffectiveImportance {
-			return out[i].EffectiveImportance > out[j].EffectiveImportance
-		}
-		iTime := memoryReferenceTime(out[i].Entry)
-		jTime := memoryReferenceTime(out[j].Entry)
-		if !iTime.Equal(jTime) {
-			return iTime.After(jTime)
-		}
-		return out[i].Entry.ID < out[j].Entry.ID
-	})
 	return out
 }
 
 func (s *ImportanceScorer) RankByQuery(entries []MemoryToolEntry, query string, now time.Time) []ScoredMemory {
-	relevance := make(map[string]float64, len(entries))
-	for _, entry := range entries {
-		relevance[entry.ID] = MemoryEntryRelevance(entry, query)
+	ranked := s.module().RankByQuery(toImportanceEntries(entries), query, now)
+	out := make([]ScoredMemory, 0, len(ranked))
+	for _, item := range ranked {
+		out = append(out, fromScoredImportanceEntry(item))
 	}
-	return s.Rank(entries, relevance, now)
-}
-
-func (s *ImportanceScorer) recencyScore(createdAt time.Time, now time.Time) float64 {
-	age := now.Sub(createdAt)
-	if age <= 0 {
-		return 1.0
-	}
-	halfLives := float64(age) / float64(s.decayHalfLife)
-	return math.Exp2(-halfLives)
+	return out
 }
 
 func (s *ImportanceScorer) EffectiveImportance(entry MemoryToolEntry, now time.Time) float64 {
-	base := clamp01(entry.Importance) * s.recencyScore(memoryReferenceTime(entry), now)
-	if base < 0.01 {
-		base = 0.01
-	}
-	return base
+	return s.module().EffectiveImportance(toImportanceEntry(entry), now)
 }
 
 func DefaultDecayCurve(createdAt time.Time, now time.Time) float64 {
-	age := now.Sub(createdAt)
-	if age <= 0 {
-		return 1.0
-	}
-	halfLives := float64(age) / float64(defaultDecayHalfLife)
-	return math.Exp2(-halfLives)
+	return importance.DefaultDecayCurve(createdAt, now)
 }
 
 func MemoryEntryRelevance(entry MemoryToolEntry, query string) float64 {
-	query = strings.ToLower(strings.TrimSpace(query))
-	if query == "" {
-		return 0
-	}
-	content := strings.ToLower(entry.Content)
-	if strings.Contains(content, query) {
-		return 1
-	}
-	tokens := strings.Fields(query)
-	if len(tokens) == 0 {
-		return 0
-	}
-	hits := 0
-	for _, token := range tokens {
-		if strings.Contains(content, token) {
-			hits++
-			continue
-		}
-		for _, tag := range entry.Tags {
-			if strings.Contains(strings.ToLower(tag), token) {
-				hits++
-				break
-			}
-		}
-	}
-	return clamp01(float64(hits) / float64(len(tokens)))
+	return importance.MemoryEntryRelevance(toImportanceEntry(entry), query)
 }
 
-func memoryReferenceTime(entry MemoryToolEntry) time.Time {
-	if !entry.UpdatedAt.IsZero() {
-		return entry.UpdatedAt
+func (s *ImportanceScorer) module() *importance.Scorer {
+	if s == nil || s.inner == nil {
+		return importance.NewScorer()
 	}
-	if !entry.CreatedAt.IsZero() {
-		return entry.CreatedAt
-	}
-	return time.Now().UTC()
+	return s.inner
 }
 
-func clamp01(value float64) float64 {
-	switch {
-	case value < 0:
-		return 0
-	case value > 1:
-		return 1
-	default:
-		return value
+func toImportanceEntries(entries []MemoryToolEntry) []importance.Entry {
+	out := make([]importance.Entry, 0, len(entries))
+	for _, entry := range entries {
+		out = append(out, toImportanceEntry(entry))
+	}
+	return out
+}
+
+func toImportanceEntry(entry MemoryToolEntry) importance.Entry {
+	return importance.Entry{
+		ID:         entry.ID,
+		Content:    entry.Content,
+		Tags:       append([]string(nil), entry.Tags...),
+		Importance: entry.Importance,
+		SessionID:  entry.SessionID,
+		CreatedAt:  entry.CreatedAt,
+		UpdatedAt:  entry.UpdatedAt,
+		Metadata:   cloneStringMap(entry.Metadata),
+	}
+}
+
+func fromImportanceEntry(entry importance.Entry) MemoryToolEntry {
+	return MemoryToolEntry{
+		ID:         entry.ID,
+		Content:    entry.Content,
+		Tags:       append([]string(nil), entry.Tags...),
+		Importance: entry.Importance,
+		SessionID:  entry.SessionID,
+		CreatedAt:  entry.CreatedAt,
+		UpdatedAt:  entry.UpdatedAt,
+		Metadata:   cloneStringMap(entry.Metadata),
+	}
+}
+
+func fromScoredImportanceEntry(item importance.ScoredEntry) ScoredMemory {
+	return ScoredMemory{
+		Entry:               fromImportanceEntry(item.Entry),
+		Relevance:           item.Relevance,
+		Recency:             item.Recency,
+		EffectiveImportance: item.EffectiveImportance,
+		Score:               item.Score,
 	}
 }
