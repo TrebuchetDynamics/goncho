@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -275,6 +277,66 @@ func TestRunBeamHuggingFaceJSONLDatasetScoresRubricContextCoverage(t *testing.T)
 	if row.QID != "q-owner-rubric-score" || row.Score != 1 || row.RubricContextScore != 1 || !slices.Equal(row.RubricContextMatches, []string{"mentions Mira", "mentions LedgerDB"}) {
 		t.Fatalf("rubric coverage row = %+v, want pure-recall score plus full rubric context coverage", row)
 	}
+}
+
+func TestRunBeamHuggingFaceJSONLDatasetReportsConversionChecksums(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-checksum.jsonl")
+	rawRecord := `{"conversation_id":"conv-checksum","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'IE': [{'id': 'q-owner-checksum', 'question': 'Who owns LedgerDB?', 'relevant_message_indices': [0], 'required_evidence_kinds': ['fact']}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	convertedPath := filepath.Join(dir, "converted-beam.jsonl")
+	if err := run(context.Background(), config{
+		BeamConvertIn:  rawPath,
+		BeamConvertOut: convertedPath,
+	}); err != nil {
+		t.Fatalf("convert BEAM record for checksum oracle: %v", err)
+	}
+	convertedRaw, err := os.ReadFile(convertedPath)
+	if err != nil {
+		t.Fatalf("read converted BEAM JSONL: %v", err)
+	}
+
+	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
+	if err := run(context.Background(), config{
+		BeamConvertIn:         rawPath,
+		BeamServiceResultsOut: resultsPath,
+		BeamServiceConfigID:   "test-beam-checksum",
+		DatabasePath:          filepath.Join(dir, "beam-checksum.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with checksum diagnostics: %v", err)
+	}
+
+	var results struct {
+		Metadata struct {
+			Diagnostics struct {
+				Conversion struct {
+					SourceSHA256         string `json:"source_sha256"`
+					ConvertedJSONLSHA256 string `json:"converted_jsonl_sha256"`
+				} `json:"conversion"`
+			} `json:"diagnostics"`
+		} `json:"metadata"`
+	}
+	rawResults, err := os.ReadFile(resultsPath)
+	if err != nil {
+		t.Fatalf("read checksum results: %v", err)
+	}
+	if err := json.Unmarshal(rawResults, &results); err != nil {
+		t.Fatalf("decode checksum results: %v", err)
+	}
+	conversion := results.Metadata.Diagnostics.Conversion
+	if conversion.SourceSHA256 != testSHA256Hex([]byte(rawRecord)) {
+		t.Fatalf("source_sha256 = %q, want raw BEAM artifact checksum", conversion.SourceSHA256)
+	}
+	if conversion.ConvertedJSONLSHA256 != testSHA256Hex(convertedRaw) {
+		t.Fatalf("converted_jsonl_sha256 = %q, want converted JSONL artifact checksum", conversion.ConvertedJSONLSHA256)
+	}
+}
+
+func testSHA256Hex(raw []byte) string {
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
 }
 
 func TestRunBeamHuggingFaceJSONLDatasetReportsUnscorableQuestions(t *testing.T) {

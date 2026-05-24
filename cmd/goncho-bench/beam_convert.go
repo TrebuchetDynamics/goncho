@@ -3,8 +3,11 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -52,6 +55,8 @@ type beamConvertedQuestion struct {
 
 type beamConversionDiagnostics struct {
 	Source                        string                     `json:"source"`
+	SourceSHA256                  string                     `json:"source_sha256,omitempty"`
+	ConvertedJSONLSHA256          string                     `json:"converted_jsonl_sha256,omitempty"`
 	ConversationCount             int                        `json:"conversation_count"`
 	MemoryCount                   int                        `json:"memory_count"`
 	QuestionCount                 int                        `json:"question_count"`
@@ -97,13 +102,14 @@ func loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale string) ([]be
 		return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: open HuggingFace BEAM JSONL: %w", err)
 	}
 	defer file.Close()
+	sourceHasher := sha256.New()
 
 	fallbackScale = strings.TrimSpace(fallbackScale)
 	if fallbackScale == "" {
 		fallbackScale = beamServiceScale
 	}
 	out := []beamJSONLRecord{{Type: "meta", Dataset: "beam-huggingface-converted", Scale: fallbackScale}}
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(io.TeeReader(file, sourceHasher))
 	scanner.Buffer(make([]byte, 0, 1024*1024), 16*1024*1024)
 	lineNo := 0
 	for scanner.Scan() {
@@ -128,7 +134,14 @@ func loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale string) ([]be
 	if len(out) == 1 {
 		return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: HuggingFace BEAM JSONL has no conversation records")
 	}
-	return out, summarizeBeamConversionRecords(out), nil
+	diagnostics := summarizeBeamConversionRecords(out)
+	diagnostics.SourceSHA256 = hex.EncodeToString(sourceHasher.Sum(nil))
+	convertedRaw, err := encodeBeamJSONLBytes(out)
+	if err != nil {
+		return nil, beamConversionDiagnostics{}, err
+	}
+	diagnostics.ConvertedJSONLSHA256 = checksumBytesSHA256(convertedRaw)
+	return out, diagnostics, nil
 }
 
 func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fallbackScale string) ([]beamJSONLRecord, error) {
@@ -360,14 +373,27 @@ func writeConvertedBeamJSONL(path string, records []beamJSONLRecord) error {
 	return encodeBeamJSONL(file, records)
 }
 
-func encodeBeamJSONL(file *os.File, records []beamJSONLRecord) error {
-	encoder := json.NewEncoder(file)
+func encodeBeamJSONLBytes(records []beamJSONLRecord) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := encodeBeamJSONL(&buf, records); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func encodeBeamJSONL(w io.Writer, records []beamJSONLRecord) error {
+	encoder := json.NewEncoder(w)
 	for _, record := range records {
 		if err := encoder.Encode(record); err != nil {
 			return fmt.Errorf("goncho-bench: write converted BEAM JSONL: %w", err)
 		}
 	}
 	return nil
+}
+
+func checksumBytesSHA256(raw []byte) string {
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
 }
 
 func summarizeBeamConversionRecords(records []beamJSONLRecord) beamConversionDiagnostics {

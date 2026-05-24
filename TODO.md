@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: raw BEAM conversion diagnostics now carry scientific-control checksums.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsConversionChecksums -count=1` proves direct raw BEAM service artifacts report both the source JSONL SHA-256 and the converted JSONL SHA-256 under `metadata.diagnostics.conversion`.
+  - Result: Goncho's one-command BEAM path now records raw and converted artifact identity needed for reproducible comparisons against Mnemosyne-style results.
+
 - 2026-05-24: BEAM paired comparison now reports a superiority verdict with a noise-floor gate.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonReportsSuperiorityVerdict -count=1` proves `--beam-paired-compare` emits `effect_size_floor`, `conclusion`, and `conclusion_reason` fields and requires the bootstrap 95% CI to clear the default 2pp floor before reporting candidate or baseline superiority.
   - Result: Goncho's local BEAM comparison oracle now encodes Mnemosyne's analysis guidance instead of encouraging overclaims from tiny paired deltas.
