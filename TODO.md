@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: BEAM-style recall benchmark oracle now runs public Service.Conclude fixtures end-to-end.
+  - Evidence target: `go test . -run TestEvaluateServiceRecallBenchmarkRunsBeamStyleCasesEndToEnd -count=1` proves tiny IE/MR fixtures ingest conclusions through `Service.Conclude`, run recall, map benchmark refs to concrete conclusion IDs, and feed ability/provenance aggregation with fact and graph evidence.
+  - Result: Goncho can now track delivered MEMORIA behavior through a deterministic local BEAM-style service oracle without answer hints, LLM judges, external datasets, or claiming final BEAM superiority.
+
 - 2026-05-24: BEAM-style recall benchmark reporting now exposes ability and provenance hit rates.
   - Evidence target: `go test . -run TestRecallBenchmarkReportsBeamAbilityBreakdownAndProvenance -count=1` proves `EvaluateRecallBenchmark` can report IE/MR-style ability slices, per-ability recall@5/@10, and required fact/graph provenance hit rates from existing `RecallTrace` evidence.
   - Result: Goncho now has a deterministic local oracle for tracking MEMORIA/BEAM ability progress without answer hints, LLM judges, retrieval tuning, or claiming final BEAM superiority.

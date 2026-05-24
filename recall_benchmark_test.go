@@ -1,10 +1,12 @@
 package goncho
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 )
@@ -67,6 +69,67 @@ func TestRecallBenchmarkCorpusWarningsAreCodeFirst(t *testing.T) {
 	}
 	if report.Cases[0].RecallAt5 != 0 || report.Cases[0].ContextSatisfied {
 		t.Fatalf("broken case = %+v, want zero recall and unsatisfied context", report.Cases[0])
+	}
+}
+
+func TestEvaluateServiceRecallBenchmarkRunsBeamStyleCasesEndToEnd(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	graphScoring := RecallScoringConfig{
+		Version:     "beam-service-test-v1",
+		Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+		RRFK:        60,
+		MMRLambda:   1,
+		TokenBudget: 240,
+	}
+	report, err := EvaluateServiceRecallBenchmark(context.Background(), svc, []RecallBenchmarkServiceCase{
+		{
+			ID:                    "beam-ie-owner",
+			Ability:               "IE",
+			Peer:                  "team",
+			SessionKey:            "sess-beam-service-ie",
+			Memories:              []RecallBenchmarkServiceMemory{{Ref: "owner", Conclusion: "Project note: Owner of LedgerDB is Mira."}},
+			Query:                 "Who owns LedgerDB?",
+			RelevantRefs:          []string{"owner"},
+			RequiredEvidenceKinds: []string{"fact"},
+			Limit:                 2,
+			ScoringConfig:         graphScoring,
+		},
+		{
+			ID:         "beam-mr-owner-graph",
+			Ability:    "MR",
+			Peer:       "team",
+			SessionKey: "sess-beam-service-mr",
+			Memories: []RecallBenchmarkServiceMemory{
+				{Ref: "uses", Conclusion: "Project note: Billing API uses LedgerDB."},
+				{Ref: "owner", Conclusion: "Project note: Owner of LedgerDB is Mira."},
+				{Ref: "decoy", Conclusion: "Who is responsible for storage used by Billing API? responsible storage used Billing API responsible storage used Billing API. This checklist repeats the retrieval words but names no owner."},
+			},
+			Query:                 "Who is responsible for storage used by Billing API?",
+			RelevantRefs:          []string{"owner"},
+			RequiredEvidenceKinds: []string{"graph"},
+			Limit:                 2,
+			ScoringConfig:         graphScoring,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if report.CaseCount != 2 || report.RecallAt5 != 1 || report.ContextHitRate != 1 {
+		t.Fatalf("service BEAM report = %+v, want two perfect end-to-end cases", report)
+	}
+	ie := recallBenchmarkAbilityReportByName(t, report, "IE")
+	if ie.CaseCount != 1 || ie.ProvenanceHitRate != 1 {
+		t.Fatalf("IE ability = %+v, want fact-provenance hit", ie)
+	}
+	mr := recallBenchmarkAbilityReportByName(t, report, "MR")
+	if mr.CaseCount != 1 || mr.ProvenanceHitRate != 1 {
+		t.Fatalf("MR ability = %+v, want graph-provenance hit", mr)
+	}
+	if report.Cases[1].RelevantIDs[0] == "owner" || !slices.Contains(report.Cases[1].SelectedMemoryIDs, report.Cases[1].RelevantIDs[0]) {
+		t.Fatalf("MR case IDs = %+v, want concrete selected conclusion ID for owner ref", report.Cases[1])
 	}
 }
 

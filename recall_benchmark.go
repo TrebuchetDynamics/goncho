@@ -1,15 +1,18 @@
 package goncho
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	RecallBenchmarkCorpusVersion = "goncho-recall-benchmark-v1"
+	RecallBenchmarkCorpusVersion          = "goncho-recall-benchmark-v1"
+	RecallBenchmarkServicePipelineVersion = "goncho-recall-benchmark-service-v1"
 
 	RecallBenchmarkWarningMissingTrace  = "benchmark_missing_trace"
 	RecallBenchmarkWarningNoRelevantIDs = "benchmark_no_relevant_ids"
@@ -25,6 +28,37 @@ type RecallBenchmarkCase struct {
 	ContextContains       []string
 	RequiredEvidenceKinds []string
 	Latency               time.Duration
+}
+
+// RecallBenchmarkServiceMemory is one public Service.Conclude write used by a
+// service-backed benchmark case. Ref is local to the case and maps benchmark
+// relevant IDs to the concrete conclusion IDs generated during ingestion.
+type RecallBenchmarkServiceMemory struct {
+	Ref        string
+	Conclusion string
+	Peer       string
+	SessionKey string
+	Scope      string
+}
+
+// RecallBenchmarkServiceCase runs a tiny BEAM-style fixture through public
+// conclusion writes and the recall pipeline before EvaluateRecallBenchmark
+// aggregates the resulting RecallTrace.
+type RecallBenchmarkServiceCase struct {
+	ID                    string
+	Ability               string
+	Peer                  string
+	SessionKey            string
+	Query                 string
+	ScopeID               string
+	Memories              []RecallBenchmarkServiceMemory
+	RelevantRefs          []string
+	ContextContains       []string
+	RequiredEvidenceKinds []string
+	Limit                 int
+	MaxTokens             int
+	ScoringConfig         RecallScoringConfig
+	PipelineVersion       string
 }
 
 type RecallBenchmarkReport struct {
@@ -78,6 +112,121 @@ type RecallBenchmarkCaseReport struct {
 	TokenBudgetWithin     bool     `json:"token_budget_within"`
 	LatencyMS             int      `json:"latency_ms"`
 	WarningCodes          []string `json:"warning_codes"`
+}
+
+func EvaluateServiceRecallBenchmark(ctx context.Context, svc *Service, cases []RecallBenchmarkServiceCase) (RecallBenchmarkReport, error) {
+	if svc == nil {
+		return RecallBenchmarkReport{}, fmt.Errorf("goncho recall benchmark: service is required")
+	}
+	benchmarkCases := make([]RecallBenchmarkCase, 0, len(cases))
+	for i, c := range cases {
+		benchmarkCase, err := runServiceRecallBenchmarkCase(ctx, svc, i, c)
+		if err != nil {
+			return RecallBenchmarkReport{}, err
+		}
+		benchmarkCases = append(benchmarkCases, benchmarkCase)
+	}
+	return EvaluateRecallBenchmark(benchmarkCases), nil
+}
+
+func runServiceRecallBenchmarkCase(ctx context.Context, svc *Service, index int, c RecallBenchmarkServiceCase) (RecallBenchmarkCase, error) {
+	if err := ctx.Err(); err != nil {
+		return RecallBenchmarkCase{}, err
+	}
+	id := strings.TrimSpace(c.ID)
+	if id == "" {
+		id = fmt.Sprintf("service-case-%03d", index+1)
+	}
+	peer := strings.TrimSpace(c.Peer)
+	if peer == "" {
+		peer = "benchmark"
+	}
+	sessionKey := strings.TrimSpace(c.SessionKey)
+	if sessionKey == "" {
+		sessionKey = "sess-" + id
+	}
+	query := strings.TrimSpace(c.Query)
+	if query == "" {
+		return RecallBenchmarkCase{}, fmt.Errorf("goncho recall benchmark: case %q query is required", id)
+	}
+	started := time.Now()
+	refToID := map[string]string{}
+	for i, memory := range c.Memories {
+		ref := strings.TrimSpace(memory.Ref)
+		if ref == "" {
+			ref = fmt.Sprintf("memory-%03d", i+1)
+		}
+		if _, exists := refToID[ref]; exists {
+			return RecallBenchmarkCase{}, fmt.Errorf("goncho recall benchmark: case %q duplicate memory ref %q", id, ref)
+		}
+		conclusion := strings.TrimSpace(memory.Conclusion)
+		if conclusion == "" {
+			return RecallBenchmarkCase{}, fmt.Errorf("goncho recall benchmark: case %q memory %q conclusion is required", id, ref)
+		}
+		memoryPeer := strings.TrimSpace(memory.Peer)
+		if memoryPeer == "" {
+			memoryPeer = peer
+		}
+		memorySessionKey := strings.TrimSpace(memory.SessionKey)
+		if memorySessionKey == "" {
+			memorySessionKey = sessionKey
+		}
+		written, err := svc.Conclude(ctx, ConcludeParams{
+			Peer:       memoryPeer,
+			Conclusion: conclusion,
+			SessionKey: memorySessionKey,
+			Scope:      memory.Scope,
+		})
+		if err != nil {
+			return RecallBenchmarkCase{}, fmt.Errorf("goncho recall benchmark: case %q write memory %q: %w", id, ref, err)
+		}
+		refToID[ref] = strconv.FormatInt(written.ID, 10)
+	}
+	relevantIDs := make([]string, 0, len(c.RelevantRefs))
+	for _, ref := range c.RelevantRefs {
+		ref = strings.TrimSpace(ref)
+		if ref == "" {
+			continue
+		}
+		memoryID, ok := refToID[ref]
+		if !ok {
+			return RecallBenchmarkCase{}, fmt.Errorf("goncho recall benchmark: case %q relevant ref %q was not written", id, ref)
+		}
+		relevantIDs = append(relevantIDs, memoryID)
+	}
+	limit := c.Limit
+	if limit <= 0 {
+		limit = 5
+	}
+	pipelineVersion := strings.TrimSpace(c.PipelineVersion)
+	if pipelineVersion == "" {
+		pipelineVersion = RecallBenchmarkServicePipelineVersion
+	}
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: pipelineVersion,
+		scoringConfig:   c.ScoringConfig,
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        peer,
+		Query:       query,
+		SessionKey:  sessionKey,
+		ScopeID:     normalizeMemoryScope(c.ScopeID, ""),
+		Limit:       limit,
+		MaxTokens:   c.MaxTokens,
+	})
+	if err != nil {
+		return RecallBenchmarkCase{}, fmt.Errorf("goncho recall benchmark: case %q run recall: %w", id, err)
+	}
+	return RecallBenchmarkCase{
+		ID:                    id,
+		Ability:               c.Ability,
+		Trace:                 trace,
+		RelevantIDs:           relevantIDs,
+		ContextContains:       append([]string(nil), c.ContextContains...),
+		RequiredEvidenceKinds: append([]string(nil), c.RequiredEvidenceKinds...),
+		Latency:               time.Since(started),
+	}, nil
 }
 
 func EvaluateRecallBenchmark(cases []RecallBenchmarkCase) RecallBenchmarkReport {
