@@ -16,6 +16,9 @@ func searchFactIntentScore(query, content string) float64 {
 	if score := searchOwnerFactIntentScore(query, content); score > 0 {
 		return score
 	}
+	if score := searchPreferenceFactIntentScore(query, content); score > 0 {
+		return score
+	}
 	return 0
 }
 
@@ -61,6 +64,34 @@ func searchOwnerFactIntentScore(query, content string) float64 {
 	return 0
 }
 
+func searchPreferenceFactIntentScore(query, content string) float64 {
+	querySubject, queryAttribute, ok := searchPreferenceQuestion(query)
+	if !ok {
+		return 0
+	}
+	subjectTokens := searchRankTokenSet(querySubject)
+	attributeTokens := searchRankTokenSet(queryAttribute)
+	if len(subjectTokens) == 0 || len(attributeTokens) == 0 {
+		return 0
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		subject, _, attribute, ok := searchPreferenceAnswerParts(sentence)
+		if !ok {
+			continue
+		}
+		if searchRankTokenCoverage(subjectTokens, subject) < 0.80 {
+			continue
+		}
+		if searchRankTokenCoverage(attributeTokens, attribute) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
 func searchOwnerQuestionObject(query string) (string, bool) {
 	match := searchOwnerQuestionPattern.FindStringSubmatch(query)
 	if len(match) != 2 {
@@ -68,6 +99,73 @@ func searchOwnerQuestionObject(query string) (string, bool) {
 	}
 	object := strings.TrimSpace(match[1])
 	return object, object != ""
+}
+
+func searchPreferenceQuestion(query string) (subject, attribute string, ok bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	lower := strings.ToLower(query)
+	if strings.HasPrefix(lower, "what does ") {
+		rest := query[len("what does "):]
+		restLower := strings.ToLower(rest)
+		preferIdx := strings.Index(restLower, " prefer")
+		if preferIdx <= 0 {
+			return "", "", false
+		}
+		subject = cleanFactValue(rest[:preferIdx])
+		after := strings.TrimSpace(rest[preferIdx+len(" prefer"):])
+		for _, prefix := range []string{"for ", "as "} {
+			if strings.HasPrefix(strings.ToLower(after), prefix) {
+				attribute = cleanFactObject(after[len(prefix):])
+				return subject, attribute, subject != "" && attribute != ""
+			}
+		}
+		return "", "", false
+	}
+	if !strings.HasPrefix(lower, "what ") {
+		return "", "", false
+	}
+	rest := query[len("what "):]
+	restLower := strings.ToLower(rest)
+	doesIdx := strings.Index(restLower, " does ")
+	if doesIdx <= 0 {
+		return "", "", false
+	}
+	attribute = cleanFactObject(rest[:doesIdx])
+	afterDoes := rest[doesIdx+len(" does "):]
+	afterLower := strings.ToLower(afterDoes)
+	preferIdx := strings.Index(afterLower, " prefer")
+	if preferIdx <= 0 {
+		return "", "", false
+	}
+	subject = cleanFactValue(afterDoes[:preferIdx])
+	return subject, attribute, subject != "" && attribute != ""
+}
+
+func searchPreferenceAnswerParts(sentence string) (subject, value, attribute string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	lower := strings.ToLower(sentence)
+	idx := strings.Index(lower, " prefers ")
+	verbLen := len(" prefers ")
+	if idx < 0 {
+		idx = strings.Index(lower, " prefer ")
+		verbLen = len(" prefer ")
+	}
+	if idx <= 0 {
+		return "", "", "", false
+	}
+	subject = cleanFactValue(sentence[:idx])
+	rest := sentence[idx+verbLen:]
+	restLower := strings.ToLower(rest)
+	forIdx := strings.LastIndex(restLower, " for ")
+	if forIdx <= 0 {
+		return "", "", "", false
+	}
+	value = cleanFactValue(rest[:forIdx])
+	attribute = cleanFactObject(rest[forIdx+len(" for "):])
+	if !searchFactSubjectLooksAssertive(subject) || !searchFactObjectLooksAssertive(value) || !searchFactObjectLooksAssertive(attribute) {
+		return "", "", "", false
+	}
+	return subject, value, attribute, true
 }
 
 func searchFactSubjectLooksAssertive(subject string) bool {

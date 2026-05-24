@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA preference extraction now feeds Goncho search through durable annotations.
+  - Evidence target: `go test . -run TestServiceConcludePreferenceAnnotationRanksDurablePreference -count=1` proves `Service.Conclude` derives a conservative preference fact from prose (`Mira's indentation preference is tabs`) and `Service.Search` ranks that durable preference above a question-shaped lexical echo.
+  - Result: the append-only fact annotation lane now covers a second MEMORIA category (`preferences`) without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
+
 - 2026-05-23: Mnemosyne MEMORIA-style append-only fact annotations now feed Goncho search.
   - Evidence target: `go test . -run 'Test(RunMigrationsCreatesMemoryAnnotationTableIdempotently|ServiceConcludeFactAnnotationsRankInverseOwnerFact)' -count=1` proves migrations create the annotation lane idempotently and `Service.Search` ranks an inverse owner fact from a durable annotation above a question-shaped lexical echo.
   - Result: `Service.Conclude` now preserves raw conclusion text while deriving conservative `fact` annotations, then `findConclusions` hydrates those annotations as hidden ranking evidence without changing the public Search JSON shape, using LLM extraction, or regenerating benchmark artifacts.

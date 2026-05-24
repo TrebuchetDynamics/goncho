@@ -18,7 +18,11 @@ func conclusionFactAnnotations(content string) []string {
 	seen := map[string]struct{}{}
 	facts := []string{}
 	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
-		if fact, ok := conclusionOwnerFactAnnotation(sentence); ok {
+		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation} {
+			fact, ok := extractor(sentence)
+			if !ok {
+				continue
+			}
 			key := strings.ToLower(fact)
 			if _, exists := seen[key]; exists {
 				continue
@@ -70,6 +74,30 @@ func conclusionOwnerOfFact(sentence, lower string) (string, bool) {
 	return ownerFactAnnotation(owner, object)
 }
 
+func conclusionPreferenceFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	lower := strings.ToLower(sentence)
+	possessive := "'s "
+	idx := strings.Index(lower, possessive)
+	if idx < 0 {
+		return "", false
+	}
+	subject := cleanFactObject(sentence[:idx])
+	rest := sentence[idx+len(possessive):]
+	restLower := strings.ToLower(rest)
+	marker := " preference is "
+	prefIdx := strings.Index(restLower, marker)
+	if prefIdx < 0 {
+		return "", false
+	}
+	attribute := cleanFactObject(rest[:prefIdx])
+	value := cleanFactValue(rest[prefIdx+len(marker):])
+	return preferenceFactAnnotation(subject, value, attribute)
+}
+
 func cleanFactObject(value string) string {
 	value = strings.TrimSpace(value)
 	if idx := strings.LastIndexAny(value, ":;"); idx >= 0 {
@@ -105,6 +133,16 @@ func ownerFactAnnotation(owner, object string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("%s owns %s", owner, object), true
+}
+
+func preferenceFactAnnotation(subject, value, attribute string) (string, bool) {
+	subject = cleanFactValue(subject)
+	value = cleanFactValue(value)
+	attribute = cleanFactObject(attribute)
+	if !searchFactSubjectLooksAssertive(subject) || !searchFactObjectLooksAssertive(value) || !searchFactObjectLooksAssertive(attribute) {
+		return "", false
+	}
+	return fmt.Sprintf("%s prefers %s for %s", subject, value, attribute), true
 }
 
 func storeConclusionFactAnnotations(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, conclusionID int64, facts []string) error {
