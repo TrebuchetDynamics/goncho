@@ -339,6 +339,88 @@ func testSHA256Hex(raw []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetImportsJudgeResultsIntoArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-judge-results.jsonl")
+	rawRecord := `{"conversation_id":"conv-beam-judge-results","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'IE': [{'id': 'q-beam-judge-results', 'question': 'Who owns LedgerDB?', 'ideal_answer': 'Mira owns LedgerDB', 'rubric': ['mentions Mira'], 'relevant_message_indices': [0]}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	judgmentsPath := filepath.Join(dir, "beam_judge_results.jsonl")
+	judgmentRow := `{"scale":"100K","conversation_id":"conv-beam-judge-results","qid":"q-beam-judge-results","ai_answer":"Mira owns LedgerDB.","score":0.75,"nuggets":["mentions Mira"],"assessment":"partial official judge score","answer_time_ms":111,"judge_time_ms":222}` + "\n"
+	if err := os.WriteFile(judgmentsPath, []byte(judgmentRow), 0o644); err != nil {
+		t.Fatalf("write BEAM judge results: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
+	summaryPath := filepath.Join(dir, "beam_e2e_summary.json")
+	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
+	if err := run(context.Background(), config{
+		BeamConvertIn:          rawPath,
+		BeamServiceResultsOut:  resultsPath,
+		BeamServiceSummaryOut:  summaryPath,
+		BeamServicePairedOut:   pairedPath,
+		BeamServiceJudgmentsIn: judgmentsPath,
+		BeamServiceConfigID:    "test-beam-judge-results",
+		DatabasePath:           filepath.Join(dir, "beam-judge-results.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with judge result import: %v", err)
+	}
+	var results struct {
+		Metadata struct {
+			Diagnostics map[string]json.RawMessage `json:"diagnostics"`
+		} `json:"metadata"`
+		Results []struct {
+			Results []struct {
+				QID              string   `json:"qid"`
+				AIAnswer         string   `json:"ai_answer"`
+				Score            float64  `json:"score"`
+				Nuggets          []string `json:"nuggets"`
+				Assessment       string   `json:"assessment"`
+				AnswerTimeMS     int      `json:"answer_time_ms"`
+				JudgeTimeMS      int      `json:"judge_time_ms"`
+				RecallProvenance struct {
+					SelectedMemoryIDs []string `json:"selected_memory_ids"`
+				} `json:"recall_provenance"`
+			} `json:"results"`
+		} `json:"results"`
+	}
+	decodeTestJSONFile(t, resultsPath, &results)
+	row := results.Results[0].Results[0]
+	if row.QID != "q-beam-judge-results" || row.AIAnswer != "Mira owns LedgerDB." || row.Score != 0.75 || !slices.Equal(row.Nuggets, []string{"mentions Mira"}) || row.Assessment != "partial official judge score" || row.AnswerTimeMS != 111 || row.JudgeTimeMS != 222 || len(row.RecallProvenance.SelectedMemoryIDs) == 0 {
+		t.Fatalf("BEAM judged result row = %+v, want imported official judge score plus recall provenance", row)
+	}
+	var diag struct {
+		SourceSHA256   string `json:"source_sha256"`
+		RowCount       int    `json:"row_count"`
+		AppliedCount   int    `json:"applied_count"`
+		MissingCount   int    `json:"missing_count"`
+		UnmatchedCount int    `json:"unmatched_count"`
+	}
+	if err := json.Unmarshal(results.Metadata.Diagnostics["judgments"], &diag); err != nil {
+		t.Fatalf("decode judge diagnostics: %v", err)
+	}
+	if diag.SourceSHA256 == "" || diag.RowCount != 1 || diag.AppliedCount != 1 || diag.MissingCount != 0 || diag.UnmatchedCount != 0 {
+		t.Fatalf("judge diagnostics = %+v, want one applied imported judgment", diag)
+	}
+	var summary struct {
+		AbilitySummary map[string]map[string]struct {
+			AvgScore float64 `json:"avg_score"`
+			Count    int     `json:"count"`
+		} `json:"ability_summary"`
+	}
+	decodeTestJSONFile(t, summaryPath, &summary)
+	if got := summary.AbilitySummary["100K"]["IE"]; got.Count != 1 || got.AvgScore != 0.75 {
+		t.Fatalf("BEAM judged summary IE = %+v, want imported judge score", got)
+	}
+	pairedRaw, err := os.ReadFile(pairedPath)
+	if err != nil {
+		t.Fatalf("read paired outcomes: %v", err)
+	}
+	if !strings.Contains(string(pairedRaw), `"score":0.75`) || !strings.Contains(string(pairedRaw), `"correct":true`) {
+		t.Fatalf("paired outcomes = %s, want imported judge score and correctness", pairedRaw)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetWritesJudgeRequestsWithoutAnswerHints(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-judge-requests.jsonl")

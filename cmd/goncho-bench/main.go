@@ -54,6 +54,7 @@ type config struct {
 	BeamServicePairedOut              string
 	BeamServiceFailuresOut            string
 	BeamServiceJudgeRequestsOut       string
+	BeamServiceJudgmentsIn            string
 	BeamServiceConfigID               string
 	BeamPairedComparePath             string
 	BeamPairedBaselineConfigID        string
@@ -64,6 +65,7 @@ type config struct {
 	BeamPairedCompareEffectSizeFloor  float64
 	BeamConversionDiagnostics         *beamConversionDiagnostics
 	BeamServiceLeakageChecks          *beamServiceLeakageChecks
+	BeamServiceJudgments              *beamServiceJudgmentSet
 }
 
 type dataset struct {
@@ -166,6 +168,7 @@ func main() {
 	flag.StringVar(&cfg.BeamServicePairedOut, "beam-service-paired-out", "", "Mnemosyne-compatible paired_outcomes.jsonl append path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceFailuresOut, "beam-service-failures-out", "", "JSONL failure audit output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceJudgeRequestsOut, "beam-service-judge-requests-out", "", "JSONL answer/judge request export path for official BEAM-compatible evaluation; answer prompts exclude ideal answers and rubrics")
+	flag.StringVar(&cfg.BeamServiceJudgmentsIn, "beam-service-judgments-in", "", "JSONL official BEAM answer/judge results to merge into service-backed BEAM results, summary, and paired outcomes")
 	flag.StringVar(&cfg.BeamServiceConfigID, "beam-service-config-id", "", "config_id written to service-backed BEAM paired outcomes and summary metadata")
 	flag.StringVar(&cfg.BeamPairedComparePath, "beam-paired-compare", "", "Mnemosyne-compatible paired_outcomes.jsonl path to compare two BEAM config_id arms")
 	flag.StringVar(&cfg.BeamPairedBaselineConfigID, "beam-paired-baseline-config-id", "", "baseline config_id for --beam-paired-compare")
@@ -303,6 +306,13 @@ func runBeamServiceBenchmarkCases(ctx context.Context, cfg config, cases []gonch
 	cfg.BeamServiceLeakageChecks = &leakageChecks
 	if cfg.FailOnLeakage && beamServiceHasBlockingLeakage(leakageChecks) {
 		return fmt.Errorf("goncho-bench: BEAM leakage check failed: question_text_in_memory=%d relevant_id_in_memory=%d rubric_text_in_memory=%d", leakageChecks.QuestionTextInMemory, leakageChecks.RelevantIDInMemory, leakageChecks.RubricTextInMemory)
+	}
+	if path := strings.TrimSpace(cfg.BeamServiceJudgmentsIn); path != "" {
+		judgments, err := loadBeamServiceJudgments(path)
+		if err != nil {
+			return err
+		}
+		cfg.BeamServiceJudgments = judgments
 	}
 	databasePath := strings.TrimSpace(cfg.DatabasePath)
 	if databasePath == "" {

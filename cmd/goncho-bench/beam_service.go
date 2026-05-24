@@ -141,17 +141,17 @@ type beamServiceRecallProvenance struct {
 func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cfg config, runStartedAt time.Time) error {
 	configID := normalizeBeamServiceConfigID(cfg.BeamServiceConfigID)
 	if path := strings.TrimSpace(cfg.BeamServiceResultsOut); path != "" {
-		if err := writeBeamServiceResults(path, report, configID, runStartedAt, cfg.BeamConversionDiagnostics, cfg.BeamServiceLeakageChecks); err != nil {
+		if err := writeBeamServiceResults(path, report, configID, runStartedAt, cfg.BeamConversionDiagnostics, cfg.BeamServiceLeakageChecks, cfg.BeamServiceJudgments); err != nil {
 			return err
 		}
 	}
 	if path := strings.TrimSpace(cfg.BeamServiceSummaryOut); path != "" {
-		if err := writeBeamServiceSummary(path, report, configID, runStartedAt); err != nil {
+		if err := writeBeamServiceSummary(path, report, configID, runStartedAt, cfg.BeamServiceJudgments); err != nil {
 			return err
 		}
 	}
 	if path := strings.TrimSpace(cfg.BeamServicePairedOut); path != "" {
-		if err := appendBeamServicePairedOutcomes(path, report, configID, runStartedAt); err != nil {
+		if err := appendBeamServicePairedOutcomes(path, report, configID, runStartedAt, cfg.BeamServiceJudgments); err != nil {
 			return err
 		}
 	}
@@ -176,8 +176,8 @@ func normalizeBeamServiceConfigID(configID string) string {
 	return configID
 }
 
-func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks) error {
-	results := buildBeamServiceResults(report, configID, runStartedAt, conversionDiagnostics, leakageChecks)
+func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) error {
+	results := buildBeamServiceResults(report, configID, runStartedAt, conversionDiagnostics, leakageChecks, judgments)
 	raw, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode BEAM service results: %w", err)
@@ -198,7 +198,7 @@ func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, c
 	return nil
 }
 
-func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks) beamServiceResultsFile {
+func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) beamServiceResultsFile {
 	type conversationAccumulator struct {
 		conversationID string
 		scale          string
@@ -218,7 +218,21 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 			conversationOrder = append(conversationOrder, key)
 		}
 		scales[scale] = struct{}{}
+		judgment, hasJudgment := judgments.find(c)
 		score := beamServiceCaseScore(c)
+		aiAnswer := ""
+		nuggets := []string{}
+		assessment := beamServiceCaseAssessment(c, score)
+		answerTimeMS := 0
+		judgeTimeMS := 0
+		if hasJudgment {
+			score = roundMetric(judgment.Score)
+			aiAnswer = strings.TrimSpace(judgment.AIAnswer)
+			nuggets = append([]string(nil), judgment.Nuggets...)
+			assessment = strings.TrimSpace(judgment.Assessment)
+			answerTimeMS = judgment.AnswerTimeMS
+			judgeTimeMS = judgment.JudgeTimeMS
+		}
 		acc.results = append(acc.results, beamServiceQuestionResult{
 			QID:                  c.ID,
 			Ability:              strings.ToUpper(strings.TrimSpace(c.Ability)),
@@ -227,11 +241,13 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 			Rubric:               append([]string(nil), c.Rubric...),
 			RubricContextScore:   c.RubricContextScore,
 			RubricContextMatches: append([]string(nil), c.RubricContextMatches...),
-			AIAnswer:             "",
+			AIAnswer:             aiAnswer,
 			RecallProvenance:     beamServiceCaseRecallProvenance(c),
 			Score:                score,
-			Nuggets:              []string{},
-			Assessment:           beamServiceCaseAssessment(c, score),
+			Nuggets:              nuggets,
+			Assessment:           assessment,
+			AnswerTimeMS:         answerTimeMS,
+			JudgeTimeMS:          judgeTimeMS,
 		})
 	}
 	conversationResults := make([]beamServiceConversationResults, 0, len(conversationOrder))
@@ -257,25 +273,26 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 			RunStartedAt:       started,
 			ConfigID:           configID,
 			Model:              beamServiceModelName,
-			JudgeModel:         beamServiceJudgeModelName,
+			JudgeModel:         beamServiceJudgeModel(judgments),
 			TopK:               5,
 			SampleSize:         len(conversationResults),
 			Scales:             scaleList,
 			TotalConversations: len(conversationResults),
-			PureRecall:         true,
+			PureRecall:         judgments == nil,
 			Config: map[string]any{
-				"pure_recall":           true,
+				"pure_recall":           judgments == nil,
+				"external_judgments":    judgments != nil,
 				"allow_harness_oracles": false,
 				"full_context":          false,
 				"use_cloud":             false,
 			},
-			Diagnostics: beamServiceResultsDiagnostics(report, conversionDiagnostics, leakageChecks),
+			Diagnostics: beamServiceResultsDiagnostics(report, conversionDiagnostics, leakageChecks, judgments),
 		},
 		Results: conversationResults,
 	}
 }
 
-func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks) map[string]interface{} {
+func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) map[string]interface{} {
 	diagnostics := map[string]interface{}{
 		"recall": map[string]interface{}{
 			"case_count":       report.CaseCount,
@@ -290,6 +307,9 @@ func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversi
 	}
 	if leakageChecks != nil {
 		diagnostics["leakage"] = *leakageChecks
+	}
+	if judgments != nil {
+		diagnostics["judgments"] = judgments.diagnostics(report)
 	}
 	return diagnostics
 }
@@ -340,8 +360,8 @@ func beamServiceCaseAssessment(c goncho.RecallBenchmarkCaseReport, score float64
 	return "pure-recall context did not satisfy benchmark gates"
 }
 
-func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
-	summary := buildBeamServiceSummary(report, configID, runStartedAt)
+func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) error {
+	summary := buildBeamServiceSummary(report, configID, runStartedAt, judgments)
 	raw, err := json.MarshalIndent(summary, "", "  ")
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode BEAM service summary: %w", err)
@@ -356,7 +376,7 @@ func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, c
 	return nil
 }
 
-func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) beamServiceSummaryFile {
+func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) beamServiceSummaryFile {
 	type scaleStats struct {
 		abilityTotals map[string]float64
 		abilityCounts map[string]int
@@ -375,7 +395,7 @@ func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID strin
 			acc = &scaleStats{abilityTotals: map[string]float64{}, abilityCounts: map[string]int{}}
 			stats[scale] = acc
 		}
-		score := beamServiceCaseScore(c)
+		score := beamServiceArtifactScore(c, judgments)
 		acc.abilityTotals[ability] += score
 		acc.abilityCounts[ability]++
 		acc.overallTotal += score
@@ -397,19 +417,19 @@ func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID strin
 		Metadata: beamServiceSummaryMetadata{
 			Model:       beamServiceModelName,
 			SampleSize:  report.CaseCount,
-			JudgeModel:  beamServiceJudgeModelName,
+			JudgeModel:  beamServiceJudgeModel(judgments),
 			ConfigID:    configID,
-			PureRecall:  true,
+			PureRecall:  judgments == nil,
 			Service:     report.Service,
 			Corpus:      report.CorpusVersion,
 			CaseCount:   report.CaseCount,
-			Description: "deterministic service-backed BEAM-style MEMORIA recall oracle; no LLM answerer or judge",
+			Description: beamServiceSummaryDescription(judgments),
 		},
 		AbilitySummary: abilitySummary,
 	}
 }
 
-func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
+func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("goncho-bench: create BEAM service paired-outcomes dir: %w", err)
 	}
@@ -419,7 +439,7 @@ func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkR
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)
-	for _, outcome := range buildBeamServicePairedOutcomes(report, configID, runStartedAt) {
+	for _, outcome := range buildBeamServicePairedOutcomes(report, configID, runStartedAt, judgments) {
 		if err := encoder.Encode(outcome); err != nil {
 			return fmt.Errorf("goncho-bench: write BEAM service paired outcome: %w", err)
 		}
@@ -427,11 +447,11 @@ func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkR
 	return nil
 }
 
-func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServicePairedOutcome {
+func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) []beamServicePairedOutcome {
 	out := make([]beamServicePairedOutcome, 0, len(report.Cases))
 	started := runStartedAt.UTC().Format(beamServicePairedDateTimeFormat)
 	for _, c := range report.Cases {
-		score := beamServiceCaseScore(c)
+		score := beamServiceArtifactScore(c, judgments)
 		out = append(out, beamServicePairedOutcome{
 			ConfigID:       configID,
 			RunStartedAt:   started,
@@ -564,6 +584,27 @@ func beamServiceCaseConversationID(c goncho.RecallBenchmarkCaseReport) string {
 		return beamServiceConversationID
 	}
 	return conversationID
+}
+
+func beamServiceArtifactScore(c goncho.RecallBenchmarkCaseReport, judgments *beamServiceJudgmentSet) float64 {
+	if row, ok := judgments.find(c); ok {
+		return roundMetric(row.Score)
+	}
+	return beamServiceCaseScore(c)
+}
+
+func beamServiceJudgeModel(judgments *beamServiceJudgmentSet) string {
+	if judgments != nil {
+		return "external-beam-judge"
+	}
+	return beamServiceJudgeModelName
+}
+
+func beamServiceSummaryDescription(judgments *beamServiceJudgmentSet) string {
+	if judgments != nil {
+		return "service-backed BEAM recall context with imported official-style answer/judge scores"
+	}
+	return "deterministic service-backed BEAM-style MEMORIA recall oracle; no LLM answerer or judge"
 }
 
 func beamServiceCaseScore(c goncho.RecallBenchmarkCaseReport) float64 {

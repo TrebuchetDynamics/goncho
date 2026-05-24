@@ -229,6 +229,8 @@ BEAM leakage-control slice delivered: `beam_e2e_results.json.metadata.diagnostic
 
 BEAM judge-export slice delivered: `goncho-bench --beam-service-judge-requests-out beam_judge_requests.jsonl` exports one JSONL row per service-backed BEAM question with selected recall context, answer prompts that exclude ideal-answer/rubric metadata, and separate judge prompts carrying the preserved BEAM ideal answer and rubric.
 
+BEAM judged-artifact import slice delivered: `goncho-bench --beam-service-judgments-in beam_judge_results.jsonl` merges external official-style answer/judge rows into Mnemosyne-compatible results, summary, and paired outcomes while keeping recall provenance and judge-source diagnostics.
+
 ## Framing
 
 The public framing should remain:
