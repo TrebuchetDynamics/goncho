@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `make stable-e2e-bench-smoke` now ties stability, e2e tests, and benchmark smokes into one checkout gate.
+  - Evidence target: `go test . -run TestStableE2EBenchmarkSmokeTargetIsDocumented -count=1` proves README and Makefile expose the stable e2e benchmark smoke command, and `make stable-e2e-bench-smoke` runs `install-smoke`, `go test ./...`, `go vet ./...`, and benchmark smoke paths equivalent to `bench-longmemeval-s-smoke`, `bench-locomo-smoke`, and `bench-beam-smoke` with temporary outputs.
+  - Result: operators have one CI-safe command for checkout-local benchmark CLI startup, full Go test coverage, static checks, and pinned retrieval/BEAM benchmark artifact smoke paths without requiring full external datasets.
+
 - 2026-05-24: Graph relation candidates now remain pending before review.
   - Evidence target: `go test . -run TestRelationCandidatesRemainPendingBeforeReview -count=1` proves graph relations can carry an accepted/pending state and pending relation candidates do not expand recall before review even with a higher score.
   - Result: conservative graph recall can ingest speculative relation candidates without presenting them as retrieved truth until accepted.

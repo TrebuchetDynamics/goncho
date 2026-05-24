@@ -62,6 +62,65 @@ func TestReleaseSmokeDocsMentionMetadataGuard(t *testing.T) {
 	}
 }
 
+func TestStableE2EBenchmarkSmokeTargetIsDocumented(t *testing.T) {
+	makefileRaw, err := os.ReadFile("Makefile")
+	if err != nil {
+		t.Fatalf("ReadFile Makefile: %v", err)
+	}
+	makefile := string(makefileRaw)
+	start := strings.Index(makefile, "stable-e2e-bench-smoke:\n")
+	if start < 0 {
+		t.Fatal("Makefile missing stable-e2e-bench-smoke target")
+	}
+	end := strings.Index(makefile[start:], "\nrelease-metadata-smoke:")
+	if end < 0 {
+		t.Fatal("Makefile stable-e2e-bench-smoke target is not before release-metadata-smoke")
+	}
+	target := makefile[start : start+end]
+	for _, want := range []string{
+		"$(MAKE) install-smoke",
+		"go test ./...",
+		"go vet ./...",
+		"mktemp -d",
+		"tiny-longmemeval.jsonl",
+		"--locomo-memories $(LOCOMO_SMOKE_MEMORIES)",
+		"--beam-convert-in $(BEAM_SMOKE_RAW)",
+		"--beam-paired-compare",
+	} {
+		if !strings.Contains(target, want) {
+			t.Fatalf("Makefile stable e2e benchmark smoke target missing marker %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"docs/benchmarks/results",
+		"docs/benchmarks/failures",
+	} {
+		if strings.Contains(target, forbidden) {
+			t.Fatalf("Makefile stable e2e benchmark smoke target writes tracked benchmark path %q", forbidden)
+		}
+	}
+
+	readmeRaw, err := os.ReadFile("README.md")
+	if err != nil {
+		t.Fatalf("ReadFile README.md: %v", err)
+	}
+	readme := string(readmeRaw)
+	for _, want := range []string{
+		"make stable-e2e-bench-smoke",
+		"go test ./...",
+		"go vet ./...",
+		"install-smoke",
+		"temporary outputs",
+		"bench-longmemeval-s-smoke",
+		"bench-locomo-smoke",
+		"bench-beam-smoke",
+	} {
+		if !strings.Contains(readme, want) {
+			t.Fatalf("README.md stable e2e benchmark smoke guidance missing marker %q", want)
+		}
+	}
+}
+
 func TestPublicDocsLinkGoReference(t *testing.T) {
 	const goReferenceURL = "https://pkg.go.dev/github.com/TrebuchetDynamics/goncho"
 	for _, path := range []string{

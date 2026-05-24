@@ -171,6 +171,14 @@ Verify public release metadata, local Go module metadata, package documentation,
 make ecosystem-smoke
 ```
 
+For one CI-safe checkout gate that proves the benchmark CLI starts, core package behavior passes, static checks pass, and tiny retrieval/BEAM benchmark paths run end to end, use:
+
+```bash
+make stable-e2e-bench-smoke
+```
+
+That target runs `install-smoke`, `go test ./...`, `go vet ./...`, and benchmark smoke paths equivalent to `bench-longmemeval-s-smoke`, `bench-locomo-smoke`, and `bench-beam-smoke` with temporary outputs so the checkout stays clean.
+
 For the narrower public release metadata proof only, run `make public-release-smoke`; it checks the documented public `@latest` version and published date from `go list -m -json`. For the narrower local go.mod metadata proof only, run `make local-module-smoke`; it checks the module path and Go version from `go list -m -json`. For the narrower package documentation proof only, run `make package-doc-smoke`; it checks that local package docs render through `go doc .`. For the narrower public docs site proof only, run `make docs-site-smoke`; it checks the local docs-site build with `npm run build`. For the narrower external import proof only, run `make public-module-smoke`. For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke`.
 
 Use `go get github.com/TrebuchetDynamics/goncho@latest` to depend on the library package. For the command-line benchmark runner, use `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` or checkout-local `make install-smoke`.
