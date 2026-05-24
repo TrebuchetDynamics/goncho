@@ -182,6 +182,88 @@ func TestRecallExpandsVersionThroughMultiHopDurableKGRelation(t *testing.T) {
 	}
 }
 
+func TestRecallExpandsTimelineThroughOwnerRelation(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	owner, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Owner of Orion is Mira.",
+		SessionKey: "sess-annotation-graph-timeline",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	timeline, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "Project note: Orion deadline is 2026-06-01.",
+		SessionKey: "sess-annotation-graph-timeline",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoy, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "team",
+		Conclusion: "When is the deadline for Mira's owned project? deadline Mira owned project deadline Mira owned project. This checklist repeats the retrieval words but names no date.",
+		SessionKey: "sess-annotation-graph-timeline",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `
+		UPDATE goncho_conclusions
+		SET updated_at = CASE id WHEN ? THEN 300 WHEN ? THEN 200 WHEN ? THEN 100 ELSE updated_at END
+		WHERE id IN (?, ?, ?)
+	`, decoy.ID, owner.ID, timeline.ID, decoy.ID, owner.ID, timeline.ID); err != nil {
+		t.Fatalf("force lexical decoy recency: %v", err)
+	}
+
+	ownerFactID := lookupAnnotationID(t, svc, owner.ID, "Mira owns Orion")
+	timelineFactID := lookupAnnotationID(t, svc, timeline.ID, "Orion occurs on 2026-06-01")
+
+	engine := newRecallPipelineEngine(svc.retrieval(), recallPipelineOptions{
+		pipelineVersion: "annotation-graph-timeline-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "annotation-graph-timeline-test-v1",
+			Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 200,
+		},
+		now: func() time.Time { return time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC) },
+	})
+	trace, err := engine.Run(ctx, RecallQuery{
+		WorkspaceID: svc.workspaceID,
+		Peer:        "team",
+		Query:       "When is the deadline for Mira's owned project?",
+		SessionKey:  "sess-annotation-graph-timeline",
+		ScopeID:     MemoryScopeWorkspace,
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	timelineMemoryID := strconv.FormatInt(timeline.ID, 10)
+	selected := selectedRecallIDs(trace)
+	if !slices.Contains(selected, timelineMemoryID) {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want graph-expanded timeline %s", selected, trace.Candidates, trace.Rejected, timelineMemoryID)
+	}
+	timelineCandidate, ok := selectedRecallCandidate(trace, timelineMemoryID)
+	if !ok {
+		t.Fatalf("selected = %+v, want timeline candidate", trace.Selected)
+	}
+	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", ownerFactID, timelineFactID)
+	if !candidateHasGraphProvenance(timelineCandidate, evidenceID) {
+		t.Fatalf("timeline provenance = %+v, want graph evidence %s", timelineCandidate.Provenance, evidenceID)
+	}
+	wantNote := fmt.Sprintf("%d -> owned_entity -> Orion -> timeline -> %d", owner.ID, timeline.ID)
+	if !candidateHasGraphNote(timelineCandidate, wantNote) {
+		t.Fatalf("timeline provenance = %+v, want relation path %q", timelineCandidate.Provenance, wantNote)
+	}
+}
+
 func lookupAnnotationID(t *testing.T, svc *Service, memoryID int64, value string) int64 {
 	t.Helper()
 	var id int64

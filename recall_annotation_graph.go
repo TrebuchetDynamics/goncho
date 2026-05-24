@@ -26,10 +26,17 @@ type annotationGraphVersionTarget struct {
 	Entity       string
 }
 
+type annotationGraphTimelineTarget struct {
+	Candidate    RecallCandidate
+	TimelineFact memoryFactAnnotation
+	Entity       string
+}
+
 func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope string, base []RecallCandidate) ([]RecallCandidate, error) {
 	ownerQuery := annotationGraphOwnerQuery(q.Query)
 	versionQuery := annotationGraphVersionQuery(q.Query)
-	if len(base) == 0 || (!ownerQuery && !versionQuery) {
+	timelineQuery := annotationGraphTimelineQuery(q.Query)
+	if len(base) == 0 || (!ownerQuery && !versionQuery && !timelineQuery) {
 		return base, nil
 	}
 	out := make([]RecallCandidate, len(base))
@@ -44,6 +51,19 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 				continue
 			}
 			fact := strings.TrimPrefix(evidence.Note, "fact=")
+			if timelineQuery {
+				owner, entity, ok := annotationGraphOwnerFactParts(fact)
+				if ok && annotationGraphQueryMatchesOwnerFact(q.Query, owner) {
+					targets, err := r.findAnnotationGraphTimelineTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
+					if err != nil {
+						return nil, err
+					}
+					for _, target := range targets {
+						graphEvidence := annotationGraphTimelineEvidence(source.MemoryID, target.Candidate.MemoryID, entity, evidence.ID, target.TimelineFact.ID)
+						out = appendAnnotationGraphCandidate(out, indexByID, target.Candidate, graphEvidence)
+					}
+				}
+			}
 			subject, relation, entity, ok := kgRelationAnswerParts(fact)
 			if !ok || !annotationGraphQueryMatchesKGRelation(q.Query, subject, relation) {
 				continue
@@ -151,6 +171,35 @@ func (r retrievalModule) findAnnotationGraphOwnerTargets(ctx context.Context, q 
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("goncho: iterate annotation graph owner targets: %w", err)
+	}
+	return out, nil
+}
+
+func (r retrievalModule) findAnnotationGraphTimelineTargets(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope, entity, sourceMemoryID string) ([]annotationGraphTimelineTarget, error) {
+	facts, err := r.queryAnnotationGraphFacts(ctx, workspaceID, peer, memoryScope, q.SessionKey)
+	if err != nil {
+		return nil, err
+	}
+	out := []annotationGraphTimelineTarget{}
+	for _, timelineFact := range facts {
+		memoryID := strconv.FormatInt(timelineFact.MemoryID, 10)
+		if memoryID == sourceMemoryID {
+			continue
+		}
+		event, _, ok := searchTimelineAnswerParts(timelineFact.Value)
+		if !ok || !annotationGraphEntityMatches(entity, event) {
+			continue
+		}
+		candidate := RecallCandidate{
+			MemoryID:   memoryID,
+			SourceType: memoryAnnotationSourceConclusion,
+			Content:    timelineFact.Content,
+			SessionID:  timelineFact.SessionKey,
+			AgentID:    r.observer,
+			ScopeID:    normalizeMemoryScope(memoryScope, ""),
+			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, timelineFact.memoryFactAnnotation)},
+		}
+		out = append(out, annotationGraphTimelineTarget{Candidate: candidate, TimelineFact: timelineFact.memoryFactAnnotation, Entity: event})
 	}
 	return out, nil
 }
@@ -294,6 +343,24 @@ func annotationGraphEvidence(sourceMemoryID, targetMemoryID, relation, entity, s
 	}
 }
 
+func annotationGraphTimelineEvidence(sourceMemoryID, targetMemoryID, entity, sourceFactID string, timelineFactID int64) EvidenceItem {
+	timelineFactIDText := strconv.FormatInt(timelineFactID, 10)
+	return EvidenceItem{
+		Kind:   "graph",
+		Source: sourceMemoryID,
+		ID:     "annotation:" + sourceFactID + "->annotation:" + timelineFactIDText,
+		Score:  1,
+		Note:   sourceMemoryID + " -> owned_entity -> " + entity + " -> timeline -> " + targetMemoryID,
+		Metadata: map[string]string{
+			"entity":          entity,
+			"relation":        "owned_entity",
+			"source_fact_id":  sourceFactID,
+			"target_fact_id":  timelineFactIDText,
+			"target_relation": "timeline",
+		},
+	}
+}
+
 func annotationGraphVersionEvidence(sourceMemoryID, targetMemoryID, firstRelation, firstEntity, secondRelation, secondEntity, sourceFactID string, relationFactID, versionFactID int64) EvidenceItem {
 	relationFactIDText := strconv.FormatInt(relationFactID, 10)
 	versionFactIDText := strconv.FormatInt(versionFactID, 10)
@@ -347,6 +414,19 @@ func annotationGraphOwnerQuery(query string) bool {
 func annotationGraphVersionQuery(query string) bool {
 	query = strings.ToLower(query)
 	return strings.Contains(query, "version") && (strings.Contains(query, "what") || strings.Contains(query, "which"))
+}
+
+func annotationGraphTimelineQuery(query string) bool {
+	query = strings.ToLower(query)
+	if !(strings.Contains(query, "when") || strings.Contains(query, "deadline") || strings.Contains(query, "scheduled") || strings.Contains(query, "date")) {
+		return false
+	}
+	return strings.Contains(query, "owner") || strings.Contains(query, "owned") || strings.Contains(query, "responsible") || strings.Contains(query, "accountable")
+}
+
+func annotationGraphQueryMatchesOwnerFact(query, owner string) bool {
+	ownerTokens := searchRankTokenSet(owner)
+	return len(ownerTokens) > 0 && searchRankTokenCoverage(ownerTokens, query) >= 0.80
 }
 
 func annotationGraphQueryMatchesKGRelation(query, subject, relation string) bool {
