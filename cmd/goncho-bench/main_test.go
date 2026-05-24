@@ -5,8 +5,43 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho"
 )
+
+func TestRunBeamServiceRecallOracleWritesAbilityReport(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "beam-service-report.json")
+	if err := run(context.Background(), config{
+		BeamServiceOut: out,
+		DatabasePath:   filepath.Join(t.TempDir(), "beam-service.db"),
+	}); err != nil {
+		t.Fatalf("run BEAM service oracle: %v", err)
+	}
+	raw, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read BEAM service report: %v", err)
+	}
+	var report goncho.RecallBenchmarkReport
+	if err := json.Unmarshal(raw, &report); err != nil {
+		t.Fatalf("decode BEAM service report: %v", err)
+	}
+	wantAbilities := []string{"CR", "EO", "IE", "IF", "KU", "MR", "PF", "TR"}
+	gotAbilities := make([]string, 0, len(report.Abilities))
+	for _, ability := range report.Abilities {
+		gotAbilities = append(gotAbilities, ability.Ability)
+		if ability.CaseCount != 1 || ability.RecallAt5 != 1 || ability.ContextHitRate != 1 || ability.ProvenanceHitRate != 1 {
+			t.Fatalf("ability %s = %+v, want one perfect service-backed fixture", ability.Ability, ability)
+		}
+	}
+	if report.CaseCount != len(wantAbilities) || !slices.Equal(gotAbilities, wantAbilities) {
+		t.Fatalf("abilities = %v case_count=%d, want %v", gotAbilities, report.CaseCount, wantAbilities)
+	}
+	if report.RecallAt5 != 1 || report.RecallAt10 != 1 || report.ContextHitRate != 1 || report.TokenBudgetPassRate != 1 || report.WarningCount != 0 {
+		t.Fatalf("BEAM service report = %+v, want perfect deterministic local oracle", report)
+	}
+}
 
 func TestRunLongMemEvalStyleFixtureComputesRetrievalMetrics(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "report.json")

@@ -43,6 +43,7 @@ type config struct {
 	LocomoBackendComparisonFailures string
 	LocomoAgentMemoryResults        string
 	LocomoMem0Results               string
+	BeamServiceOut                  string
 }
 
 type dataset struct {
@@ -135,6 +136,7 @@ func main() {
 	flag.StringVar(&cfg.LocomoBackendComparisonFailures, "locomo-backend-comparison-failures-out", "", "JSONL failure output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoAgentMemoryResults, "locomo-agentmemory-results", "", "optional JSONL results from scripts/bench_agentmemory_locomo.py")
 	flag.StringVar(&cfg.LocomoMem0Results, "locomo-mem0-results", "", "optional JSONL results from scripts/bench_mem0_locomo.py")
+	flag.StringVar(&cfg.BeamServiceOut, "beam-service-out", "", "JSON output path for Goncho's deterministic service-backed BEAM-style recall oracle")
 	flag.IntVar(&cfg.Limit, "limit", 10, "retrieval limit per question")
 	flag.IntVar(&cfg.Runs, "runs", 1, "number of benchmark runs to aggregate")
 	flag.Parse()
@@ -145,6 +147,9 @@ func main() {
 }
 
 func run(ctx context.Context, cfg config) error {
+	if strings.TrimSpace(cfg.BeamServiceOut) != "" {
+		return runBeamServiceBenchmark(ctx, cfg)
+	}
 	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
 		return generateLocomoComparison(cfg.LocomoCompareReport, cfg.LocomoCompareJSONL, cfg.LocomoCompareMD)
 	}
@@ -210,6 +215,47 @@ func run(ctx context.Context, cfg config) error {
 	}
 	if err := os.WriteFile(cfg.OutPath, raw, 0o644); err != nil {
 		return fmt.Errorf("goncho-bench: write report: %w", err)
+	}
+	return nil
+}
+
+func runBeamServiceBenchmark(ctx context.Context, cfg config) error {
+	databasePath := strings.TrimSpace(cfg.DatabasePath)
+	if databasePath == "" {
+		dir, err := os.MkdirTemp("", "goncho-beam-service-*")
+		if err != nil {
+			return fmt.Errorf("goncho-bench: create BEAM service temp db dir: %w", err)
+		}
+		databasePath = filepath.Join(dir, "beam-service.db")
+	}
+	store, err := memory.OpenSqlite(databasePath, 0, nil)
+	if err != nil {
+		return fmt.Errorf("goncho-bench: open BEAM service sqlite: %w", err)
+	}
+	defer store.Close(ctx)
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		return fmt.Errorf("goncho-bench: run BEAM service migrations: %w", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-beam-service", ObserverPeerID: "goncho-bench", RecentMessages: 0}, nil)
+	report, err := goncho.EvaluateServiceRecallBenchmark(ctx, svc, goncho.DefaultRecallBenchmarkServiceCases())
+	if err != nil {
+		return fmt.Errorf("goncho-bench: evaluate BEAM service oracle: %w", err)
+	}
+	raw, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("goncho-bench: encode BEAM service report: %w", err)
+	}
+	raw = append(raw, '\n')
+	outPath := strings.TrimSpace(cfg.BeamServiceOut)
+	if outPath == "-" {
+		_, err = os.Stdout.Write(raw)
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		return fmt.Errorf("goncho-bench: create BEAM service report dir: %w", err)
+	}
+	if err := os.WriteFile(outPath, raw, 0o644); err != nil {
+		return fmt.Errorf("goncho-bench: write BEAM service report: %w", err)
 	}
 	return nil
 }

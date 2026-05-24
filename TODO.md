@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `goncho-bench --beam-service-out` now emits a deterministic BEAM-style MEMORIA recall report.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamServiceRecallOracleWritesAbilityReport -count=1` proves the CLI runs public `Service.Conclude` fixtures for IE, MR, TR, PF, IF, EO, CR, and KU, writes a JSON `RecallBenchmarkReport`, and requires perfect recall/context/provenance rates for each ability.
+  - Result: Goncho can generate a local comparison artifact for delivered MEMORIA abilities without answer hints, LLM judges, external datasets, or claiming final BEAM superiority.
+
 - 2026-05-24: BEAM-style recall benchmark oracle now runs public Service.Conclude fixtures end-to-end.
   - Evidence target: `go test . -run TestEvaluateServiceRecallBenchmarkRunsBeamStyleCasesEndToEnd -count=1` proves tiny IE/MR fixtures ingest conclusions through `Service.Conclude`, run recall, map benchmark refs to concrete conclusion IDs, and feed ability/provenance aggregation with fact and graph evidence.
   - Result: Goncho can now track delivered MEMORIA behavior through a deterministic local BEAM-style service oracle without answer hints, LLM judges, external datasets, or claiming final BEAM superiority.
