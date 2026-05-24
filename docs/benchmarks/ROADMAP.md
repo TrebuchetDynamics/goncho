@@ -221,6 +221,8 @@ Every benchmark should include:
 9. One-command clean-room reproduction where licensing permits.
 10. CI-safe smoke target with tiny pinned fixtures.
 
+BEAM smoke slice delivered: `make bench-beam-smoke` runs the pinned raw HuggingFace-style fixture at `cmd/goncho-bench/testdata/beam-smoke/hf-beam-smoke.jsonl`, emits Mnemosyne-compatible results/summary/paired outcomes, and compares against the checked-in `mnemosyne-smoke` paired baseline with checksum diagnostics and a bootstrap-gated superiority verdict.
+
 ## Framing
 
 The public framing should remain:

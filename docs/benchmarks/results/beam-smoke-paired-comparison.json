@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-05-24T08:54:35Z",
+  "source_path": "./artifacts/beam-smoke/paired_outcomes.jsonl",
+  "baseline_config_id": "mnemosyne-smoke",
+  "candidate_config_id": "goncho-smoke",
+  "paired_count": 1,
+  "dropped_unpaired_count": 0,
+  "baseline_avg_score": 0.5,
+  "candidate_avg_score": 1,
+  "score_delta": 0.5,
+  "effect_size_floor": 0.02,
+  "conclusion": "candidate_superior",
+  "conclusion_reason": "candidate_ci_above_effect_floor",
+  "baseline_wins": 0,
+  "candidate_wins": 1,
+  "ties": 0,
+  "bootstrap_samples": 200,
+  "bootstrap_seed": 42,
+  "score_delta_ci95": {
+    "lower": 0.5,
+    "upper": 0.5
+  },
+  "by_ability": {
+    "MR": {
+      "paired_count": 1,
+      "baseline_avg_score": 0.5,
+      "candidate_avg_score": 1,
+      "score_delta": 0.5,
+      "conclusion": "candidate_superior",
+      "conclusion_reason": "candidate_delta_above_effect_floor",
+      "baseline_wins": 0,
+      "candidate_wins": 1,
+      "ties": 0
+    }
+  },
+  "rows": [
+    {
+      "scale": "100K",
+      "conversation_id": "conv-beam-smoke",
+      "qid": "q-mr-ledger-smoke",
+      "ability": "MR",
+      "baseline_score": 0.5,
+      "candidate_score": 1,
+      "score_delta": 0.5,
+      "baseline_correct": true,
+      "candidate_correct": true,
+      "winner": "candidate"
+    }
+  ]
+}

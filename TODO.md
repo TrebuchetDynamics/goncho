@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `make bench-beam-smoke` now runs a pinned BEAM artifact smoke path end to end.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts -count=1` proves the checked-in raw BEAM fixture plus Mnemosyne-style baseline paired row produce per-question results, summary, appended Goncho paired outcomes, and a paired-comparison verdict with conversion checksums, graph provenance, and rubric context coverage.
+  - Result: Goncho now has a CI-safe one-command BEAM smoke target before running larger HuggingFace samples or claiming superiority against Mnemosyne.
+
 - 2026-05-24: raw BEAM conversion diagnostics now carry scientific-control checksums.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsConversionChecksums -count=1` proves direct raw BEAM service artifacts report both the source JSONL SHA-256 and the converted JSONL SHA-256 under `metadata.diagnostics.conversion`.
   - Result: Goncho's one-command BEAM path now records raw and converted artifact identity needed for reproducible comparisons against Mnemosyne-style results.

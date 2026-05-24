@@ -1,0 +1,26 @@
+{
+  "date": "2026-05-24T08:54:35Z",
+  "metadata": {
+    "model": "goncho-service-recall",
+    "sample_size": 1,
+    "judge_model": "none",
+    "config_id": "goncho-smoke",
+    "pure_recall": true,
+    "service": "goncho",
+    "corpus_version": "goncho-recall-benchmark-v1",
+    "case_count": 1,
+    "description": "deterministic service-backed BEAM-style MEMORIA recall oracle; no LLM answerer or judge"
+  },
+  "ability_summary": {
+    "100K": {
+      "MR": {
+        "avg_score": 1,
+        "count": 1
+      },
+      "OVERALL": {
+        "avg_score": 1,
+        "count": 1
+      }
+    }
+  }
+}

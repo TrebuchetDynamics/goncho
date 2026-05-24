@@ -1,0 +1,97 @@
+{
+  "metadata": {
+    "date": "2026-05-24T08:54:35Z",
+    "run_started_at": "2026-05-24T08:54:35Z",
+    "config_id": "goncho-smoke",
+    "model": "goncho-service-recall",
+    "judge_model": "none",
+    "top_k": 5,
+    "sample_size": 1,
+    "scales": [
+      "100K"
+    ],
+    "total_conversations": 1,
+    "pure_recall": true,
+    "config": {
+      "allow_harness_oracles": false,
+      "full_context": false,
+      "pure_recall": true,
+      "use_cloud": false
+    },
+    "diagnostics": {
+      "conversion": {
+        "source": "huggingface-beam-jsonl",
+        "source_sha256": "ed0ef2c909b64d537cbcef8b749a4946cf278f509fd9fcd81e4189ac0101e787",
+        "converted_jsonl_sha256": "946f69b222f75b51a486ed84a6f9d1c808b855ce5a9c2daa37fb655a43ff56f6",
+        "conversation_count": 1,
+        "memory_count": 2,
+        "question_count": 1,
+        "expected_no_answer_question_count": 0,
+        "unscorable_question_count": 0,
+        "questions_by_ability": {
+          "MR": 1
+        }
+      },
+      "recall": {
+        "case_count": 1,
+        "context_hit_rate": 1,
+        "recall_at_10": 1,
+        "recall_at_5": 1,
+        "warning_count": 0
+      }
+    }
+  },
+  "results": [
+    {
+      "conversation_id": "conv-beam-smoke",
+      "scale": "100K",
+      "num_questions": 1,
+      "num_evaluated": 1,
+      "results": [
+        {
+          "qid": "q-mr-ledger-smoke",
+          "ability": "MR",
+          "question": "Who is responsible for storage used by Billing API?",
+          "ideal_answer": "Mira is responsible for LedgerDB storage.",
+          "rubric": [
+            "mentions Mira",
+            "mentions LedgerDB"
+          ],
+          "rubric_context_score": 1,
+          "rubric_context_matches": [
+            "mentions Mira",
+            "mentions LedgerDB"
+          ],
+          "ai_answer": "",
+          "recall_provenance": {
+            "engine": "goncho-service-recall",
+            "kept_count": 2,
+            "voice_sums": {
+              "fact": 1,
+              "graph": 1,
+              "keyword": 1
+            },
+            "top_result_voices": {
+              "fact": 1,
+              "graph": 1
+            },
+            "top_result_tier": "structured",
+            "candidate_memory_ids": [
+              "2",
+              "1"
+            ],
+            "selected_memory_ids": [
+              "2",
+              "1"
+            ]
+          },
+          "score": 1,
+          "nuggets": [],
+          "assessment": "pure-recall context selected the required memory and provenance gates passed",
+          "answer_time_ms": 0,
+          "judge_time_ms": 0
+        }
+      ]
+    }
+  ]
+}

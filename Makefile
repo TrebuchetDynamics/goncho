@@ -8,10 +8,12 @@ LOCOMO_SMOKE_MEMORIES := ./cmd/goncho-bench/testdata/locomo-smoke/memories.jsonl
 LOCOMO_SMOKE_QUESTIONS := ./cmd/goncho-bench/testdata/locomo-smoke/questions.jsonl
 LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
+BEAM_SMOKE_RAW := ./cmd/goncho-bench/testdata/beam-smoke/hf-beam-smoke.jsonl
+BEAM_SMOKE_BASELINE_PAIRED := ./cmd/goncho-bench/testdata/beam-smoke/mnemosyne-smoke-paired_outcomes.jsonl
 PUBLIC_LATEST_VERSION := v0.1.1
 PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-22
 
-.PHONY: release-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends
+.PHONY: release-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends bench-beam-smoke
 
 release-smoke:
 	$(MAKE) release-metadata-smoke
@@ -164,3 +166,21 @@ bench-locomo-backends: prepare-locomo
 		--locomo-backend-comparison-json-out ./docs/benchmarks/results/locomo-backend-comparison.json \
 		--locomo-backend-comparison-failures-out ./docs/benchmarks/failures/locomo-backend-comparison.jsonl \
 		--locomo-backend-comparison-md-out ./docs/benchmarks/locomo-backend-comparison.md
+
+bench-beam-smoke:
+	@mkdir -p artifacts/beam-smoke docs/benchmarks/results
+	@cp $(BEAM_SMOKE_BASELINE_PAIRED) ./artifacts/beam-smoke/paired_outcomes.jsonl
+	go run ./cmd/goncho-bench \
+		--beam-convert-in $(BEAM_SMOKE_RAW) \
+		--beam-service-results-out ./docs/benchmarks/results/beam-smoke-results.json \
+		--beam-service-summary-out ./docs/benchmarks/results/beam-smoke-summary.json \
+		--beam-service-paired-out ./artifacts/beam-smoke/paired_outcomes.jsonl \
+		--beam-service-config-id goncho-smoke \
+		--db ./artifacts/beam-smoke/goncho.db
+	go run ./cmd/goncho-bench \
+		--beam-paired-compare ./artifacts/beam-smoke/paired_outcomes.jsonl \
+		--beam-paired-baseline-config-id mnemosyne-smoke \
+		--beam-paired-candidate-config-id goncho-smoke \
+		--beam-paired-json-out ./docs/benchmarks/results/beam-smoke-paired-comparison.json \
+		--beam-paired-md-out ./docs/benchmarks/beam-smoke-paired-comparison.md \
+		--beam-paired-bootstrap-samples 200
