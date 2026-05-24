@@ -472,6 +472,107 @@ func TestRunBeamHuggingFaceJSONLDatasetImportsJudgeResultsIntoArtifacts(t *testi
 	}
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetImportsNestedBeamResultsAsJudgments(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-nested-judge-results.jsonl")
+	rawRecord := `{"conversation_id":"conv-beam-nested-judge-results","scale":"100K","chat":[{"role":"user","content":"Project note: Owner of LedgerDB is Mira."}],"probing_questions":"{'IE': [{'id': 'q-beam-nested-judge-results', 'question': 'Who owns LedgerDB?', 'ideal_answer': 'Mira owns LedgerDB', 'rubric': ['mentions Mira'], 'relevant_message_indices': [0]}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	judgmentsPath := filepath.Join(dir, "beam_e2e_results.json")
+	nestedResults := `{
+  "metadata": {"config_id": "external-beam-judge"},
+  "results": [
+    {
+      "conversation_id": "conv-beam-nested-judge-results",
+      "scale": "100K",
+      "num_questions": 1,
+      "num_evaluated": 1,
+      "results": [
+        {
+          "qid": "q-beam-nested-judge-results",
+          "ability": "IE",
+          "question": "Who owns LedgerDB?",
+          "ai_answer": "Mira owns LedgerDB.",
+          "score": 0.5,
+          "nuggets": ["mentions Mira"],
+          "assessment": "nested official judge score",
+          "answer_time_ms": 333.5,
+          "judge_time_ms": 444.25
+        }
+      ]
+    }
+  ]
+}
+`
+	if err := os.WriteFile(judgmentsPath, []byte(nestedResults), 0o644); err != nil {
+		t.Fatalf("write nested BEAM results judgments: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_nested_results.json")
+	summaryPath := filepath.Join(dir, "beam_nested_summary.json")
+	pairedPath := filepath.Join(dir, "beam_nested_paired.jsonl")
+	if err := run(context.Background(), config{
+		BeamConvertIn:          rawPath,
+		BeamServiceResultsOut:  resultsPath,
+		BeamServiceSummaryOut:  summaryPath,
+		BeamServicePairedOut:   pairedPath,
+		BeamServiceJudgmentsIn: judgmentsPath,
+		BeamServiceConfigID:    "test-beam-nested-judge-results",
+		DatabasePath:           filepath.Join(dir, "beam-nested-judge-results.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with nested result judgment import: %v", err)
+	}
+	var results struct {
+		Metadata struct {
+			Diagnostics map[string]json.RawMessage `json:"diagnostics"`
+		} `json:"metadata"`
+		Results []struct {
+			Results []struct {
+				QID          string   `json:"qid"`
+				AIAnswer     string   `json:"ai_answer"`
+				Score        float64  `json:"score"`
+				Nuggets      []string `json:"nuggets"`
+				Assessment   string   `json:"assessment"`
+				AnswerTimeMS float64  `json:"answer_time_ms"`
+				JudgeTimeMS  float64  `json:"judge_time_ms"`
+			} `json:"results"`
+		} `json:"results"`
+	}
+	decodeTestJSONFile(t, resultsPath, &results)
+	row := results.Results[0].Results[0]
+	if row.QID != "q-beam-nested-judge-results" || row.AIAnswer != "Mira owns LedgerDB." || row.Score != 0.5 || !slices.Equal(row.Nuggets, []string{"mentions Mira"}) || row.Assessment != "nested official judge score" || row.AnswerTimeMS != 333.5 || row.JudgeTimeMS != 444.25 {
+		t.Fatalf("nested BEAM judged result row = %+v, want imported nested official judge score", row)
+	}
+	var diag struct {
+		SourceSHA256 string `json:"source_sha256"`
+		RowCount     int    `json:"row_count"`
+		AppliedCount int    `json:"applied_count"`
+	}
+	if err := json.Unmarshal(results.Metadata.Diagnostics["judgments"], &diag); err != nil {
+		t.Fatalf("decode nested judgment diagnostics: %v", err)
+	}
+	if diag.SourceSHA256 == "" || diag.RowCount != 1 || diag.AppliedCount != 1 {
+		t.Fatalf("nested judge diagnostics = %+v, want one applied nested judgment", diag)
+	}
+	var summary struct {
+		AbilitySummary map[string]map[string]struct {
+			AvgScore float64 `json:"avg_score"`
+			Count    int     `json:"count"`
+		} `json:"ability_summary"`
+	}
+	decodeTestJSONFile(t, summaryPath, &summary)
+	if got := summary.AbilitySummary["100K"]["IE"]; got.Count != 1 || got.AvgScore != 0.5 {
+		t.Fatalf("nested BEAM judged summary IE = %+v, want imported nested judge score", got)
+	}
+	pairedRaw, err := os.ReadFile(pairedPath)
+	if err != nil {
+		t.Fatalf("read nested paired outcomes: %v", err)
+	}
+	if !strings.Contains(string(pairedRaw), `"score":0.5`) || !strings.Contains(string(pairedRaw), `"correct":true`) {
+		t.Fatalf("nested paired outcomes = %s, want imported nested judge score and correctness", pairedRaw)
+	}
+}
+
 func TestRunBeamHuggingFaceJSONLDatasetWritesJudgeRequestsWithoutAnswerHints(t *testing.T) {
 	dir := t.TempDir()
 	rawPath := filepath.Join(dir, "hf-beam-judge-requests.jsonl")

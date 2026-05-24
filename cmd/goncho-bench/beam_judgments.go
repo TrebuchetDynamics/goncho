@@ -2,11 +2,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -21,8 +21,8 @@ type beamServiceJudgment struct {
 	Score          float64  `json:"score"`
 	Nuggets        []string `json:"nuggets,omitempty"`
 	Assessment     string   `json:"assessment,omitempty"`
-	AnswerTimeMS   int      `json:"answer_time_ms,omitempty"`
-	JudgeTimeMS    int      `json:"judge_time_ms,omitempty"`
+	AnswerTimeMS   float64  `json:"answer_time_ms,omitempty"`
+	JudgeTimeMS    float64  `json:"judge_time_ms,omitempty"`
 }
 
 type beamServiceJudgmentSet struct {
@@ -44,15 +44,26 @@ type beamServiceJudgmentDiagnostics struct {
 }
 
 func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
-	file, err := os.Open(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("goncho-bench: open BEAM service judgments: %w", err)
 	}
-	defer file.Close()
-	hasher := sha256.New()
-	scanner := bufio.NewScanner(io.TeeReader(file, hasher))
-	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
+	sum := sha256.Sum256(raw)
 	rows := map[string]beamServiceJudgment{}
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) > 0 && trimmed[0] == '{' && bytes.Contains(trimmed, []byte(`"results"`)) {
+		if err := loadNestedBeamServiceJudgments(trimmed, rows); err != nil {
+			return nil, err
+		}
+	} else if err := loadJSONLBeamServiceJudgments(raw, rows); err != nil {
+		return nil, err
+	}
+	return &beamServiceJudgmentSet{Source: "beam-service-judgments", SourceSHA256: hex.EncodeToString(sum[:]), Rows: rows, RowCount: len(rows)}, nil
+}
+
+func loadJSONLBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment) error {
+	scanner := bufio.NewScanner(bytes.NewReader(raw))
+	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
 	lineNo := 0
 	for scanner.Scan() {
 		lineNo++
@@ -62,20 +73,54 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 		}
 		var row beamServiceJudgment
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
-			return nil, fmt.Errorf("goncho-bench: decode BEAM service judgment line %d: %w", lineNo, err)
+			return fmt.Errorf("goncho-bench: decode BEAM service judgment line %d: %w", lineNo, err)
 		}
-		row.Scale = strings.TrimSpace(row.Scale)
-		row.ConversationID = strings.TrimSpace(row.ConversationID)
-		row.QID = strings.TrimSpace(row.QID)
-		if row.QID == "" {
-			return nil, fmt.Errorf("goncho-bench: BEAM service judgment line %d missing qid", lineNo)
+		if err := addBeamServiceJudgment(rows, row, fmt.Sprintf("line %d", lineNo)); err != nil {
+			return err
 		}
-		rows[beamServiceJudgmentKey(row.Scale, row.ConversationID, row.QID)] = row
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("goncho-bench: read BEAM service judgments: %w", err)
+		return fmt.Errorf("goncho-bench: read BEAM service judgments: %w", err)
 	}
-	return &beamServiceJudgmentSet{Source: "beam-service-judgments-jsonl", SourceSHA256: hex.EncodeToString(hasher.Sum(nil)), Rows: rows, RowCount: len(rows)}, nil
+	return nil
+}
+
+func loadNestedBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment) error {
+	var file struct {
+		Results []struct {
+			Scale          string                `json:"scale"`
+			ConversationID string                `json:"conversation_id"`
+			Results        []beamServiceJudgment `json:"results"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal(raw, &file); err != nil {
+		return fmt.Errorf("goncho-bench: decode nested BEAM service judgments: %w", err)
+	}
+	for conversationIndex, conv := range file.Results {
+		for resultIndex, row := range conv.Results {
+			if strings.TrimSpace(row.Scale) == "" {
+				row.Scale = conv.Scale
+			}
+			if strings.TrimSpace(row.ConversationID) == "" {
+				row.ConversationID = conv.ConversationID
+			}
+			if err := addBeamServiceJudgment(rows, row, fmt.Sprintf("conversation %d result %d", conversationIndex+1, resultIndex+1)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func addBeamServiceJudgment(rows map[string]beamServiceJudgment, row beamServiceJudgment, location string) error {
+	row.Scale = strings.TrimSpace(row.Scale)
+	row.ConversationID = strings.TrimSpace(row.ConversationID)
+	row.QID = strings.TrimSpace(row.QID)
+	if row.QID == "" {
+		return fmt.Errorf("goncho-bench: BEAM service judgment %s missing qid", location)
+	}
+	rows[beamServiceJudgmentKey(row.Scale, row.ConversationID, row.QID)] = row
+	return nil
 }
 
 func (s *beamServiceJudgmentSet) find(c goncho.RecallBenchmarkCaseReport) (beamServiceJudgment, bool) {

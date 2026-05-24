@@ -124,8 +124,8 @@ type beamServiceQuestionResult struct {
 	Score                float64                     `json:"score"`
 	Nuggets              []string                    `json:"nuggets"`
 	Assessment           string                      `json:"assessment"`
-	AnswerTimeMS         int                         `json:"answer_time_ms"`
-	JudgeTimeMS          int                         `json:"judge_time_ms"`
+	AnswerTimeMS         float64                     `json:"answer_time_ms"`
+	JudgeTimeMS          float64                     `json:"judge_time_ms"`
 }
 
 type beamServiceRecallProvenance struct {
@@ -223,8 +223,8 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 		aiAnswer := ""
 		nuggets := []string{}
 		assessment := beamServiceCaseAssessment(c, score)
-		answerTimeMS := 0
-		judgeTimeMS := 0
+		answerTimeMS := 0.0
+		judgeTimeMS := 0.0
 		if hasJudgment {
 			score = roundMetric(judgment.Score)
 			aiAnswer = strings.TrimSpace(judgment.AIAnswer)

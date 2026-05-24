@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: BEAM judged imports now accept nested Mnemosyne-compatible result files.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetImportsNestedBeamResultsAsJudgments -count=1` proves `--beam-service-judgments-in` can read a nested `beam_e2e_results.json`, inherit conversation/scale identity, and merge imported official-style scores into Goncho results, summary, and paired outcomes.
+  - Result: real BEAM judge output no longer needs a separate flattening script before Goncho can produce comparable judged artifacts against Mnemosyne.
+
 - 2026-05-24: BEAM judged imports now fail on incomplete official-style outcome sets.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetRejectsIncompleteJudgeResults -count=1` proves `--beam-service-judgments-in` rejects missing or unmatched judgment rows before writing comparable artifacts, while `--beam-service-allow-partial-judgments` keeps partial runs diagnostic-only with explicit missing/unmatched counts.
   - Result: Goncho no longer silently mixes pure-recall scores with official-style judged scores when preparing BEAM paired comparisons against Mnemosyne.

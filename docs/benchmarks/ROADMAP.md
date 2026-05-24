@@ -233,6 +233,8 @@ BEAM judged-artifact import slice delivered: `goncho-bench --beam-service-judgme
 
 BEAM judgment-completeness gate delivered: judged imports fail by default on missing or unmatched rows before comparable artifacts are written; `--beam-service-allow-partial-judgments` is available only for diagnostic partial runs that keep missing/unmatched counts in metadata.
 
+BEAM nested-judgment import delivered: `--beam-service-judgments-in` accepts nested Mnemosyne-compatible `beam_e2e_results.json` files as well as flat JSONL rows, inheriting conversation/scale identity from result groups before applying the same completeness gate.
+
 ## Framing
 
 The public framing should remain:

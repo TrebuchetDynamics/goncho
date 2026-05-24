@@ -169,7 +169,7 @@ func main() {
 	flag.StringVar(&cfg.BeamServicePairedOut, "beam-service-paired-out", "", "Mnemosyne-compatible paired_outcomes.jsonl append path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceFailuresOut, "beam-service-failures-out", "", "JSONL failure audit output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceJudgeRequestsOut, "beam-service-judge-requests-out", "", "JSONL answer/judge request export path for official BEAM-compatible evaluation; answer prompts exclude ideal answers and rubrics")
-	flag.StringVar(&cfg.BeamServiceJudgmentsIn, "beam-service-judgments-in", "", "JSONL official BEAM answer/judge results to merge into service-backed BEAM results, summary, and paired outcomes")
+	flag.StringVar(&cfg.BeamServiceJudgmentsIn, "beam-service-judgments-in", "", "official BEAM answer/judge results to merge into service-backed BEAM artifacts; accepts flat JSONL rows or nested Mnemosyne-compatible beam_e2e_results.json")
 	flag.BoolVar(&cfg.BeamServiceAllowPartialJudgments, "beam-service-allow-partial-judgments", false, "allow --beam-service-judgments-in to leave missing/unmatched judgment rows as diagnostics instead of failing")
 	flag.StringVar(&cfg.BeamServiceConfigID, "beam-service-config-id", "", "config_id written to service-backed BEAM paired outcomes and summary metadata")
 	flag.StringVar(&cfg.BeamPairedComparePath, "beam-paired-compare", "", "Mnemosyne-compatible paired_outcomes.jsonl path to compare two BEAM config_id arms")
