@@ -22,7 +22,7 @@ If memory says a file exists, verify it. If memory says a migration was approved
 Use Goncho as an embedded Go module:
 
 ```bash
-go get github.com/TrebuchetDynamics/goncho@latest
+go get github.com/TrebuchetDynamics/goncho/service@latest
 ```
 
 From a checkout, verify the reproducible benchmark CLI builds and starts when you need local retrieval reports:
@@ -31,16 +31,16 @@ From a checkout, verify the reproducible benchmark CLI builds and starts when yo
 make install-smoke
 ```
 
-The root module is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.1, published May 22, 2026, and includes the benchmark CLI. From a checkout, `go run ./cmd/goncho-bench --beam-service-out beam-service-report.json --beam-service-results-out beam_e2e_results.json --beam-service-summary-out beam_e2e_summary.json --beam-service-paired-out paired_outcomes.jsonl --beam-service-failures-out beam_failures.jsonl --beam-service-judge-requests-out beam_judge_requests.jsonl` writes deterministic local BEAM-style MEMORIA recall artifacts for the delivered ABS, IE, MR, TR, PF, IF, EO, CR, KU, and SUM service-backed fixtures, including Mnemosyne-compatible per-question results, summary, paired-outcome, failure-audit, and answer/judge request files. Add `--beam-convert-in hf-beam.jsonl --beam-service-results-out beam_e2e_results.json --beam-service-summary-out beam_e2e_summary.json --beam-service-paired-out paired_outcomes.jsonl` to run a HuggingFace BEAM JSONL export directly through the same artifact path; `beam_e2e_results.json` preserves raw `ideal_answer` and `rubric` metadata, emits a local `rubric_context_score`/`rubric_context_matches` coverage diagnostic for retrieved context, and reports raw-conversion checksums plus evidence gaps under `metadata.diagnostics.conversion` and leakage counts under `metadata.diagnostics.leakage`. Pass `--fail-on-leakage` to reject BEAM runs with query-text, stable-ID, or rubric-label leakage before retrieval scoring. `--beam-service-judge-requests-out` exports official-BEAM-compatible answer prompts built only from selected recall context plus the question, alongside separate judge prompts carrying preserved ideal-answer/rubric metadata. After an external answerer/judge fills those requests, pass `--beam-service-judgments-in beam_judge_results.jsonl` (or a nested Mnemosyne-compatible `beam_e2e_results.json`) to merge `ai_answer`, score, nuggets, assessment, and timing rows back into Mnemosyne-compatible results, summary, and paired outcomes while keeping recall provenance attached; nested Mnemosyne rows can match by exact source qid or by conversation/scale/ability/question when Mnemosyne emits `conversation_id:qN` qids, and judged imports fail by default if any BEAM question is missing a judgment or any judgment row is unmatched, with `--beam-service-allow-partial-judgments` reserved for diagnostics-only partial runs. Use `--beam-convert-in hf-beam.jsonl --beam-convert-out converted-beam.jsonl` when you want an intermediate converted JSONL for inspection or replay via `--beam-jsonl converted-beam.jsonl`. Use `--beam-paired-results-in mnemosyne-beam_e2e_results.json --beam-paired-results-out paired_outcomes.jsonl --beam-paired-results-config-id mnemosyne-v3` to append nested Mnemosyne result files as paired rows with source path/checksum provenance, then `--beam-paired-compare paired_outcomes.jsonl --beam-paired-baseline-config-id mnemosyne-v3 --beam-paired-candidate-config-id goncho-current --beam-paired-json-out beam-paired-comparison.json --beam-paired-md-out beam-paired-comparison.md` to compare Mnemosyne-compatible BEAM runs with paired score deltas, deterministic bootstrap confidence intervals, exact-qid pairing, fail-closed exact-question fallback pairing, and a 2pp default effect-size floor before declaring a superiority verdict. Run `make bench-beam-smoke` for a CI-safe pinned tiny BEAM fixture that imports a nested Mnemosyne result baseline, emits per-question results, summary, paired outcomes, and paired comparison artifacts end to end.
+The service package is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.1, published May 22, 2026, and includes the benchmark CLI. From a checkout, `go run ./cmd/goncho-bench --beam-service-out beam-service-report.json --beam-service-results-out beam_e2e_results.json --beam-service-summary-out beam_e2e_summary.json --beam-service-paired-out paired_outcomes.jsonl --beam-service-failures-out beam_failures.jsonl --beam-service-judge-requests-out beam_judge_requests.jsonl` writes deterministic local BEAM-style MEMORIA recall artifacts for the delivered ABS, IE, MR, TR, PF, IF, EO, CR, KU, and SUM service-backed fixtures, including Mnemosyne-compatible per-question results, summary, paired-outcome, failure-audit, and answer/judge request files. Add `--beam-convert-in hf-beam.jsonl --beam-service-results-out beam_e2e_results.json --beam-service-summary-out beam_e2e_summary.json --beam-service-paired-out paired_outcomes.jsonl` to run a HuggingFace BEAM JSONL export directly through the same artifact path; `beam_e2e_results.json` preserves raw `ideal_answer` and `rubric` metadata, emits a local `rubric_context_score`/`rubric_context_matches` coverage diagnostic for retrieved context, and reports raw-conversion checksums plus evidence gaps under `metadata.diagnostics.conversion` and leakage counts under `metadata.diagnostics.leakage`. Pass `--fail-on-leakage` to reject BEAM runs with query-text, stable-ID, or rubric-label leakage before retrieval scoring. `--beam-service-judge-requests-out` exports official-BEAM-compatible answer prompts built only from selected recall context plus the question, alongside separate judge prompts carrying preserved ideal-answer/rubric metadata. After an external answerer/judge fills those requests, pass `--beam-service-judgments-in beam_judge_results.jsonl` (or a nested Mnemosyne-compatible `beam_e2e_results.json`) to merge `ai_answer`, score, nuggets, assessment, and timing rows back into Mnemosyne-compatible results, summary, and paired outcomes while keeping recall provenance attached; nested Mnemosyne rows can match by exact source qid or by conversation/scale/ability/question when Mnemosyne emits `conversation_id:qN` qids, and judged imports fail by default if any BEAM question is missing a judgment or any judgment row is unmatched, with `--beam-service-allow-partial-judgments` reserved for diagnostics-only partial runs. Use `--beam-convert-in hf-beam.jsonl --beam-convert-out converted-beam.jsonl` when you want an intermediate converted JSONL for inspection or replay via `--beam-jsonl converted-beam.jsonl`. Use `--beam-paired-results-in mnemosyne-beam_e2e_results.json --beam-paired-results-out paired_outcomes.jsonl --beam-paired-results-config-id mnemosyne-v3` to append nested Mnemosyne result files as paired rows with source path/checksum provenance, then `--beam-paired-compare paired_outcomes.jsonl --beam-paired-baseline-config-id mnemosyne-v3 --beam-paired-candidate-config-id goncho-current --beam-paired-json-out beam-paired-comparison.json --beam-paired-md-out beam-paired-comparison.md` to compare Mnemosyne-compatible BEAM runs with paired score deltas, deterministic bootstrap confidence intervals, exact-qid pairing, fail-closed exact-question fallback pairing, and a 2pp default effect-size floor before declaring a superiority verdict. Run `make bench-beam-smoke` for a CI-safe pinned tiny BEAM fixture that imports a nested Mnemosyne result baseline, emits per-question results, summary, paired outcomes, and paired comparison artifacts end to end.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho.svg)](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
+[![Go Reference](https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho/service.svg)](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho/service)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## At a Glance
 
 If you are evaluating Goncho on pkg.go.dev, start here:
 
-- **Install:** `go get github.com/TrebuchetDynamics/goncho@latest`.
+- **Install:** `go get github.com/TrebuchetDynamics/goncho/service@latest`.
 - **Use when:** your Go agent host needs local SQLite memory, scoped recall, review queues, stale-claim warnings, and verification-first context assembly.
 - **Do not use as:** a hosted memory API, generic vector database, standalone CLI app, or replacement for live checks before tool execution.
 - **First useful call:** wire `memory.OpenSqlite`, run `goncho.RunMigrations`, create `goncho.NewService`, then call `svc.Context` to build an orientation pack.
@@ -63,10 +63,18 @@ Goncho can orient the agent by storing evidence, ranking scoped memory, assembli
 | --- | --- | --- |
 | Open local memory | `memory.OpenSqlite` plus `goncho.RunMigrations` | Creates the SQLite store and schema Goncho expects. |
 | Embed the service | `goncho.NewService` | Gives your Go host the profile, search, recall, context, chat, and conclude APIs. |
-| Store durable facts | `svc.SetProfile` or `svc.Conclude` | Separates stable profile facts from current conclusions and evidence. |
-| Retrieve scoped memory | `svc.Search` | Returns peer/profile/session-scoped hits before you decide what to verify. |
-| Audit recall scoring | `svc.Recall` | Returns the scored `RecallTrace` with candidates, selected/rejected memories, warnings, and provenance before any projection. |
+| Store durable facts | `svc.SetProfile`, `svc.Conclude`, or memory slots | Separates stable profile facts, current conclusions, and named durable facts/preferences. |
+| Manage named slots | `CreateMemorySlot`, `GetMemorySlot`, `ListMemorySlots`, `AppendMemorySlot`, `ReplaceMemorySlot`, `DeleteMemorySlot` | Provides scoped slot memory with revisioning, tombstones, audit observations, and profile isolation. |
+| Consolidate locally | `ExecuteFourTierConsolidation` | Explicitly writes working, episodic, semantic, and procedural consolidation memories with provenance. |
+| Coordinate local actions | `UpsertAction`, `ReadActionGraph`, `CompleteAction`, `SignalAction` | Tracks local dependencies, frontier, next action, and coordination signals without server leases. |
+| Export snapshots | `ExportSnapshotManifest`, `DiffSnapshotManifests`, `BuildSnapshotRollbackMetadata` | Produces deterministic manifests and rollback metadata while leaving git operations adapter-owned. |
+| Store image refs | `StoreImageMemory`, `SearchImageMemories` | Stores image references, checksums, alt text, and metadata with embeddings explicitly deferred for later vision search. |
+| Retrieve scoped memory | `svc.Search` | Returns peer/profile/session-scoped hits before you decide what to verify; transparent synonym expansion is surfaced as hit provenance. |
+| Audit recall scoring | `svc.Recall` | Returns the scored `RecallTrace` with candidates, selected/rejected memories, warnings, and provenance, including query-expansion evidence, before any projection. |
+| Plug semantic retrieval | `Config.VectorStore` | Optionally lets a host provide local embedding/vector hits; Goncho fuses them as `semantic` provenance with lexical and graph signals through recall RRF. |
 | Build an action primer | `svc.Context` | Produces an orientation pack; hosts still verify live state before acting. |
+| Capture host hooks | `svc.CaptureHostHook` | Maps host-neutral prompt, assistant, PostToolUse, failure, compact, and session lifecycle events into `Observe`, `CreateMessages`, and session summaries. |
+| Discover resources/prompts | `NewMemoryResourceRegistry` | Exposes Go-neutral status, profile, latest-memory, graph-stat resources and a recall prompt without requiring an MCP server. |
 | Expose agent tools | `NewGonchoContextTool`, `NewGonchoSearchTool`, `NewGonchoRecallTool`, `NewGonchoRememberTool`, `NewReviewTool`, `NewGonchoHandoffTool` | Keeps host integrations on the public tool boundary instead of database internals. |
 | Reproduce retrieval evidence | `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` | Installs the benchmark CLI shipped with the public module. |
 
@@ -74,7 +82,7 @@ Goncho can orient the agent by storing evidence, ranking scoped memory, assembli
 
 | Import path | Role | Use it for |
 | --- | --- | --- |
-| `github.com/TrebuchetDynamics/goncho` | Root library package | `RunMigrations`, `NewService`, service calls, context/search/conclude params, and public tool constructors. |
+| `github.com/TrebuchetDynamics/goncho/service` | Service library package | `RunMigrations`, `NewService`, service calls, context/search/conclude params, and public tool constructors. |
 | `github.com/TrebuchetDynamics/goncho/memory` | SQLite opener | `memory.OpenSqlite` when you want a local file-backed store for an embedded host. |
 | `github.com/TrebuchetDynamics/goncho/cmd/goncho-bench` | Command only | `go install .../cmd/goncho-bench@latest` for reproducible retrieval reports; do not import it into an agent host. |
 | `github.com/TrebuchetDynamics/goncho/memorymirror` | Architecture mirror/port matrix | Inspect the Go-native mirror of the upstream broad-memory reference at `355124141625ccc0d740ae08ddaaf77fe2c165ae`: pipeline stages, memory tiers, retrieval streams, hooks, MCP tools, Goncho seams, and explicit residual gaps. |
@@ -94,7 +102,7 @@ import (
     "os"
     "path/filepath"
 
-    "github.com/TrebuchetDynamics/goncho"
+    "github.com/TrebuchetDynamics/goncho/service"
     "github.com/TrebuchetDynamics/goncho/memory"
 )
 
@@ -156,13 +164,13 @@ Goncho is pre-1.0, but it has the public release signals needed to evaluate it a
 | Valid go.mod file | Module path is `github.com/TrebuchetDynamics/goncho` | `make local-module-smoke` checks `go list -m -json` for module path and Go version. |
 | Redistributable license | `MIT` | License file is checked in and pkg.go.dev marks it redistributable. |
 | Package documentation | Root package docs render with examples | `make package-doc-smoke` checks `go doc .`; compiled examples run in `go test ./...`. |
-| External importability | Public module can be imported from a temporary module | `make public-module-smoke` runs `go get github.com/TrebuchetDynamics/goncho@latest` and compiles a minimal service import. |
+| External importability | Public module can be imported from a temporary module | `make public-module-smoke` runs `go get github.com/TrebuchetDynamics/goncho/service@latest` and compiles a minimal service import. |
 | Command install path | Root is a library; `cmd/goncho-bench` is the command | `make install-smoke` installs checkout-local `./cmd/goncho-bench` and starts `--help`. |
 | Imported by | Imported by count is an adoption signal, not a local correctness gate | Prefer the smoke commands above for reproducible package-readiness evidence. |
 
 ### Versioning and Adoption Notes
 
-- **Pin production dependencies:** Goncho is pre-1.0 stability software. For reproducible builds, use `go get github.com/TrebuchetDynamics/goncho@v0.1.1` or a reviewed commit; do not treat `@latest` as a deployment lock.
+- **Pin production dependencies:** Goncho is pre-1.0 stability software. For reproducible builds, use `go get github.com/TrebuchetDynamics/goncho/service@v0.1.1` or a reviewed commit; do not treat `@latest` as a deployment lock.
 - **Read adoption counters carefully:** pkg.go.dev currently shows Imported by 0. That reverse-dependency count is not a correctness gate; use it as adoption context, then rely on the smoke checks below for package readiness.
 - **Upgrade by evidence:** before changing the pinned version, run `make ecosystem-smoke` from a checkout and keep host-side live verification in place.
 
@@ -182,7 +190,7 @@ That target runs `install-smoke`, `go test ./...`, `go vet ./...`, and benchmark
 
 For the narrower public release metadata proof only, run `make public-release-smoke`; it checks the documented public `@latest` version and published date from `go list -m -json`. For the narrower local go.mod metadata proof only, run `make local-module-smoke`; it checks the module path and Go version from `go list -m -json`. For the narrower package documentation proof only, run `make package-doc-smoke`; it checks that local package docs render through `go doc .`. For the narrower public docs site proof only, run `make docs-site-smoke`; it checks the local docs-site build with `npm run build`. For the narrower external import proof only, run `make public-module-smoke`. For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke`.
 
-Use `go get github.com/TrebuchetDynamics/goncho@latest` to depend on the library package. For the command-line benchmark runner, use `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` or checkout-local `make install-smoke`.
+Use `go get github.com/TrebuchetDynamics/goncho/service@latest` to depend on the library package. For the command-line benchmark runner, use `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` or checkout-local `make install-smoke`.
 
 ---
 
@@ -272,7 +280,7 @@ import (
     "context"
     "fmt"
 
-    "github.com/TrebuchetDynamics/goncho"
+    "github.com/TrebuchetDynamics/goncho/service"
     "github.com/TrebuchetDynamics/goncho/memory"
 )
 
@@ -358,7 +366,7 @@ write, err := svc.Conclude(ctx, goncho.ConcludeParams{
 })
 ```
 
-Full API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho)
+Full API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho/service](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho/service)
 
 ---
 

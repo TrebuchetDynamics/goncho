@@ -8,10 +8,10 @@ Goncho is a Go library for local-first agent memory and context assembly.
 Use the module in an embedded Go runtime:
 
 ```sh
-go get github.com/TrebuchetDynamics/goncho@latest
+go get github.com/TrebuchetDynamics/goncho/service@latest
 ```
 
-API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
+API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho/service](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho/service).
 
 From a checkout, verify the public module, local go.mod metadata, local package docs, public docs site build, external import path, and benchmark CLI together:
 
@@ -29,7 +29,7 @@ From a checkout, verify the benchmark CLI only when you need reproducible local 
 make install-smoke
 ```
 
-The root module is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.1, published May 22, 2026, and includes the benchmark CLI.
+The service package is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.1.1, published May 22, 2026, and includes the benchmark CLI.
 
 :::note[Pre-1.0 note]
 Goncho is pre-1.0. The setup flow is intentionally small, and operators should pin the module version or commit they deploy against.
@@ -45,7 +45,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/TrebuchetDynamics/goncho"
+	"github.com/TrebuchetDynamics/goncho/service"
 	"github.com/TrebuchetDynamics/goncho/memory"
 )
 

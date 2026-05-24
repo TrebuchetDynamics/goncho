@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TrebuchetDynamics/goncho"
+	"github.com/TrebuchetDynamics/goncho/service"
 )
 
 func TestRunBeamServiceRecallOracleWritesAbilityReport(t *testing.T) {

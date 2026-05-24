@@ -56,6 +56,8 @@ Temporal current-truth routing slice delivered: `TestRecallTemporalRoutingPrefer
 
 Speaker who-said-what routing slice delivered: `TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch` proves explicit speaker provenance can select the right who-said-what branches while preserving stable-ID memories without regenerating LOCOMO full-run artifacts.
 
+Transparent query-expansion slice delivered: `TestSearchAndRecallUseQueryExpansionWithProvenance` proves synonym expansion can recover low-overlap terms while surfacing `query_expansion` provenance in both Search hits and Recall candidates.
+
 Failure-driven evaluation slice delivered: `TestLocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets` and `TestWriteLocomoFailureAuditEmitsFailureBucket` prove wrong branch retrieval and missing companion memories can be separated into failure-audit buckets while preserving stable-ID memories without regenerating LOCOMO full-run artifacts.
 
 LOCOMO answer-ready closeout delivered: the current evidence chain supports a plain answer to how to improve Goncho. Keep the frozen baseline metrics as the guardrail, target multi-hop recall_any@10 above `50%` and multi-hop strict_recall@10 above `25%`, continue hybrid candidate generation plus graph expansion, query decomposition, coverage-aware selection, temporal routing, speaker routing, and failure-bucket audits, and read backend-comparison `failure_buckets` beside rank categories. The delivered loop proves graph companions, query decomposition, temporal routing, speaker routing, failure-audit buckets, backend-comparison `failure_buckets`, and public docs guards without answer hints, LLM judges, answer-text scoring, or frozen artifact regeneration. Remaining benchmark backlog: choose an approved retrieval slice, then generate a new date-stamped full LOCOMO run only when the change is ready to compare against the frozen evidence.
@@ -134,6 +136,8 @@ It should compare Goncho against:
 - SQLite FTS5,
 - vector-only,
 - hybrid BM25+vector where available.
+
+First hybrid retrieval seam delivered: `TestServiceRecallUsesOptionalVectorStoreForSemanticRRF` proves a host-provided local vector store can contribute `semantic` provenance to `Service.Recall` and receive RRF fusion alongside lexical candidates without requiring a hosted vector database.
 
 Goncho-specific question:
 

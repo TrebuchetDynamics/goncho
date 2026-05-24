@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	goncho "github.com/TrebuchetDynamics/goncho"
 	"github.com/TrebuchetDynamics/goncho/memory"
+	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
 func TestLocalE2E_HTTPServiceLifecycleUsesHonchoCompatibleRoutes(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrebuchetDynamics/goncho"
 	"github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/service"
 )
 
 type config struct {

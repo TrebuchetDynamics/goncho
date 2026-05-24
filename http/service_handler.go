@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	goncho "github.com/TrebuchetDynamics/goncho"
+	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
 // NewServiceHandler exposes a small local HTTP adapter over service-backed

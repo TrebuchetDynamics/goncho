@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/TrebuchetDynamics/goncho"
+	"github.com/TrebuchetDynamics/goncho/service"
 )
 
 type beamServiceJudgment struct {

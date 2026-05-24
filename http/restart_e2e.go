@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	goncho "github.com/TrebuchetDynamics/goncho"
 	"github.com/TrebuchetDynamics/goncho/memory"
+	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
 type HTTPServiceRestartE2EConfig struct {

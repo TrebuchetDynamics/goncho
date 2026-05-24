@@ -798,6 +798,15 @@
 
 ## Next roadmap items
 
+- Wire a real local embedding/index adapter behind `Config.VectorStore`; the public seam and deterministic fake-vector RRF test are in place.
+- Add concrete host adapters on top of `CaptureHostHook`; the host-neutral prompt/tool/failure/session lifecycle capture contract is in place.
+- Expand the transparent synonym table from production misses; the Search/Recall query-expansion provenance contract is in place.
+- Wire concrete host resource registries from `NewMemoryResourceRegistry`; the Go-neutral status/profile/latest/graph/recall-prompt registry is in place.
+- Build host UX around memory slots; scoped create/get/list/append/replace/delete with audit observations and profile isolation is in place.
+- Refine four-tier consolidation heuristics; explicit local working/episodic/semantic/procedural consolidation with provenance is in place.
+- Add server-mode leases later; local action graph dependencies/frontier/next-action/signals are in place without leases.
+- Let host adapters own git commands; deterministic snapshot manifest/diff/rollback metadata is in place without git side effects.
+- Add real image embeddings later; image references/checksums/alt text storage and search are in place with embedding status deferred.
 - Continue lifecycle trust work: temporal validity, supersession chains, and confidence/freshness scoring.
 - Expand graph/cognitive-map features behind deterministic tests.
 - Add optional PostgreSQL/team adapter only after local SQLite API remains stable.

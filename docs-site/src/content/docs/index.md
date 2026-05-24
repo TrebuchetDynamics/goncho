@@ -28,9 +28,9 @@ Goncho treats memory as the state an agent carries forward: what it knows about 
 :::note[Current status]
 Goncho is pre-1.0. Public `@latest` currently resolves to v0.1.1, published May 22, 2026, and the v0.1.x Go library supports local persistence, peer cards, search, context assembly, session summaries, local markdown memory, public tools, trust checks, and compatibility surfaces. Deeper graph/cognitive-map layers remain architecture direction.
 
-Public API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho).
+Public API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho/service](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho/service).
 
-The root module is a library package, not a CLI binary and not a root `go install` target. Use `go get github.com/TrebuchetDynamics/goncho@latest` for the library; use `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` or checkout-local benchmark commands for `goncho-bench`.
+The service package is a library package, not a CLI binary and not a root `go install` target. Use `go get github.com/TrebuchetDynamics/goncho/service@latest` for the library; use `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` or checkout-local benchmark commands for `goncho-bench`.
 
 Local ecosystem smoke: `make ecosystem-smoke` verifies public release metadata, local Go module metadata, package docs, public docs site build, external importability, and checkout-local benchmark CLI installation. For the narrower public release metadata proof, run `make public-release-smoke`; it checks the documented public `@latest` version and published date. For the narrower local go.mod metadata proof, run `make local-module-smoke`; for the narrower package documentation proof, run `make package-doc-smoke`; for the narrower public docs site proof, run `make docs-site-smoke`; for the narrower external import proof, run `make public-module-smoke`.
 
