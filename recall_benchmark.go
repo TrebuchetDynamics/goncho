@@ -100,27 +100,31 @@ type RecallBenchmarkAbilityReport struct {
 }
 
 type RecallBenchmarkCaseReport struct {
-	ID                    string   `json:"id"`
-	Ability               string   `json:"ability,omitempty"`
-	Scale                 string   `json:"scale,omitempty"`
-	ConversationID        string   `json:"conversation_id,omitempty"`
-	TraceID               string   `json:"trace_id"`
-	PipelineVersion       string   `json:"pipeline_version"`
-	ScoringConfigVersion  string   `json:"scoring_config_version"`
-	RelevantIDs           []string `json:"relevant_ids"`
-	RequiredEvidenceKinds []string `json:"required_evidence_kinds,omitempty"`
-	ExpectedNoAnswer      bool     `json:"expected_no_answer,omitempty"`
-	CandidateMemoryIDs    []string `json:"candidate_memory_ids"`
-	SelectedMemoryIDs     []string `json:"selected_memory_ids"`
-	RecallAt5             float64  `json:"recall_at_5"`
-	RecallAt10            float64  `json:"recall_at_10"`
-	ContextSatisfied      bool     `json:"context_satisfied"`
-	ProvenanceSatisfied   bool     `json:"provenance_satisfied,omitempty"`
-	TokenBudget           int      `json:"token_budget"`
-	SelectedTokens        int      `json:"selected_tokens"`
-	TokenBudgetWithin     bool     `json:"token_budget_within"`
-	LatencyMS             int      `json:"latency_ms"`
-	WarningCodes          []string `json:"warning_codes"`
+	ID                     string   `json:"id"`
+	Ability                string   `json:"ability,omitempty"`
+	Scale                  string   `json:"scale,omitempty"`
+	ConversationID         string   `json:"conversation_id,omitempty"`
+	Question               string   `json:"question,omitempty"`
+	TraceID                string   `json:"trace_id"`
+	PipelineVersion        string   `json:"pipeline_version"`
+	ScoringConfigVersion   string   `json:"scoring_config_version"`
+	RelevantIDs            []string `json:"relevant_ids"`
+	RequiredEvidenceKinds  []string `json:"required_evidence_kinds,omitempty"`
+	ExpectedNoAnswer       bool     `json:"expected_no_answer,omitempty"`
+	CandidateMemoryIDs     []string `json:"candidate_memory_ids"`
+	SelectedMemoryIDs      []string `json:"selected_memory_ids"`
+	CandidateEvidenceKinds []string `json:"candidate_evidence_kinds,omitempty"`
+	SelectedEvidenceKinds  []string `json:"selected_evidence_kinds,omitempty"`
+	TopEvidenceKinds       []string `json:"top_evidence_kinds,omitempty"`
+	RecallAt5              float64  `json:"recall_at_5"`
+	RecallAt10             float64  `json:"recall_at_10"`
+	ContextSatisfied       bool     `json:"context_satisfied"`
+	ProvenanceSatisfied    bool     `json:"provenance_satisfied,omitempty"`
+	TokenBudget            int      `json:"token_budget"`
+	SelectedTokens         int      `json:"selected_tokens"`
+	TokenBudgetWithin      bool     `json:"token_budget_within"`
+	LatencyMS              int      `json:"latency_ms"`
+	WarningCodes           []string `json:"warning_codes"`
 }
 
 func EvaluateServiceRecallBenchmark(ctx context.Context, svc *Service, cases []RecallBenchmarkServiceCase) (RecallBenchmarkReport, error) {
@@ -290,27 +294,31 @@ func evaluateRecallBenchmarkCase(index int, c RecallBenchmarkCase) (RecallBenchm
 	selectedTokens := recallBenchmarkSelectedTokens(c.Trace.Selected)
 	requiredEvidenceKinds := normalizeRecallBenchmarkEvidenceKinds(c.RequiredEvidenceKinds)
 	caseReport := RecallBenchmarkCaseReport{
-		ID:                    id,
-		Ability:               normalizeRecallBenchmarkAbility(c.Ability),
-		Scale:                 strings.TrimSpace(c.Scale),
-		ConversationID:        strings.TrimSpace(c.ConversationID),
-		TraceID:               c.Trace.TraceID,
-		PipelineVersion:       c.Trace.PipelineVersion,
-		ScoringConfigVersion:  c.Trace.ScoringConfig.Version,
-		RelevantIDs:           append([]string(nil), c.RelevantIDs...),
-		RequiredEvidenceKinds: requiredEvidenceKinds,
-		ExpectedNoAnswer:      c.ExpectedNoAnswer,
-		CandidateMemoryIDs:    candidateIDs,
-		SelectedMemoryIDs:     selectedIDs,
-		RecallAt5:             recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, c.RelevantIDs, c.ExpectedNoAnswer, 5),
-		RecallAt10:            recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, c.RelevantIDs, c.ExpectedNoAnswer, 10),
-		ContextSatisfied:      recallBenchmarkContextSatisfied(c.Trace, c.RelevantIDs, c.ContextContains, c.ExpectedNoAnswer),
-		ProvenanceSatisfied:   len(requiredEvidenceKinds) > 0 && recallBenchmarkProvenanceSatisfied(c.Trace, c.RelevantIDs, requiredEvidenceKinds),
-		TokenBudget:           budget,
-		SelectedTokens:        selectedTokens,
-		TokenBudgetWithin:     budget <= 0 || selectedTokens <= budget,
-		LatencyMS:             int(c.Latency / time.Millisecond),
-		WarningCodes:          recallBenchmarkWarningCodes(c.Trace.Warnings),
+		ID:                     id,
+		Ability:                normalizeRecallBenchmarkAbility(c.Ability),
+		Scale:                  strings.TrimSpace(c.Scale),
+		ConversationID:         strings.TrimSpace(c.ConversationID),
+		Question:               strings.TrimSpace(c.Trace.Query.Query),
+		TraceID:                c.Trace.TraceID,
+		PipelineVersion:        c.Trace.PipelineVersion,
+		ScoringConfigVersion:   c.Trace.ScoringConfig.Version,
+		RelevantIDs:            append([]string(nil), c.RelevantIDs...),
+		RequiredEvidenceKinds:  requiredEvidenceKinds,
+		ExpectedNoAnswer:       c.ExpectedNoAnswer,
+		CandidateMemoryIDs:     candidateIDs,
+		SelectedMemoryIDs:      selectedIDs,
+		CandidateEvidenceKinds: recallBenchmarkEvidenceKinds(c.Trace.Candidates),
+		SelectedEvidenceKinds:  recallBenchmarkEvidenceKinds(c.Trace.Selected),
+		TopEvidenceKinds:       recallBenchmarkTopEvidenceKinds(c.Trace.Selected),
+		RecallAt5:              recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, c.RelevantIDs, c.ExpectedNoAnswer, 5),
+		RecallAt10:             recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, c.RelevantIDs, c.ExpectedNoAnswer, 10),
+		ContextSatisfied:       recallBenchmarkContextSatisfied(c.Trace, c.RelevantIDs, c.ContextContains, c.ExpectedNoAnswer),
+		ProvenanceSatisfied:    len(requiredEvidenceKinds) > 0 && recallBenchmarkProvenanceSatisfied(c.Trace, c.RelevantIDs, requiredEvidenceKinds),
+		TokenBudget:            budget,
+		SelectedTokens:         selectedTokens,
+		TokenBudgetWithin:      budget <= 0 || selectedTokens <= budget,
+		LatencyMS:              int(c.Latency / time.Millisecond),
+		WarningCodes:           recallBenchmarkWarningCodes(c.Trace.Warnings),
 	}
 	if caseReport.RelevantIDs == nil {
 		caseReport.RelevantIDs = []string{}
@@ -419,6 +427,27 @@ func normalizeRecallBenchmarkEvidenceKinds(kinds []string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func recallBenchmarkEvidenceKinds(items []ScoredRecallCandidate) []string {
+	kinds := []string{}
+	for _, item := range items {
+		for _, evidence := range item.Candidate.Provenance {
+			kinds = append(kinds, evidence.Kind)
+		}
+	}
+	return normalizeRecallBenchmarkEvidenceKinds(kinds)
+}
+
+func recallBenchmarkTopEvidenceKinds(items []ScoredRecallCandidate) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	kinds := make([]string, 0, len(items[0].Candidate.Provenance))
+	for _, evidence := range items[0].Candidate.Provenance {
+		kinds = append(kinds, evidence.Kind)
+	}
+	return normalizeRecallBenchmarkEvidenceKinds(kinds)
 }
 
 func recallBenchmarkProvenanceSatisfied(trace RecallTrace, relevantIDs, requiredKinds []string) bool {

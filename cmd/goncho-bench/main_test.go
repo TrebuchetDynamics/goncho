@@ -96,6 +96,75 @@ func TestConvertBeamHuggingFaceJSONLWritesStableIDDataset(t *testing.T) {
 	}
 }
 
+func TestRunBeamJSONLDatasetWritesMnemosyneCompatibleResultsFile(t *testing.T) {
+	dir := t.TempDir()
+	datasetPath := filepath.Join(dir, "beam.jsonl")
+	dataset := strings.Join([]string{
+		`{"type":"meta","dataset":"tiny-beam","scale":"500K"}`,
+		`{"type":"memory","id":"uses","conversation_id":"conv-ledger","peer":"team","session_key":"sess-beam-results","content":"Project note: Billing API uses LedgerDB."}`,
+		`{"type":"memory","id":"owner","conversation_id":"conv-ledger","peer":"team","session_key":"sess-beam-results","content":"Project note: Owner of LedgerDB is Mira."}`,
+		`{"type":"question","id":"q-mr-ledger","conversation_id":"conv-ledger","scale":"500K","ability":"MR","peer":"team","session_key":"sess-beam-results","query":"Who is responsible for storage used by Billing API?","relevant_ids":["owner"],"required_evidence_kinds":["graph"],"limit":2}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(datasetPath, []byte(dataset), 0o644); err != nil {
+		t.Fatalf("write BEAM JSONL dataset: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
+	if err := run(context.Background(), config{
+		BeamJSONLPath:         datasetPath,
+		BeamServiceResultsOut: resultsPath,
+		BeamServiceConfigID:   "test-beam-results",
+		DatabasePath:          filepath.Join(dir, "beam-results.db"),
+	}); err != nil {
+		t.Fatalf("run BEAM JSONL oracle: %v", err)
+	}
+
+	var results struct {
+		Metadata struct {
+			ConfigID           string   `json:"config_id"`
+			PureRecall         bool     `json:"pure_recall"`
+			Scales             []string `json:"scales"`
+			TotalConversations int      `json:"total_conversations"`
+		} `json:"metadata"`
+		Results []struct {
+			ConversationID string `json:"conversation_id"`
+			Scale          string `json:"scale"`
+			NumQuestions   int    `json:"num_questions"`
+			Results        []struct {
+				QID              string  `json:"qid"`
+				Ability          string  `json:"ability"`
+				Question         string  `json:"question"`
+				Score            float64 `json:"score"`
+				RecallProvenance struct {
+					Engine          string             `json:"engine"`
+					KeptCount       int                `json:"kept_count"`
+					VoiceSums       map[string]float64 `json:"voice_sums"`
+					TopResultVoices map[string]float64 `json:"top_result_voices"`
+				} `json:"recall_provenance"`
+			} `json:"results"`
+		} `json:"results"`
+	}
+	raw, err := os.ReadFile(resultsPath)
+	if err != nil {
+		t.Fatalf("read results: %v", err)
+	}
+	if err := json.Unmarshal(raw, &results); err != nil {
+		t.Fatalf("decode results: %v", err)
+	}
+	if results.Metadata.ConfigID != "test-beam-results" || !results.Metadata.PureRecall || !slices.Equal(results.Metadata.Scales, []string{"500K"}) || results.Metadata.TotalConversations != 1 {
+		t.Fatalf("results metadata = %+v, want Mnemosyne-compatible pure-recall metadata", results.Metadata)
+	}
+	if len(results.Results) != 1 || results.Results[0].ConversationID != "conv-ledger" || results.Results[0].Scale != "500K" || results.Results[0].NumQuestions != 1 || len(results.Results[0].Results) != 1 {
+		t.Fatalf("conversation results = %+v, want one grouped BEAM conversation result", results.Results)
+	}
+	row := results.Results[0].Results[0]
+	if row.QID != "q-mr-ledger" || row.Ability != "MR" || row.Question != "Who is responsible for storage used by Billing API?" || row.Score != 1 {
+		t.Fatalf("result row = %+v, want perfect MR question row with original query", row)
+	}
+	if row.RecallProvenance.Engine != "goncho-service-recall" || row.RecallProvenance.KeptCount == 0 || row.RecallProvenance.VoiceSums["graph"] == 0 || row.RecallProvenance.TopResultVoices["graph"] == 0 {
+		t.Fatalf("recall provenance = %+v, want graph voice provenance in Mnemosyne-compatible result", row.RecallProvenance)
+	}
+}
+
 func TestRunBeamJSONLDatasetWritesMnemosyneCompatibleArtifacts(t *testing.T) {
 	dir := t.TempDir()
 	datasetPath := filepath.Join(dir, "beam.jsonl")

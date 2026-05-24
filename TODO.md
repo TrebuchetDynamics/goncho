@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `goncho-bench --beam-service-results-out` now emits Mnemosyne-compatible per-question BEAM result artifacts.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamJSONLDatasetWritesMnemosyneCompatibleResultsFile -count=1` proves a converted JSONL case writes `beam_e2e_results.json`-style metadata, grouped conversation results, original question text, pure-recall score, and recall-provenance voice summaries with graph evidence.
+  - Result: Goncho now has the third Mnemosyne artifact alongside summary and paired outcomes, making source-backed per-question BEAM diagnostics possible without LLM answerers, judges, answer hints, or external services.
+
 - 2026-05-24: `goncho-bench --beam-convert-in/--beam-convert-out` now converts HuggingFace BEAM JSONL exports into Goncho's service-oracle format.
   - Evidence target: `go test ./cmd/goncho-bench -run TestConvertBeamHuggingFaceJSONLWritesStableIDDataset -count=1` proves nested BEAM chat plus Python-literal `probing_questions` convert into stable memory IDs, conversation-scoped question rows, mapped relevant message indices, required evidence kinds, and ABS expected-no-answer rows without importing ideal answers as retrieval hints.
   - Result: Goncho now has the missing raw-dataset conversion step before `--beam-jsonl`, preserving stable-ID and no-answer-hint discipline while moving closer to real BEAM sample runs.

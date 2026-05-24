@@ -17,6 +17,7 @@
   "cases": [
     {
       "id": "stable-trace-auth",
+      "question": "auth rate limit",
       "trace_id": "b3765ad87524b8be6fcdf19dd43e946a8116dd8995e0e998f4a1f08bec69b9ef",
       "pipeline_version": "test-pipeline",
       "scoring_config_version": "test-v1",
@@ -33,6 +34,24 @@
         "mem-auth",
         "mem-db"
       ],
+      "candidate_evidence_kinds": [
+        "graph",
+        "keyword",
+        "scope",
+        "semantic"
+      ],
+      "selected_evidence_kinds": [
+        "graph",
+        "keyword",
+        "scope",
+        "semantic"
+      ],
+      "top_evidence_kinds": [
+        "graph",
+        "keyword",
+        "scope",
+        "semantic"
+      ],
       "recall_at_5": 1,
       "recall_at_10": 1,
       "context_satisfied": true,
@@ -44,6 +63,7 @@
     },
     {
       "id": "golden-turn-preference",
+      "question": "How should you answer me about Goncho RecallTrace evidence?",
       "trace_id": "trace-golden-turn-pref",
       "pipeline_version": "goncho-golden-e2e-v1",
       "scoring_config_version": "goncho-golden-scoring-v1",

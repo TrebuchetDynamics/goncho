@@ -49,6 +49,7 @@ type config struct {
 	BeamConvertScale                string
 	BeamJSONLPath                   string
 	BeamServiceOut                  string
+	BeamServiceResultsOut           string
 	BeamServiceSummaryOut           string
 	BeamServicePairedOut            string
 	BeamServiceConfigID             string
@@ -149,6 +150,7 @@ func main() {
 	flag.StringVar(&cfg.BeamConvertScale, "beam-convert-scale", "", "fallback BEAM scale for converted records when the source record omits scale")
 	flag.StringVar(&cfg.BeamJSONLPath, "beam-jsonl", "", "BEAM-style JSONL dataset path for service-backed recall evaluation")
 	flag.StringVar(&cfg.BeamServiceOut, "beam-service-out", "", "JSON output path for Goncho's deterministic service-backed BEAM-style recall oracle")
+	flag.StringVar(&cfg.BeamServiceResultsOut, "beam-service-results-out", "", "Mnemosyne-compatible beam_e2e_results.json output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceSummaryOut, "beam-service-summary-out", "", "Mnemosyne-compatible beam_e2e_summary.json output path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServicePairedOut, "beam-service-paired-out", "", "Mnemosyne-compatible paired_outcomes.jsonl append path for the service-backed BEAM-style oracle")
 	flag.StringVar(&cfg.BeamServiceConfigID, "beam-service-config-id", "", "config_id written to service-backed BEAM paired outcomes and summary metadata")
@@ -165,7 +167,7 @@ func run(ctx context.Context, cfg config) error {
 	if strings.TrimSpace(cfg.BeamConvertIn) != "" {
 		return convertBeamHuggingFaceJSONL(cfg.BeamConvertIn, cfg.BeamConvertOut, cfg.BeamConvertScale)
 	}
-	if strings.TrimSpace(cfg.BeamJSONLPath) != "" || strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" {
+	if strings.TrimSpace(cfg.BeamJSONLPath) != "" || strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceResultsOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" {
 		return runBeamServiceBenchmark(ctx, cfg)
 	}
 	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
