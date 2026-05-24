@@ -145,8 +145,8 @@ func main() {
 	flag.StringVar(&cfg.LocomoBackendComparisonFailures, "locomo-backend-comparison-failures-out", "", "JSONL failure output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoAgentMemoryResults, "locomo-agentmemory-results", "", "optional JSONL results from scripts/bench_agentmemory_locomo.py")
 	flag.StringVar(&cfg.LocomoMem0Results, "locomo-mem0-results", "", "optional JSONL results from scripts/bench_mem0_locomo.py")
-	flag.StringVar(&cfg.BeamConvertIn, "beam-convert-in", "", "HuggingFace BEAM JSONL export to convert into Goncho's BEAM service JSONL format")
-	flag.StringVar(&cfg.BeamConvertOut, "beam-convert-out", "", "output path for --beam-convert-in; use - for stdout")
+	flag.StringVar(&cfg.BeamConvertIn, "beam-convert-in", "", "HuggingFace BEAM JSONL export to convert into Goncho's BEAM service JSONL format or run directly with BEAM service artifact flags")
+	flag.StringVar(&cfg.BeamConvertOut, "beam-convert-out", "", "output path for convert-only --beam-convert-in; use - for stdout")
 	flag.StringVar(&cfg.BeamConvertScale, "beam-convert-scale", "", "fallback BEAM scale for converted records when the source record omits scale")
 	flag.StringVar(&cfg.BeamJSONLPath, "beam-jsonl", "", "BEAM-style JSONL dataset path for service-backed recall evaluation")
 	flag.StringVar(&cfg.BeamServiceOut, "beam-service-out", "", "JSON output path for Goncho's deterministic service-backed BEAM-style recall oracle")
@@ -165,9 +165,12 @@ func main() {
 
 func run(ctx context.Context, cfg config) error {
 	if strings.TrimSpace(cfg.BeamConvertIn) != "" {
+		if beamServiceArtifactRequested(cfg) {
+			return runBeamHuggingFaceServiceBenchmark(ctx, cfg)
+		}
 		return convertBeamHuggingFaceJSONL(cfg.BeamConvertIn, cfg.BeamConvertOut, cfg.BeamConvertScale)
 	}
-	if strings.TrimSpace(cfg.BeamJSONLPath) != "" || strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceResultsOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" {
+	if strings.TrimSpace(cfg.BeamJSONLPath) != "" || beamServiceArtifactRequested(cfg) {
 		return runBeamServiceBenchmark(ctx, cfg)
 	}
 	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
@@ -239,7 +242,38 @@ func run(ctx context.Context, cfg config) error {
 	return nil
 }
 
+func beamServiceArtifactRequested(cfg config) bool {
+	return strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceResultsOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != ""
+}
+
 func runBeamServiceBenchmark(ctx context.Context, cfg config) error {
+	cases := goncho.DefaultRecallBenchmarkServiceCases()
+	if datasetPath := strings.TrimSpace(cfg.BeamJSONLPath); datasetPath != "" {
+		loaded, err := loadBeamServiceJSONLCases(datasetPath)
+		if err != nil {
+			return err
+		}
+		cases = loaded
+	}
+	return runBeamServiceBenchmarkCases(ctx, cfg, cases)
+}
+
+func runBeamHuggingFaceServiceBenchmark(ctx context.Context, cfg config) error {
+	if strings.TrimSpace(cfg.BeamJSONLPath) != "" {
+		return fmt.Errorf("goncho-bench: --beam-convert-in direct service run cannot be combined with --beam-jsonl")
+	}
+	records, err := loadBeamHuggingFaceRecords(cfg.BeamConvertIn, cfg.BeamConvertScale)
+	if err != nil {
+		return err
+	}
+	cases, err := beamServiceCasesFromJSONLRecords(records)
+	if err != nil {
+		return err
+	}
+	return runBeamServiceBenchmarkCases(ctx, cfg, cases)
+}
+
+func runBeamServiceBenchmarkCases(ctx context.Context, cfg config, cases []goncho.RecallBenchmarkServiceCase) error {
 	runStartedAt := time.Now().UTC()
 	databasePath := strings.TrimSpace(cfg.DatabasePath)
 	if databasePath == "" {
@@ -258,14 +292,6 @@ func runBeamServiceBenchmark(ctx context.Context, cfg config) error {
 		return fmt.Errorf("goncho-bench: run BEAM service migrations: %w", err)
 	}
 	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-beam-service", ObserverPeerID: "goncho-bench", RecentMessages: 0}, nil)
-	cases := goncho.DefaultRecallBenchmarkServiceCases()
-	if datasetPath := strings.TrimSpace(cfg.BeamJSONLPath); datasetPath != "" {
-		loaded, err := loadBeamServiceJSONLCases(datasetPath)
-		if err != nil {
-			return err
-		}
-		cases = loaded
-	}
 	report, err := goncho.EvaluateServiceRecallBenchmark(ctx, svc, cases)
 	if err != nil {
 		return fmt.Errorf("goncho-bench: evaluate BEAM service oracle: %w", err)

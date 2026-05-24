@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: `goncho-bench --beam-convert-in` can now feed BEAM service artifacts directly.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetWritesServiceArtifactsDirectly -count=1` proves raw HuggingFace-style BEAM JSONL can be converted in memory, ingested through `Service.Conclude`, and emitted as Mnemosyne-compatible per-question results, summary, and paired outcomes without requiring a manual intermediate converted JSONL file.
+  - Result: Goncho now has a one-command raw BEAM sample path from exported dataset record to source-backed local recall artifacts, preserving stable IDs, conversation IDs, scales, ability labels, graph provenance, and no-answer-hint discipline.
+
 - 2026-05-24: `goncho-bench --beam-service-results-out` now emits Mnemosyne-compatible per-question BEAM result artifacts.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamJSONLDatasetWritesMnemosyneCompatibleResultsFile -count=1` proves a converted JSONL case writes `beam_e2e_results.json`-style metadata, grouped conversation results, original question text, pure-recall score, and recall-provenance voice summaries with graph evidence.
   - Result: Goncho now has the third Mnemosyne artifact alongside summary and paired outcomes, making source-backed per-question BEAM diagnostics possible without LLM answerers, judges, answer hints, or external services.

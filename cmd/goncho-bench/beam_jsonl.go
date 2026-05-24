@@ -52,9 +52,7 @@ func loadBeamServiceJSONLCases(path string) ([]goncho.RecallBenchmarkServiceCase
 	}
 	defer file.Close()
 
-	defaultScale := beamServiceScale
-	memoriesByConversation := map[string][]goncho.RecallBenchmarkServiceMemory{}
-	questions := []beamJSONLQuestion{}
+	records := []beamJSONLRecord{}
 	scanner := bufio.NewScanner(file)
 	lineNo := 0
 	for scanner.Scan() {
@@ -67,6 +65,20 @@ func loadBeamServiceJSONLCases(path string) ([]goncho.RecallBenchmarkServiceCase
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
 			return nil, fmt.Errorf("goncho-bench: decode BEAM JSONL line %d: %w", lineNo, err)
 		}
+		records = append(records, record)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("goncho-bench: read BEAM JSONL dataset: %w", err)
+	}
+	return beamServiceCasesFromJSONLRecords(records)
+}
+
+func beamServiceCasesFromJSONLRecords(records []beamJSONLRecord) ([]goncho.RecallBenchmarkServiceCase, error) {
+	defaultScale := beamServiceScale
+	memoriesByConversation := map[string][]goncho.RecallBenchmarkServiceMemory{}
+	questions := []beamJSONLQuestion{}
+	for i, record := range records {
+		lineNo := i + 1
 		switch strings.ToLower(strings.TrimSpace(record.Type)) {
 		case "meta":
 			if scale := strings.TrimSpace(record.Scale); scale != "" {
@@ -87,9 +99,6 @@ func loadBeamServiceJSONLCases(path string) ([]goncho.RecallBenchmarkServiceCase
 		default:
 			return nil, fmt.Errorf("goncho-bench: BEAM JSONL line %d has unknown type %q", lineNo, record.Type)
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("goncho-bench: read BEAM JSONL dataset: %w", err)
 	}
 	if len(questions) == 0 {
 		return nil, fmt.Errorf("goncho-bench: BEAM JSONL dataset has no question records")

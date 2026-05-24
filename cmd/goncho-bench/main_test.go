@@ -96,6 +96,101 @@ func TestConvertBeamHuggingFaceJSONLWritesStableIDDataset(t *testing.T) {
 	}
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetWritesServiceArtifactsDirectly(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam.jsonl")
+	rawRecord := `{"conversation_id":"conv-ledger","scale":"500K","chat":[[{"role":"user","content":"Project note: Billing API uses LedgerDB."},{"role":"assistant","content":"Project note: Owner of LedgerDB is Mira."}]],"probing_questions":"{'MR': [{'id': 'q-mr-ledger', 'question': 'Who is responsible for storage used by Billing API?', 'relevant_message_indices': [1], 'required_evidence_kinds': ['graph'], 'limit': 2}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
+	summaryPath := filepath.Join(dir, "beam_e2e_summary.json")
+	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
+	if err := run(context.Background(), config{
+		BeamConvertIn:         rawPath,
+		BeamServiceResultsOut: resultsPath,
+		BeamServiceSummaryOut: summaryPath,
+		BeamServicePairedOut:  pairedPath,
+		BeamServiceConfigID:   "test-beam-direct",
+		DatabasePath:          filepath.Join(dir, "beam-direct.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle directly: %v", err)
+	}
+
+	var results struct {
+		Metadata struct {
+			ConfigID           string   `json:"config_id"`
+			PureRecall         bool     `json:"pure_recall"`
+			Scales             []string `json:"scales"`
+			TotalConversations int      `json:"total_conversations"`
+		} `json:"metadata"`
+		Results []struct {
+			ConversationID string `json:"conversation_id"`
+			Scale          string `json:"scale"`
+			Results        []struct {
+				QID              string  `json:"qid"`
+				Ability          string  `json:"ability"`
+				Score            float64 `json:"score"`
+				RecallProvenance struct {
+					TopResultVoices map[string]float64 `json:"top_result_voices"`
+				} `json:"recall_provenance"`
+			} `json:"results"`
+		} `json:"results"`
+	}
+	rawResults, err := os.ReadFile(resultsPath)
+	if err != nil {
+		t.Fatalf("read direct results: %v", err)
+	}
+	if err := json.Unmarshal(rawResults, &results); err != nil {
+		t.Fatalf("decode direct results: %v", err)
+	}
+	if results.Metadata.ConfigID != "test-beam-direct" || !results.Metadata.PureRecall || !slices.Equal(results.Metadata.Scales, []string{"500K"}) || results.Metadata.TotalConversations != 1 {
+		t.Fatalf("direct results metadata = %+v, want raw BEAM pure-recall metadata", results.Metadata)
+	}
+	if len(results.Results) != 1 || results.Results[0].ConversationID != "conv-ledger" || results.Results[0].Scale != "500K" || len(results.Results[0].Results) != 1 {
+		t.Fatalf("direct conversation results = %+v, want one converted raw BEAM conversation", results.Results)
+	}
+	row := results.Results[0].Results[0]
+	if row.QID != "q-mr-ledger" || row.Ability != "MR" || row.Score != 1 || row.RecallProvenance.TopResultVoices["graph"] == 0 {
+		t.Fatalf("direct result row = %+v, want scored graph-provenance MR row", row)
+	}
+	var summary struct {
+		AbilitySummary map[string]map[string]struct {
+			AvgScore float64 `json:"avg_score"`
+			Count    int     `json:"count"`
+		} `json:"ability_summary"`
+	}
+	summaryRaw, err := os.ReadFile(summaryPath)
+	if err != nil {
+		t.Fatalf("read direct summary: %v", err)
+	}
+	if err := json.Unmarshal(summaryRaw, &summary); err != nil {
+		t.Fatalf("decode direct summary: %v", err)
+	}
+	if got := summary.AbilitySummary["500K"]["MR"]; got.Count != 1 || got.AvgScore != 1 {
+		t.Fatalf("direct summary MR = %+v, want one perfect raw BEAM case", got)
+	}
+	pairedRaw, err := os.ReadFile(pairedPath)
+	if err != nil {
+		t.Fatalf("read direct paired outcomes: %v", err)
+	}
+	var paired struct {
+		ConfigID       string  `json:"config_id"`
+		Scale          string  `json:"scale"`
+		ConversationID string  `json:"conversation_id"`
+		QID            string  `json:"qid"`
+		Ability        string  `json:"ability"`
+		Score          float64 `json:"score"`
+		Correct        bool    `json:"correct"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(pairedRaw))), &paired); err != nil {
+		t.Fatalf("decode direct paired outcome: %v", err)
+	}
+	if paired.ConfigID != "test-beam-direct" || paired.Scale != "500K" || paired.ConversationID != "conv-ledger" || paired.QID != "q-mr-ledger" || paired.Ability != "MR" || paired.Score != 1 || !paired.Correct {
+		t.Fatalf("direct paired row = %+v, want raw BEAM paired outcome", paired)
+	}
+}
+
 func TestRunBeamJSONLDatasetWritesMnemosyneCompatibleResultsFile(t *testing.T) {
 	dir := t.TempDir()
 	datasetPath := filepath.Join(dir, "beam.jsonl")
