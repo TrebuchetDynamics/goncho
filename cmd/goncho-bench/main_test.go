@@ -191,6 +191,57 @@ func TestRunBeamHuggingFaceJSONLDatasetWritesServiceArtifactsDirectly(t *testing
 	}
 }
 
+func TestRunBeamHuggingFaceJSONLDatasetReportsUnscorableQuestions(t *testing.T) {
+	dir := t.TempDir()
+	rawPath := filepath.Join(dir, "hf-beam-unscorable.jsonl")
+	rawRecord := `{"conversation_id":"conv-unscored","scale":"100K","chat":[{"role":"user","content":"Project note: Billing API uses LedgerDB."}],"probing_questions":"{'IE': [{'id': 'q-owner-missing-evidence', 'question': 'Who owns LedgerDB?'}]}"}` + "\n"
+	if err := os.WriteFile(rawPath, []byte(rawRecord), 0o644); err != nil {
+		t.Fatalf("write raw BEAM record: %v", err)
+	}
+	resultsPath := filepath.Join(dir, "beam_e2e_results.json")
+	if err := run(context.Background(), config{
+		BeamConvertIn:         rawPath,
+		BeamServiceResultsOut: resultsPath,
+		BeamServiceConfigID:   "test-beam-unscorable",
+		DatabasePath:          filepath.Join(dir, "beam-unscorable.db"),
+	}); err != nil {
+		t.Fatalf("run raw BEAM oracle with unscorable question: %v", err)
+	}
+
+	var results struct {
+		Metadata struct {
+			Diagnostics struct {
+				Conversion struct {
+					ConversationCount       int            `json:"conversation_count"`
+					QuestionCount           int            `json:"question_count"`
+					UnscorableQuestionCount int            `json:"unscorable_question_count"`
+					UnscorableByAbility     map[string]int `json:"unscorable_by_ability"`
+					Warnings                []struct {
+						Code           string `json:"code"`
+						ConversationID string `json:"conversation_id"`
+						QID            string `json:"qid"`
+						Ability        string `json:"ability"`
+					} `json:"warnings"`
+				} `json:"conversion"`
+			} `json:"diagnostics"`
+		} `json:"metadata"`
+	}
+	rawResults, err := os.ReadFile(resultsPath)
+	if err != nil {
+		t.Fatalf("read unscorable results: %v", err)
+	}
+	if err := json.Unmarshal(rawResults, &results); err != nil {
+		t.Fatalf("decode unscorable results: %v", err)
+	}
+	conversion := results.Metadata.Diagnostics.Conversion
+	if conversion.ConversationCount != 1 || conversion.QuestionCount != 1 || conversion.UnscorableQuestionCount != 1 || conversion.UnscorableByAbility["IE"] != 1 {
+		t.Fatalf("conversion diagnostics = %+v, want one unscorable IE question", conversion)
+	}
+	if len(conversion.Warnings) != 1 || conversion.Warnings[0].Code != "beam_question_missing_relevant_ids" || conversion.Warnings[0].ConversationID != "conv-unscored" || conversion.Warnings[0].QID != "q-owner-missing-evidence" || conversion.Warnings[0].Ability != "IE" {
+		t.Fatalf("conversion warnings = %+v, want missing relevant IDs warning for IE question", conversion.Warnings)
+	}
+}
+
 func TestRunBeamJSONLDatasetWritesMnemosyneCompatibleResultsFile(t *testing.T) {
 	dir := t.TempDir()
 	datasetPath := filepath.Join(dir, "beam.jsonl")

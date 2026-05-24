@@ -45,6 +45,26 @@ type beamConvertedQuestion struct {
 	MaxTokens             int      `json:"max_tokens"`
 }
 
+type beamConversionDiagnostics struct {
+	Source                        string                     `json:"source"`
+	ConversationCount             int                        `json:"conversation_count"`
+	MemoryCount                   int                        `json:"memory_count"`
+	QuestionCount                 int                        `json:"question_count"`
+	ExpectedNoAnswerQuestionCount int                        `json:"expected_no_answer_question_count"`
+	UnscorableQuestionCount       int                        `json:"unscorable_question_count"`
+	QuestionsByAbility            map[string]int             `json:"questions_by_ability,omitempty"`
+	UnscorableByAbility           map[string]int             `json:"unscorable_by_ability,omitempty"`
+	Warnings                      []beamConversionDiagnostic `json:"warnings,omitempty"`
+}
+
+type beamConversionDiagnostic struct {
+	Code           string `json:"code"`
+	ConversationID string `json:"conversation_id,omitempty"`
+	QID            string `json:"qid,omitempty"`
+	Ability        string `json:"ability,omitempty"`
+	Message        string `json:"message,omitempty"`
+}
+
 func convertBeamHuggingFaceJSONL(inputPath, outputPath, fallbackScale string) error {
 	inputPath = strings.TrimSpace(inputPath)
 	if inputPath == "" {
@@ -62,9 +82,14 @@ func convertBeamHuggingFaceJSONL(inputPath, outputPath, fallbackScale string) er
 }
 
 func loadBeamHuggingFaceRecords(path, fallbackScale string) ([]beamJSONLRecord, error) {
+	records, _, err := loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale)
+	return records, err
+}
+
+func loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale string) ([]beamJSONLRecord, beamConversionDiagnostics, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("goncho-bench: open HuggingFace BEAM JSONL: %w", err)
+		return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: open HuggingFace BEAM JSONL: %w", err)
 	}
 	defer file.Close()
 
@@ -84,21 +109,21 @@ func loadBeamHuggingFaceRecords(path, fallbackScale string) ([]beamJSONLRecord, 
 		}
 		var record beamHuggingFaceRecord
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
-			return nil, fmt.Errorf("goncho-bench: decode HuggingFace BEAM line %d: %w", lineNo, err)
+			return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: decode HuggingFace BEAM line %d: %w", lineNo, err)
 		}
 		converted, err := convertBeamHuggingFaceRecord(record, lineNo, fallbackScale)
 		if err != nil {
-			return nil, err
+			return nil, beamConversionDiagnostics{}, err
 		}
 		out = append(out, converted...)
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("goncho-bench: read HuggingFace BEAM JSONL: %w", err)
+		return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: read HuggingFace BEAM JSONL: %w", err)
 	}
 	if len(out) == 1 {
-		return nil, fmt.Errorf("goncho-bench: HuggingFace BEAM JSONL has no conversation records")
+		return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: HuggingFace BEAM JSONL has no conversation records")
 	}
-	return out, nil
+	return out, summarizeBeamConversionRecords(out), nil
 }
 
 func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fallbackScale string) ([]beamJSONLRecord, error) {
@@ -336,6 +361,50 @@ func encodeBeamJSONL(file *os.File, records []beamJSONLRecord) error {
 		}
 	}
 	return nil
+}
+
+func summarizeBeamConversionRecords(records []beamJSONLRecord) beamConversionDiagnostics {
+	diagnostics := beamConversionDiagnostics{
+		Source:              "huggingface-beam-jsonl",
+		QuestionsByAbility:  map[string]int{},
+		UnscorableByAbility: map[string]int{},
+		Warnings:            []beamConversionDiagnostic{},
+	}
+	conversations := map[string]struct{}{}
+	for _, record := range records {
+		switch strings.ToLower(strings.TrimSpace(record.Type)) {
+		case "memory":
+			diagnostics.MemoryCount++
+			conversationID := normalizeBeamJSONLConversationID(record.ConversationID)
+			conversations[conversationID] = struct{}{}
+		case "question":
+			diagnostics.QuestionCount++
+			conversationID := normalizeBeamJSONLConversationID(record.ConversationID)
+			conversations[conversationID] = struct{}{}
+			ability := strings.ToUpper(strings.TrimSpace(record.Ability))
+			if ability == "" {
+				ability = "UNKNOWN"
+			}
+			diagnostics.QuestionsByAbility[ability]++
+			if record.ExpectedNoAnswer {
+				diagnostics.ExpectedNoAnswerQuestionCount++
+				continue
+			}
+			if len(record.RelevantIDs) == 0 && len(record.ContextContains) == 0 {
+				diagnostics.UnscorableQuestionCount++
+				diagnostics.UnscorableByAbility[ability]++
+				diagnostics.Warnings = append(diagnostics.Warnings, beamConversionDiagnostic{
+					Code:           "beam_question_missing_relevant_ids",
+					ConversationID: conversationID,
+					QID:            strings.TrimSpace(record.ID),
+					Ability:        ability,
+					Message:        "question has no stable relevant_ids/context_contains, so stable-ID pure recall scoring treats it as unscorable",
+				})
+			}
+		}
+	}
+	diagnostics.ConversationCount = len(conversations)
+	return diagnostics
 }
 
 func beamQuestionCount(questionsByAbility map[string][]beamConvertedQuestion) int {

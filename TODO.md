@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: raw BEAM service artifacts now report conversion diagnostics for unscorable questions.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsUnscorableQuestions -count=1` proves `beam_e2e_results.json.metadata.diagnostics.conversion` names conversation/question counts and warns when a raw HuggingFace-style BEAM question lacks stable `relevant_ids` or `context_contains` for pure-recall scoring.
+  - Result: Goncho now distinguishes recall failures from dataset-conversion evidence gaps when running raw BEAM samples, preserving no-answer-hint discipline while making real-BEAM readiness auditable.
+
 - 2026-05-24: `goncho-bench --beam-convert-in` can now feed BEAM service artifacts directly.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetWritesServiceArtifactsDirectly -count=1` proves raw HuggingFace-style BEAM JSONL can be converted in memory, ingested through `Service.Conclude`, and emitted as Mnemosyne-compatible per-question results, summary, and paired outcomes without requiring a manual intermediate converted JSONL file.
   - Result: Goncho now has a one-command raw BEAM sample path from exported dataset record to source-backed local recall artifacts, preserving stable IDs, conversation IDs, scales, ability labels, graph provenance, and no-answer-hint discipline.

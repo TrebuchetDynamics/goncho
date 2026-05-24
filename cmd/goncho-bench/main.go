@@ -53,6 +53,7 @@ type config struct {
 	BeamServiceSummaryOut           string
 	BeamServicePairedOut            string
 	BeamServiceConfigID             string
+	BeamConversionDiagnostics       *beamConversionDiagnostics
 }
 
 type dataset struct {
@@ -262,10 +263,11 @@ func runBeamHuggingFaceServiceBenchmark(ctx context.Context, cfg config) error {
 	if strings.TrimSpace(cfg.BeamJSONLPath) != "" {
 		return fmt.Errorf("goncho-bench: --beam-convert-in direct service run cannot be combined with --beam-jsonl")
 	}
-	records, err := loadBeamHuggingFaceRecords(cfg.BeamConvertIn, cfg.BeamConvertScale)
+	records, diagnostics, err := loadBeamHuggingFaceRecordsWithDiagnostics(cfg.BeamConvertIn, cfg.BeamConvertScale)
 	if err != nil {
 		return err
 	}
+	cfg.BeamConversionDiagnostics = &diagnostics
 	cases, err := beamServiceCasesFromJSONLRecords(records)
 	if err != nil {
 		return err
