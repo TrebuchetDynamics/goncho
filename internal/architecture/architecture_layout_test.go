@@ -70,6 +70,62 @@ func TestArchitectureLayoutScopedKeyTestsLiveWithModule(t *testing.T) {
 	}
 }
 
+func TestArchitectureLayoutDynamicAgentRegistryImplementationLivesBehindInternalModule(t *testing.T) {
+	root := repoRoot(t)
+
+	implPath := filepath.Join(root, "internal", "dynamicagents", "registry.go")
+	if _, err := os.Stat(implPath); err != nil {
+		t.Fatalf("dynamic agent registry implementation must live at %s: %v", implPath, err)
+	}
+
+	facadePath := filepath.Join(root, "dynamic_agents.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), facadePath, nil, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", facadePath, err)
+	}
+	forbiddenImplementationImports := map[string]struct{}{
+		"context": {},
+		"errors":  {},
+		"fmt":     {},
+		"regexp":  {},
+		"strings": {},
+		"time":    {},
+	}
+	for _, imp := range parsed.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			t.Fatalf("Unquote(%s): %v", imp.Path.Value, err)
+		}
+		if _, forbidden := forbiddenImplementationImports[path]; forbidden {
+			t.Fatalf("dynamic_agents.go imports implementation package %q; keep root dynamic_agents.go as a public facade and put implementation behind internal/dynamicagents", path)
+		}
+	}
+}
+
+func TestArchitectureLayoutDynamicAgentRegistryTestsLiveWithModule(t *testing.T) {
+	root := repoRoot(t)
+
+	moduleTestPath := filepath.Join(root, "internal", "dynamicagents", "registry_test.go")
+	if _, err := os.Stat(moduleTestPath); err != nil {
+		t.Fatalf("dynamic agent registry behavior tests must live at %s: %v", moduleTestPath, err)
+	}
+
+	rootTestPath := filepath.Join(root, "dynamic_agents_test.go")
+	parsed, err := parser.ParseFile(token.NewFileSet(), rootTestPath, nil, 0)
+	if err != nil {
+		t.Fatalf("ParseFile(%s): %v", rootTestPath, err)
+	}
+	for _, decl := range parsed.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || !strings.HasPrefix(fn.Name.Name, "Test") {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "TestDynamicAgentRegistryPublicFacade") {
+			t.Fatalf("%s keeps %s in the root package; move pure dynamic agent registry behavior tests to internal/dynamicagents", rootTestPath, fn.Name.Name)
+		}
+	}
+}
+
 func TestArchitectureLayoutPluginRuntimeImplementationLivesBehindInternalModule(t *testing.T) {
 	root := repoRoot(t)
 
