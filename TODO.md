@@ -2,6 +2,10 @@
 
 ## Release state
 
+- 2026-05-24: BEAM paired comparison now fails closed on ambiguous question fallback.
+  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonRejectsAmbiguousQuestionFallback -count=1` proves duplicated conversation/scale/ability/question fallback keys reject comparison instead of silently pairing the first candidate row.
+  - Result: BEAM superiority reports cannot be produced from ambiguous Mnemosyne/Goncho qid-mismatch rows; exact-qid matches remain preferred, and exact-question fallback stays available only when unique.
+
 - 2026-05-24: BEAM paired rows now retain nested result source checksums.
   - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion -count=1` proves `--beam-paired-results-in` writes `source_path` and `source_sha256` on imported paired rows and carries them into comparison rows as baseline/candidate source provenance.
   - Result: paired BEAM superiority reports can audit exactly which Mnemosyne `beam_e2e_results.json` artifact produced imported baseline rows, satisfying checksum controls without changing scores or matching.

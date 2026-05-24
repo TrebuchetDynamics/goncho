@@ -108,6 +108,29 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 	}
 }
 
+func TestRunBeamPairedComparisonRejectsAmbiguousQuestionFallback(t *testing.T) {
+	dir := t.TempDir()
+	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
+	pairedRows := strings.Join([]string{
+		`{"config_id":"mnemosyne-v3","run_started_at":"2026-05-24T00:00:00Z","scale":"100K","conversation_id":"conv-ambiguous","qid":"conv-ambiguous:q0","ability":"IE","question":"Who owns LedgerDB?","score":0.25,"correct":false}`,
+		`{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-ambiguous","qid":"q-source-a","ability":"IE","question":"Who owns LedgerDB?","score":1,"correct":true}`,
+		`{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-ambiguous","qid":"q-source-b","ability":"IE","question":"Who owns LedgerDB?","score":0,"correct":false}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(pairedPath, []byte(pairedRows), 0o644); err != nil {
+		t.Fatalf("write ambiguous paired outcomes: %v", err)
+	}
+	err := run(context.Background(), config{
+		BeamPairedComparePath:             pairedPath,
+		BeamPairedBaselineConfigID:        "mnemosyne-v3",
+		BeamPairedCandidateConfigID:       "goncho-current",
+		BeamPairedCompareJSONOut:          filepath.Join(dir, "beam-paired-ambiguous.json"),
+		BeamPairedCompareBootstrapSamples: 200,
+	})
+	if err == nil || !strings.Contains(err.Error(), "ambiguous BEAM paired question-key fallback") {
+		t.Fatalf("ambiguous question fallback error = %v, want fail-closed pairing diagnostic", err)
+	}
+}
+
 func TestRunBeamPairedComparisonReportsSuperiorityVerdict(t *testing.T) {
 	dir := t.TempDir()
 	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")

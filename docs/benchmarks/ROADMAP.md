@@ -241,6 +241,8 @@ BEAM result-to-paired import delivered: `--beam-paired-results-in` converts nest
 
 BEAM paired-source provenance delivered: imported paired rows carry `source_path` and `source_sha256`, and comparison rows expose baseline/candidate source fields so superiority reports remain traceable to the exact nested result artifact.
 
+BEAM ambiguous-pairing guard delivered: exact-qid matches remain preferred, but exact-question fallback now fails closed when either side has duplicate conversation/scale/ability/question keys, preventing false superiority reports from arbitrary Mnemosyne/Goncho qid-mismatch pairings.
+
 ## Framing
 
 The public framing should remain:

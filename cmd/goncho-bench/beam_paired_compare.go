@@ -134,7 +134,10 @@ func buildBeamPairedComparison(cfg config) (beamPairedComparisonReport, error) {
 			candidateRows = append(candidateRows, row)
 		}
 	}
-	matchedRows, dropped := matchBeamPairedOutcomes(baselineRows, candidateRows)
+	matchedRows, dropped, err := matchBeamPairedOutcomes(baselineRows, candidateRows)
+	if err != nil {
+		return beamPairedComparisonReport{}, err
+	}
 	if len(matchedRows) == 0 {
 		return beamPairedComparisonReport{}, fmt.Errorf("goncho-bench: no paired BEAM outcomes for config_id %q vs %q", baselineID, candidateID)
 	}
@@ -248,11 +251,12 @@ func beamPairedOutcomeQuestionKey(row beamServicePairedOutcome) beamPairedCompar
 	}
 }
 
-func matchBeamPairedOutcomes(baselineRows, candidateRows []beamServicePairedOutcome) ([]beamPairedMatchedOutcome, int) {
+func matchBeamPairedOutcomes(baselineRows, candidateRows []beamServicePairedOutcome) ([]beamPairedMatchedOutcome, int, error) {
 	sort.Slice(baselineRows, func(i, j int) bool { return beamServicePairedOutcomeLess(baselineRows[i], baselineRows[j]) })
 	sort.Slice(candidateRows, func(i, j int) bool { return beamServicePairedOutcomeLess(candidateRows[i], candidateRows[j]) })
 	candidateByQID := map[beamPairedComparisonKey]int{}
 	candidateByQuestion := map[beamPairedComparisonQuestionKey]int{}
+	candidateQuestionCounts := map[beamPairedComparisonQuestionKey]int{}
 	for i, row := range candidateRows {
 		if key := beamPairedOutcomeKey(row); key.qid != "" {
 			if _, ok := candidateByQID[key]; !ok {
@@ -260,9 +264,16 @@ func matchBeamPairedOutcomes(baselineRows, candidateRows []beamServicePairedOutc
 			}
 		}
 		if key := beamPairedOutcomeQuestionKey(row); key.question != "" {
+			candidateQuestionCounts[key]++
 			if _, ok := candidateByQuestion[key]; !ok {
 				candidateByQuestion[key] = i
 			}
+		}
+	}
+	baselineQuestionCounts := map[beamPairedComparisonQuestionKey]int{}
+	for _, row := range baselineRows {
+		if key := beamPairedOutcomeQuestionKey(row); key.question != "" {
+			baselineQuestionCounts[key]++
 		}
 	}
 	usedCandidates := map[int]struct{}{}
@@ -277,6 +288,11 @@ func matchBeamPairedOutcomes(baselineRows, candidateRows []beamServicePairedOutc
 			}
 		}
 		if questionKey := beamPairedOutcomeQuestionKey(base); questionKey.question != "" {
+			candidateCount := candidateQuestionCounts[questionKey]
+			baselineCount := baselineQuestionCounts[questionKey]
+			if candidateCount > 0 && (baselineCount > 1 || candidateCount > 1) {
+				return nil, 0, fmt.Errorf("goncho-bench: ambiguous BEAM paired question-key fallback for scale=%q conversation_id=%q ability=%q question=%q (baseline_rows=%d candidate_rows=%d)", questionKey.scale, questionKey.conversationID, questionKey.ability, questionKey.question, baselineCount, candidateCount)
+			}
 			if idx, ok := candidateByQuestion[questionKey]; ok {
 				if _, used := usedCandidates[idx]; !used {
 					usedCandidates[idx] = struct{}{}
@@ -288,7 +304,7 @@ func matchBeamPairedOutcomes(baselineRows, candidateRows []beamServicePairedOutc
 		dropped++
 	}
 	dropped += len(candidateRows) - len(usedCandidates)
-	return matched, dropped
+	return matched, dropped, nil
 }
 
 func beamServicePairedOutcomeLess(a, b beamServicePairedOutcome) bool {
