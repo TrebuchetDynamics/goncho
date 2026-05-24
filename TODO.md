@@ -2,6 +2,14 @@
 
 ## Release state
 
+- 2026-05-23: Mnemosyne MEMORIA instruction extraction now feeds Goncho search through durable annotations.
+  - Evidence target: `go test . -run TestServiceConcludeInstructionAnnotationRanksDurableInstruction -count=1` proves `Service.Conclude` derives a conservative instruction fact from prose (`Mira's instruction is never delete logs`) and `Service.Search` ranks that durable instruction above a question-shaped lexical echo.
+  - Result: the append-only fact annotation lane now covers MEMORIA-style instructions without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
+
+- 2026-05-23: Mnemosyne MEMORIA location extraction now feeds Goncho search through durable annotations.
+  - Evidence target: `go test . -run TestServiceConcludeLocationAnnotationRanksDurableLocation -count=1` proves `Service.Conclude` derives a conservative location fact from prose (`the escalation runbook location is Notion page RB-17`) and `Service.Search` ranks that durable location above a question-shaped lexical echo.
+  - Result: the append-only fact annotation lane now covers owner, preference, and location MEMORIA categories without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
+
 - 2026-05-23: Mnemosyne MEMORIA preference extraction now feeds Goncho search through durable annotations.
   - Evidence target: `go test . -run TestServiceConcludePreferenceAnnotationRanksDurablePreference -count=1` proves `Service.Conclude` derives a conservative preference fact from prose (`Mira's indentation preference is tabs`) and `Service.Search` ranks that durable preference above a question-shaped lexical echo.
   - Result: the append-only fact annotation lane now covers a second MEMORIA category (`preferences`) without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.

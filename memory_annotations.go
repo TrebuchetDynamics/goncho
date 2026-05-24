@@ -18,7 +18,7 @@ func conclusionFactAnnotations(content string) []string {
 	seen := map[string]struct{}{}
 	facts := []string{}
 	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
-		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation} {
+		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation} {
 			fact, ok := extractor(sentence)
 			if !ok {
 				continue
@@ -98,6 +98,58 @@ func conclusionPreferenceFactAnnotation(sentence string) (string, bool) {
 	return preferenceFactAnnotation(subject, value, attribute)
 }
 
+func conclusionLocationFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	lower := strings.ToLower(sentence)
+	for _, marker := range []string{" location is ", " location: "} {
+		idx := strings.Index(lower, marker)
+		if idx <= 0 {
+			continue
+		}
+		object := cleanFactObject(sentence[:idx])
+		location := cleanFactValue(sentence[idx+len(marker):])
+		return locationFactAnnotation(object, location)
+	}
+	for _, marker := range []string{" is located at ", " is located in ", " is in ", " lives in "} {
+		idx := strings.Index(lower, marker)
+		if idx <= 0 {
+			continue
+		}
+		object := cleanFactObject(sentence[:idx])
+		location := cleanFactValue(sentence[idx+len(marker):])
+		return locationFactAnnotation(object, location)
+	}
+	return "", false
+}
+
+func conclusionInstructionFactAnnotation(sentence string) (string, bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	if sentence == "" || strings.Contains(sentence, "?") {
+		return "", false
+	}
+	lower := strings.ToLower(sentence)
+	possessive := "'s "
+	idx := strings.Index(lower, possessive)
+	if idx < 0 {
+		return "", false
+	}
+	subject := cleanFactObject(sentence[:idx])
+	rest := sentence[idx+len(possessive):]
+	restLower := strings.ToLower(rest)
+	for _, marker := range []string{"instruction is ", "rule is ", " instruction is ", " rule is "} {
+		instructionIdx := strings.Index(restLower, marker)
+		if instructionIdx < 0 {
+			continue
+		}
+		instruction := cleanFactValue(rest[instructionIdx+len(marker):])
+		return instructionFactAnnotation(subject, instruction)
+	}
+	return "", false
+}
+
 func cleanFactObject(value string) string {
 	value = strings.TrimSpace(value)
 	if idx := strings.LastIndexAny(value, ":;"); idx >= 0 {
@@ -143,6 +195,24 @@ func preferenceFactAnnotation(subject, value, attribute string) (string, bool) {
 		return "", false
 	}
 	return fmt.Sprintf("%s prefers %s for %s", subject, value, attribute), true
+}
+
+func locationFactAnnotation(object, location string) (string, bool) {
+	object = cleanFactObject(object)
+	location = cleanFactValue(location)
+	if !searchFactObjectLooksAssertive(object) || !searchFactObjectLooksAssertive(location) {
+		return "", false
+	}
+	return fmt.Sprintf("%s is located at %s", object, location), true
+}
+
+func instructionFactAnnotation(subject, instruction string) (string, bool) {
+	subject = cleanFactValue(subject)
+	instruction = cleanFactValue(instruction)
+	if !searchFactSubjectLooksAssertive(subject) || !searchFactObjectLooksAssertive(instruction) {
+		return "", false
+	}
+	return fmt.Sprintf("%s instructed %s", subject, instruction), true
 }
 
 func storeConclusionFactAnnotations(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, conclusionID int64, facts []string) error {

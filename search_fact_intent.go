@@ -19,6 +19,12 @@ func searchFactIntentScore(query, content string) float64 {
 	if score := searchPreferenceFactIntentScore(query, content); score > 0 {
 		return score
 	}
+	if score := searchLocationFactIntentScore(query, content); score > 0 {
+		return score
+	}
+	if score := searchInstructionFactIntentScore(query, content); score > 0 {
+		return score
+	}
 	return 0
 }
 
@@ -90,6 +96,131 @@ func searchPreferenceFactIntentScore(query, content string) float64 {
 		}
 	}
 	return 0
+}
+
+func searchLocationFactIntentScore(query, content string) float64 {
+	queryObject, ok := searchLocationQuestionObject(query)
+	if !ok {
+		return 0
+	}
+	queryTokens := searchRankTokenSet(queryObject)
+	if len(queryTokens) == 0 {
+		return 0
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		object, location, ok := searchLocationAnswerParts(sentence)
+		if !ok || !searchFactObjectLooksAssertive(location) {
+			continue
+		}
+		if searchRankTokenCoverage(queryTokens, object) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func searchLocationQuestionObject(query string) (string, bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	lower := strings.ToLower(query)
+	for _, prefix := range []string{"where is ", "where are ", "where's "} {
+		if strings.HasPrefix(lower, prefix) {
+			object := cleanFactObject(query[len(prefix):])
+			return object, object != ""
+		}
+	}
+	return "", false
+}
+
+func searchLocationAnswerParts(sentence string) (object, location string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	lower := strings.ToLower(sentence)
+	for _, marker := range []string{" is located at ", " is located in ", " is in ", " lives in "} {
+		idx := strings.Index(lower, marker)
+		if idx <= 0 {
+			continue
+		}
+		object = cleanFactObject(sentence[:idx])
+		location = cleanFactValue(sentence[idx+len(marker):])
+		return object, location, searchFactObjectLooksAssertive(object) && location != ""
+	}
+	return "", "", false
+}
+
+func searchInstructionFactIntentScore(query, content string) float64 {
+	querySubject, queryTopic, ok := searchInstructionQuestion(query)
+	if !ok {
+		return 0
+	}
+	subjectTokens := searchRankTokenSet(querySubject)
+	topicTokens := searchRankTokenSet(queryTopic)
+	if len(subjectTokens) == 0 || len(topicTokens) == 0 {
+		return 0
+	}
+	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		subject, instruction, ok := searchInstructionAnswerParts(sentence)
+		if !ok {
+			continue
+		}
+		if searchRankTokenCoverage(subjectTokens, subject) < 0.80 {
+			continue
+		}
+		if searchRankTokenCoverage(topicTokens, instruction) >= 0.80 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func searchInstructionQuestion(query string) (subject, topic string, ok bool) {
+	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	lower := strings.ToLower(query)
+	for _, prefix := range []string{"what instruction did ", "what rule did "} {
+		if !strings.HasPrefix(lower, prefix) {
+			continue
+		}
+		rest := query[len(prefix):]
+		restLower := strings.ToLower(rest)
+		giveIdx := strings.Index(restLower, " give")
+		if giveIdx <= 0 {
+			return "", "", false
+		}
+		subject = cleanFactValue(rest[:giveIdx])
+		afterGive := strings.TrimSpace(rest[giveIdx+len(" give"):])
+		afterLower := strings.ToLower(afterGive)
+		aboutIdx := strings.LastIndex(afterLower, " about ")
+		if aboutIdx >= 0 {
+			topic = cleanFactObject(afterGive[aboutIdx+len(" about "):])
+			return subject, topic, subject != "" && topic != ""
+		}
+		if strings.HasPrefix(afterLower, "about ") {
+			topic = cleanFactObject(afterGive[len("about "):])
+			return subject, topic, subject != "" && topic != ""
+		}
+		return "", "", false
+		return subject, topic, subject != "" && topic != ""
+	}
+	return "", "", false
+}
+
+func searchInstructionAnswerParts(sentence string) (subject, instruction string, ok bool) {
+	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	lower := strings.ToLower(sentence)
+	idx := strings.Index(lower, " instructed ")
+	if idx <= 0 {
+		return "", "", false
+	}
+	subject = cleanFactValue(sentence[:idx])
+	instruction = cleanFactValue(sentence[idx+len(" instructed "):])
+	if !searchFactSubjectLooksAssertive(subject) || !searchFactObjectLooksAssertive(instruction) {
+		return "", "", false
+	}
+	return subject, instruction, true
 }
 
 func searchOwnerQuestionObject(query string) (string, bool) {
