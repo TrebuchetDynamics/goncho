@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## v0.3.0 - 2026-05-25
+
+### Added
+
+- Added the `goncho-server` runtime with local service smoke coverage, HTTP lifecycle wiring, and host hook capture schemas.
+- Added server/team mode safety primitives including auth requirements, action leases, read receipts, team-feed ACL audit, Docker Compose smoke coverage, deployment guidance, and threat-model documentation.
+- Added local-first memory platform APIs for eval feedback, recall feedback, retention previews, portable export/import, vector-store fusion, provider resilience, memory extraction proposals, and memory facade compatibility.
+- Added operator and connector surfaces including `doctor`, `version`, `upgrade-check`, `schema-fingerprint`, connector plans, Go/Python examples, security documentation, and public release checklist guidance.
+- Added filesystem watcher preview/import primitives plus `goncho connect filesystem-watcher --plan` for explicit include/exclude observation imports.
+- Added local agent skills for Goncho release operations and refreshed Goncho implementation/planning skills with compact contracts and verification gates.
+
+### Changed
+
+- Refreshed the README first-touch experience around trust-preserving context architecture, evidence-backed memory, local-first positioning, and benchmark reproducibility.
+- Refreshed the memory product roadmap around delivered server, connector, local platform, and release-readiness slices.
+- Updated public `@latest` release metadata docs and smoke guards for v0.3.0.
+
 ## v0.2.0 - 2026-05-25
 
 ### Changed

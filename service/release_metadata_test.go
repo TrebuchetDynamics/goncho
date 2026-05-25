@@ -1328,8 +1328,8 @@ func TestPublicDocsMentionLatestReleaseVersion(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ReadFile %s: %v", path, err)
 			}
-			if !strings.Contains(string(raw), "v0.2.0") {
-				t.Fatalf("%s does not mention current public release v0.2.0", path)
+			if !strings.Contains(string(raw), "v0.3.0") {
+				t.Fatalf("%s does not mention current public release v0.3.0", path)
 			}
 		})
 	}
@@ -1517,7 +1517,7 @@ func TestReadmeSurfacesGoDevSignalMap(t *testing.T) {
 		"### go.dev Signal Map",
 		"Valid go.mod file",
 		"Redistributable license",
-		"v0.2.0 / Latest",
+		"v0.3.0 / Latest",
 		"published May 25, 2026",
 		"make package-doc-smoke",
 		"make public-module-smoke",
@@ -1538,7 +1538,7 @@ func TestReadmeSurfacesVersioningAndAdoptionNotes(t *testing.T) {
 	for _, want := range []string{
 		"### Versioning and Adoption Notes",
 		"pre-1.0 stability",
-		"go get github.com/TrebuchetDynamics/goncho/service@v0.2.0",
+		"go get github.com/TrebuchetDynamics/goncho/service@v0.3.0",
 		"do not treat `@latest` as a deployment lock",
 		"Imported by 0",
 		"reverse-dependency count is not a correctness gate",
@@ -1854,7 +1854,7 @@ func TestPublicReleaseSmokeChecksDocumentedLatestMetadata(t *testing.T) {
 	}
 	text := string(raw)
 	for _, want := range []string{
-		"PUBLIC_LATEST_VERSION := v0.2.0",
+		"PUBLIC_LATEST_VERSION := v0.3.0",
 		"PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-25",
 		`"Version": "$(PUBLIC_LATEST_VERSION)"`,
 		`"Time": "$(PUBLIC_LATEST_PUBLISHED_DATE)`,
@@ -2052,7 +2052,7 @@ func TestPackageDocSurfacesGoDevPackageSignals(t *testing.T) {
 	text := strings.Join(strings.Fields(string(out)), " ")
 	for _, want := range []string{
 		"go.dev package signals",
-		"v0.2.0",
+		"v0.3.0",
 		"valid go.mod",
 		"redistributable MIT license",
 		"make package-doc-smoke",
@@ -2073,7 +2073,7 @@ func TestPackageDocSurfacesVersioningAndAdoptionNotes(t *testing.T) {
 	for _, want := range []string{
 		"Versioning and adoption notes",
 		"pre-1.0",
-		"go get github.com/TrebuchetDynamics/goncho/service@v0.2.0",
+		"go get github.com/TrebuchetDynamics/goncho/service@v0.3.0",
 		"@latest is a discovery shortcut, not a deployment lock",
 		"Stable version",
 		"Imported by 0",

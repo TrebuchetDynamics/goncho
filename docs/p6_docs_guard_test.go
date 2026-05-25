@@ -25,7 +25,7 @@ func TestReleaseChecklistDocumentsSmokeAndPublicVerification(t *testing.T) {
 		t.Fatalf("read release-checklist.md: %v", err)
 	}
 	doc := string(raw)
-	for _, want := range []string{"make release-smoke", "make stable-e2e-bench-smoke", "make public-module-smoke", "GitHub release", "pkg.go.dev", "v0.2.0"} {
+	for _, want := range []string{"make release-smoke", "make stable-e2e-bench-smoke", "make public-module-smoke", "GitHub release", "pkg.go.dev", "v0.3.0"} {
 		if !strings.Contains(doc, want) {
 			t.Fatalf("release checklist missing %q", want)
 		}

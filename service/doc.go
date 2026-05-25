@@ -130,14 +130,14 @@
 // traces.
 //
 // go.dev package signals to check before adopting: the public module is
-// currently v0.2.0, has a valid go.mod, a redistributable MIT license, and
+// currently v0.3.0, has a valid go.mod, a redistributable MIT license, and
 // package documentation. Use make package-doc-smoke for this overview and its
 // examples, make public-module-smoke for external imports, and make
 // install-smoke for the cmd/goncho-bench command path.
 //
 // Versioning and adoption notes: Goncho is pre-1.0, so read the go.dev Stable
 // version signal as not yet v1-stable. For reproducible builds, pin with
-// go get github.com/TrebuchetDynamics/goncho/service@v0.2.0 or a reviewed commit;
+// go get github.com/TrebuchetDynamics/goncho/service@v0.3.0 or a reviewed commit;
 // @latest is a discovery shortcut, not a deployment lock. pkg.go.dev currently
 // shows Imported by 0, but that reverse-dependency count is adoption context,
 // not a correctness gate. Before upgrading a pinned host, run make

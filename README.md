@@ -1,23 +1,197 @@
 # Goncho
 
-**High-trust local memory for Go-native AI agent runtimes.**
+<p align="center">
+  <strong>Context architecture for long-horizon AI agents.</strong><br/>
+  Persistent, temporal, evidence-backed memory without stuffing endless context into prompts.
+</p>
 
-Goncho is the memory kernel for agent hosts that need durable local state, auditability, scoped recall, review warnings, and live-verification discipline without a Python service, Docker sidecar, hosted memory API, vector database wrapper, or giant tool catalog.
+<p align="center">
+  <a href="https://pkg.go.dev/github.com/TrebuchetDynamics/goncho/service"><img src="https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho/service.svg" alt="Go Reference" /></a>
+  <a href="https://github.com/TrebuchetDynamics/goncho/releases/tag/v0.3.0"><img src="https://img.shields.io/badge/release-v0.3.0-blue" alt="Release v0.3.0" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+</p>
 
-It is designed for the Trebuchet local-first agent stack:
+<p align="center">
+  <a href="#why">Why</a> &bull;
+  <a href="#architecture">Architecture</a> &bull;
+  <a href="#core-concepts">Concepts</a> &bull;
+  <a href="#retrieval-benchmarks">Benchmarks</a> &bull;
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#core-api">API</a>
+</p>
 
-- **Gormes** — a Go-native AI agent runtime for Linux, Windows, macOS, and Termux on Android. One binary runs providers, tools, skills, sessions, local memory, chat, and gateways with no Python or Docker required.
-- **Navivox** — an Android app in development that turns a phone into an AI agent server with local memory, chat, and gateways.
-- **Goncho** — the high-trust memory layer underneath: evidence, claims, scoped temporal beliefs, context packs, review queues, and live verification.
+---
 
-Goncho's rule is simple:
+Goncho gives agents **trust-preserving context architecture**: active memory, retrieval provenance, temporal validity, negative memory, scoped beliefs, and local-first storage for Go-native runtimes.
+
+> Goncho does not treat memory as a vector database problem.
+> It treats memory as a claims-and-evidence system.
+
+## Why
+
+Most AI memory systems fail in the same way: they retrieve old text as if it were current truth.
+
+They often:
+
+- dump raw history into prompts;
+- retrieve stale information without temporal validity;
+- lose provenance between a claim and the evidence behind it;
+- repeat failed approaches because dead ends are not first-class memory;
+- cannot distinguish “was true then” from “is safe to act on now.”
+
+Goncho solves this with scoped memory, evidence-backed claims, hybrid retrieval, temporal metadata, active memory consolidation, negative memory, and trust-aware context generation.
+
+The goal is not “the agent remembers everything.”
+
+The goal is:
 
 ```text
-evidence before belief
-live verification before action
+the agent remembers correctly
 ```
 
-If memory says a file exists, verify it. If memory says a migration was approved, verify it. If memory says an API path still exists, verify it. Goncho treats memory as orientation until current evidence says it is safe to act.
+## Architecture
+
+Goncho makes the memory pipeline explicit:
+
+```text
+Raw Evidence
+    ↓
+Claims + Temporal Metadata
+    ↓
+Scoped Beliefs + Review State
+    ↓
+Hybrid Retrieval (SQLite FTS + optional semantic vector hits + graph/provenance signals)
+    ↓
+Orientation Pack Generation
+    ↓
+Agent Runtime Context
+    ↓
+Reflection / Consolidation / Decay / Negative Memory
+```
+
+That architecture is why Goncho feels different from a vector wrapper. Search can find candidate memories; it does not decide truth. Context packs orient an agent; they do not authorize action. Review queues, stale-claim warnings, and provenance keep the host runtime in control.
+
+## Core Concepts
+
+### Claims + Evidence
+
+Every durable memory in Goncho is designed to be:
+
+- a claim, not just a chunk;
+- linked to evidence;
+- scoped to workspace, profile, peer, and session context;
+- temporally bounded or revisable when truth changes;
+- retrievable with provenance and scoring diagnostics.
+
+### Negative Memory
+
+Goncho remembers what *not* to repeat:
+
+- dead ends;
+- failed attempts;
+- rejected plans;
+- drift anchors;
+- contradictory evidence;
+- stale code claims that require live verification.
+
+### Orientation Packs
+
+Agents should not boot with raw dumps of everything they have ever seen. Goncho builds orientation packs with:
+
+- current goals;
+- trusted facts;
+- recent episodes;
+- known preferences;
+- warnings;
+- unresolved conflicts;
+- remembered dead ends.
+
+The output is compact context for action, not a permission slip to skip live checks.
+
+## Agent Interface
+
+Goncho intentionally exposes a small memory surface to agent hosts:
+
+| Surface | Purpose |
+| --- | --- |
+| `context` | Build an orientation pack before an agent acts. |
+| `search` | Retrieve scoped memory candidates. |
+| `remember` | Store evidence-backed memories through the public tool boundary. |
+| `review` | Inspect conflicts, stale claims, quarantine, and pending decisions. |
+| `handoff` | Produce continuation context for another agent or session. |
+
+Complexity stays internal: temporal metadata, query expansion, vector fusion, graph/provenance signals, review state, and consolidation are implementation details behind a small host-facing API.
+
+## Retrieval Benchmarks
+
+Goncho ships benchmark code and frozen evidence because memory claims should be reproducible.
+
+**LongMemEval-S** retrieval run, 500 questions, retrieval-only evaluation — no LLM reader, no LLM judge:
+
+| System | recall_any@5 | recall_any@10 | MRR |
+| --- | ---: | ---: | ---: |
+| agentmemory BM25+Vector reference | 95.20% | 98.60% | 88.20% |
+| Goncho 2026-05-20 run | 96.80% | 98.00% | 91.35% |
+
+Scope matters: this evaluates retrieval over long conversational memory, not end-to-end QA. The frozen report documents leakage checks, source provenance, and the exact command.
+
+Reproduce the CI-safe version:
+
+```bash
+make bench-longmemeval-s-smoke
+```
+
+Run the full pinned benchmark when you have the dataset prepared:
+
+```bash
+make bench-longmemeval-s
+```
+
+Goncho also includes LOCOMO retrieval and backend-comparison harnesses with stable inserted IDs, leakage checks, failure buckets, and no answer-text rescue. See [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md) for methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status.
+
+## Philosophy
+
+Memory is not storage.
+
+Memory is:
+
+- selective;
+- temporal;
+- revisable;
+- uncertain;
+- evidence-backed;
+- self-regulating.
+
+Vectors are useful. They are not truth. The agent should remember enough to orient itself, verify enough to act safely, and forget or revise enough to avoid accumulating confident nonsense.
+
+## Local-first By Default
+
+Goncho is designed for:
+
+- offline memory;
+- private context;
+- edge inference;
+- inspectable SQLite state;
+- reproducible retrieval;
+- Go-native hosts on workstations, small servers, WSL2, macOS, Windows, Linux, and Termux.
+
+Users should not have to trust a black-box cloud memory layer just to give an agent continuity.
+
+## Positioning
+
+Great open-source memory projects set useful expectations. **[mem0](https://github.com/mem0ai/mem0)** popularized simple, product-like agent memory APIs. **[agentmemory](docs/opensource-memory-systems/agentmemory/README.md)** demonstrates the power of broad hooks, MCP surfaces, multi-agent workflows, and benchmark-driven claims.
+
+Goncho is the trust-preserving Go-native layer for hosts that want local memory and clear action boundaries:
+
+| If you like... | Goncho's answer |
+| --- | --- |
+| mem0-style simple memory APIs | A compact embedded Go service with `NewService`, `Search`, `Recall`, `Context`, and `Conclude`. |
+| agentmemory-style hooks and integration | Host-neutral hook capture plus public memory tools, without forcing a separate server. |
+| Vector search | Optional local `Config.VectorStore` fusion with lexical and graph signals; vectors help retrieval but do not become truth. |
+| Persistent agent memory | SQLite-local evidence, claims, scoped temporal beliefs, memory slots, review queues, and deterministic migrations. |
+| Production safety | Verification-first context packs, stale-code-claim warnings, prompt-injection quarantine, profile isolation, and audit-friendly recall traces. |
+
+## Install
 
 Use Goncho as an embedded Go module:
 
@@ -25,16 +199,19 @@ Use Goncho as an embedded Go module:
 go get github.com/TrebuchetDynamics/goncho/service@latest
 ```
 
-From a checkout, verify the reproducible benchmark CLI builds and starts when you need local retrieval reports:
+The service package is a library package, not a root `go install` target. The installable command is the reproducible benchmark CLI:
 
 ```bash
-make install-smoke
+go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest
 ```
 
-The service package is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.2.0, published May 25, 2026, and includes the benchmark CLI. From a checkout, `go run ./cmd/goncho-bench --beam-service-out beam-service-report.json --beam-service-results-out beam_e2e_results.json --beam-service-summary-out beam_e2e_summary.json --beam-service-paired-out paired_outcomes.jsonl --beam-service-failures-out beam_failures.jsonl --beam-service-judge-requests-out beam_judge_requests.jsonl` writes deterministic local BEAM-style MEMORIA recall artifacts for the delivered ABS, IE, MR, TR, PF, IF, EO, CR, KU, and SUM service-backed fixtures, including Mnemosyne-compatible per-question results, summary, paired-outcome, failure-audit, and answer/judge request files. Add `--beam-convert-in hf-beam.jsonl --beam-service-results-out beam_e2e_results.json --beam-service-summary-out beam_e2e_summary.json --beam-service-paired-out paired_outcomes.jsonl` to run a HuggingFace BEAM JSONL export directly through the same artifact path; `beam_e2e_results.json` preserves raw `ideal_answer` and `rubric` metadata, emits a local `rubric_context_score`/`rubric_context_matches` coverage diagnostic for retrieved context, and reports raw-conversion checksums plus evidence gaps under `metadata.diagnostics.conversion` and leakage counts under `metadata.diagnostics.leakage`. Pass `--fail-on-leakage` to reject BEAM runs with query-text, stable-ID, or rubric-label leakage before retrieval scoring. `--beam-service-judge-requests-out` exports official-BEAM-compatible answer prompts built only from selected recall context plus the question, alongside separate judge prompts carrying preserved ideal-answer/rubric metadata. After an external answerer/judge fills those requests, pass `--beam-service-judgments-in beam_judge_results.jsonl` (or a nested Mnemosyne-compatible `beam_e2e_results.json`) to merge `ai_answer`, score, nuggets, assessment, and timing rows back into Mnemosyne-compatible results, summary, and paired outcomes while keeping recall provenance attached; nested Mnemosyne rows can match by exact source qid or by conversation/scale/ability/question when Mnemosyne emits `conversation_id:qN` qids, and judged imports fail by default if any BEAM question is missing a judgment or any judgment row is unmatched, with `--beam-service-allow-partial-judgments` reserved for diagnostics-only partial runs. Use `--beam-convert-in hf-beam.jsonl --beam-convert-out converted-beam.jsonl` when you want an intermediate converted JSONL for inspection or replay via `--beam-jsonl converted-beam.jsonl`. Use `--beam-paired-results-in mnemosyne-beam_e2e_results.json --beam-paired-results-out paired_outcomes.jsonl --beam-paired-results-config-id mnemosyne-v3` to append nested Mnemosyne result files as paired rows with source path/checksum provenance, then `--beam-paired-compare paired_outcomes.jsonl --beam-paired-baseline-config-id mnemosyne-v3 --beam-paired-candidate-config-id goncho-current --beam-paired-json-out beam-paired-comparison.json --beam-paired-md-out beam-paired-comparison.md` to compare Mnemosyne-compatible BEAM runs with paired score deltas, deterministic bootstrap confidence intervals, exact-qid pairing, fail-closed exact-question fallback pairing, and a 2pp default effect-size floor before declaring a superiority verdict. Run `make bench-beam-smoke` for a CI-safe pinned tiny BEAM fixture that imports a nested Mnemosyne result baseline, emits per-question results, summary, paired outcomes, and paired comparison artifacts end to end.
+From a checkout, verify the public package, local docs, external importability, and benchmark CLI readiness:
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho/service.svg)](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho/service)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+```bash
+make ecosystem-smoke
+```
+
+Public `@latest` currently resolves to v0.3.0, published May 25, 2026. For production, pin the service package version rather than treating `@latest` as a deployment lock.
 
 ## At a Glance
 
@@ -154,13 +331,13 @@ Use this checklist when embedding Goncho in an agent host after the minimal skel
 
 ## Package Status
 
-Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.2.0 release published May 25, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. LOCOMO backend-comparison reports expose stable-ID failure buckets through the JSON `failure_buckets` field and markdown `Failure buckets` table, beside rank-based `failure_categories`, without changing scoring or regenerating frozen LOCOMO artifacts. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
+Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.3.0 release published May 25, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. LOCOMO backend-comparison reports expose stable-ID failure buckets through the JSON `failure_buckets` field and markdown `Failure buckets` table, beside rank-based `failure_categories`, without changing scoring or regenerating frozen LOCOMO artifacts. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
 
 ### go.dev Signal Map
 
 | go.dev signal | Current state | Local proof |
 | --- | --- | --- |
-| Version | `v0.2.0 / Latest`, published May 25, 2026 | `make public-release-smoke` checks public `@latest` metadata with `go list -m -json`. |
+| Version | `v0.3.0 / Latest`, published May 25, 2026 | `make public-release-smoke` checks public `@latest` metadata with `go list -m -json`. |
 | Valid go.mod file | Module path is `github.com/TrebuchetDynamics/goncho` | `make local-module-smoke` checks `go list -m -json` for module path and Go version. |
 | Redistributable license | `MIT` | License file is checked in and pkg.go.dev marks it redistributable. |
 | Package documentation | Root package docs render with examples | `make package-doc-smoke` checks `go doc .`; compiled examples run in `go test ./...`. |
@@ -170,7 +347,7 @@ Goncho is pre-1.0, but it has the public release signals needed to evaluate it a
 
 ### Versioning and Adoption Notes
 
-- **Pin production dependencies:** Goncho is pre-1.0 stability software. For reproducible builds, use `go get github.com/TrebuchetDynamics/goncho/service@v0.2.0` or a reviewed commit; do not treat `@latest` as a deployment lock.
+- **Pin production dependencies:** Goncho is pre-1.0 stability software. For reproducible builds, use `go get github.com/TrebuchetDynamics/goncho/service@v0.3.0` or a reviewed commit; do not treat `@latest` as a deployment lock.
 - **Read adoption counters carefully:** pkg.go.dev currently shows Imported by 0. That reverse-dependency count is not a correctness gate; use it as adoption context, then rely on the smoke checks below for package readiness.
 - **Upgrade by evidence:** before changing the pinned version, run `make ecosystem-smoke` from a checkout and keep host-side live verification in place.
 
