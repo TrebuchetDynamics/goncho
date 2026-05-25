@@ -33,6 +33,12 @@ func NewToolRegistry(svc *goncho.Service, opts ToolRegistryOptions) []toolmeta.T
 		newServiceTool("memory_profile", "Return the Goncho peer profile through the compatible memory_profile name.", json.RawMessage(`{"type":"object","properties":{"peer_id":{"type":"string","description":"Optional Goncho peer id"}}}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 			return executeMemoryProfile(ctx, svc, opts, args)
 		}),
+		newServiceTool("memory_timeline", "Return a read-only session timeline through the compatible memory_timeline name.", json.RawMessage(`{"type":"object","properties":{"session_id":{"type":"string","description":"Optional session id; defaults to registry session"}},"required":[]}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+			return executeMemoryTimeline(ctx, svc, opts, args)
+		}),
+		newServiceTool("memory_audit", "Return read-only Goncho audit events through the compatible memory_audit name.", json.RawMessage(`{"type":"object","properties":{"target_id":{"type":"string"},"peer_id":{"type":"string"},"session_id":{"type":"string"},"limit":{"type":"integer"}}}`), false, true, func(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+			return executeMemoryAudit(ctx, svc, opts, args)
+		}),
 	}
 }
 
@@ -169,6 +175,48 @@ func executeMemoryProfile(ctx context.Context, svc *goncho.Service, opts ToolReg
 		return nil, fmt.Errorf("memory_profile: %w", err)
 	}
 	return json.Marshal(map[string]any{"success": true, "tool": "memory_profile", "backend": "goncho", "profile": out, "local_first": true})
+}
+
+func executeMemoryTimeline(ctx context.Context, svc *goncho.Service, opts ToolRegistryOptions, args json.RawMessage) (json.RawMessage, error) {
+	if svc == nil {
+		return nil, errors.New("memory_timeline: service is required")
+	}
+	var in struct {
+		SessionID string `json:"session_id"`
+	}
+	if err := json.Unmarshal(args, &in); err != nil {
+		return nil, fmt.Errorf("memory_timeline: %w", err)
+	}
+	sessionKey := firstNonEmpty(in.SessionID, opts.DefaultSessionKey)
+	if sessionKey == "" {
+		return nil, errors.New("memory_timeline: session_id is required")
+	}
+	timeline, err := svc.ViewerSessionTimeline(ctx, sessionKey)
+	if err != nil {
+		return nil, fmt.Errorf("memory_timeline: %w", err)
+	}
+	return json.Marshal(map[string]any{"success": true, "tool": "memory_timeline", "backend": "goncho", "retrieval": "goncho_viewer_timeline", "workspace_id": timeline.WorkspaceID, "session_key": timeline.SessionKey, "message_count": len(timeline.Messages), "observation_count": len(timeline.Observations), "summary_count": len(timeline.Summaries), "event_count": len(timeline.Events), "timeline": timeline, "local_first": true})
+}
+
+func executeMemoryAudit(ctx context.Context, svc *goncho.Service, opts ToolRegistryOptions, args json.RawMessage) (json.RawMessage, error) {
+	if svc == nil {
+		return nil, errors.New("memory_audit: service is required")
+	}
+	var in struct {
+		TargetID  string `json:"target_id"`
+		PeerID    string `json:"peer_id"`
+		Peer      string `json:"peer"`
+		SessionID string `json:"session_id"`
+		Limit     int    `json:"limit"`
+	}
+	if err := json.Unmarshal(args, &in); err != nil {
+		return nil, fmt.Errorf("memory_audit: %w", err)
+	}
+	result, err := svc.AuditTrail(ctx, goncho.AuditQuery{TargetID: strings.TrimSpace(in.TargetID), PeerID: firstNonEmpty(in.PeerID, in.Peer), SessionKey: firstNonEmpty(in.SessionID), Limit: in.Limit})
+	if err != nil {
+		return nil, fmt.Errorf("memory_audit: %w", err)
+	}
+	return json.Marshal(map[string]any{"success": true, "tool": "memory_audit", "backend": "goncho", "retrieval": "goncho_audit_trail", "workspace_id": opts.DefaultWorkspaceID, "count": result.Count, "events": result.Events, "local_first": true})
 }
 
 func upstreamMetadataSuffix(memoryType, concepts, files string) string {

@@ -36,6 +36,10 @@ func (h serviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rest := parts[3:]
 
 	switch {
+	case r.Method == http.MethodGet && len(rest) == 1 && rest[0] == "viewer":
+		h.handleViewerSnapshot(w, r)
+	case r.Method == http.MethodGet && len(rest) == 4 && rest[0] == "viewer" && rest[1] == "sessions" && rest[3] == "timeline":
+		h.handleViewerSessionTimeline(w, r, rest[2])
 	case r.Method == http.MethodPut && len(rest) == 3 && rest[0] == "peers" && rest[2] == "card":
 		h.handleSetPeerCard(w, r, rest[1])
 	case r.Method == http.MethodGet && len(rest) == 3 && rest[0] == "peers" && rest[2] == "context":
@@ -53,6 +57,24 @@ func (h serviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeHTTPError(w, http.StatusNotFound, "goncho http: route not found")
 	}
+}
+
+func (h serviceHandler) handleViewerSnapshot(w http.ResponseWriter, r *http.Request) {
+	result, err := h.svc.ViewerSnapshot(r.Context())
+	if err != nil {
+		writeHTTPError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h serviceHandler) handleViewerSessionTimeline(w http.ResponseWriter, r *http.Request, sessionKey string) {
+	result, err := h.svc.ViewerSessionTimeline(r.Context(), sessionKey)
+	if err != nil {
+		writeHTTPError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (h serviceHandler) handleSetPeerCard(w http.ResponseWriter, r *http.Request, peer string) {

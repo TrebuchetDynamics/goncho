@@ -25,6 +25,10 @@ type Config struct {
 	DialecticDefaultLevel        DialecticLevel
 	SessionDirectory             SessionDirectory
 	VectorStore                  VectorStore
+	ProviderFailureThreshold     int
+	ProviderCooldown             time.Duration
+	ProviderTimeout              time.Duration
+	ProviderMaxPayloadBytes      int
 }
 
 type DialecticLevel string

@@ -27,7 +27,7 @@ func TestMemoryResourceRegistryExposesStatusProfileLatestGraphAndRecallPrompt(t 
 
 	registry := NewMemoryResourceRegistry(svc)
 	descriptors := registry.Descriptors()
-	if got, want := resourceDescriptorNames(descriptors), []string{"goncho://graph/stats", "goncho://latest", "goncho://profile", "goncho://recall/prompt", "goncho://status"}; !slices.Equal(got, want) {
+	if got, want := resourceDescriptorNames(descriptors), []string{"goncho://graph/stats", "goncho://handoff/prompt", "goncho://latest", "goncho://profile", "goncho://recall/prompt", "goncho://review/prompt", "goncho://status", "goncho://verify/prompt"}; !slices.Equal(got, want) {
 		t.Fatalf("resource descriptors = %v, want %v", got, want)
 	}
 	for _, descriptor := range descriptors {
@@ -87,6 +87,23 @@ func TestMemoryResourceRegistryExposesStatusProfileLatestGraphAndRecallPrompt(t 
 	text, ok := prompt.Payload["prompt"].(string)
 	if !ok || !strings.Contains(text, "who owns auth?") || !strings.Contains(text, "Use goncho_recall") || !strings.Contains(text, "Require provenance") {
 		t.Fatalf("recall prompt = %#v", prompt.Payload["prompt"])
+	}
+	for _, tc := range []struct {
+		uri  string
+		want string
+	}{
+		{"goncho://handoff/prompt", "session handoff"},
+		{"goncho://review/prompt", "Review open Goncho memory items"},
+		{"goncho://verify/prompt", "Before taking consequential action"},
+	} {
+		content, err := registry.Read(ctx, MemoryResourceRequest{URI: tc.uri, Peer: "peer-resources", Query: "deploy?"})
+		if err != nil {
+			t.Fatalf("read %s: %v", tc.uri, err)
+		}
+		text, ok := content.Payload["prompt"].(string)
+		if !ok || !strings.Contains(text, tc.want) {
+			t.Fatalf("prompt %s = %#v, want %q", tc.uri, content.Payload["prompt"], tc.want)
+		}
 	}
 }
 

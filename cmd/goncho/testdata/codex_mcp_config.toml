@@ -1,0 +1,6 @@
+[mcp_servers.goncho]
+command = "goncho-server"
+args = ["serve", "-addr", "127.0.0.1:8719"]
+
+[mcp_servers.goncho.env]
+GONCHO_TRANSPORT = "http"

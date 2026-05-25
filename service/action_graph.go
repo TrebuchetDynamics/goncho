@@ -78,12 +78,13 @@ type ActionSignalParams struct {
 }
 
 type ActionSignal struct {
-	ID        int64  `json:"id"`
-	ActionID  string `json:"action_id"`
-	Signal    string `json:"signal"`
-	Message   string `json:"message,omitempty"`
-	Actor     string `json:"actor,omitempty"`
-	CreatedAt int64  `json:"created_at"`
+	ID        int64                 `json:"id"`
+	ActionID  string                `json:"action_id"`
+	Signal    string                `json:"signal"`
+	Message   string                `json:"message,omitempty"`
+	Actor     string                `json:"actor,omitempty"`
+	CreatedAt int64                 `json:"created_at"`
+	Receipts  []ActionSignalReceipt `json:"receipts,omitempty"`
 }
 
 type ActionNode struct {
@@ -337,16 +338,30 @@ func listActionSignals(ctx context.Context, db *sql.DB, workspaceID, profileID, 
 	if err != nil {
 		return nil, fmt.Errorf("goncho: list action signals: %w", err)
 	}
-	defer rows.Close()
 	out := []ActionSignal{}
 	for rows.Next() {
 		var signal ActionSignal
 		if err := rows.Scan(&signal.ID, &signal.ActionID, &signal.Signal, &signal.Message, &signal.Actor, &signal.CreatedAt); err != nil {
+			_ = rows.Close()
 			return nil, fmt.Errorf("goncho: scan action signal: %w", err)
 		}
 		out = append(out, signal)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, fmt.Errorf("goncho: close action signals: %w", err)
+	}
+	for i := range out {
+		receipts, err := listActionSignalReceiptsBySignal(ctx, db, workspaceID, profileID, peer, actionID, out[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		out[i].Receipts = receipts
+	}
+	return out, nil
 }
 
 func actionFrontier(nodes []ActionNode) []ActionNode {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/TrebuchetDynamics/goncho/memory"
@@ -16,8 +17,18 @@ func TestBroadMemoryCompatibleToolRegistryExecutesCoreAliases(t *testing.T) {
 	svc, cleanup := newMemoryMirrorTestService(t)
 	defer cleanup()
 
-	tools := NewToolRegistry(svc, ToolRegistryOptions{DefaultPeerID: "peer-memorymirror", DefaultSessionKey: "session-memorymirror"})
-	for _, want := range []string{"memory_save", "memory_smart_search", "memory_recall"} {
+	peer := "peer-memorymirror"
+	session := "session-memorymirror"
+	if _, err := svc.CreateMessages(ctx, goncho.CreateMessagesParams{SessionKey: session, Messages: []goncho.CreateMessage{{Peer: peer, Role: "user", Content: "Need auth middleware timeline evidence."}}}); err != nil {
+		t.Fatalf("CreateMessages: %v", err)
+	}
+	observed, err := svc.Observe(ctx, goncho.ObservationParams{Kind: goncho.ObservationKindToolCall, PeerID: peer, SessionKey: session, Input: "rg jose middleware"})
+	if err != nil {
+		t.Fatalf("Observe: %v", err)
+	}
+
+	tools := NewToolRegistry(svc, ToolRegistryOptions{DefaultPeerID: peer, DefaultSessionKey: session})
+	for _, want := range []string{"memory_save", "memory_smart_search", "memory_recall", "memory_timeline", "memory_audit"} {
 		if _, ok := findTool(tools, want); !ok {
 			t.Fatalf("tool registry missing %s; names=%v", want, toolNames(tools))
 		}
@@ -59,6 +70,51 @@ func TestBroadMemoryCompatibleToolRegistryExecutesCoreAliases(t *testing.T) {
 	if int(recalled["selected_count"].(float64)) < 1 {
 		t.Fatalf("memory_recall selected_count = %#v", recalled["selected_count"])
 	}
+
+	timeline := executeMemoryMirrorTool(t, ctx, tools, "memory_timeline", map[string]any{"session_id": session})
+	if timeline["tool"] != "memory_timeline" || timeline["retrieval"] != "goncho_viewer_timeline" || int(timeline["event_count"].(float64)) < 2 {
+		t.Fatalf("memory_timeline output = %+v", timeline)
+	}
+
+	audit := executeMemoryMirrorTool(t, ctx, tools, "memory_audit", map[string]any{"target_id": observed.Observation.ID})
+	if audit["tool"] != "memory_audit" || audit["retrieval"] != "goncho_audit_trail" || int(audit["count"].(float64)) != 1 {
+		t.Fatalf("memory_audit output = %+v", audit)
+	}
+}
+
+func TestCompatibilityCatalogDocumentsRegisteredSafeAliases(t *testing.T) {
+	svc, cleanup := newMemoryMirrorTestService(t)
+	defer cleanup()
+
+	catalog := CompatibilityCatalog()
+	for _, want := range []string{"memory_save", "memory_smart_search", "memory_recall", "memory_profile", "memory_timeline", "memory_audit"} {
+		entry, ok := catalog.CompatTool(want)
+		if !ok {
+			t.Fatalf("compat catalog missing %s", want)
+		}
+		if entry.Status != PortDelivered || entry.RegisteredName != want {
+			t.Fatalf("catalog[%s] = %+v, want delivered registered alias", want, entry)
+		}
+	}
+
+	manifest := ArchitectureManifest()
+	for _, entry := range catalog.Tools {
+		if _, ok := manifest.Tool(entry.Name); !ok {
+			t.Fatalf("catalog tool %s missing from architecture manifest", entry.Name)
+		}
+		if entry.DefaultEnabled && !strings.HasPrefix(entry.GonchoSeam, "service.") {
+			t.Fatalf("default-enabled tool %s seam = %q, want public service seam", entry.Name, entry.GonchoSeam)
+		}
+	}
+	for _, tool := range NewToolRegistry(svc, ToolRegistryOptions{}) {
+		entry, ok := catalog.CompatTool(tool.Name())
+		if !ok {
+			t.Fatalf("registered tool %s missing from compat catalog", tool.Name())
+		}
+		if entry.Status != PortDelivered {
+			t.Fatalf("registered tool %s status = %q, want delivered", tool.Name(), entry.Status)
+		}
+	}
 }
 
 func TestBroadMemoryCompatibleToolsExposeUpstreamSchemasAndSpecs(t *testing.T) {
@@ -66,7 +122,7 @@ func TestBroadMemoryCompatibleToolsExposeUpstreamSchemasAndSpecs(t *testing.T) {
 	defer cleanup()
 
 	tools := NewToolRegistry(svc, ToolRegistryOptions{})
-	for _, name := range []string{"memory_save", "memory_smart_search", "memory_recall", "memory_profile"} {
+	for _, name := range []string{"memory_save", "memory_smart_search", "memory_recall", "memory_profile", "memory_timeline", "memory_audit"} {
 		tool, ok := findTool(tools, name)
 		if !ok {
 			t.Fatalf("missing %s", name)
@@ -81,6 +137,9 @@ func TestBroadMemoryCompatibleToolsExposeUpstreamSchemasAndSpecs(t *testing.T) {
 		}
 		if name == "memory_save" && !spec.Mutating {
 			t.Fatalf("memory_save must be marked mutating")
+		}
+		if (name == "memory_timeline" || name == "memory_audit") && spec.AuditKind != "memory" {
+			t.Fatalf("%s audit kind = %q, want memory", name, spec.AuditKind)
 		}
 		if name != "memory_save" && spec.Mutating {
 			t.Fatalf("%s must be non-mutating", name)

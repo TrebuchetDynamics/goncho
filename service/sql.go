@@ -500,7 +500,7 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 	base := `
 		SELECT id, content, COALESCE(session_key, '')
 		FROM goncho_conclusions
-		WHERE observer_peer_id = ? AND peer_id = ?
+		WHERE observer_peer_id = ? AND peer_id = ? AND status IN ('processed', 'active')
 	`
 	args := []any{observer, peer}
 	switch normalizeMemoryScope(memoryScope, profileID) {

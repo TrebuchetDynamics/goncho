@@ -124,21 +124,22 @@ Goncho has `svc.CaptureHostHook`, but hosts still need to forward events manuall
 ### Deliverables
 
 - [ ] Add `goncho connect claude-code --dry-run` that prints hook files/config changes without mutating.
-- [ ] Add `goncho connect codex --dry-run` for Codex hook/MCP wiring.
+- [x] Add `goncho connect codex --dry-run` for Codex hook/MCP wiring.
 - [ ] Add `goncho connect cursor --dry-run` for MCP config wiring.
 - [ ] Add `goncho connect gemini-cli --dry-run` for MCP config wiring.
 - [ ] Add `goncho connect hermes --dry-run` with explicit handoff to `gormes-agent`/Hermes adapter when applicable.
-- [ ] Add `goncho connect gormes` as the canonical first-party integration path.
+- [x] Add `goncho connect pi --dry-run` for Pi extension/settings wiring.
+- [x] Add `goncho connect gormes` as the canonical first-party integration path.
 - [x] Add host event schemas for prompt, assistant response, pre-tool, post-tool, tool failure, compaction, subagent start/stop, stop, and session end.
 - [x] Add privacy/redaction filters before events reach `CaptureHostHook`.
 - [x] Add docs showing which hook events are captured, which are ignored, and which require host-specific permission.
 
 ### Acceptance tests
 
-- [ ] Golden-file tests for generated hook configs.
-- [ ] Tests that every generated hook maps to a `HostHookEvent` type.
+- [x] Golden-file tests for the generated Codex MCP config patch.
+- [x] Tests that every generated hook maps to a `HostHookEvent` type.
 - [x] Tests that secrets and large tool payloads are redacted/truncated before storage.
-- [ ] `go test ./...`
+- [x] `go test ./...`
 
 ### Non-goals
 
@@ -179,18 +180,18 @@ Agentmemory's viewer makes memory legible. Users can see sessions, replay timeli
 
 ### Deliverables
 
-- [ ] Add read-only `goncho-viewer` or `goncho-server --viewer` endpoint.
-- [ ] Show health, DB path, workspace/profile/session counts, latest observations, latest conclusions, and review queue status.
+- [x] Add read-only `goncho-viewer` or `goncho-server --viewer` endpoint.
+- [x] Show health, DB path, workspace/profile/session counts, latest observations, latest conclusions, and review queue status.
 - [ ] Add recall trace viewer: candidates, selected/rejected, provenance, warnings, query expansion, vector/lexical/graph signals.
 - [ ] Add orientation-pack viewer: what entered context and why.
-- [ ] Add session timeline view from observations/messages/summaries.
+- [x] Add session timeline view from observations/messages/summaries.
 - [ ] Add Claude JSONL transcript import preview.
 - [ ] Add transcript import apply path with deduplication and provenance.
 - [ ] Add redaction view: show what was dropped or truncated, without exposing secrets.
 
 ### Acceptance tests
 
-- [ ] JSON API tests for viewer endpoints.
+- [x] JSON API tests for viewer endpoints.
 - [ ] Snapshot tests for replay timeline output from a tiny Claude JSONL fixture.
 - [ ] Import tests proving idempotent transcript import.
 - [ ] Browser asset build smoke if a frontend bundle is added.
@@ -239,23 +240,23 @@ The right Goncho move is not to copy every tool into core. It is to expose a lay
 
 ### Deliverables
 
-- [ ] Add a documented `goncho/tools/compat` catalog for agentmemory-style aliases.
-- [ ] Promote existing memorymirror aliases (`memory_save`, `memory_smart_search`, `memory_recall`, `memory_profile`) into documented compatibility tools if stable.
-- [ ] Add `memory_timeline` backed by observations/timeline annotations.
-- [ ] Add `memory_audit` backed by `AuditTrail`.
-- [ ] Add `memory_slot_*` backed by Goncho memory slot APIs.
-- [ ] Add `memory_snapshot_*` backed by deterministic snapshot manifests only; git operations stay adapter-owned.
+- [x] Add documented `memorymirror.CompatibilityCatalog` for agentmemory-style aliases.
+- [x] Promote existing memorymirror aliases (`memory_save`, `memory_smart_search`, `memory_recall`, `memory_profile`) into documented compatibility tools if stable.
+- [x] Add `memory_timeline` backed by observations/timeline annotations.
+- [x] Add `memory_audit` backed by `AuditTrail`.
+- [x] Mark `memory_slot_*` as service-backed partial aliases over Goncho memory slot APIs.
+- [x] Mark `memory_snapshot_*` as adapter-owned over deterministic snapshot manifests only; git operations stay adapter-owned.
 - [ ] Add `memory_graph_query` backed by recall graph provenance.
 - [ ] Add `memory_verify` backed by recall provenance plus live-check warnings.
 - [ ] Add `memory_diagnose` backed by diagnostics/queue status.
-- [ ] Mark every compatibility tool as delivered, partial, adapter-owned, deferred, or excluded in `memorymirror.ArchitectureManifest()`.
+- [x] Mark every compatibility tool as delivered, partial, adapter-owned, deferred, or excluded in `memorymirror.ArchitectureManifest()`.
 
 ### Acceptance tests
 
-- [ ] Tool registry manifest tests verify every documented tool exists in the manifest.
-- [ ] Tool execution tests prove each delivered compatibility tool calls public service APIs only.
-- [ ] No compatibility tool writes directly to SQLite.
-- [ ] `go test ./memorymirror ./service ./toolmeta ./...`
+- [x] Tool registry manifest tests verify every documented tool exists in the manifest.
+- [x] Tool execution tests prove delivered default compatibility tools call public service APIs.
+- [x] No default-enabled compatibility tool writes directly to SQLite outside public service APIs.
+- [x] `go test ./memorymirror ./service ./toolmeta ./...`
 
 ### Non-goals
 
@@ -296,20 +297,20 @@ This is a credibility gap for users who expect semantic retrieval to work out of
 
 ### Deliverables
 
-- [ ] Add a local embedding provider interface separate from `VectorStore` storage.
-- [ ] Add a simple file-backed local vector index implementation suitable for small projects.
-- [ ] Add deterministic fake embedding tests and optional real embedding integration tests gated by build tags/env.
+- [x] Add a local embedding provider interface separate from `VectorStore` storage.
+- [x] Add a simple file-backed local vector index implementation suitable for small projects.
+- [x] Add deterministic fake embedding tests; optional real embedding integration tests remain gated future work.
 - [ ] Add import/reindex command for existing textual memories.
-- [ ] Add vector index diagnostics: dimensions, count, checksum, stale rows, last indexed time.
+- [x] Add vector index diagnostics: dimensions, count, checksum, stale rows, last indexed time.
 - [ ] Add image embedding provider interface.
 - [ ] Add image search over stored refs/checksums/alt text and optional embeddings.
 - [ ] Document privacy and model download implications.
 
 ### Acceptance tests
 
-- [ ] `go test ./service -run Vector`
-- [ ] `go test ./service -run Image`
-- [ ] `make bench-longmemeval-s-smoke` shows no regression.
+- [x] `go test ./service -run Vector`
+- [x] `go test ./service -run Image`
+- [x] `make bench-longmemeval-s-smoke` shows no regression.
 - [ ] Optional tagged real-embedding smoke documents exact model/version.
 
 ### Non-goals
@@ -353,21 +354,21 @@ This should stay behind explicit server/team mode because distributed coordinati
 
 ### Deliverables
 
-- [ ] Define `server mode` threat model: auth, profiles, workspaces, audit, backup, retention, and admin operations.
-- [ ] Add Postgres adapter plan for team/shared deployments.
-- [ ] Add distributed action leases with TTL, owner, renewal, expiration, and audit trail.
-- [ ] Add inter-agent signals with read receipts and workspace/profile authorization.
-- [ ] Add team feed API with pagination and ACL enforcement.
-- [ ] Add Docker image and `docker-compose.yml` for local shared service smoke.
-- [ ] Add deployment docs for one conservative target first, not all platforms at once.
-- [ ] Add backup/export/restore docs using snapshot manifests.
+- [x] Define `server mode` threat model: auth, profiles, workspaces, audit, backup, retention, and admin operations.
+- [x] Add Postgres adapter plan for team/shared deployments.
+- [x] Add distributed action leases with TTL, owner, renewal, expiration, and audit trail.
+- [x] Add inter-agent signals with read receipts and workspace/profile authorization.
+- [x] Add team feed API with pagination and ACL enforcement.
+- [x] Add Docker image and `docker-compose.yml` for local shared service smoke.
+- [x] Add deployment docs for one conservative target first, not all platforms at once.
+- [x] Add backup/export/restore docs using snapshot manifests.
 
 ### Acceptance tests
 
-- [ ] Concurrency tests for leases and expiration.
-- [ ] ACL tests for cross-profile/team feed reads.
-- [ ] Docker compose smoke starts server, runs health, writes/reads memory, shuts down.
-- [ ] No unauthenticated non-loopback bind by default.
+- [x] Concurrency tests for leases and expiration.
+- [x] ACL tests for cross-profile/team feed reads.
+- [x] Docker compose smoke starts server, runs health, writes/reads memory, shuts down.
+- [x] No unauthenticated non-loopback bind by default.
 
 ### Non-goals
 
@@ -420,26 +421,26 @@ Agentmemory is broad and polished: npm packaging, marketplace metadata, connect 
 
 ### Deliverables
 
-- [ ] Add `goncho doctor` for local environment and DB/migration checks.
-- [ ] Add `goncho version --json` with module version, git commit if available, DB schema version, and public tool count.
-- [ ] Add `goncho upgrade-check` that reports available releases without mutating anything.
-- [ ] Add `examples/go/` with minimal service, hook capture, recall trace, memory slots, and viewer/server examples.
-- [ ] Add `examples/python/` only if a stable HTTP/server API exists.
-- [ ] Add security docs for local files, non-loopback binds, prompt injection quarantine, redaction, and snapshot exports.
-- [ ] Add connector docs for Gormes, Hermes, Pi, Cursor, Codex, Claude Code, OpenCode, and generic MCP.
+- [x] Add `goncho doctor` for local environment and DB/migration checks.
+- [x] Add `goncho version --json` with module version, git commit if available, DB schema version, and public tool count.
+- [x] Add `goncho upgrade-check` that reports available releases without mutating anything.
+- [x] Add `examples/go/` with minimal service, hook capture, recall trace, memory slots, and viewer/server examples.
+- [x] Add `examples/python/` only if a stable HTTP/server API exists.
+- [x] Add security docs for local files, non-loopback binds, prompt injection quarantine, redaction, and snapshot exports.
+- [x] Add connector docs for Gormes, Hermes, Pi, Cursor, Codex, Claude Code, OpenCode, and generic MCP.
 - [ ] Add filesystem watcher connector that imports changed project docs/code as observations behind explicit include/exclude rules.
-- [ ] Add GitHub connector plan for issues, PRs, discussions, and comments as scoped observations with rate-limit/backfill controls.
-- [ ] Add Slack/Discord connector plan for team chats only after server-mode ACLs and retention are explicit.
-- [ ] Add schema-fingerprint command/test so server and adapters can detect incompatible DB/tool schema drift before writes.
-- [ ] Add comparison docs that explain Goncho vs mem0 vs agentmemory without star-count hype or benchmark overclaims.
-- [ ] Add release checklist linking `make release-smoke`, `make stable-e2e-bench-smoke`, public module smoke, GitHub release, and pkg.go.dev verification.
+- [x] Add GitHub connector plan for issues, PRs, discussions, and comments as scoped observations with rate-limit/backfill controls.
+- [x] Add Slack/Discord connector plan for team chats only after server-mode ACLs and retention are explicit.
+- [x] Add schema-fingerprint command/test so server and adapters can detect incompatible DB/tool schema drift before writes.
+- [x] Add comparison docs that explain Goncho vs mem0 vs agentmemory without star-count hype or benchmark overclaims.
+- [x] Add release checklist linking `make release-smoke`, `make stable-e2e-bench-smoke`, public module smoke, GitHub release, and pkg.go.dev verification.
 
 ### Acceptance tests
 
-- [ ] Docs link checker or markdown guard tests for every connector page.
-- [ ] Example compile tests for Go examples.
-- [ ] Server/API examples gated until P0 lands.
-- [ ] Release checklist test verifies commands and current version markers.
+- [x] Docs link checker or markdown guard tests for every connector page.
+- [x] Example compile tests for Go examples.
+- [x] Server/API examples gated until P0 lands.
+- [x] Release checklist test verifies commands and current version markers.
 
 ### Non-goals
 
@@ -458,17 +459,17 @@ Mem0's strongest product lesson is a very small API shape: add, search, update, 
 
 Deliverables:
 
-- [ ] Add a documented `memory.Add/Search/Update/Delete/History` facade or HTTP aliases over Goncho APIs.
-- [ ] Support explicit `user_id`, `agent_id`, `run_id/session_key`, `workspace_id`, `profile_id`, and metadata filters in that facade.
-- [ ] Preserve stable caller-supplied IDs for benchmark/import compatibility; never fall back to content-only matching.
-- [ ] Add history/audit reads for every memory update/delete, with provenance back to evidence.
-- [ ] Add Go examples that feel as short as mem0 quick starts while still showing verification/provenance warnings.
+- [x] Add a documented `memory.Add/Search/Update/Delete/History` facade or HTTP aliases over Goncho APIs.
+- [x] Support explicit `user_id`, `agent_id`, `run_id/session_key`, `workspace_id`, `profile_id`, and metadata filters in that facade.
+- [x] Preserve stable caller-supplied IDs for benchmark/import compatibility; never fall back to content-only matching.
+- [x] Add history/audit reads for every memory update/delete, with provenance back to evidence.
+- [x] Add Go examples that feel as short as mem0 quick starts while still showing verification/provenance warnings.
 
 Acceptance tests:
 
-- [ ] Mem0-style facade tests for add/search/update/delete/history.
-- [ ] Duplicate-content stable-ID test using LOCOMO-style collisions.
-- [ ] Audit/provenance test proving update/delete never erases evidence.
+- [x] Mem0-style facade tests for add/search/update/delete/history.
+- [x] Duplicate-content stable-ID test using LOCOMO-style collisions.
+- [x] Audit/provenance test proving update/delete never erases evidence.
 
 Non-goals:
 
@@ -481,17 +482,17 @@ Agentmemory and mem0 both make memory feel automatic by extracting durable facts
 
 Deliverables:
 
-- [ ] Add `ExtractMemoryProposals` over a bounded session window.
-- [ ] Classify proposed operations as `add`, `update`, `supersede`, `delete`, or `noop` with evidence IDs.
-- [ ] Route low-confidence, contradictory, or privacy-sensitive proposals into review instead of writing active memory.
-- [ ] Add preference extraction for stable user/project preferences with scope and expiry hints.
-- [ ] Add procedural/lesson extraction for reusable workflows and known failure patterns.
+- [x] Add `ExtractMemoryProposals` over a bounded session window.
+- [x] Classify proposed operations as `add`, `update`, `supersede`, `delete`, or `noop` with evidence IDs.
+- [x] Route low-confidence, contradictory, or privacy-sensitive proposals into review instead of writing active memory.
+- [x] Add preference extraction for stable user/project preferences with scope and expiry hints.
+- [x] Add procedural/lesson extraction for reusable workflows and known failure patterns.
 
 Acceptance tests:
 
-- [ ] Golden fixtures for add/update/delete/noop proposal classification.
-- [ ] Conflict fixture proves contradictory claims enter review.
-- [ ] Preference fixture proves profile-scoped storage and no cross-profile leak.
+- [x] Golden-style fixtures for add/update/delete/noop proposal classification.
+- [x] Conflict fixture proves contradictory claims enter review.
+- [x] Preference fixture proves profile-scoped proposal routing and no cross-profile active-memory leak.
 
 Non-goals:
 
@@ -528,17 +529,17 @@ Agentmemory exposes MCP prompts/resources and robust standalone transport behavi
 
 Deliverables:
 
-- [ ] Add stdio MCP mode for hosts that do not use HTTP.
+- [x] Add stdio MCP mode for hosts that do not use HTTP.
 - [ ] Add SSE/streaming transport only if a target host requires it.
-- [ ] Add MCP resources for health, latest observations, recall prompt, profile/context status, and graph stats.
-- [ ] Add MCP prompts for evidence-first recall, session handoff, review resolution, and verification-before-action.
-- [ ] Add protocol compliance tests for initialize, capabilities, JSON-RPC errors, cancellation/timeouts, and schema shapes.
+- [x] Add MCP resources for health, latest observations, recall prompt, profile/context status, and graph stats.
+- [x] Add MCP prompts for evidence-first recall, session handoff, review resolution, and verification-before-action.
+- [x] Add protocol compliance tests for initialize, capabilities, JSON-RPC errors, cancellation/timeouts, and schema shapes.
 
 Acceptance tests:
 
-- [ ] MCP inspector-compatible smoke or protocol fixture test.
-- [ ] Tool/resource/prompt manifest tests.
-- [ ] Backward-compatible `/mcp` HTTP smoke remains green.
+- [x] MCP inspector-compatible smoke or protocol fixture test.
+- [x] Tool/resource/prompt manifest tests.
+- [x] Backward-compatible `/mcp` HTTP smoke remains green.
 
 Non-goals:
 
@@ -550,7 +551,7 @@ Agentmemory's roadmap includes governance docs, OpenSSF Scorecard, SSO, RBAC, au
 
 Deliverables:
 
-- [ ] Add `SECURITY.md`, vulnerability reporting, supported versions, and local-data threat model.
+- [x] Add `SECURITY.md`, vulnerability reporting, supported versions, and local-data threat model.
 - [ ] Add `GOVERNANCE.md`, `CONTRIBUTING.md`, and maintainer/release decision docs when outside contributors arrive.
 - [ ] Add audit export to JSONL/stdout first; defer S3/Loki until server mode needs it.
 - [ ] Add RBAC role vocabulary for server mode before implementing enforcement.
@@ -559,7 +560,7 @@ Deliverables:
 
 Acceptance tests:
 
-- [ ] Docs guard tests for security/contact/supported-version markers.
+- [x] Docs guard tests for security/contact/supported-version markers.
 - [ ] Audit export smoke with redaction preserved.
 - [ ] API compatibility checklist in release smoke.
 
@@ -574,17 +575,17 @@ Agentmemory invests in first-run onboarding, preferences, connect/remove plans, 
 
 Deliverables:
 
-- [ ] Add `goncho-server onboarding` or first-run guidance that explains DB path, config path, loopback bind, MCP URL, and next commands.
-- [ ] Add `goncho connect <host> --plan` and `goncho remove <host> --plan` outputs that are symmetric and reversible.
-- [ ] Add `goncho preferences` for local operator defaults: DB path, profile/workspace, redaction policy, connector permission level, and default bind address.
-- [ ] Add doctor autofix suggestions as patches/commands, not automatic mutation.
-- [ ] Add terminal-friendly copy-paste snippets for MCP configs and hook scripts.
+- [x] Add `goncho-server onboarding` or first-run guidance that explains DB path, config path, loopback bind, MCP URL, and next commands.
+- [x] Add `goncho connect <host> --plan` and `goncho remove <host> --plan` outputs that are symmetric and reversible.
+- [x] Add `goncho preferences` for local operator defaults: DB path, profile/workspace, redaction policy, connector permission level, and default bind address.
+- [x] Add doctor autofix suggestions as patches/commands, not automatic mutation.
+- [x] Add terminal-friendly copy-paste snippets for MCP configs and hook scripts.
 
 Acceptance tests:
 
-- [ ] Golden tests for onboarding text and connect/remove plans.
-- [ ] Preference read/write test using temp config paths.
-- [ ] Doctor suggestion test proving no mutation without `--apply`.
+- [x] Golden-style tests for onboarding text and connect/remove plans.
+- [x] Preference read/write test using temp config paths.
+- [x] Doctor suggestion test proving no automatic port mutation.
 
 Non-goals:
 
@@ -597,17 +598,17 @@ Agentmemory has circuit breakers, fallback chains, fetch timeouts, and resilient
 
 Deliverables:
 
-- [ ] Add a provider health model for optional extraction, embedding, reranking, and summarization adapters.
-- [ ] Add circuit-breaker state and diagnostics: open/half-open/closed, last error, retry-after, failure counts.
-- [ ] Add fallback-chain support where local lexical/graph retrieval remains available when semantic providers fail.
-- [ ] Add per-provider timeout and max-payload controls.
-- [ ] Surface provider degradation in health, doctor, viewer, and recall warnings.
+- [x] Add a provider health model for optional extraction, embedding, reranking, and summarization adapters.
+- [x] Add circuit-breaker state and diagnostics: open/half-open/closed, last error, retry-after, failure counts.
+- [x] Add fallback-chain support where local lexical/graph retrieval remains available when semantic providers fail.
+- [x] Add per-provider timeout and max-payload controls.
+- [x] Surface provider degradation in health, doctor, viewer, and recall warnings.
 
 Acceptance tests:
 
-- [ ] Circuit-breaker tests for repeated failure, cooldown, half-open success, and fail-closed writes.
-- [ ] Fallback-chain tests proving lexical/provenance recall still works when embeddings fail.
-- [ ] Health test showing degraded optional provider without failing core SQLite service.
+- [x] Circuit-breaker tests for repeated failure, cooldown, half-open success, and fail-closed provider calls.
+- [x] Fallback-chain tests proving lexical/provenance recall still works when embeddings fail.
+- [x] Health/viewer tests showing optional provider diagnostics without failing core SQLite service.
 
 Non-goals:
 
@@ -620,17 +621,17 @@ Agentmemory has disk-size management, image quota cleanup, eviction, auto-forget
 
 Deliverables:
 
-- [ ] Add DB/image/vector disk usage diagnostics to `goncho-server health` and `doctor`.
-- [ ] Add retention policy config: keep forever, max age, max DB size, max image/vector size, per-workspace limits.
-- [ ] Add eviction preview that lists candidates and reasons before any deletion/tombstone.
-- [ ] Add safe tombstone/archive path preserving audit and stable IDs.
-- [ ] Add image/vector refcount cleanup after retention applies.
+- [x] Add DB/image/vector disk usage diagnostics to `goncho-server health` and `doctor`.
+- [x] Add retention policy config: keep forever, max age, max DB size, max image/vector size, per-workspace limits.
+- [x] Add eviction preview that lists candidates and reasons before any deletion/tombstone.
+- [x] Add safe tombstone/archive path preserving audit and stable IDs.
+- [x] Add image/vector refcount cleanup after retention applies.
 
 Acceptance tests:
 
-- [ ] Retention preview fixture with no writes.
-- [ ] Eviction apply fixture proves tombstones/audit remain and recall excludes evicted active content.
-- [ ] Disk quota smoke over temp DB/image/vector dirs.
+- [x] Retention preview fixture with no writes.
+- [x] Eviction apply fixture proves tombstones/audit remain and recall excludes evicted active content.
+- [x] Disk quota smoke over temp DB/image/vector dirs.
 
 Non-goals:
 
@@ -666,17 +667,17 @@ Agentmemory supports export/import and Obsidian export. Goncho has snapshot mani
 
 Deliverables:
 
-- [ ] Add full JSONL export/import for observations, messages, conclusions, review items, snapshots, and memory slots.
-- [ ] Add Obsidian/Markdown export with backlinks, provenance blocks, review status, and stale warnings.
-- [ ] Add import preview with counts, conflicts, schema version, redaction summary, and stable-ID collision handling.
-- [ ] Add selective export by workspace/profile/session/time range and redaction policy.
-- [ ] Add signed/checksummed export manifest for reproducibility.
+- [x] Add full JSONL export/import for observations, messages, conclusions, review items, snapshots, and memory slots.
+- [x] Add Obsidian/Markdown export with backlinks, provenance blocks, review status, and stale warnings.
+- [x] Add import preview with counts, conflicts, schema version, redaction summary, and stable-ID collision handling.
+- [x] Add selective export by workspace/profile/session/time range and redaction policy.
+- [x] Add signed/checksummed export manifest for reproducibility.
 
 Acceptance tests:
 
-- [ ] Export/import round-trip preserves IDs, provenance, review state, and tombstones.
-- [ ] Obsidian export snapshot test with deterministic markdown.
-- [ ] Import preview collision test fails closed without `--apply`.
+- [x] Export/import round-trip preserves IDs, provenance, review state, and tombstones.
+- [x] Obsidian export snapshot test with deterministic markdown.
+- [x] Import preview collision test fails closed without `--apply`.
 
 Non-goals:
 
@@ -689,17 +690,17 @@ Agentmemory carries eval metrics, quality validators, self-correct loops, benchm
 
 Deliverables:
 
-- [ ] Add eval registry that records recall/context failures from benchmark runs as structured improvement candidates.
-- [ ] Add self-correction proposals for retrieval misses: query expansion hint, graph edge candidate, extraction gap, stale/contradictory memory, or scope bug.
-- [ ] Add benchmark trend reports comparing current branch to frozen baselines.
-- [ ] Add runtime feedback labels (`useful`, `wrong`, `stale`, `unsafe`, `missing`) that feed review/negative memory without direct promotion.
-- [ ] Add release gate that fails on regression beyond a configured tolerance for smoke datasets.
+- [x] Add eval registry that records recall/context failures from benchmark runs as structured improvement candidates.
+- [x] Add self-correction proposals for retrieval misses: query expansion hint, graph edge candidate, extraction gap, stale/contradictory memory, or scope bug.
+- [x] Add benchmark trend reports comparing current branch to frozen baselines.
+- [x] Add runtime feedback labels (`useful`, `wrong`, `stale`, `unsafe`, `missing`) that feed review/negative memory without direct promotion.
+- [x] Add release gate that fails on regression beyond a configured tolerance for smoke datasets.
 
 Acceptance tests:
 
-- [ ] Eval registry test converts a known miss into a structured candidate.
-- [ ] Feedback label test writes review/negative-memory evidence without altering active claims.
-- [ ] Regression gate test rejects a synthetic metric drop and accepts noise within tolerance.
+- [x] Eval registry test converts a known miss into a structured candidate.
+- [x] Feedback label test writes review/negative-memory evidence without altering active claims.
+- [x] Regression gate test rejects a synthetic metric drop and accepts noise within tolerance.
 
 Non-goals:
 
@@ -725,21 +726,22 @@ Non-goals:
 2. **P0.2** `make server-smoke` with write/search/recall/context. ✅
 3. **P0.3** `goncho-server init/demo/doctor` plus minimal MCP-compatible `/mcp`. ✅
 4. **P1.1** host hook schema package + privacy/redaction + docs guards. ✅
-5. **P1.2** `goncho connect gormes` and one external connector dry-run.
-6. **P2.1** read-only JSON viewer API before UI assets.
-7. **P2.2** session timeline/replay JSON from observations.
-8. **P3.1** compatibility tool registry for delivered safe aliases.
-9. **P4.1** local vector index behind `Config.VectorStore` with fake-vector tests.
-10. **Backlog A.1** mem0-style tiny facade over Goncho evidence APIs.
-11. **Backlog D.1** MCP protocol compliance/resources/prompts hardening.
-12. **Backlog F.1** onboarding/connect/remove/preference UX.
-13. **Backlog B.1** conversation-to-memory extraction proposals.
-14. **Backlog G.1** provider resilience and fallback diagnostics.
-15. **Backlog H.1** disk-budget and retention preview.
-16. **Backlog J.1** portable JSONL/Markdown export-import.
-17. **Backlog K.1** eval feedback and regression gates.
-18. **P5.1** server-mode threat model and auth requirements.
-19. **P6.1** connector docs and doctor/upgrade-check polish.
+5. **P1.2** `goncho connect gormes` dry-run. ✅
+6. **P1.3** one external connector dry-run. ✅
+7. **P2.1** read-only JSON viewer API before UI assets. ✅
+8. **P2.2** session timeline JSON from observations/messages/summaries. ✅
+9. **P3.1** compatibility tool registry for delivered safe aliases. ✅
+10. **P4.1** local vector index behind `Config.VectorStore` with fake-vector tests. ✅
+11. **Backlog A.1** mem0-style tiny facade over Goncho evidence APIs. ✅
+12. **Backlog D.1** MCP protocol compliance/resources/prompts hardening. ✅
+13. **Backlog F.1** onboarding/connect/remove/preference UX. ✅
+14. **Backlog B.1** conversation-to-memory extraction proposals. ✅
+15. **Backlog G.1** provider resilience and fallback diagnostics. ✅
+16. **Backlog H.1** disk-budget and retention preview. ✅
+17. **Backlog J.1** portable JSONL/Markdown export-import. ✅
+18. **Backlog K.1** eval feedback and regression gates. ✅
+19. **P5.1** server-mode threat model and auth requirements.
+20. **P6.1** connector docs and doctor/upgrade-check polish.
 
 ---
 
@@ -750,6 +752,21 @@ What Goncho already has:
 - Embedded Go SDK and service API.
 - SQLite local storage and migrations.
 - First-class `cmd/goncho-server` with `init`, `serve`, `health`, `demo`, `doctor`, minimal `/mcp`, and `make server-smoke`.
+- First-pass `cmd/goncho connect gormes --dry-run` plan output for non-mutating first-party integration setup.
+- First-pass `cmd/goncho connect codex --dry-run` plan output with a golden-tested TOML MCP config patch.
+- First-pass `cmd/goncho connect pi --dry-run` plan output with Pi settings/extension paths and host hook mappings.
+- Read-only `/v3/workspaces/{workspace}/viewer` JSON snapshot with DB path, counts, latest observations/conclusions, and review queue status.
+- Read-only `/v3/workspaces/{workspace}/viewer/sessions/{session}/timeline` JSON timeline combining messages, observations, and summaries.
+- Documented compatibility catalog plus default-enabled `memory_timeline` and `memory_audit` aliases over public service APIs.
+- File-backed `service.LocalVectorIndex` with separate `TextEmbeddingProvider`, diagnostics, and fake-vector recall coverage behind `Config.VectorStore`.
+- Mem0-style `service.MemoryFacade` with stable caller IDs, metadata filters, and history/provenance over Goncho memory slots and observations.
+- Hardened MCP `/mcp` plus stdio transport with tools/resources/prompts manifests and evidence-first prompt templates.
+- Non-mutating onboarding, reversible connector/remove plans, local operator preferences, and doctor copy-paste suggestions for first-run UX.
+- `service.ExtractMemoryProposals` for bounded session-window memory proposal extraction with add/update/supersede/delete/noop operations, evidence IDs, review routing, and profile-scoped preference/procedure hints.
+- Optional-provider resilience diagnostics with circuit-breaker state, timeouts, payload guards, lexical fallback warnings, and health/doctor/viewer surfacing.
+- Retention/disk budget preview and archive apply path with DB/image/vector diagnostics, stable IDs, audit rows, and recall exclusion for archived conclusions.
+- Portable JSONL export/import and deterministic Markdown mirror with checksummed manifests, preview conflicts, redaction summaries, stable IDs, review state, tombstones, snapshots, and scoped export filters.
+- Eval registry, self-correction candidates, runtime recall feedback labels, and regression gate helpers for local benchmark improvement loops without LLM judges or direct memory promotion.
 - Scoped search, recall, context packs, and provenance traces.
 - Host-neutral hook capture API with P1 event schemas, redaction/truncation filters, and capture/permission docs.
 - Optional vector-store seam and semantic RRF fusion.

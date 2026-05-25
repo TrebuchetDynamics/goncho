@@ -85,6 +85,34 @@
 //     and selection/rejection reasoning before projection.
 //   - Service.Context assembles an orientation pack for the next action.
 //   - Service.Profile stores and reads durable profile facts.
+//   - Service.ExtractMemoryProposals inspects a bounded session window and
+//     returns add/update/supersede/delete/noop proposals with message evidence;
+//     review-required proposals are queued without writing active memory.
+//   - Service.ProviderHealthDiagnostics reports optional extraction, embedding,
+//     reranking, and summarization provider state. Semantic provider failures
+//     degrade recall with warnings while lexical/local evidence remains usable.
+//   - Service.PreviewRetention and Service.ApplyRetention provide non-destructive
+//     retention planning and audited archive/tombstone application; archived
+//     conclusions keep stable IDs but are excluded from active recall.
+//   - Service.ExportPortableJSONL, Service.PreviewPortableImport,
+//     Service.ImportPortableJSONL, and Service.ExportPortableMarkdown provide
+//     portable local mirrors with checksummed manifests and preview-first import.
+//   - Service.RecordEvalFailures and Service.RecordRecallFeedback turn benchmark
+//     misses and runtime labels into reviewable improvement evidence without
+//     promoting claims; EvaluateRegressionGate enforces deterministic tolerances.
+//   - Service.AcquireActionLease, Service.RenewActionLease,
+//     Service.ExpireActionLeases, and Service.ListActionLeaseAudit provide
+//     local server-mode coordination primitives with TTLs, owner checks, and
+//     audit-visible allow/deny/expire evidence.
+//   - Service.RecordActionSignalReceipt, Service.ListActionSignalReceipts, and
+//     Service.ListActionSignalReceiptAudit add read receipts to action signals
+//     with observable workspace/profile authorization decisions.
+//   - Service.TeamFeed and Service.ListTeamFeedAudit expose a read-only,
+//     paginated team feed over authorized action signals with observable ACL
+//     allow/deny evidence.
+//   - ServerModeSecurityRequirements exposes the requirements-only threat model
+//     and RBAC vocabulary future shared/team mode must satisfy without enabling
+//     network sharing or weakening local-first SQLite mode.
 //
 // For host integrations, prefer the public tool constructors such as
 // NewGonchoContextTool, NewGonchoSearchTool, NewGonchoRecallTool,

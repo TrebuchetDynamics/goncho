@@ -1,0 +1,26 @@
+services:
+  goncho-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - serve
+      - -db
+      - /data/goncho.db
+      - -addr
+      - 0.0.0.0:8765
+      - -auth-token
+      - ${GONCHO_SERVER_AUTH_TOKEN:-local-compose-token}
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - goncho-data:/data
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/goncho-server", "health", "-db", "/data/goncho.db"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  goncho-data:

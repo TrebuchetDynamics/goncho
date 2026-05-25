@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -103,9 +104,20 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 	if r.vectorStore == nil || strings.TrimSpace(q.Query) == "" {
 		return base, nil
 	}
-	hits, err := r.vectorStore.Search(ctx, vectorSearchQueryFromRecall(q, workspaceID, profileID, peer, scopeID))
+	var hits []VectorSearchHit
+	query := vectorSearchQueryFromRecall(q, workspaceID, profileID, peer, scopeID)
+	if maxPayload := r.providers.MaxPayloadBytes(string(ProviderKindEmbedding)); maxPayload > 0 && len(query.Query) > maxPayload {
+		r.recallWarnings.append(RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Message: "optional semantic provider skipped because query exceeds configured provider payload limit; lexical/graph recall fallback remained active", Evidence: map[string]string{"provider": string(ProviderKindEmbedding), "error": "max_payload_exceeded", "max_payload_bytes": fmt.Sprintf("%d", maxPayload)}})
+		return base, nil
+	}
+	err := r.providers.Execute(ctx, string(ProviderKindEmbedding), func(providerCtx context.Context) error {
+		var searchErr error
+		hits, searchErr = r.vectorStore.Search(providerCtx, query)
+		return searchErr
+	})
 	if err != nil {
-		return nil, err
+		r.recallWarnings.append(RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Message: "optional semantic provider unavailable; lexical/graph recall fallback remained active", Evidence: map[string]string{"provider": string(ProviderKindEmbedding), "error": err.Error()}})
+		return base, nil
 	}
 	out := append([]RecallCandidate(nil), base...)
 	indexByID := make(map[string]int, len(out)+len(hits))

@@ -10,6 +10,8 @@ import (
 	"github.com/TrebuchetDynamics/goncho/internal/skillproposals"
 )
 
+const GonchoSQLiteSchemaVersion = "goncho-sqlite-v1"
+
 func RunMigrations(db *sql.DB) error {
 	if db == nil {
 		return fmt.Errorf("%w: nil db", ErrObservationInvalid)
@@ -30,7 +32,7 @@ func RunMigrations(db *sql.DB) error {
 		return fmt.Errorf("goncho: begin migrations: %w", err)
 	}
 	defer tx.Rollback()
-	ddl := append(append(append(append(append(append(observationlog.DDL, reviewlog.DDL...), skillproposals.DDL...), memoryAnnotationDDL...), memorySlotDDL...), actionGraphDDL...), imageMemoryDDL...)
+	ddl := append(append(append(append(append(append(append(append(append(append(append(observationlog.DDL, reviewlog.DDL...), skillproposals.DDL...), memoryAnnotationDDL...), memorySlotDDL...), actionGraphDDL...), actionLeaseDDL...), actionSignalReceiptDDL...), teamFeedDDL...), imageMemoryDDL...), retentionAuditDDL...), evalFeedbackDDL...)
 	for _, stmt := range ddl {
 		if err := applyGonchoMigrationStmt(tx, stmt); err != nil {
 			return fmt.Errorf("goncho: apply migration: %w", err)

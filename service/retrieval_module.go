@@ -10,25 +10,33 @@ import (
 )
 
 type retrievalModule struct {
-	db           *sql.DB
-	workspaceID  string
-	observer     string
-	recentLimit  int
-	dreamEnabled bool
-	sessions     SessionDirectory
-	vectorStore  VectorStore
+	db             *sql.DB
+	workspaceID    string
+	observer       string
+	recentLimit    int
+	dreamEnabled   bool
+	sessions       SessionDirectory
+	vectorStore    VectorStore
+	providers      *ProviderHealthRegistry
+	recallWarnings *recallWarningBuffer
 }
 
 func (s *Service) retrieval() retrievalModule {
 	return retrievalModule{
-		db:           s.db,
-		workspaceID:  s.workspaceID,
-		observer:     s.observer,
-		recentLimit:  s.recentLimit,
-		dreamEnabled: s.dreamEnabled,
-		sessions:     s.sessions,
-		vectorStore:  s.vectorStore,
+		db:             s.db,
+		workspaceID:    s.workspaceID,
+		observer:       s.observer,
+		recentLimit:    s.recentLimit,
+		dreamEnabled:   s.dreamEnabled,
+		sessions:       s.sessions,
+		vectorStore:    s.vectorStore,
+		providers:      s.providerRegistry,
+		recallWarnings: &recallWarningBuffer{},
 	}
+}
+
+func (r retrievalModule) RecallWarnings() []RecallWarning {
+	return r.recallWarnings.list()
 }
 
 func (r retrievalModule) Generate(ctx context.Context, q RecallQuery) ([]RecallCandidate, error) {

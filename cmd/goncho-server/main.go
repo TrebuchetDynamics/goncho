@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -31,6 +32,13 @@ type config struct {
 	Addr           string
 	WorkspaceID    string
 	ObserverPeerID string
+	ImageDir       string
+	VectorDir      string
+	MaxDBBytes     int64
+	MaxImageBytes  int64
+	MaxVectorBytes int64
+	AuthToken      string
+	Stdin          io.Reader
 	Stdout         io.Writer
 	Stderr         io.Writer
 }
@@ -46,11 +54,13 @@ type runtimeState struct {
 }
 
 type healthReport struct {
-	Status     string          `json:"status"`
-	Version    string          `json:"version"`
-	DB         dbHealth        `json:"db"`
-	Migrations migrationHealth `json:"migrations"`
-	Tools      toolHealth      `json:"tools"`
+	Status     string                           `json:"status"`
+	Version    string                           `json:"version"`
+	DB         dbHealth                         `json:"db"`
+	Migrations migrationHealth                  `json:"migrations"`
+	Tools      toolHealth                       `json:"tools"`
+	Providers  goncho.ProviderHealthDiagnostics `json:"providers"`
+	Disk       goncho.DiskUsageDiagnostics      `json:"disk"`
 }
 
 type serverConfigFile struct {
@@ -58,6 +68,7 @@ type serverConfigFile struct {
 	WorkspaceID    string `json:"workspace_id"`
 	ObserverPeerID string `json:"observer_peer_id"`
 	ServeAddr      string `json:"serve_addr"`
+	AuthMode       string `json:"auth_mode"`
 	CreatedAt      string `json:"created_at"`
 }
 
@@ -65,6 +76,18 @@ type initReport struct {
 	Status     string `json:"status"`
 	ConfigPath string `json:"config_path"`
 	DBPath     string `json:"db_path"`
+}
+
+type onboardingReport struct {
+	Status       string   `json:"status"`
+	Mutates      bool     `json:"mutates"`
+	DBPath       string   `json:"db_path"`
+	ConfigPath   string   `json:"config_path"`
+	BindAddr     string   `json:"bind_addr"`
+	MCPURL       string   `json:"mcp_url"`
+	NextCommands []string `json:"next_commands"`
+	MCPSnippet   string   `json:"mcp_snippet"`
+	HookSnippet  string   `json:"hook_snippet"`
 }
 
 type doctorReport struct {
@@ -75,9 +98,10 @@ type doctorReport struct {
 }
 
 type doctorCheck struct {
-	Name    string `json:"name"`
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
+	Name        string   `json:"name"`
+	Status      string   `json:"status"`
+	Message     string   `json:"message,omitempty"`
+	Suggestions []string `json:"suggestions,omitempty"`
 }
 
 func (r doctorReport) CheckByName(name string) (doctorCheck, bool) {
@@ -124,6 +148,7 @@ type mcpTool interface {
 	Name() string
 	Description() string
 	Schema() json.RawMessage
+	Timeout() time.Duration
 	Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error)
 }
 
@@ -149,6 +174,21 @@ type mcpError struct {
 type mcpToolCallParams struct {
 	Name      string          `json:"name"`
 	Arguments json.RawMessage `json:"arguments"`
+}
+
+type mcpResourceReadParams struct {
+	URI        string `json:"uri"`
+	ProfileID  string `json:"profile_id,omitempty"`
+	Peer       string `json:"peer,omitempty"`
+	Query      string `json:"query,omitempty"`
+	SessionKey string `json:"session_key,omitempty"`
+	Scope      string `json:"scope,omitempty"`
+	Limit      int    `json:"limit,omitempty"`
+}
+
+type mcpPromptGetParams struct {
+	Name      string          `json:"name"`
+	Arguments json.RawMessage `json:"arguments,omitempty"`
 }
 
 var publicToolNames = []string{
@@ -182,6 +222,7 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 		Command:      "serve",
 		DatabasePath: defaultDBPath(),
 		Addr:         defaultServeAddr,
+		Stdin:        os.Stdin,
 		Stdout:       stdout,
 		Stderr:       stderr,
 	}
@@ -192,25 +233,36 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 	fs := flag.NewFlagSet("goncho-server "+cfg.Command, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&cfg.DatabasePath, "db", cfg.DatabasePath, "SQLite database path")
-	if cfg.Command == "init" {
+	if cfg.Command == "init" || cfg.Command == "onboarding" {
 		cfg.ConfigPath = defaultConfigPath()
 		fs.StringVar(&cfg.ConfigPath, "config", cfg.ConfigPath, "goncho-server JSON config path")
 	}
 	fs.StringVar(&cfg.WorkspaceID, "workspace", "", "Goncho workspace ID; defaults to service default")
 	fs.StringVar(&cfg.ObserverPeerID, "observer", "", "observer peer ID; defaults to service default")
-	if cfg.Command == "serve" || cfg.Command == "doctor" {
+	fs.StringVar(&cfg.ImageDir, "image-dir", "", "optional image storage directory for disk diagnostics")
+	fs.StringVar(&cfg.VectorDir, "vector-dir", "", "optional vector index directory for disk diagnostics")
+	fs.Int64Var(&cfg.MaxDBBytes, "max-db-bytes", 0, "optional DB size budget for diagnostics")
+	fs.Int64Var(&cfg.MaxImageBytes, "max-image-bytes", 0, "optional image directory size budget for diagnostics")
+	fs.Int64Var(&cfg.MaxVectorBytes, "max-vector-bytes", 0, "optional vector directory size budget for diagnostics")
+	if cfg.Command == "serve" || cfg.Command == "doctor" || cfg.Command == "onboarding" {
 		fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "HTTP listen address to check or serve; defaults to loopback only")
+	}
+	if cfg.Command == "serve" {
+		fs.StringVar(&cfg.AuthToken, "auth-token", "", "explicit local server token required for non-loopback binds; enforcement is reserved for future server mode")
 	}
 	if err := fs.Parse(args); err != nil {
 		return cfg, err
 	}
-	if cfg.Command != "init" && cfg.Command != "serve" && cfg.Command != "health" && cfg.Command != "demo" && cfg.Command != "doctor" {
-		return cfg, fmt.Errorf("goncho-server: unknown command %q (want init, serve, health, demo, or doctor)", cfg.Command)
+	if cfg.Command != "init" && cfg.Command != "onboarding" && cfg.Command != "serve" && cfg.Command != "stdio" && cfg.Command != "health" && cfg.Command != "demo" && cfg.Command != "doctor" && cfg.Command != "security" {
+		return cfg, fmt.Errorf("goncho-server: unknown command %q (want init, onboarding, serve, stdio, health, demo, doctor, or security)", cfg.Command)
 	}
 	return cfg, nil
 }
 
 func run(ctx context.Context, cfg config) error {
+	if cfg.Stdin == nil {
+		cfg.Stdin = os.Stdin
+	}
 	if cfg.Stdout == nil {
 		cfg.Stdout = os.Stdout
 	}
@@ -220,15 +272,19 @@ func run(ctx context.Context, cfg config) error {
 	switch cfg.Command {
 	case "init":
 		return runInit(ctx, cfg)
+	case "onboarding":
+		return runOnboarding(ctx, cfg)
 	case "doctor":
 		return runDoctor(ctx, cfg)
+	case "security":
+		return json.NewEncoder(cfg.Stdout).Encode(goncho.ServerModeSecurityRequirements())
 	case "health":
 		rt, err := openRuntime(ctx, cfg)
 		if err != nil {
 			return err
 		}
 		defer rt.Close(ctx)
-		return json.NewEncoder(cfg.Stdout).Encode(rt.Health(ctx))
+		return json.NewEncoder(cfg.Stdout).Encode(rt.Health(ctx, retentionPolicyFromConfig(cfg)))
 	case "demo":
 		rt, err := openRuntime(ctx, cfg)
 		if err != nil {
@@ -243,7 +299,17 @@ func run(ctx context.Context, cfg config) error {
 			return errors.New("goncho-server demo: recall/context proof failed")
 		}
 		return nil
+	case "stdio":
+		rt, err := openRuntime(ctx, cfg)
+		if err != nil {
+			return err
+		}
+		defer rt.Close(ctx)
+		return runStdioMCP(ctx, cfg.Stdin, cfg.Stdout, rt)
 	case "serve":
+		if err := validateServeSecurity(cfg); err != nil {
+			return err
+		}
 		rt, err := openRuntime(ctx, cfg)
 		if err != nil {
 			return err
@@ -265,6 +331,71 @@ func run(ctx context.Context, cfg config) error {
 	}
 }
 
+func retentionPolicyFromConfig(cfg config) goncho.RetentionPolicy {
+	return goncho.RetentionPolicy{ImageDir: cfg.ImageDir, VectorDir: cfg.VectorDir, MaxDBBytes: cfg.MaxDBBytes, MaxImageBytes: cfg.MaxImageBytes, MaxVectorBytes: cfg.MaxVectorBytes}
+}
+
+func validateServeSecurity(cfg config) error {
+	addr := strings.TrimSpace(cfg.Addr)
+	if addr == "" {
+		addr = defaultServeAddr
+	}
+	if isLoopbackListenAddr(addr) {
+		return nil
+	}
+	if strings.TrimSpace(cfg.AuthToken) != "" {
+		return nil
+	}
+	return fmt.Errorf("goncho-server serve: refusing unauthenticated non-loopback bind %q; use a loopback address like %s or configure an explicit server auth token", addr, defaultServeAddr)
+}
+
+func isLoopbackListenAddr(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		host = addr
+	}
+	host = strings.Trim(strings.TrimSpace(host), "[]")
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func runOnboarding(ctx context.Context, cfg config) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	dbPath := strings.TrimSpace(cfg.DatabasePath)
+	if dbPath == "" {
+		dbPath = defaultDBPath()
+	}
+	configPath := strings.TrimSpace(cfg.ConfigPath)
+	if configPath == "" {
+		configPath = defaultConfigPath()
+	}
+	addr := strings.TrimSpace(cfg.Addr)
+	if addr == "" {
+		addr = defaultServeAddr
+	}
+	report := onboardingReport{
+		Status:     "plan",
+		Mutates:    false,
+		DBPath:     dbPath,
+		ConfigPath: configPath,
+		BindAddr:   addr,
+		MCPURL:     "http://" + addr + "/mcp",
+		NextCommands: []string{
+			fmt.Sprintf("goncho-server init -db %q -config %q", dbPath, configPath),
+			fmt.Sprintf("goncho-server serve -db %q -addr %q", dbPath, addr),
+			"goncho connect <host> --plan to inspect host-specific MCP/hook changes before mutating files",
+		},
+		MCPSnippet:  fmt.Sprintf(`{"mcpServers":{"goncho":{"url":"http://%s/mcp"}}}`, addr),
+		HookSnippet: "Forward approved host events to service.CaptureHostHook after applying local redaction policy; onboarding does not install hooks.",
+	}
+	return json.NewEncoder(cfg.Stdout).Encode(report)
+}
+
 func runDoctor(ctx context.Context, cfg config) error {
 	dbPath := strings.TrimSpace(cfg.DatabasePath)
 	if dbPath == "" {
@@ -280,6 +411,7 @@ func runDoctor(ctx context.Context, cfg config) error {
 		if err != nil {
 			check.Status = "error"
 			check.Message = err.Error()
+			check.Suggestions = doctorSuggestions(name, dbPath, addr)
 			report.Status = "error"
 		}
 		report.Checks = append(report.Checks, check)
@@ -292,12 +424,64 @@ func runDoctor(ctx context.Context, cfg config) error {
 		addCheck("migrations", err)
 	} else {
 		addCheck("migrations", nil)
-		_ = rt.Close(ctx)
 	}
 	addCheck("port_available", checkPortAvailable(addr))
 	addCheck("public_tools", checkPublicTools())
+	if rt != nil && rt.Service != nil {
+		_, diskErr := rt.Service.DiskUsage(ctx, retentionPolicyFromConfig(cfg))
+		addCheck("disk_usage", diskErr)
+	} else {
+		addCheck("disk_usage", err)
+	}
+	addDoctorProviderCheck := func(health goncho.ProviderHealthDiagnostics) {
+		check := doctorCheck{Name: "optional_providers", Status: "ok"}
+		for _, provider := range health {
+			if provider.Status == goncho.ProviderStatusDegraded {
+				check.Status = "degraded"
+				check.Message = "one or more optional providers are degraded; core SQLite service remains usable"
+				check.Suggestions = doctorSuggestions("optional_providers", dbPath, addr)
+				break
+			}
+		}
+		report.Checks = append(report.Checks, check)
+	}
+	addDoctorProviderCheck(rtForProviderHealth(rt))
+	if rt != nil {
+		_ = rt.Close(ctx)
+	}
 
 	return json.NewEncoder(cfg.Stdout).Encode(report)
+}
+
+func rtForProviderHealth(rt *runtimeState) goncho.ProviderHealthDiagnostics {
+	if rt == nil || rt.Service == nil {
+		return goncho.ProviderHealthDiagnostics{}
+	}
+	return rt.Service.ProviderHealthDiagnostics()
+}
+
+func doctorSuggestions(name, dbPath, addr string) []string {
+	switch name {
+	case "db_path", "write_permissions":
+		return []string{
+			fmt.Sprintf("mkdir -p %q", filepath.Dir(dbPath)),
+			fmt.Sprintf("chmod 700 %q", filepath.Dir(dbPath)),
+			fmt.Sprintf("goncho-server init -db %q", dbPath),
+		}
+	case "migrations":
+		return []string{fmt.Sprintf("goncho-server init -db %q", dbPath), "Inspect the SQLite error above before retrying; doctor does not repair migrations automatically."}
+	case "port_available":
+		return []string{
+			fmt.Sprintf("goncho-server serve -db %q -addr 127.0.0.1:0", dbPath),
+			fmt.Sprintf("Choose a free loopback address instead of %q, then update connector plans with goncho connect <host> --plan -addr <addr>.", addr),
+		}
+	case "public_tools":
+		return []string{"Run go test ./service ./cmd/goncho-server and inspect publicToolNames/buildMCPTools registration."}
+	case "optional_providers":
+		return []string{"Inspect provider health diagnostics; Goncho will continue lexical/graph recall fallback while optional providers recover.", "Increase provider timeout/cooldown only after confirming the adapter is local and trusted."}
+	default:
+		return nil
+	}
 }
 
 func runInit(ctx context.Context, cfg config) error {
@@ -318,6 +502,7 @@ func runInit(ctx context.Context, cfg config) error {
 		WorkspaceID:    rt.WorkspaceID,
 		ObserverPeerID: effectiveObserverPeerID(cfg.ObserverPeerID),
 		ServeAddr:      defaultServeAddr,
+		AuthMode:       "loopback_only",
 		CreatedAt:      time.Now().UTC().Format(time.RFC3339),
 	}
 	raw, err := json.MarshalIndent(serverCfg, "", "  ")
@@ -398,7 +583,11 @@ func (rt *runtimeState) RunDemo(ctx context.Context) demoReport {
 	return report
 }
 
-func (rt *runtimeState) Health(ctx context.Context) healthReport {
+func (rt *runtimeState) Health(ctx context.Context, policies ...goncho.RetentionPolicy) healthReport {
+	policy := goncho.RetentionPolicy{}
+	if len(policies) > 0 {
+		policy = policies[0]
+	}
 	report := healthReport{
 		Status:  "ok",
 		Version: buildVersion(),
@@ -414,6 +603,13 @@ func (rt *runtimeState) Health(ctx context.Context) healthReport {
 			Count:     len(publicToolNames),
 			Available: append([]string(nil), publicToolNames...),
 		},
+		Providers: rt.Service.ProviderHealthDiagnostics(),
+	}
+	if rt != nil && rt.Service != nil {
+		disk, err := rt.Service.DiskUsage(ctx, policy)
+		if err == nil {
+			report.Disk = disk
+		}
 	}
 	if rt == nil || rt.DB == nil {
 		report.Status = "error"
@@ -480,14 +676,40 @@ func handleMCP(w http.ResponseWriter, r *http.Request, rt *runtimeState) {
 		writeJSON(w, http.StatusOK, mcpResponse{JSONRPC: "2.0", Error: &mcpError{Code: -32700, Message: err.Error()}})
 		return
 	}
+	writeJSON(w, http.StatusOK, handleMCPRequest(r.Context(), rt, req))
+}
+
+func handleMCPRequest(ctx context.Context, rt *runtimeState, req mcpRequest) mcpResponse {
 	resp := mcpResponse{JSONRPC: "2.0", ID: req.ID}
+	if req.JSONRPC != "2.0" || strings.TrimSpace(req.Method) == "" {
+		resp.Error = &mcpError{Code: -32600, Message: "invalid JSON-RPC request"}
+		return resp
+	}
 	switch req.Method {
 	case "initialize":
-		resp.Result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "goncho-server", "version": buildVersion()}, "capabilities": map[string]any{"tools": map[string]any{}}}
+		resp.Result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "goncho-server", "version": buildVersion()}, "capabilities": map[string]any{"tools": map[string]any{}, "resources": map[string]any{}, "prompts": map[string]any{}}}
 	case "tools/list":
 		resp.Result = map[string]any{"tools": mcpToolDescriptors(rt.Tools)}
+	case "resources/list":
+		resp.Result = map[string]any{"resources": mcpResourceDescriptors(rt.Service)}
+	case "resources/read":
+		result, err := mcpReadResource(ctx, rt.Service, req.Params)
+		if err != nil {
+			resp.Error = &mcpError{Code: -32602, Message: err.Error()}
+		} else {
+			resp.Result = result
+		}
+	case "prompts/list":
+		resp.Result = map[string]any{"prompts": mcpPromptDescriptors(rt.Service)}
+	case "prompts/get":
+		result, err := mcpGetPrompt(ctx, rt.Service, req.Params)
+		if err != nil {
+			resp.Error = &mcpError{Code: -32602, Message: err.Error()}
+		} else {
+			resp.Result = result
+		}
 	case "tools/call":
-		result, err := mcpCallTool(r.Context(), rt.Tools, req.Params)
+		result, err := mcpCallTool(ctx, rt.Tools, req.Params)
 		if err != nil {
 			resp.Error = &mcpError{Code: -32602, Message: err.Error()}
 		} else {
@@ -498,7 +720,55 @@ func handleMCP(w http.ResponseWriter, r *http.Request, rt *runtimeState) {
 	default:
 		resp.Error = &mcpError{Code: -32601, Message: "method not found"}
 	}
-	writeJSON(w, http.StatusOK, resp)
+	return resp
+}
+
+func runStdioMCP(ctx context.Context, in io.Reader, out io.Writer, rt *runtimeState) error {
+	scanner := bufio.NewScanner(in)
+	encoder := json.NewEncoder(out)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		var req mcpRequest
+		if err := json.Unmarshal([]byte(line), &req); err != nil {
+			if encodeErr := encoder.Encode(mcpResponse{JSONRPC: "2.0", Error: &mcpError{Code: -32700, Message: err.Error()}}); encodeErr != nil {
+				return encodeErr
+			}
+			continue
+		}
+		if err := encoder.Encode(handleMCPRequest(ctx, rt, req)); err != nil {
+			return err
+		}
+	}
+	return scanner.Err()
+}
+
+func mcpResourceDescriptors(svc *goncho.Service) []map[string]any {
+	registry := goncho.NewMemoryResourceRegistry(svc)
+	descriptors := registry.Descriptors()
+	out := make([]map[string]any, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		if descriptor.Kind != goncho.MemoryResourceKindResource {
+			continue
+		}
+		out = append(out, map[string]any{"uri": descriptor.URI, "name": descriptor.Name, "description": descriptor.Description, "mimeType": descriptor.MimeType})
+	}
+	return out
+}
+
+func mcpPromptDescriptors(svc *goncho.Service) []map[string]any {
+	registry := goncho.NewMemoryResourceRegistry(svc)
+	descriptors := registry.Descriptors()
+	out := make([]map[string]any, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		if descriptor.Kind != goncho.MemoryResourceKindPrompt {
+			continue
+		}
+		out = append(out, map[string]any{"name": descriptor.Name, "description": descriptor.Description, "arguments": []map[string]string{{"name": "peer", "description": "Goncho peer id"}, {"name": "session_key", "description": "Optional session key"}, {"name": "query", "description": "Optional recall or verification query"}}})
+	}
+	return out
 }
 
 func mcpToolDescriptors(tools map[string]mcpTool) []map[string]any {
@@ -511,6 +781,81 @@ func mcpToolDescriptors(tools map[string]mcpTool) []map[string]any {
 		out = append(out, map[string]any{"name": tool.Name(), "description": tool.Description(), "inputSchema": json.RawMessage(tool.Schema())})
 	}
 	return out
+}
+
+func mcpReadResource(ctx context.Context, svc *goncho.Service, rawParams json.RawMessage) (map[string]any, error) {
+	var params mcpResourceReadParams
+	if len(rawParams) == 0 {
+		return nil, errors.New("resources/read requires params")
+	}
+	if err := json.Unmarshal(rawParams, &params); err != nil {
+		return nil, err
+	}
+	content, err := goncho.NewMemoryResourceRegistry(svc).Read(ctx, goncho.MemoryResourceRequest{URI: params.URI, ProfileID: params.ProfileID, Peer: params.Peer, Query: params.Query, SessionKey: params.SessionKey, Scope: params.Scope, Limit: params.Limit})
+	if err != nil {
+		return nil, err
+	}
+	text, err := mcpResourceText(content)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"contents": []map[string]any{{"uri": content.URI, "mimeType": content.MimeType, "text": text}}}, nil
+}
+
+func mcpGetPrompt(ctx context.Context, svc *goncho.Service, rawParams json.RawMessage) (map[string]any, error) {
+	var params mcpPromptGetParams
+	if len(rawParams) == 0 {
+		return nil, errors.New("prompts/get requires params")
+	}
+	if err := json.Unmarshal(rawParams, &params); err != nil {
+		return nil, err
+	}
+	var args mcpResourceReadParams
+	if len(params.Arguments) > 0 && string(params.Arguments) != "null" {
+		if err := json.Unmarshal(params.Arguments, &args); err != nil {
+			return nil, err
+		}
+	}
+	uri, err := mcpPromptURI(params.Name)
+	if err != nil {
+		return nil, err
+	}
+	content, err := goncho.NewMemoryResourceRegistry(svc).Read(ctx, goncho.MemoryResourceRequest{URI: uri, ProfileID: args.ProfileID, Peer: args.Peer, Query: args.Query, SessionKey: args.SessionKey, Scope: args.Scope, Limit: args.Limit})
+	if err != nil {
+		return nil, err
+	}
+	text, err := mcpResourceText(content)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"description": "Goncho " + params.Name + " prompt", "messages": []map[string]any{{"role": "user", "content": map[string]string{"type": "text", "text": text}}}}, nil
+}
+
+func mcpPromptURI(name string) (string, error) {
+	switch strings.TrimSpace(name) {
+	case "recall_prompt":
+		return "goncho://recall/prompt", nil
+	case "session_handoff":
+		return "goncho://handoff/prompt", nil
+	case "review_resolution":
+		return "goncho://review/prompt", nil
+	case "verification_before_action":
+		return "goncho://verify/prompt", nil
+	default:
+		return "", fmt.Errorf("unknown prompt %q", name)
+	}
+}
+
+func mcpResourceText(content goncho.MemoryResourceContent) (string, error) {
+	if content.MimeType == "text/plain" {
+		text, _ := content.Payload["prompt"].(string)
+		return text, nil
+	}
+	raw, err := json.Marshal(content.Payload)
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
 }
 
 func mcpCallTool(ctx context.Context, tools map[string]mcpTool, rawParams json.RawMessage) (map[string]any, error) {
@@ -528,6 +873,11 @@ func mcpCallTool(ctx context.Context, tools map[string]mcpTool, rawParams json.R
 	args := params.Arguments
 	if len(args) == 0 || string(args) == "null" {
 		args = json.RawMessage(`{}`)
+	}
+	if timeout := tool.Timeout(); timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
 	out, err := tool.Execute(ctx, args)
 	if err != nil {

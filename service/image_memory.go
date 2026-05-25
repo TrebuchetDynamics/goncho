@@ -122,7 +122,7 @@ func (s *Service) SearchImageMemories(ctx context.Context, query ImageMemoryQuer
 	if limit <= 0 {
 		limit = 20
 	}
-	base := `SELECT id, workspace_id, profile_id, peer_id, session_key, image_ref, checksum, alt_text, embedding_status, metadata_json, created_at, updated_at FROM goncho_image_memories WHERE workspace_id = ? AND profile_id = ? AND peer_id = ?`
+	base := `SELECT id, workspace_id, profile_id, peer_id, session_key, image_ref, checksum, alt_text, embedding_status, metadata_json, created_at, updated_at FROM goncho_image_memories WHERE workspace_id = ? AND profile_id = ? AND peer_id = ? AND embedding_status != 'archived'`
 	args := []any{workspaceID, profileID, peer}
 	if sessionKey := strings.TrimSpace(query.SessionKey); sessionKey != "" {
 		base += ` AND session_key = ?`

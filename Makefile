@@ -13,7 +13,7 @@ BEAM_SMOKE_BASELINE_RESULTS := ./cmd/goncho-bench/testdata/beam-smoke/mnemosyne-
 PUBLIC_LATEST_VERSION := v0.2.0
 PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-25
 
-.PHONY: release-smoke stable-e2e-bench-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke server-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends bench-beam-smoke
+.PHONY: release-smoke stable-e2e-bench-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke server-smoke docker-compose-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends bench-beam-smoke
 
 release-smoke:
 	$(MAKE) release-metadata-smoke
@@ -143,6 +143,9 @@ install-smoke:
 
 server-smoke:
 	python3 ./scripts/server_smoke.py
+
+docker-compose-smoke:
+	python3 ./scripts/docker_compose_smoke.py
 
 bench-longmemeval-s-smoke:
 	@mkdir -p artifacts/bench-smoke docs/benchmarks/results docs/benchmarks/failures

@@ -23,19 +23,20 @@ const (
 // Service is the first in-binary Goncho domain facade. It sits directly on
 // top of the SQLite store used by Gormes today.
 type Service struct {
-	db              *sql.DB
-	workspaceID     string
-	observer        string
-	recentLimit     int
-	maxMessageSize  int
-	maxFileSize     int
-	peerCardEnabled bool
-	dreamEnabled    bool
-	dreamIdle       time.Duration
-	sessions        SessionDirectory
-	vectorStore     VectorStore
-	log             *slog.Logger
-	dialecticCaller DialecticCaller
+	db               *sql.DB
+	workspaceID      string
+	observer         string
+	recentLimit      int
+	maxMessageSize   int
+	maxFileSize      int
+	peerCardEnabled  bool
+	dreamEnabled     bool
+	dreamIdle        time.Duration
+	sessions         SessionDirectory
+	vectorStore      VectorStore
+	providerRegistry *ProviderHealthRegistry
+	log              *slog.Logger
+	dialecticCaller  DialecticCaller
 }
 
 const maxPeerCardFacts = 40
@@ -65,18 +66,19 @@ func NewService(db *sql.DB, cfg Config, log *slog.Logger) *Service {
 		recentLimit = DefaultRecentMessages
 	}
 	return &Service{
-		db:              db,
-		workspaceID:     workspaceID,
-		observer:        observer,
-		recentLimit:     recentLimit,
-		maxMessageSize:  cfg.MaxMessageSize,
-		maxFileSize:     cfg.MaxFileSize,
-		peerCardEnabled: cfg.PeerCardEnabled,
-		dreamEnabled:    cfg.DreamEnabled,
-		dreamIdle:       cfg.DreamIdleTimeout,
-		sessions:        cfg.SessionDirectory,
-		vectorStore:     cfg.VectorStore,
-		log:             log,
+		db:               db,
+		workspaceID:      workspaceID,
+		observer:         observer,
+		recentLimit:      recentLimit,
+		maxMessageSize:   cfg.MaxMessageSize,
+		maxFileSize:      cfg.MaxFileSize,
+		peerCardEnabled:  cfg.PeerCardEnabled,
+		dreamEnabled:     cfg.DreamEnabled,
+		dreamIdle:        cfg.DreamIdleTimeout,
+		sessions:         cfg.SessionDirectory,
+		vectorStore:      cfg.VectorStore,
+		providerRegistry: NewProviderHealthRegistry(providerResilienceConfigFromServiceConfig(cfg), cfg.VectorStore),
+		log:              log,
 	}
 }
 

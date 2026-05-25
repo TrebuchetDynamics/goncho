@@ -54,6 +54,9 @@ func (r *MemoryResourceRegistry) Descriptors() []MemoryResourceDescriptor {
 		{URI: "goncho://latest", Name: "latest_memories", Kind: MemoryResourceKindResource, Description: "Latest local memories visible to the requested peer/session scope.", MimeType: "application/json"},
 		{URI: "goncho://graph/stats", Name: "graph_stats", Kind: MemoryResourceKindResource, Description: "Local annotation graph counts and relation-like fact counts.", MimeType: "application/json"},
 		{URI: "goncho://recall/prompt", Name: "recall_prompt", Kind: MemoryResourceKindPrompt, Description: "Prompt template for evidence-first recall with provenance.", MimeType: "text/plain"},
+		{URI: "goncho://handoff/prompt", Name: "session_handoff", Kind: MemoryResourceKindPrompt, Description: "Prompt template for session handoff with evidence and next actions.", MimeType: "text/plain"},
+		{URI: "goncho://review/prompt", Name: "review_resolution", Kind: MemoryResourceKindPrompt, Description: "Prompt template for resolving review items with explicit evidence.", MimeType: "text/plain"},
+		{URI: "goncho://verify/prompt", Name: "verification_before_action", Kind: MemoryResourceKindPrompt, Description: "Prompt template requiring verification before consequential actions.", MimeType: "text/plain"},
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].URI < out[j].URI })
 	return out
@@ -75,6 +78,12 @@ func (r *MemoryResourceRegistry) Read(ctx context.Context, req MemoryResourceReq
 		return r.graphStats(ctx, req)
 	case "goncho://recall/prompt":
 		return r.recallPrompt(ctx, req)
+	case "goncho://handoff/prompt":
+		return r.sessionHandoffPrompt(ctx, req)
+	case "goncho://review/prompt":
+		return r.reviewResolutionPrompt(ctx, req)
+	case "goncho://verify/prompt":
+		return r.verificationBeforeActionPrompt(ctx, req)
 	default:
 		return MemoryResourceContent{}, fmt.Errorf("goncho: unknown memory resource %q", req.URI)
 	}
@@ -154,6 +163,21 @@ func (r *MemoryResourceRegistry) recallPrompt(ctx context.Context, req MemoryRes
 	}
 	prompt := fmt.Sprintf("Use goncho_recall before answering. Query: %q. Peer: %q. Session: %q. Limit: %d. Require provenance: cite selected RecallTrace candidate memory_id values, evidence kinds, warnings, and any query_expansion/semantic/graph signals. If recall is empty, say no memory evidence was found and do not invent facts.", query, strings.TrimSpace(req.Peer), strings.TrimSpace(req.SessionKey), limit)
 	return MemoryResourceContent{URI: "goncho://recall/prompt", MimeType: "text/plain", Payload: map[string]any{"prompt": prompt, "query": query, "peer": strings.TrimSpace(req.Peer), "limit": limit}}, nil
+}
+
+func (r *MemoryResourceRegistry) sessionHandoffPrompt(ctx context.Context, req MemoryResourceRequest) (MemoryResourceContent, error) {
+	prompt := fmt.Sprintf("Create an evidence-backed session handoff for peer %q and session %q. Include decisions, files or memory IDs cited from Goncho observations/summaries, unresolved risks, and concrete next actions. Do not invent state that is not supported by Goncho evidence.", strings.TrimSpace(req.Peer), strings.TrimSpace(req.SessionKey))
+	return MemoryResourceContent{URI: "goncho://handoff/prompt", MimeType: "text/plain", Payload: map[string]any{"prompt": prompt, "peer": strings.TrimSpace(req.Peer), "session_key": strings.TrimSpace(req.SessionKey)}}, nil
+}
+
+func (r *MemoryResourceRegistry) reviewResolutionPrompt(ctx context.Context, req MemoryResourceRequest) (MemoryResourceContent, error) {
+	prompt := fmt.Sprintf("Review open Goncho memory items for peer %q. Resolve only with explicit evidence IDs, explain accepted/rejected/superseded/verified decisions, and leave uncertain items open for operator review.", strings.TrimSpace(req.Peer))
+	return MemoryResourceContent{URI: "goncho://review/prompt", MimeType: "text/plain", Payload: map[string]any{"prompt": prompt, "peer": strings.TrimSpace(req.Peer)}}, nil
+}
+
+func (r *MemoryResourceRegistry) verificationBeforeActionPrompt(ctx context.Context, req MemoryResourceRequest) (MemoryResourceContent, error) {
+	prompt := fmt.Sprintf("Before taking consequential action for peer %q, verify relevant Goncho recall evidence for query %q. Cite memory IDs, warnings, stale/superseded evidence, and say what remains unverified before acting.", strings.TrimSpace(req.Peer), strings.TrimSpace(req.Query))
+	return MemoryResourceContent{URI: "goncho://verify/prompt", MimeType: "text/plain", Payload: map[string]any{"prompt": prompt, "peer": strings.TrimSpace(req.Peer), "query": strings.TrimSpace(req.Query)}}, nil
 }
 
 func memoryResourceGraphCounts(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string) (int, int, error) {
