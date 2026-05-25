@@ -1356,7 +1356,7 @@ func TestPublicDocsUseLatestQualifiedGoGet(t *testing.T) {
 }
 
 func TestPublicDocsMentionPublishedReleaseDate(t *testing.T) {
-	const publishedDate = "published May 24, 2026"
+	const publishedDate = "published May 25, 2026"
 	for _, path := range []string{
 		"README.md",
 		"docs-site/src/content/docs/index.md",
@@ -1518,7 +1518,7 @@ func TestReadmeSurfacesGoDevSignalMap(t *testing.T) {
 		"Valid go.mod file",
 		"Redistributable license",
 		"v0.2.0 / Latest",
-		"published May 24, 2026",
+		"published May 25, 2026",
 		"make package-doc-smoke",
 		"make public-module-smoke",
 		"Imported by count is an adoption signal",
@@ -1855,7 +1855,7 @@ func TestPublicReleaseSmokeChecksDocumentedLatestMetadata(t *testing.T) {
 	text := string(raw)
 	for _, want := range []string{
 		"PUBLIC_LATEST_VERSION := v0.2.0",
-		"PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-24",
+		"PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-25",
 		`"Version": "$(PUBLIC_LATEST_VERSION)"`,
 		`"Time": "$(PUBLIC_LATEST_PUBLISHED_DATE)`,
 	} {

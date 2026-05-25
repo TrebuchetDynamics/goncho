@@ -11,7 +11,7 @@ Current public package signals:
 
 - Module path: `github.com/TrebuchetDynamics/goncho`.
 - API reference: [pkg.go.dev/github.com/TrebuchetDynamics/goncho/service](https://pkg.go.dev/github.com/TrebuchetDynamics/goncho/service).
-- Tagged release stream: public `@latest` currently resolves to v0.2.0, published May 24, 2026; v0.2.x is the active release line for the importable service, Gormes adapter surface, and benchmark CLI.
+- Tagged release stream: public `@latest` currently resolves to v0.2.0, published May 25, 2026; v0.2.x is the active release line for the importable service, Gormes adapter surface, and benchmark CLI.
 - Local release smoke: `make release-smoke` runs release metadata checks, ecosystem smoke, Go tests, vet, race tests, and the docs-site build before local pre-tag decisions.
 - Ecosystem smoke: `make ecosystem-smoke` verifies public release metadata, local Go module metadata, local package documentation, public docs site build, a temporary external Go module import, and checkout-local benchmark CLI installation.
 - Public release metadata smoke: `make public-release-smoke` checks the documented public `@latest` version and published date from `go list -m -json github.com/TrebuchetDynamics/goncho/service@latest`.
