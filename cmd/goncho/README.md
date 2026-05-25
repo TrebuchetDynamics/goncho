@@ -48,6 +48,19 @@ go run ./cmd/goncho preferences --config ~/.config/goncho/preferences.json \
 
 Without `--set`, `preferences` reads the JSON file or prints safe local defaults. With `--set`, it writes only the named preferences to the requested config path.
 
+## Filesystem watcher connector plan
+
+```bash
+go run ./cmd/goncho connect filesystem-watcher --plan \
+  --watch-root . \
+  --include '**/*.md' \
+  --include '**/*.go' \
+  --exclude '.git/**' \
+  --exclude 'node_modules/**'
+```
+
+The command prints a non-mutating watcher plan. Include globs are required. A host watcher should call `PreviewFilesystemWatcherImport` first, then `ImportFilesystemWatcherChanges` only after include/exclude rules are reviewed.
+
 ## Gormes connector plan
 
 ```bash

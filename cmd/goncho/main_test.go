@@ -160,6 +160,34 @@ func TestRunPreferencesWritesAndReadsLocalDefaults(t *testing.T) {
 	}
 }
 
+func TestRunConnectFilesystemWatcherPlanRequiresExplicitIncludeExclude(t *testing.T) {
+	root := t.TempDir()
+	var stdout bytes.Buffer
+	if err := run(context.Background(), config{Command: "connect", Connector: "filesystem-watcher", Plan: true, WatchRoots: []string{root}, IncludeGlobs: []string{"**/*.md", "**/*.go"}, ExcludeGlobs: []string{".git/**", "node_modules/**"}, Stdout: &stdout}); err != nil {
+		t.Fatalf("connect filesystem-watcher --plan: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode filesystem watcher plan: %v\n%s", err, stdout.String())
+	}
+	if plan.Status != "plan" || plan.Integration != "filesystem-watcher" || plan.Mutates || plan.ConfigAction != "preview_import_changed_files" {
+		t.Fatalf("plan = %+v, want non-mutating filesystem watcher preview plan", plan)
+	}
+	if !slices.Equal(plan.WatchRoots, []string{root}) || !slices.Contains(plan.IncludeGlobs, "**/*.md") || !slices.Contains(plan.ExcludeGlobs, "node_modules/**") {
+		t.Fatalf("watch globs = roots:%v include:%v exclude:%v", plan.WatchRoots, plan.IncludeGlobs, plan.ExcludeGlobs)
+	}
+	if !strings.Contains(strings.Join(plan.RecommendedNextStep, "\n"), "ImportFilesystemWatcherChanges") {
+		t.Fatalf("next steps = %v, want service import guidance", plan.RecommendedNextStep)
+	}
+}
+
+func TestRunConnectFilesystemWatcherRejectsMissingIncludeGlobs(t *testing.T) {
+	err := run(context.Background(), config{Command: "connect", Connector: "filesystem-watcher", Plan: true, WatchRoots: []string{t.TempDir()}, Stdout: &bytes.Buffer{}})
+	if err == nil {
+		t.Fatal("connect filesystem-watcher without include globs succeeded, want explicit include rule error")
+	}
+}
+
 func TestRunConnectPlanAliasAndRemovePlanAreNonMutating(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, ".codex", "config.toml")

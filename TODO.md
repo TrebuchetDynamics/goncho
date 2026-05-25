@@ -428,7 +428,7 @@ Agentmemory is broad and polished: npm packaging, marketplace metadata, connect 
 - [x] Add `examples/python/` only if a stable HTTP/server API exists.
 - [x] Add security docs for local files, non-loopback binds, prompt injection quarantine, redaction, and snapshot exports.
 - [x] Add connector docs for Gormes, Hermes, Pi, Cursor, Codex, Claude Code, OpenCode, and generic MCP.
-- [ ] Add filesystem watcher connector that imports changed project docs/code as observations behind explicit include/exclude rules.
+- [x] Add filesystem watcher connector that imports changed project docs/code as observations behind explicit include/exclude rules.
 - [x] Add GitHub connector plan for issues, PRs, discussions, and comments as scoped observations with rate-limit/backfill controls.
 - [x] Add Slack/Discord connector plan for team chats only after server-mode ACLs and retention are explicit.
 - [x] Add schema-fingerprint command/test so server and adapters can detect incompatible DB/tool schema drift before writes.
@@ -740,8 +740,8 @@ Non-goals:
 16. **Backlog H.1** disk-budget and retention preview. ✅
 17. **Backlog J.1** portable JSONL/Markdown export-import. ✅
 18. **Backlog K.1** eval feedback and regression gates. ✅
-19. **P5.1** server-mode threat model and auth requirements.
-20. **P6.1** connector docs and doctor/upgrade-check polish.
+19. **P5.1** server-mode threat model and auth requirements. ✅
+20. **P6.1** connector docs, operator polish, examples, schema fingerprint, and filesystem watcher import. ✅
 
 ---
 
@@ -772,6 +772,7 @@ What Goncho already has:
 - Optional vector-store seam and semantic RRF fusion.
 - Query expansion provenance.
 - Memory slots.
+- Filesystem watcher preview/import primitives plus `goncho connect filesystem-watcher --plan` for explicit include/exclude observation import.
 - Four-tier explicit consolidation API.
 - Local action graph and signals.
 - Snapshot manifests/diffs/rollback metadata.

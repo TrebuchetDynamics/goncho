@@ -110,6 +110,10 @@
 //   - Service.TeamFeed and Service.ListTeamFeedAudit expose a read-only,
 //     paginated team feed over authorized action signals with observable ACL
 //     allow/deny evidence.
+//   - Service.PreviewFilesystemWatcherImport and
+//     Service.ImportFilesystemWatcherChanges let local watcher connectors import
+//     changed project docs/code as scoped observations only after explicit
+//     include/exclude rules select the files.
 //   - ServerModeSecurityRequirements exposes the requirements-only threat model
 //     and RBAC vocabulary future shared/team mode must satisfy without enabling
 //     network sharing or weakening local-first SQLite mode.

@@ -36,6 +36,9 @@ type config struct {
 	ServerAddr            string
 	PreferencesConfigPath string
 	PreferenceUpdates     map[string]string
+	WatchRoots            []string
+	IncludeGlobs          []string
+	ExcludeGlobs          []string
 	VersionJSON           bool
 	DoctorJSON            bool
 	UpgradeJSON           bool
@@ -70,6 +73,9 @@ type connectPlan struct {
 	ConfigAction        string   `json:"config_action,omitempty"`
 	ConfigPatch         string   `json:"config_patch,omitempty"`
 	GeneratedHookEvents []string `json:"generated_hook_events,omitempty"`
+	WatchRoots          []string `json:"watch_roots,omitempty"`
+	IncludeGlobs        []string `json:"include_globs,omitempty"`
+	ExcludeGlobs        []string `json:"exclude_globs,omitempty"`
 	RecommendedNextStep []string `json:"recommended_next_steps"`
 }
 
@@ -178,10 +184,19 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 		fs.StringVar(&cfg.DatabasePath, "db", "", "explicit Goncho SQLite database path")
 		fs.StringVar(&cfg.ConfigPath, "config", "", "external host config path for connector plans")
 		fs.StringVar(&cfg.ExtensionPath, "extension", "", "Pi extension directory for connector plans")
+		watchRoots := stringListFlag{}
+		includeGlobs := stringListFlag{}
+		excludeGlobs := stringListFlag{}
 		fs.StringVar(&cfg.ServerAddr, "addr", "", "goncho-server listen address for connector plans")
+		fs.Var(&watchRoots, "watch-root", "filesystem watcher root to observe; repeatable")
+		fs.Var(&includeGlobs, "include", "filesystem watcher include glob; repeatable and required for filesystem-watcher")
+		fs.Var(&excludeGlobs, "exclude", "filesystem watcher exclude glob; repeatable")
 		if err := fs.Parse(args); err != nil {
 			return cfg, err
 		}
+		cfg.WatchRoots = []string(watchRoots)
+		cfg.IncludeGlobs = []string(includeGlobs)
+		cfg.ExcludeGlobs = []string(excludeGlobs)
 		return cfg, nil
 	case "schema-fingerprint":
 		fs := flag.NewFlagSet("goncho schema-fingerprint", flag.ContinueOnError)
@@ -301,6 +316,8 @@ func buildConnectPlan(cfg config) (connectPlan, error) {
 		return buildCodexConnectPlan(cfg)
 	case "pi":
 		return buildPiConnectPlan(cfg)
+	case "filesystem-watcher":
+		return buildFilesystemWatcherConnectPlan(cfg)
 	default:
 		return connectPlan{}, fmt.Errorf("goncho connect: unsupported connector %q", cfg.Connector)
 	}
@@ -653,6 +670,41 @@ func applyPreferenceUpdates(prefs *operatorPreferences, updates map[string]strin
 	return nil
 }
 
+type stringListFlag []string
+
+func (f *stringListFlag) String() string {
+	if f == nil {
+		return ""
+	}
+	return strings.Join(*f, ",")
+}
+
+func (f *stringListFlag) Set(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return errors.New("value must not be empty")
+	}
+	*f = append(*f, value)
+	return nil
+}
+
+func normalizeCLIStringList(values []string) []string {
+	seen := map[string]struct{}{}
+	out := []string{}
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
+}
+
 type preferenceUpdateFlag map[string]string
 
 func (f *preferenceUpdateFlag) String() string {
@@ -721,6 +773,37 @@ func buildGormesConnectPlan(cfg config) (connectPlan, error) {
 			"Review this plan with the Gormes host configuration owner.",
 			"Run goncho-server init with the planned database path before enabling hooks.",
 			"Register the listed Goncho public tools in the Gormes tool registry.",
+		},
+	}, nil
+}
+
+func buildFilesystemWatcherConnectPlan(cfg config) (connectPlan, error) {
+	roots := normalizeCLIStringList(cfg.WatchRoots)
+	include := normalizeCLIStringList(cfg.IncludeGlobs)
+	exclude := normalizeCLIStringList(cfg.ExcludeGlobs)
+	if len(roots) == 0 {
+		return connectPlan{}, errors.New("goncho connect filesystem-watcher: at least one --watch-root is required")
+	}
+	if len(include) == 0 {
+		return connectPlan{}, errors.New("goncho connect filesystem-watcher: at least one explicit --include glob is required")
+	}
+	if len(exclude) == 0 {
+		exclude = []string{".git/**", "node_modules/**", "dist/**", "build/**", "coverage/**", "*.log", "*.lock"}
+	}
+	return connectPlan{
+		Status:       "dry_run",
+		Integration:  "filesystem-watcher",
+		Mutates:      false,
+		Protocol:     "local_service_api",
+		ConfigFormat: "json",
+		ConfigAction: "preview_import_changed_files",
+		WatchRoots:   roots,
+		IncludeGlobs: include,
+		ExcludeGlobs: exclude,
+		RecommendedNextStep: []string{
+			"Run PreviewFilesystemWatcherImport with a sample changed-file batch and inspect skipped/importable counts.",
+			"Only call ImportFilesystemWatcherChanges after include/exclude rules are reviewed by the workspace owner.",
+			"Keep the watcher one-way: changed files become scoped observations; it must not mutate source files.",
 		},
 	}, nil
 }
