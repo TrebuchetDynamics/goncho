@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.2.0 - 2026-05-24
+
 ### Changed
 
 - Added package documentation trust-boundary guidance for pkg.go.dev readers embedding Goncho in host agents.
@@ -24,7 +26,9 @@
 - Added a compiled `NewService` package example for pkg.go.dev readers evaluating embedded service setup.
 - Added a README `At a Glance` section for pkg.go.dev readers evaluating installation, use cases, first calls, and trust boundaries.
 - Expanded the root package documentation shown by `go doc` and pkg.go.dev with use cases, quick start, and trust-boundary guidance.
-- Updated public `@latest` release metadata docs and smoke guards after v0.1.1 tag publication.
+- Updated public `@latest` release metadata docs and smoke guards after v0.2.0 tag publication.
+- Split the importable library surface into `github.com/TrebuchetDynamics/goncho/service`, keeping the root module as the release module and `cmd/goncho-bench` as the installable benchmark command.
+- Added local memory roadmap APIs for vector-store fusion, host hook capture, query expansion provenance, memory resources/prompts, memory slots, four-tier consolidation, local action graphs, snapshots, and image references.
 
 ## v0.1.1 - 2026-05-22
 

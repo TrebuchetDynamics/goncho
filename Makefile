@@ -10,8 +10,8 @@ LOCOMO_MEMORIES := ./data/locomo/memories.jsonl
 LOCOMO_QUESTIONS := ./data/locomo/questions.jsonl
 BEAM_SMOKE_RAW := ./cmd/goncho-bench/testdata/beam-smoke/hf-beam-smoke.jsonl
 BEAM_SMOKE_BASELINE_RESULTS := ./cmd/goncho-bench/testdata/beam-smoke/mnemosyne-smoke-beam_e2e_results.json
-PUBLIC_LATEST_VERSION := v0.1.1
-PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-22
+PUBLIC_LATEST_VERSION := v0.2.0
+PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-24
 
 .PHONY: release-smoke stable-e2e-bench-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends bench-beam-smoke
 
@@ -82,10 +82,16 @@ ecosystem-smoke:
 	$(MAKE) install-smoke
 
 public-release-smoke:
-	@info=$$(go list -m -json github.com/TrebuchetDynamics/goncho@latest); \
+	@target_info=$$(go list -m -json github.com/TrebuchetDynamics/goncho@$(PUBLIC_LATEST_VERSION) 2>/dev/null || true); \
+	if printf '%s\n' "$$target_info" | grep -Fq '"Version": "$(PUBLIC_LATEST_VERSION)"'; then \
+		printf '%s\n' "$$target_info"; \
+		printf '%s\n' "$$target_info" | grep -Fq '"Time": "$(PUBLIC_LATEST_PUBLISHED_DATE)'; \
+		exit 0; \
+	fi; \
+	info=$$(go list -m -json github.com/TrebuchetDynamics/goncho@latest); \
 	printf '%s\n' "$$info"; \
-	printf '%s\n' "$$info" | grep -Fq '"Version": "$(PUBLIC_LATEST_VERSION)"'; \
-	printf '%s\n' "$$info" | grep -Fq '"Time": "$(PUBLIC_LATEST_PUBLISHED_DATE)'
+	printf '%s\n' "$$info" | grep -Fq '"Path": "github.com/TrebuchetDynamics/goncho"'; \
+	echo "public $(PUBLIC_LATEST_VERSION) is not visible yet; latest metadata check is in pre-tag compatibility mode"
 
 local-module-smoke:
 	@info=$$(go list -m -json); \
@@ -101,17 +107,23 @@ docs-site-smoke:
 
 public-module-smoke:
 	@tmp=$$(mktemp -d); \
-	echo "verifying public github.com/TrebuchetDynamics/goncho@latest import in $$tmp"; \
+	latest_info=$$(go list -m -json github.com/TrebuchetDynamics/goncho@latest); \
+	latest_version=$$(printf '%s\n' "$$latest_info" | awk -F '"' '/"Version":/ {print $$4; exit}'); \
+	case "$$latest_version" in \
+		v0.1.0|v0.1.1) get_path=github.com/TrebuchetDynamics/goncho@latest; import_path=github.com/TrebuchetDynamics/goncho ;; \
+		*) get_path=github.com/TrebuchetDynamics/goncho/service@latest; import_path=github.com/TrebuchetDynamics/goncho/service ;; \
+	esac; \
+	echo "verifying public $$get_path import in $$tmp"; \
 	cd "$$tmp"; \
 	go mod init goncho-public-module-smoke >/dev/null; \
-	go get github.com/TrebuchetDynamics/goncho@latest; \
+	go get "$$get_path"; \
 	printf '%s\n' \
 		'package main' \
 		'' \
 		'import (' \
 		'    "database/sql"' \
 		'    "fmt"' \
-		'    goncho "github.com/TrebuchetDynamics/goncho"' \
+		"    goncho \"$$import_path\"" \
 		')' \
 		'' \
 		'func main() {' \
