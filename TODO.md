@@ -1,812 +1,781 @@
-# Goncho TODO
+# Goncho TODO — Productized Runtime UX Gap Roadmap
 
-## Release state
+This TODO tracks the highest-value gaps between Goncho and the source-pinned `agentmemory` reference, plus selected `mem0` product/API lessons. The gap is mostly **productized integration/runtime UX**, not core memory theory.
 
-- 2026-05-24: `make stable-e2e-bench-smoke` now ties stability, e2e tests, and benchmark smokes into one checkout gate.
-  - Evidence target: `go test . -run TestStableE2EBenchmarkSmokeTargetIsDocumented -count=1` proves README and Makefile expose the stable e2e benchmark smoke command, and `make stable-e2e-bench-smoke` runs `install-smoke`, `go test ./...`, `go vet ./...`, and benchmark smoke paths equivalent to `bench-longmemeval-s-smoke`, `bench-locomo-smoke`, and `bench-beam-smoke` with temporary outputs.
-  - Result: operators have one CI-safe command for checkout-local benchmark CLI startup, full Go test coverage, static checks, and pinned retrieval/BEAM benchmark artifact smoke paths without requiring full external datasets.
+- Agentmemory reference repo: `docs/opensource-memory-systems/agentmemory`
+- Mem0 comparison/probe references: `scripts/bench_mem0_locomo.py`, `docs/benchmarks/external-backend-adapters.md`, `docs/benchmarks/locomo-backend-comparison.md`
+- Source-pinned Goncho mirror: `memorymirror.ArchitectureManifest()` in `memorymirror/architecture.go`
+- Backlog mirror: `memorymirror/ImplementationBacklog()` in `memorymirror/backlog.go`
+- Goncho principle: keep core memory trust-preserving and local-first; put broad runtime UX behind explicit adapters, tools, and server mode.
+
+Priority scale:
+
+- **P0** = most important, blocks Goncho feeling like a product.
+- **P1** = high-leverage product surface after P0 exists.
+- **P2** = major capability expansion with clear adapter seams.
+- **P3** = advanced/team/runtime coordination.
+- **P4** = media/connector breadth.
+- **P5** = operational polish and ecosystem packaging.
+- **P6** = optional parity/experiments; do not compromise Goncho's trust model for these.
+
+---
+
+## P0 — Turnkey Goncho Server + Health + Minimal Runtime Product
+
+### Why this matters
+
+Agentmemory feels usable immediately because a user can run a server and see a working memory product:
+
+- `npx @agentmemory/agentmemory`
+- HTTP server and MCP server
+- health endpoint
+- demo/seed path
+- viewer link
+- `doctor`/diagnostics paths
+
+Goncho is currently excellent as an embedded Go SDK, but users who are not already inside Gormes do not get a polished standalone runtime.
+
+### Agentmemory references
+
+- `docs/opensource-memory-systems/agentmemory/src/cli.ts`
+- `docs/opensource-memory-systems/agentmemory/src/mcp/server.ts`
+- `docs/opensource-memory-systems/agentmemory/src/mcp/standalone.ts`
+- `docs/opensource-memory-systems/agentmemory/src/mcp/rest-proxy.ts`
+- `docs/opensource-memory-systems/agentmemory/src/health/monitor.ts`
+- `docs/opensource-memory-systems/agentmemory/src/health/thresholds.ts`
+- `docs/opensource-memory-systems/agentmemory/dist/standalone.mjs`
+- `docs/opensource-memory-systems/agentmemory/dist/docker-compose.yml`
+- `docs/opensource-memory-systems/agentmemory/.env.example`
+
+### Goncho seams today
+
+- `service.NewService`
+- `memory.OpenSqlite`
+- `service.RunMigrations`
+- `http/` local adapter
+- `NewGonchoContextTool`, `NewGonchoSearchTool`, `NewGonchoRecallTool`, `NewGonchoRememberTool`, `NewReviewTool`, `NewGonchoHandoffTool`
+- `goncho-adapter-api.md`
 
-- 2026-05-24: Graph relation candidates now remain pending before review.
-  - Evidence target: `go test . -run TestRelationCandidatesRemainPendingBeforeReview -count=1` proves graph relations can carry an accepted/pending state and pending relation candidates do not expand recall before review even with a higher score.
-  - Result: conservative graph recall can ingest speculative relation candidates without presenting them as retrieved truth until accepted.
+### Deliverables
 
-- 2026-05-24: Cognitive-map graph expansion now gates low-activation branches.
-  - Evidence target: `go test . -run TestCognitiveMapSuppressesLowActivationGraphBranches -count=1` proves graph relations can carry `ActivationTerms` so an owner query for authentication expands the authentication owner but suppresses an unrelated billing owner branch.
-  - Result: graph-assisted recall can stay conservative around wrong-branch retrieval while preserving stable-ID/no-answer-hint benchmark discipline.
+- [x] Add `cmd/goncho-server` as a first-class local memory server.
+- [x] Add `goncho-server init` to create a local config and SQLite DB path.
+- [x] Add `goncho-server serve` with HTTP API and MCP-compatible tool transport.
+- [x] Add `goncho-server health` returning JSON health, version, DB status, migration status, and tool availability.
+- [x] Add `goncho-server demo` that seeds a tiny project-memory scenario and proves recall/context.
+- [x] Add `goncho-server doctor` that checks DB path, migrations, write permissions, port conflicts, and public tool registration.
+- [x] Add `make server-smoke` that starts the server on a random local port, calls health, writes one memory, recalls it, and shuts down cleanly.
+
+### Acceptance tests
+
+- [x] `go test ./cmd/goncho-server ./http ./service`
+- [x] `make server-smoke`
+- [x] `go test ./...`
+- [x] `git diff --check`
+
+### Non-goals
+
+- Do not make the server mandatory for Gormes or embedded users.
+- Do not add cloud dependencies.
+- Do not auto-bind to public interfaces without explicit authentication.
+
+---
+
+## P1 — Automatic Hook Installation and Agent Connectors
+
+### Why this matters
+
+Agentmemory's strongest UX is zero-manual capture. Users install/connect once and hooks capture prompts, tool use, failures, compaction, subagents, and session lifecycle.
+
+Goncho has `svc.CaptureHostHook`, but hosts still need to forward events manually. That is architecturally clean, but not yet productized.
+
+### Agentmemory references
+
+- `docs/opensource-memory-systems/agentmemory/plugin/hooks/hooks.json`
+- `docs/opensource-memory-systems/agentmemory/plugin/hooks/hooks.codex.json`
+- `docs/opensource-memory-systems/agentmemory/plugin/scripts/session-start.mjs`
+- `docs/opensource-memory-systems/agentmemory/plugin/scripts/prompt-submit.mjs`
+- `docs/opensource-memory-systems/agentmemory/plugin/scripts/pre-tool-use.mjs`
+- `docs/opensource-memory-systems/agentmemory/plugin/scripts/post-tool-use.mjs`
+- `docs/opensource-memory-systems/agentmemory/plugin/scripts/post-tool-failure.mjs`
+- `docs/opensource-memory-systems/agentmemory/plugin/scripts/pre-compact.mjs`
+- `docs/opensource-memory-systems/agentmemory/plugin/scripts/stop.mjs`
+- `docs/opensource-memory-systems/agentmemory/plugin/scripts/session-end.mjs`
+- `docs/opensource-memory-systems/agentmemory/plugin/.claude-plugin/plugin.json`
+- `docs/opensource-memory-systems/agentmemory/plugin/.codex-plugin/plugin.json`
+- `docs/opensource-memory-systems/agentmemory/src/cli/connect/claude-code.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/connect/codex.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/connect/cursor.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/connect/gemini-cli.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/connect/hermes.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/connect/openclaw.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/connect/pi.ts`
 
-- 2026-05-24: Graph relation-path recall projection now reaches context orientation text.
-  - Evidence target: `go test . -run TestRecallProjectorContextIncludesGraphRelationPathCitation -count=1` proves `RecallProjector.ProjectContext` preserves selected graph provenance notes as relation-path citations in the projected orientation pack.
-  - Result: graph-assisted recall is explainable through context projection, not only raw `RecallTrace` inspection, while preserving stable-ID/no-answer-hint benchmark discipline.
+### Goncho seams today
 
-- 2026-05-24: BEAM paired comparison now fails closed on ambiguous question fallback.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonRejectsAmbiguousQuestionFallback -count=1` proves duplicated conversation/scale/ability/question fallback keys reject comparison instead of silently pairing the first candidate row.
-  - Result: BEAM superiority reports cannot be produced from ambiguous Mnemosyne/Goncho qid-mismatch rows; exact-qid matches remain preferred, and exact-question fallback stays available only when unique.
+- `service.CaptureHostHook`
+- `HostHookEvent`
+- `service.Observe`
+- `service.CreateMessages`
+- `service.SessionSummary`
+- `plugins` write queue
+- Gormes adapter contract in `goncho-adapter-api.md`
+
+### Deliverables
+
+- [ ] Add `goncho connect claude-code --dry-run` that prints hook files/config changes without mutating.
+- [ ] Add `goncho connect codex --dry-run` for Codex hook/MCP wiring.
+- [ ] Add `goncho connect cursor --dry-run` for MCP config wiring.
+- [ ] Add `goncho connect gemini-cli --dry-run` for MCP config wiring.
+- [ ] Add `goncho connect hermes --dry-run` with explicit handoff to `gormes-agent`/Hermes adapter when applicable.
+- [ ] Add `goncho connect gormes` as the canonical first-party integration path.
+- [x] Add host event schemas for prompt, assistant response, pre-tool, post-tool, tool failure, compaction, subagent start/stop, stop, and session end.
+- [x] Add privacy/redaction filters before events reach `CaptureHostHook`.
+- [x] Add docs showing which hook events are captured, which are ignored, and which require host-specific permission.
+
+### Acceptance tests
+
+- [ ] Golden-file tests for generated hook configs.
+- [ ] Tests that every generated hook maps to a `HostHookEvent` type.
+- [x] Tests that secrets and large tool payloads are redacted/truncated before storage.
+- [ ] `go test ./...`
+
+### Non-goals
+
+- Do not silently mutate user agent configs without `--apply`.
+- Do not install global hooks by default.
+- Do not claim full agentmemory connector parity until each connector has a smoke test.
+
+---
+
+## P2 — Real-time Viewer, Session Replay, and Transcript Import
+
+### Why this matters
+
+Agentmemory's viewer makes memory legible. Users can see sessions, replay timelines, inspect memory growth, and debug why retrieval worked or failed. Goncho has audit APIs, recall traces, and benchmark artifacts, but no first-class visual product surface.
+
+### Agentmemory references
+
+- `docs/opensource-memory-systems/agentmemory/src/viewer/server.ts`
+- `docs/opensource-memory-systems/agentmemory/src/viewer/index.html`
+- `docs/opensource-memory-systems/agentmemory/dist/viewer/index.html`
+- `docs/opensource-memory-systems/agentmemory/src/replay/jsonl-parser.ts`
+- `docs/opensource-memory-systems/agentmemory/src/replay/timeline.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/replay.ts`
+- `docs/opensource-memory-systems/agentmemory/assets/demo.gif`
+- `docs/opensource-memory-systems/agentmemory/assets/iii-console/states.png`
+- `docs/opensource-memory-systems/agentmemory/assets/iii-console/traces-waterfall.png`
+- `docs/opensource-memory-systems/agentmemory/assets/iii-console/workers.png`
+
+### Goncho seams today
+
+- `service.ListObservations`
+- `service.AuditTrail`
+- `service.Recall` trace
+- `service.Context` representation
+- session summaries
+- review queue APIs
+- `docs/benchmarks/results/*` JSON artifacts
+
+### Deliverables
+
+- [ ] Add read-only `goncho-viewer` or `goncho-server --viewer` endpoint.
+- [ ] Show health, DB path, workspace/profile/session counts, latest observations, latest conclusions, and review queue status.
+- [ ] Add recall trace viewer: candidates, selected/rejected, provenance, warnings, query expansion, vector/lexical/graph signals.
+- [ ] Add orientation-pack viewer: what entered context and why.
+- [ ] Add session timeline view from observations/messages/summaries.
+- [ ] Add Claude JSONL transcript import preview.
+- [ ] Add transcript import apply path with deduplication and provenance.
+- [ ] Add redaction view: show what was dropped or truncated, without exposing secrets.
+
+### Acceptance tests
+
+- [ ] JSON API tests for viewer endpoints.
+- [ ] Snapshot tests for replay timeline output from a tiny Claude JSONL fixture.
+- [ ] Import tests proving idempotent transcript import.
+- [ ] Browser asset build smoke if a frontend bundle is added.
+
+### Non-goals
+
+- No cloud dashboard.
+- No write operations from viewer until auth and audit are explicit.
+
+---
+
+## P3 — MCP Tool Catalog Expansion Without Losing the Small Core Surface
+
+### Why this matters
+
+Agentmemory exposes 50+ MCP tools. Goncho intentionally exposes a smaller trusted surface, which is a strength. But users coming from agentmemory expect familiar high-level operations: sessions, file history, timeline, audit, slots, snapshots, lessons, facets, diagnostics, and graph queries.
+
+The right Goncho move is not to copy every tool into core. It is to expose a layered tool catalog where broad aliases call small trusted APIs.
+
+### Agentmemory references
+
+- `docs/opensource-memory-systems/agentmemory/src/mcp/tools-registry.ts`
+- `docs/opensource-memory-systems/agentmemory/dist/tools-registry-BFwOoyLn.mjs`
+- `docs/opensource-memory-systems/agentmemory/src/functions/actions.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/audit.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/checkpoints.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/facets.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/frontier.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/graph-retrieval.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/lessons.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/slots.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/snapshot.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/timeline.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/verify.ts`
+
+### Goncho seams today
+
+- `memorymirror.NewToolRegistry`
+- `memorymirror.ArchitectureManifest()`
+- public Goncho tools: context/search/recall/remember/review/handoff
+- memory slots API
+- action graph API
+- snapshots API
+- audit/review APIs
+- graph recall provenance
+
+### Deliverables
+
+- [ ] Add a documented `goncho/tools/compat` catalog for agentmemory-style aliases.
+- [ ] Promote existing memorymirror aliases (`memory_save`, `memory_smart_search`, `memory_recall`, `memory_profile`) into documented compatibility tools if stable.
+- [ ] Add `memory_timeline` backed by observations/timeline annotations.
+- [ ] Add `memory_audit` backed by `AuditTrail`.
+- [ ] Add `memory_slot_*` backed by Goncho memory slot APIs.
+- [ ] Add `memory_snapshot_*` backed by deterministic snapshot manifests only; git operations stay adapter-owned.
+- [ ] Add `memory_graph_query` backed by recall graph provenance.
+- [ ] Add `memory_verify` backed by recall provenance plus live-check warnings.
+- [ ] Add `memory_diagnose` backed by diagnostics/queue status.
+- [ ] Mark every compatibility tool as delivered, partial, adapter-owned, deferred, or excluded in `memorymirror.ArchitectureManifest()`.
+
+### Acceptance tests
+
+- [ ] Tool registry manifest tests verify every documented tool exists in the manifest.
+- [ ] Tool execution tests prove each delivered compatibility tool calls public service APIs only.
+- [ ] No compatibility tool writes directly to SQLite.
+- [ ] `go test ./memorymirror ./service ./toolmeta ./...`
+
+### Non-goals
+
+- Do not expose a giant unreviewed mutating catalog by default.
+- Do not hide dangerous operations behind friendly names.
+
+---
+
+## P4 — Local Dense Embeddings and Vision Search
+
+### Why this matters
+
+Agentmemory has local embeddings and vision/image search. Goncho has an optional vector seam and image metadata storage, but not a bundled local embedding runtime or image embedding/search flow.
+
+This is a credibility gap for users who expect semantic retrieval to work out of the box.
+
+### Agentmemory references
+
+- `docs/opensource-memory-systems/agentmemory/src/providers/embedding/local.ts`
+- `docs/opensource-memory-systems/agentmemory/src/providers/embedding/clip.ts`
+- `docs/opensource-memory-systems/agentmemory/src/providers/embedding/openai.ts`
+- `docs/opensource-memory-systems/agentmemory/src/providers/embedding/voyage.ts`
+- `docs/opensource-memory-systems/agentmemory/src/state/vector-index.ts`
+- `docs/opensource-memory-systems/agentmemory/src/state/hybrid-search.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/vision-search.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/image-refs.ts`
+- `docs/opensource-memory-systems/agentmemory/src/utils/image-store.ts`
+- `docs/opensource-memory-systems/agentmemory/benchmark/REAL-EMBEDDINGS.md`
 
-- 2026-05-24: BEAM paired rows now retain nested result source checksums.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion -count=1` proves `--beam-paired-results-in` writes `source_path` and `source_sha256` on imported paired rows and carries them into comparison rows as baseline/candidate source provenance.
-  - Result: paired BEAM superiority reports can audit exactly which Mnemosyne `beam_e2e_results.json` artifact produced imported baseline rows, satisfying checksum controls without changing scores or matching.
+### Goncho seams today
 
-- 2026-05-24: `make bench-beam-smoke` now exercises nested Mnemosyne result import.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'Test(BenchBeamSmokeTargetImportsNestedMnemosyneResults|RunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts)' -count=1` proves the pinned smoke target imports a nested `beam_e2e_results.json` Mnemosyne baseline before appending Goncho outcomes, then paired comparison matches Mnemosyne `conversation_id:q0` to Goncho's source qid by exact question.
-  - Result: Goncho's CI-safe BEAM smoke path now covers the same result-to-paired Adapter needed for real Mnemosyne result files, instead of relying on a pre-flattened baseline JSONL.
+- `Config.VectorStore`
+- `VectorStore`, `VectorSearchQuery`, `VectorSearchHit`
+- RRF fusion with semantic provenance
+- `StoreImageMemory`
+- `SearchImageMemories`
+- image refs/checksums/alt text/metadata with deferred embeddings
+
+### Deliverables
+
+- [ ] Add a local embedding provider interface separate from `VectorStore` storage.
+- [ ] Add a simple file-backed local vector index implementation suitable for small projects.
+- [ ] Add deterministic fake embedding tests and optional real embedding integration tests gated by build tags/env.
+- [ ] Add import/reindex command for existing textual memories.
+- [ ] Add vector index diagnostics: dimensions, count, checksum, stale rows, last indexed time.
+- [ ] Add image embedding provider interface.
+- [ ] Add image search over stored refs/checksums/alt text and optional embeddings.
+- [ ] Document privacy and model download implications.
+
+### Acceptance tests
+
+- [ ] `go test ./service -run Vector`
+- [ ] `go test ./service -run Image`
+- [ ] `make bench-longmemeval-s-smoke` shows no regression.
+- [ ] Optional tagged real-embedding smoke documents exact model/version.
+
+### Non-goals
+
+- Do not require Python.
+- Do not require hosted embedding APIs.
+- Do not make vector search authoritative over evidence/provenance.
+
+---
+
+## P5 — Multi-agent Coordination, Server Mode, and Operational Packaging
+
+### Why this matters
+
+Agentmemory includes multi-agent concepts: leases, signals, mesh/team flows, shared service deployment, and operational packaging. Goncho has local action graph signals and ACL/policy pieces, but no distributed coordination product.
+
+This should stay behind explicit server/team mode because distributed coordination changes the trust and governance model.
+
+### Agentmemory references
+
+- `docs/opensource-memory-systems/agentmemory/src/functions/leases.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/signals.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/mesh.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/team.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/actions.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/frontier.ts`
+- `docs/opensource-memory-systems/agentmemory/deploy/README.md`
+- `docs/opensource-memory-systems/agentmemory/deploy/coolify/README.md`
+- `docs/opensource-memory-systems/agentmemory/deploy/fly/README.md`
+- `docs/opensource-memory-systems/agentmemory/deploy/railway/README.md`
+- `docs/opensource-memory-systems/agentmemory/deploy/render/README.md`
+- `docs/opensource-memory-systems/agentmemory/docker-compose.yml`
+
+### Goncho seams today
+
+- local action graph: `UpsertAction`, `ReadActionGraph`, `CompleteAction`, `SignalAction`
+- policy ACLs
+- workspace/profile scopes
+- snapshots/export manifests
+- local HTTP adapter
+
+### Deliverables
+
+- [ ] Define `server mode` threat model: auth, profiles, workspaces, audit, backup, retention, and admin operations.
+- [ ] Add Postgres adapter plan for team/shared deployments.
+- [ ] Add distributed action leases with TTL, owner, renewal, expiration, and audit trail.
+- [ ] Add inter-agent signals with read receipts and workspace/profile authorization.
+- [ ] Add team feed API with pagination and ACL enforcement.
+- [ ] Add Docker image and `docker-compose.yml` for local shared service smoke.
+- [ ] Add deployment docs for one conservative target first, not all platforms at once.
+- [ ] Add backup/export/restore docs using snapshot manifests.
+
+### Acceptance tests
+
+- [ ] Concurrency tests for leases and expiration.
+- [ ] ACL tests for cross-profile/team feed reads.
+- [ ] Docker compose smoke starts server, runs health, writes/reads memory, shuts down.
+- [ ] No unauthenticated non-loopback bind by default.
+
+### Non-goals
+
+- Do not add P2P mesh sync until server mode is secure and boring.
+- Do not weaken local-first embedded mode.
+
+---
+
+## P6 — Ecosystem Polish, Connector Breadth, and Optional Parity Features
+
+### Why this matters
+
+Agentmemory is broad and polished: npm packaging, marketplace metadata, connect commands, doctor/upgrade, examples, security advisories, deployment guides, and many agent-specific docs. Goncho needs enough ecosystem polish to feel excellent without becoming a clone.
+
+### Agentmemory references
+
+- `docs/opensource-memory-systems/agentmemory/package.json`
+- `docs/opensource-memory-systems/agentmemory/.github/workflows/ci.yml`
+- `docs/opensource-memory-systems/agentmemory/.github/workflows/publish.yml`
+- `docs/opensource-memory-systems/agentmemory/.github/security-advisories/*`
+- `docs/opensource-memory-systems/agentmemory/examples/python/README.md`
+- `docs/opensource-memory-systems/agentmemory/integrations/filesystem-watcher/README.md`
+- `docs/opensource-memory-systems/agentmemory/ROADMAP.md` (GitHub connector, Slack/Discord connector, OpenCode hook bus, OpenSSF, SSO/RBAC/audit export)
+- `docs/opensource-memory-systems/agentmemory/test/fs-watcher.test.ts`
+- `docs/opensource-memory-systems/agentmemory/test/export-import.test.ts`
+- `docs/opensource-memory-systems/agentmemory/test/retention.test.ts`
+- `docs/opensource-memory-systems/agentmemory/test/retention-access.test.ts`
+- `docs/opensource-memory-systems/agentmemory/test/schema-fingerprint.test.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/onboarding.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/remove-plan.ts`
+- `docs/opensource-memory-systems/agentmemory/src/cli/preferences.ts`
+- `docs/opensource-memory-systems/agentmemory/src/providers/circuit-breaker.ts`
+- `docs/opensource-memory-systems/agentmemory/src/providers/fallback-chain.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/disk-size-manager.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/branch-aware.ts`
+- `docs/opensource-memory-systems/agentmemory/src/functions/obsidian-export.ts`
+- `docs/opensource-memory-systems/agentmemory/src/eval/self-correct.ts`
+- `docs/opensource-memory-systems/agentmemory/src/eval/quality.ts`
+- `docs/opensource-memory-systems/agentmemory/test/circuit-breaker.test.ts`
+- `docs/opensource-memory-systems/agentmemory/test/obsidian-export.test.ts`
+- `docs/opensource-memory-systems/agentmemory/test/working-memory.test.ts`
+- `docs/opensource-memory-systems/agentmemory/test/sliding-window.test.ts`
+- `docs/opensource-memory-systems/agentmemory/integrations/hermes/README.md`
+- `docs/opensource-memory-systems/agentmemory/integrations/openclaw/README.md`
+- `docs/opensource-memory-systems/agentmemory/integrations/pi/README.md`
+- `docs/opensource-memory-systems/agentmemory/benchmark/COMPARISON.md`
+- `docs/opensource-memory-systems/agentmemory/benchmark/LONGMEMEVAL.md`
+- `docs/opensource-memory-systems/agentmemory/benchmark/QUALITY.md`
+- `docs/opensource-memory-systems/agentmemory/benchmark/SCALE.md`
 
-- 2026-05-24: BEAM paired comparison now imports nested Mnemosyne result files and pairs qid mismatches by question.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion -count=1` proves `--beam-paired-results-in` converts nested `beam_e2e_results.json` rows into paired outcomes and `--beam-paired-compare` matches Mnemosyne `conversation_id:qN` rows to Goncho source qids by exact conversation/scale/ability/question, surfacing the qid mismatch in comparison rows.
-  - Result: a real Mnemosyne BEAM result file plus a Goncho judged artifact can now feed paired comparison without separate flattening or qid-rewrite scripts.
+### Deliverables
 
-- 2026-05-24: BEAM judged imports now tolerate Mnemosyne-generated qids.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetImportsNestedMnemosyneQIDByQuestion -count=1` proves nested `beam_e2e_results.json` rows with Mnemosyne's `conversation_id:qN` qids can still apply to Goncho's source/generated BEAM qids by exact conversation/scale/ability/question match, without weakening the strict completeness gate.
-  - Result: real Mnemosyne BEAM result files no longer need qid rewriting before Goncho can import official-style judged scores for paired comparison.
+- [ ] Add `goncho doctor` for local environment and DB/migration checks.
+- [ ] Add `goncho version --json` with module version, git commit if available, DB schema version, and public tool count.
+- [ ] Add `goncho upgrade-check` that reports available releases without mutating anything.
+- [ ] Add `examples/go/` with minimal service, hook capture, recall trace, memory slots, and viewer/server examples.
+- [ ] Add `examples/python/` only if a stable HTTP/server API exists.
+- [ ] Add security docs for local files, non-loopback binds, prompt injection quarantine, redaction, and snapshot exports.
+- [ ] Add connector docs for Gormes, Hermes, Pi, Cursor, Codex, Claude Code, OpenCode, and generic MCP.
+- [ ] Add filesystem watcher connector that imports changed project docs/code as observations behind explicit include/exclude rules.
+- [ ] Add GitHub connector plan for issues, PRs, discussions, and comments as scoped observations with rate-limit/backfill controls.
+- [ ] Add Slack/Discord connector plan for team chats only after server-mode ACLs and retention are explicit.
+- [ ] Add schema-fingerprint command/test so server and adapters can detect incompatible DB/tool schema drift before writes.
+- [ ] Add comparison docs that explain Goncho vs mem0 vs agentmemory without star-count hype or benchmark overclaims.
+- [ ] Add release checklist linking `make release-smoke`, `make stable-e2e-bench-smoke`, public module smoke, GitHub release, and pkg.go.dev verification.
 
-- 2026-05-24: BEAM judged imports now accept nested Mnemosyne-compatible result files.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetImportsNestedBeamResultsAsJudgments -count=1` proves `--beam-service-judgments-in` can read a nested `beam_e2e_results.json`, inherit conversation/scale identity, and merge imported official-style scores into Goncho results, summary, and paired outcomes.
-  - Result: real BEAM judge output no longer needs a separate flattening script before Goncho can produce comparable judged artifacts against Mnemosyne.
+### Acceptance tests
 
-- 2026-05-24: BEAM judged imports now fail on incomplete official-style outcome sets.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetRejectsIncompleteJudgeResults -count=1` proves `--beam-service-judgments-in` rejects missing or unmatched judgment rows before writing comparable artifacts, while `--beam-service-allow-partial-judgments` keeps partial runs diagnostic-only with explicit missing/unmatched counts.
-  - Result: Goncho no longer silently mixes pure-recall scores with official-style judged scores when preparing BEAM paired comparisons against Mnemosyne.
+- [ ] Docs link checker or markdown guard tests for every connector page.
+- [ ] Example compile tests for Go examples.
+- [ ] Server/API examples gated until P0 lands.
+- [ ] Release checklist test verifies commands and current version markers.
 
-- 2026-05-24: raw BEAM service artifacts now import official-style answer/judge results.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetImportsJudgeResultsIntoArtifacts -count=1` proves `--beam-service-judgments-in` merges external BEAM `ai_answer`, score, nuggets, assessment, and timing rows into `beam_e2e_results.json`, `beam_e2e_summary.json`, and `paired_outcomes.jsonl` while retaining recall provenance and emitting source checksum/application diagnostics.
-  - Result: Goncho can round-trip a real BEAM sample from recall export through an external official-style judge and back into Mnemosyne-compatible paired comparison artifacts without changing retrieval or leaking answers.
+### Non-goals
 
-- 2026-05-24: raw BEAM service artifacts now export answer/judge request bundles.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetWritesJudgeRequestsWithoutAnswerHints -count=1` proves `--beam-service-judge-requests-out` emits JSONL rows with source-backed config/scale/conversation/qid identity, selected recall context, answer prompts that exclude ideal-answer/rubric metadata, and separate judge prompts carrying the preserved BEAM ideal answer and rubric.
-  - Result: Goncho can hand a real BEAM sample to an official-style answerer/judge runner without weakening pure-recall scoring or leaking answer hints into retrieval/answer prompts.
+- Do not spend time on broad connector docs before P0/P1 are usable.
+- Do not create install instructions for unsupported integrations.
 
-- 2026-05-24: raw BEAM service artifacts now include leakage diagnostics and a fail-fast guard.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsLeakageChecks -count=1` proves `beam_e2e_results.json.metadata.diagnostics.leakage` reports query-text, stable-ID, ideal-answer-text, and rubric-label leakage examples, while `--fail-on-leakage` rejects blocking query/stable-ID/rubric leakage before scoring.
-  - Result: Goncho's BEAM one-command path now satisfies the benchmark-roadmap leakage-control gate for real HuggingFace samples without indexing answer metadata or hiding contaminated runs.
+---
 
-- 2026-05-24: raw BEAM service artifacts now include a JSONL failure audit.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetWritesFailureAudit -count=1` proves `--beam-service-failures-out` emits failing BEAM questions with config/scale/conversation/qid identity, query, score, failure mode, expected memory IDs, retrieved top 10, rank, evidence kinds, and benchmark gate booleans.
-  - Result: Goncho's BEAM path now satisfies the benchmark-roadmap failure-audit control, making real-sample misses inspectable without LLM judges, answer hints, or hand-parsing nested result files.
+## Backlog — Additional Things Worth Stealing From Agentmemory + Mem0
 
-- 2026-05-24: `make bench-beam-smoke` now runs a pinned BEAM artifact smoke path end to end.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts -count=1` proves the checked-in raw BEAM fixture plus Mnemosyne-style baseline paired row produce per-question results, summary, appended Goncho paired outcomes, and a paired-comparison verdict with conversion checksums, graph provenance, and rubric context coverage.
-  - Result: Goncho now has a CI-safe one-command BEAM smoke target before running larger HuggingFace samples or claiming superiority against Mnemosyne.
+These are not all first-slice priorities. They are candidate product ideas to keep visible while preserving Goncho's small trusted core.
 
-- 2026-05-24: raw BEAM conversion diagnostics now carry scientific-control checksums.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsConversionChecksums -count=1` proves direct raw BEAM service artifacts report both the source JSONL SHA-256 and the converted JSONL SHA-256 under `metadata.diagnostics.conversion`.
-  - Result: Goncho's one-command BEAM path now records raw and converted artifact identity needed for reproducible comparisons against Mnemosyne-style results.
+### A. Mem0-style tiny memory API, without losing evidence
 
-- 2026-05-24: BEAM paired comparison now reports a superiority verdict with a noise-floor gate.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonReportsSuperiorityVerdict -count=1` proves `--beam-paired-compare` emits `effect_size_floor`, `conclusion`, and `conclusion_reason` fields and requires the bootstrap 95% CI to clear the default 2pp floor before reporting candidate or baseline superiority.
-  - Result: Goncho's local BEAM comparison oracle now encodes Mnemosyne's analysis guidance instead of encouraging overclaims from tiny paired deltas.
+Mem0's strongest product lesson is a very small API shape: add, search, update, delete/history with user/session/agent metadata filters. Goncho's service API is richer and safer, but new adopters should get a mem0-simple path.
 
-- 2026-05-24: `goncho-bench --beam-paired-compare` now compares Mnemosyne-compatible BEAM paired outcomes.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamPairedComparisonWritesBootstrapReport -count=1` proves Goncho can read append-only `paired_outcomes.jsonl`, pair baseline and candidate `config_id` rows by scale/conversation/qid, report score deltas, ability breakdowns, win/tie counts, dropped-unpaired counts, and deterministic bootstrap 95% confidence intervals.
-  - Result: Goncho now has the local arm-comparison oracle needed to make future BEAM superiority claims falsifiable against Mnemosyne-style artifacts instead of hand-comparing summaries.
+Deliverables:
 
-- 2026-05-24: raw BEAM service artifacts now score retrieved-context coverage against BEAM rubrics.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetScoresRubricContextCoverage -count=1` proves `beam_e2e_results.json` keeps Goncho's pure-recall score while adding local `rubric_context_score` and `rubric_context_matches` diagnostics derived only from selected context and BEAM rubric text.
-  - Result: Goncho now has a deterministic offline rubric-coverage signal to compare with optional BEAM judge results without using ideal answers as retrieval hints or weakening stable-ID recall scoring.
+- [ ] Add a documented `memory.Add/Search/Update/Delete/History` facade or HTTP aliases over Goncho APIs.
+- [ ] Support explicit `user_id`, `agent_id`, `run_id/session_key`, `workspace_id`, `profile_id`, and metadata filters in that facade.
+- [ ] Preserve stable caller-supplied IDs for benchmark/import compatibility; never fall back to content-only matching.
+- [ ] Add history/audit reads for every memory update/delete, with provenance back to evidence.
+- [ ] Add Go examples that feel as short as mem0 quick starts while still showing verification/provenance warnings.
 
-- 2026-05-24: raw BEAM service artifacts now preserve ideal-answer and rubric metadata.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetPreservesRubricMetadata -count=1` proves HuggingFace-style BEAM `ideal_answer` and `rubric` fields survive conversion, service recall, and `beam_e2e_results.json` emission without entering retrieval or changing pure-recall scores.
-  - Result: Goncho now retains the official BEAM judging inputs needed for future optional LLM-judge/full BEAM comparisons while preserving no-answer-hint discipline in the recall oracle.
+Acceptance tests:
 
-- 2026-05-24: raw BEAM service artifacts now report conversion diagnostics for unscorable questions.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetReportsUnscorableQuestions -count=1` proves `beam_e2e_results.json.metadata.diagnostics.conversion` names conversation/question counts and warns when a raw HuggingFace-style BEAM question lacks stable `relevant_ids` or `context_contains` for pure-recall scoring.
-  - Result: Goncho now distinguishes recall failures from dataset-conversion evidence gaps when running raw BEAM samples, preserving no-answer-hint discipline while making real-BEAM readiness auditable.
+- [ ] Mem0-style facade tests for add/search/update/delete/history.
+- [ ] Duplicate-content stable-ID test using LOCOMO-style collisions.
+- [ ] Audit/provenance test proving update/delete never erases evidence.
 
-- 2026-05-24: `goncho-bench --beam-convert-in` can now feed BEAM service artifacts directly.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamHuggingFaceJSONLDatasetWritesServiceArtifactsDirectly -count=1` proves raw HuggingFace-style BEAM JSONL can be converted in memory, ingested through `Service.Conclude`, and emitted as Mnemosyne-compatible per-question results, summary, and paired outcomes without requiring a manual intermediate converted JSONL file.
-  - Result: Goncho now has a one-command raw BEAM sample path from exported dataset record to source-backed local recall artifacts, preserving stable IDs, conversation IDs, scales, ability labels, graph provenance, and no-answer-hint discipline.
+Non-goals:
 
-- 2026-05-24: `goncho-bench --beam-service-results-out` now emits Mnemosyne-compatible per-question BEAM result artifacts.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamJSONLDatasetWritesMnemosyneCompatibleResultsFile -count=1` proves a converted JSONL case writes `beam_e2e_results.json`-style metadata, grouped conversation results, original question text, pure-recall score, and recall-provenance voice summaries with graph evidence.
-  - Result: Goncho now has the third Mnemosyne artifact alongside summary and paired outcomes, making source-backed per-question BEAM diagnostics possible without LLM answerers, judges, answer hints, or external services.
+- Do not copy mem0's hosted/cloud assumptions.
+- Do not hide Goncho review state behind a deceptively simple success response.
 
-- 2026-05-24: `goncho-bench --beam-convert-in/--beam-convert-out` now converts HuggingFace BEAM JSONL exports into Goncho's service-oracle format.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestConvertBeamHuggingFaceJSONLWritesStableIDDataset -count=1` proves nested BEAM chat plus Python-literal `probing_questions` convert into stable memory IDs, conversation-scoped question rows, mapped relevant message indices, required evidence kinds, and ABS expected-no-answer rows without importing ideal answers as retrieval hints.
-  - Result: Goncho now has the missing raw-dataset conversion step before `--beam-jsonl`, preserving stable-ID and no-answer-hint discipline while moving closer to real BEAM sample runs.
-
-- 2026-05-24: `goncho-bench --beam-jsonl` now runs external BEAM-style JSONL conversions through the service oracle.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamJSONLDatasetWritesMnemosyneCompatibleArtifacts -count=1` proves a converted JSONL file with stable memory IDs, conversation IDs, scale, ability, relevant IDs, and required graph evidence is ingested through `Service.Conclude`, recalled through the service oracle, and exported as Mnemosyne-compatible summary and paired-outcome artifacts.
-  - Result: Goncho now has a dataset Adapter seam for real BEAM conversions instead of only built-in deterministic fixtures, while preserving no-answer-hint, no-LLM-judge, stable-ID recall discipline.
-
-- 2026-05-24: service-backed BEAM oracle now covers ABS and SUM fixtures plus expected-no-answer scoring.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunBeamServiceRecallOracleWrites(AbilityReport|MnemosyneCompatibleArtifacts)' -count=1` proves the CLI summary and paired outcomes include all ten BEAM abilities (ABS, CR, EO, IE, IF, KU, MR, PF, SUM, TR) with perfect deterministic service-backed recall, context, token-budget, and provenance gates.
-  - Result: Goncho can now produce local Mnemosyne-compatible BEAM-style artifacts for every BEAM ability dimension while still avoiding answer hints, LLM judges, external datasets, or final BEAM superiority claims.
-
-- 2026-05-24: `goncho-bench --beam-service-summary-out` and `--beam-service-paired-out` now emit Mnemosyne-compatible BEAM artifacts.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamServiceRecallOracleWritesMnemosyneCompatibleArtifacts -count=1` proves the deterministic service oracle writes `beam_e2e_summary.json`-style ability scores and append-only `paired_outcomes.jsonl` rows with config IDs, scale, qid, ability, score, and correctness.
-  - Result: Goncho's delivered MEMORIA fixture oracle can now be compared with Mnemosyne-style BEAM result tooling while still avoiding answer hints, LLM judges, external datasets, or final BEAM superiority claims.
-
-- 2026-05-24: `goncho-bench --beam-service-out` now emits a deterministic BEAM-style MEMORIA recall report.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunBeamServiceRecallOracleWritesAbilityReport -count=1` proves the CLI runs public `Service.Conclude` fixtures for IE, MR, TR, PF, IF, EO, CR, and KU, writes a JSON `RecallBenchmarkReport`, and requires perfect recall/context/provenance rates for each ability.
-  - Result: Goncho can generate a local comparison artifact for delivered MEMORIA abilities without answer hints, LLM judges, external datasets, or claiming final BEAM superiority.
-
-- 2026-05-24: BEAM-style recall benchmark oracle now runs public Service.Conclude fixtures end-to-end.
-  - Evidence target: `go test . -run TestEvaluateServiceRecallBenchmarkRunsBeamStyleCasesEndToEnd -count=1` proves tiny IE/MR fixtures ingest conclusions through `Service.Conclude`, run recall, map benchmark refs to concrete conclusion IDs, and feed ability/provenance aggregation with fact and graph evidence.
-  - Result: Goncho can now track delivered MEMORIA behavior through a deterministic local BEAM-style service oracle without answer hints, LLM judges, external datasets, or claiming final BEAM superiority.
-
-- 2026-05-24: BEAM-style recall benchmark reporting now exposes ability and provenance hit rates.
-  - Evidence target: `go test . -run TestRecallBenchmarkReportsBeamAbilityBreakdownAndProvenance -count=1` proves `EvaluateRecallBenchmark` can report IE/MR-style ability slices, per-ability recall@5/@10, and required fact/graph provenance hit rates from existing `RecallTrace` evidence.
-  - Result: Goncho now has a deterministic local oracle for tracking MEMORIA/BEAM ability progress without answer hints, LLM judges, retrieval tuning, or claiming final BEAM superiority.
-
-- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-sequence, relation-to-decision, and relation-to-negation recall through durable annotations.
-  - Evidence target: `go test . -run 'TestRecallExpands(Sequence|Decision|Negation)ThroughDurableKGRelation' -count=1` proves `Service.Conclude` derives durable relation facts plus sequence/decision/negation annotations, then recall selects the target memory for BEAM-style event-order and contradiction-resolution questions with graph provenance citing both annotation rows.
-  - Result: annotation-backed graph recall now covers multi-hop EO/CR paths without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
-
-- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-preference and relation-to-instruction recall through durable annotations.
-  - Evidence target: `go test . -run 'TestRecallExpands(Preference|Instruction)ThroughDurableKGRelation' -count=1` proves `Service.Conclude` derives durable relation facts plus preference/instruction annotations, then recall selects the target memory for BEAM-style `storage used by Billing API` preference/rule questions with graph provenance citing both annotation rows.
-  - Result: annotation-backed graph recall now covers multi-hop PF/IF paths without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
-
-- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-location recall through durable annotations.
-  - Evidence target: `go test . -run TestRecallExpandsLocationThroughDurableKGRelation -count=1` proves `Service.Conclude` derives durable `Billing API uses VectorDB` and `VectorDB is located at us-east-1` facts, then recall selects the location memory for `Where is the storage used by Billing API?` with graph provenance citing both annotation rows.
-  - Result: annotation-backed graph recall now covers a BEAM-style dependency/location path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
-
-- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support relation-to-metric recall through durable annotations.
-  - Evidence target: `go test . -run TestRecallExpandsMetricThroughDurableKGRelation -count=1` proves `Service.Conclude` derives durable `Billing API uses VectorDB` and `VectorDB latency is 250ms` facts, then recall selects the metric memory for `How fast is the storage used by Billing API?` with graph provenance citing both annotation rows.
-  - Result: annotation-backed graph recall now covers a BEAM-style dependency/metric path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
-
-- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support owner-to-timeline recall through durable annotations.
-  - Evidence target: `go test . -run TestRecallExpandsTimelineThroughOwnerRelation -count=1` proves `Service.Conclude` derives durable `Mira owns Orion` and `Orion occurs on 2026-06-01` facts, then recall selects the timeline memory for `When is the deadline for Mira's owned project?` with graph provenance citing both annotation rows.
-  - Result: annotation-backed graph recall now covers a BEAM-style ownership/timeline path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
-
-- 2026-05-23: Mnemosyne MEMORIA KG relation facts now support two-hop version recall through durable annotations.
-  - Evidence target: `go test . -run TestRecallExpandsVersionThroughMultiHopDurableKGRelation -count=1` proves `Service.Conclude` derives durable `Billing API uses LedgerDB`, `LedgerDB runs on PostgreSQL`, and `PostgreSQL version is 14.2` facts, then recall selects the version memory for `What version is used by Billing API storage?` with graph provenance citing all three annotation rows.
-  - Result: annotation-backed graph recall now covers a BEAM-style multi-hop dependency/version path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
-
-- 2026-05-23: Mnemosyne MEMORIA KG relation facts now expand Goncho recall through annotation-backed graph provenance.
-  - Evidence target: `go test . -run TestRecallExpandsOwnerThroughDurableKGRelation -count=1` proves `Service.Conclude` derives a durable `Billing API uses LedgerDB` KG fact, joins it to the durable owner fact `Mira owns LedgerDB`, and recall selects the owner memory for `Who is responsible for storage used by Billing API?` with `graph` provenance citing the source and target annotation rows.
-  - Result: the MEMORIA annotation lane now supports a deterministic knowledge-graph recall path without changing public Search JSON, adding LLM extraction, using answer hints, or claiming final BEAM superiority.
-
-- 2026-05-23: Agentmemory/MEMORIA citation provenance now follows durable annotation rows into recall.
-  - Evidence target: `go test . -run TestRecallCandidatesIncludeDurableFactAnnotationProvenance -count=1` proves `RecallCandidate.Provenance` fact evidence cites the real `goncho_memory_annotations.id`, carries `memory_source`, `memory_id`, extractor `source`, and confidence metadata, and still contributes to recall `fact_score`.
-  - Result: durable annotation search ranking now has traceable recall citations, borrowing agentmemory's citation-provenance pattern without changing public Search JSON, adding LLM extraction, or claiming BEAM superiority.
-
-- 2026-05-23: Mnemosyne MEMORIA negation/decision extraction now feeds Goncho search through durable annotations.
-  - Evidence target: `go test . -run 'TestServiceConclude(NegationAnnotationRanksDurableDenial|DecisionAnnotationRanksDurableDecision)' -count=1` proves `Service.Conclude` derives conservative negation and decision facts from prose (`I never approved auto-deleting audit logs`, `I decided to keep PostgreSQL for audit logs`) and `Service.Search` ranks those durable facts above question-shaped lexical echoes.
-  - Result: the append-only fact annotation lane now covers MEMORIA-style contradiction-resolution and decision-recall signals without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA durable annotations now feed RecallCandidate provenance.
-  - Evidence target: `go test . -run TestRecallCandidatesIncludeDurableFactAnnotationProvenance -count=1` proves recall candidate generation hydrates stored `goncho_memory_annotations` facts into `RecallCandidate.Provenance`, assigns `fact_score=1`, and selects the durable annotated fact over a lexical echo.
-  - Result: the append-only fact annotation lane now supports both public search ranking and recall-trace provenance without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA sequence extraction now feeds Goncho search through durable annotations.
-  - Evidence target: `go test . -run TestServiceConcludeSequenceAnnotationRanksDurableSequence -count=1` proves `Service.Conclude` derives a conservative event-order fact from prose (`first freeze writes, then run migration, finally enable readers`) and `Service.Search` ranks that durable sequence above a question-shaped lexical echo.
-  - Result: the append-only fact annotation lane now covers MEMORIA-style event ordering without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA metric/version extraction now feeds Goncho search through durable annotations.
-  - Evidence target: `go test . -run 'TestServiceConclude(MetricAnnotationRanksDurableMetric|VersionAnnotationRanksDurableVersion)' -count=1` proves `Service.Conclude` derives conservative numeric metric and semantic-version facts from prose (`dashboard API latency is 250ms`, `PostgreSQL version is 14.2`) and `Service.Search` ranks those durable facts above question-shaped lexical echoes.
-  - Result: the append-only fact annotation lane now covers MEMORIA-style IE/KU measurement facts without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA timeline extraction now feeds Goncho search through durable annotations.
-  - Evidence target: `go test . -run TestServiceConcludeTimelineAnnotationRanksDurableDate -count=1` proves `Service.Conclude` derives a conservative timeline fact from prose (`Release Orion deadline is 2026-06-01`) and `Service.Search` ranks that durable date above a question-shaped lexical echo.
-  - Result: the append-only fact annotation lane now covers MEMORIA-style timelines without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA instruction extraction now feeds Goncho search through durable annotations.
-  - Evidence target: `go test . -run TestServiceConcludeInstructionAnnotationRanksDurableInstruction -count=1` proves `Service.Conclude` derives a conservative instruction fact from prose (`Mira's instruction is never delete logs`) and `Service.Search` ranks that durable instruction above a question-shaped lexical echo.
-  - Result: the append-only fact annotation lane now covers MEMORIA-style instructions without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA location extraction now feeds Goncho search through durable annotations.
-  - Evidence target: `go test . -run TestServiceConcludeLocationAnnotationRanksDurableLocation -count=1` proves `Service.Conclude` derives a conservative location fact from prose (`the escalation runbook location is Notion page RB-17`) and `Service.Search` ranks that durable location above a question-shaped lexical echo.
-  - Result: the append-only fact annotation lane now covers owner, preference, and location MEMORIA categories without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA preference extraction now feeds Goncho search through durable annotations.
-  - Evidence target: `go test . -run TestServiceConcludePreferenceAnnotationRanksDurablePreference -count=1` proves `Service.Conclude` derives a conservative preference fact from prose (`Mira's indentation preference is tabs`) and `Service.Search` ranks that durable preference above a question-shaped lexical echo.
-  - Result: the append-only fact annotation lane now covers a second MEMORIA category (`preferences`) without changing the public Search JSON shape, adding LLM extraction, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA-style append-only fact annotations now feed Goncho search.
-  - Evidence target: `go test . -run 'Test(RunMigrationsCreatesMemoryAnnotationTableIdempotently|ServiceConcludeFactAnnotationsRankInverseOwnerFact)' -count=1` proves migrations create the annotation lane idempotently and `Service.Search` ranks an inverse owner fact from a durable annotation above a question-shaped lexical echo.
-  - Result: `Service.Conclude` now preserves raw conclusion text while deriving conservative `fact` annotations, then `findConclusions` hydrates those annotations as hidden ranking evidence without changing the public Search JSON shape, using LLM extraction, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA fact-intent search ranking has its first public Goncho slice.
-  - Evidence target: `go test . -run 'Test(SearchFactIntentScoresOwnerAnswerButNotLexicalEcho|ServiceSearchFactIntentRanksAnswerOverLexicalEcho)' -count=1` proves a conservative owner-fact intent scorer recognizes an answer-shaped fact, rejects a question-shaped lexical echo, and makes `Service.Search` rank the answer fact first.
-  - Result: public search now uses a MEMORIA-style structured fact signal without changing the Search API, adding LLM extraction, persisting triples, using answer hints, or regenerating benchmark artifacts.
-
-- 2026-05-23: Mnemosyne MEMORIA fact-voice scoring has its first Goncho recall slice.
-  - Evidence target: `go test . -run TestRecallFactVoiceRanksStructuredEvidence -count=1` proves structured `fact` evidence contributes to recall scoring, outranks a question-shaped lexical decoy, and surfaces `fact_score`/`fact=` diagnostics in the recall trace/report.
-  - Result: Goncho can ingest a Mnemosyne-style structured fact voice through its existing evidence seam without adding LLM extraction, answer hints, benchmark gold IDs, or frozen-artifact changes.
-
-- 2026-05-22: LOCOMO answer-ready closeout now has a guarded roadmap handoff.
-  - Evidence target: `go test . -run TestBenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout -count=1` proves internal and public benchmark roadmaps summarize the delivered graph, query-decomposition, temporal/speaker-routing, failure-bucket, backend-comparison, and docs-guard chain.
-  - Result: the loop can stop cleanly with a source-backed answer for how to improve Goncho next: keep frozen LOCOMO metrics as the guardrail, choose an approved retrieval slice, and generate a new date-stamped full LOCOMO run only when the change is ready to compare.
-
-- 2026-05-22: Public LOCOMO docs now guard backend-comparison failure-bucket summaries.
-  - Evidence target: `go test . -run TestBenchmarkDocsDocumentBackendComparisonFailureBucketSummaries -count=1` proves README, retrieval reference docs, and external adapter notes state that backend-comparison reports expose stable-ID `failure_buckets` and a markdown `Failure buckets` table beside rank-based `failure_categories`.
-  - Result: backend authors and benchmark readers can interpret failure-bucket summaries as reporting-only diagnostics without changing scoring or regenerating frozen LOCOMO artifacts.
-
-- 2026-05-22: LOCOMO backend-comparison reports now summarize failure buckets.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestLocomoBackendComparisonSummarizesFailureBuckets -count=1` proves comparable backend reports emit `failure_buckets` JSON and a markdown `Failure buckets` table with stable-ID-only `missing_companion_memory` counts.
-  - Result: operators can compare failure-driven buckets beside rank-based failure categories without regenerating frozen LOCOMO full-run artifacts or changing scoring semantics.
-
-- 2026-05-22: LOCOMO backend-comparison failure-audit validation now names wrong-branch buckets.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoBackendComparisonFailuresRejectsOutOfConversationRetrievedID -count=1` proves out-of-conversation retrieved stable IDs are still rejected before JSONL emission, and the validation error names `failure_bucket "wrong_branch_retrieval"`.
-  - Result: failure-audit operators get bucket-aligned diagnostics without admitting invalid cross-conversation rows into comparable backend audits.
-
-- 2026-05-22: LOCOMO docs now guard wrong-branch external backend rejections.
-  - Evidence target: `go test . -run TestBenchmarkDocsDocumentWrongBranchBackendRejections -count=1` proves README, public retrieval docs, and adapter notes state that an out-of-conversation stable `memory_id` is rejected before scoring, labeled `failure_bucket "wrong_branch_retrieval"`, and not rescued by content matching or answer text.
-  - Result: backend authors can see that wrong-branch diagnostics are scoring-blocking stable-ID validation, not a new content-only rescue path.
-
-- 2026-05-22: LOCOMO external backend wrong-branch rejections now name the failure bucket.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestLocomoBackendComparisonRejectsExternalOutOfConversationMemoryID -count=1` proves external comparable rows that return another conversation's stable `memory_id` are still rejected, and the error names `failure_bucket "wrong_branch_retrieval"`.
-  - Result: backend authors get the same failure-driven vocabulary without weakening stable-ID comparability or admitting wrong-branch rows into scoring.
-
-- 2026-05-22: LOCOMO backend-comparison failure audits now emit stable-ID failure buckets.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoBackendComparisonFailuresEmitsFailureBucket -count=1` proves comparable backend failure rows can label missing companion memories as `failure_bucket` without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
-  - Result: external-backend comparisons can share the same failure-driven evaluation vocabulary as Goncho's native LOCOMO failure audit.
-
-- 2026-05-22: LOCOMO failure-driven evaluation has its first implementation slice.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'Test(LocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets|WriteLocomoFailureAuditEmitsFailureBucket)' -count=1` proves wrong branch retrieval and missing companion memories can be classified from stable-ID LOCOMO rows, and partial multi-gold audit rows emit `failure_bucket` without regenerating LOCOMO full-run artifacts.
-  - Result: future retrieval tuning can start from named failure-audit buckets instead of tuning aggregate recall alone.
-
-- 2026-05-22: LOCOMO failure-driven evaluation now has an implementation plan.
-  - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-failure-driven-evaluation.md` names wrong branch retrieval, missing companion memories, failure-audit buckets, stable-ID constraints, and no-answer-hint benchmark discipline.
-  - Result: the next LOCOMO evaluation loop can start from a concrete plan before classifying new failure buckets or tuning retrieval behavior.
-
-- 2026-05-22: LOCOMO speaker who-said-what routing has its first implementation slice.
-  - Evidence target: `go test . -run TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch -count=1` proves explicit speaker provenance can steer selection to the right who-said-what branch even when the query also names another person.
-  - Result: future LOCOMO speaker-routing work can separate the speaker from the object of speech without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
-
-- 2026-05-22: LOCOMO temporal current-truth routing has its first implementation slice.
-  - Evidence target: `go test . -run TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence -count=1` proves current facts can outrank superseded evidence for now/current/latest-style questions while preserving the superseded candidate in `trace.Candidates`.
-  - Result: future LOCOMO temporal work can distinguish current truth from past truth with a visible `superseded_evidence_observed` warning and without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
-
-- 2026-05-22: LOCOMO temporal and speaker routing recall now has an implementation plan.
-  - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoTemporalSpeakerRoutingRecall -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-temporal-speaker-routing-recall.md` names the TDD entrypoints, current-truth warning, who-said-what branch routing, superseded-evidence preservation, and stable-ID/no-answer-hint constraints.
-  - Result: the next retrieval-code loop can start from a concrete temporal/speaker routing plan without changing frozen LOCOMO artifacts or scoring by answer text.
-
-- 2026-05-22: LOCOMO query-decomposition recall has its first implementation slice.
-  - Evidence target: `go test . -run TestRecallQueryDecompositionRetrievesEachSubQuestionFact -count=1` proves decomposed subqueries can retrieve each required stable-ID fact for a multi-part question before scoring.
-  - Result: multi-hop recall work can cover more required facts without answer hints, LLM judges, answer-text scoring, or LOCOMO artifact regeneration.
-
-- 2026-05-22: LOCOMO query-decomposition recall now has an implementation plan.
-  - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoQueryDecompositionRecall -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-query-decomposition-recall.md` names the TDD entrypoint, subquery split, stable-ID merge/deduplication, and stable-ID/no-answer-hint constraints.
-  - Result: the next retrieval-code loop can start from a concrete query-decomposition plan without changing frozen LOCOMO artifacts or scoring by answer text.
-
-- 2026-05-22: LOCOMO graph-assisted recall now has a coverage-aware selection slice.
-  - Evidence target: `go test . -run TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion -count=1` proves a relation-path graph companion can beat a near-duplicate lexical hit when the selected set is small.
-  - Result: multi-hop recall work can preserve complementary stable-ID memories in the selected context before any LOCOMO full-run artifact is regenerated.
-
-- 2026-05-22: Graph-assisted LOCOMO multi-hop recall has its first implementation slice.
-  - Evidence target: `go test . -run TestGraphRecallConnectsOwnerThroughServiceRelation -count=1` proves graph-expanded recall retrieves a stable-ID companion memory with relation path provenance.
-  - Result: LOCOMO improvement work can move from recommendations to a measured graph-assisted recall slice without changing frozen benchmark artifacts or scoring by answer text.
-
-- 2026-05-22: Graph-assisted LOCOMO multi-hop recall now has an implementation plan.
-  - Evidence target: `go test . -run TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall -count=1` proves `docs/superpowers/plans/2026-05-22-locomo-graph-assisted-multihop-recall.md` names the TDD entrypoint, stable-ID boundary, graph provenance, coverage-aware selection, and required validation commands.
-  - Result: future retrieval-code work can start from a concrete plan without changing production retrieval behavior, frozen LOCOMO artifacts, or stable-ID scoring semantics in this slice.
-
-- 2026-05-22: Benchmark roadmap now names the LOCOMO implementation gate.
-  - Evidence target: `go test . -run TestBenchmarkRoadmapNamesLocomoImplementationGate -count=1` proves internal and public benchmark roadmap docs state recommendations are not approval to change retrieval behavior, require an approved plan before production retrieval changes, and require a focused failing recall test before graph/ranking code.
-  - Result: future LOCOMO implementation loops have a test-protected approval/TDD boundary while preserving frozen artifacts and stable-ID scoring.
-
-- 2026-05-22: Public benchmark docs now recommend LOCOMO improvement levers.
-  - Evidence target: `go test . -run TestBenchmarkDocsRecommendLocomoImprovementLevers -count=1` proves README and Retrieval Benchmarks docs tie next improvements to weak multi-hop and strict-recall metrics, while preserving stable-ID, retrieval-only scoring constraints.
-  - Result: readers can answer how to improve Goncho LOCOMO next without adding answer hints, LLM judges, answer-text scoring, benchmark-specific gold-ID hacks, or extra runtime tools.
-
-- 2026-05-22: Benchmark roadmap now names LOCOMO improvement priorities.
-  - Evidence target: `go test . -run TestBenchmarkRoadmapNamesLocomoImprovementPriorities -count=1` proves internal and public benchmark roadmap docs name multi-hop graph expansion, query decomposition, coverage-aware ranking, temporal and speaker routing, failure-audit buckets, and explicit multi-hop recall/strict-recall targets.
-  - Result: future LOCOMO optimization loops have a test-protected roadmap before changing retrieval behavior or frozen benchmark artifacts.
-
-- 2026-05-22: Public benchmark docs now surface Goncho strict LOCOMO category metrics.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoGonchoStrictCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name Goncho strict_recall@5 and strict_recall@10 for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
-  - Result: LOCOMO readers can distinguish any-hit category recall from all-gold-ID strict recall for Goncho without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface LOCOMO category question counts.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoCategoryQuestionCounts -count=1` proves README and Retrieval Benchmarks docs name 446 adversarial, 92 multi-hop, 841 open-domain, 282 single-hop, and 321 temporal retrieval questions from the frozen full run.
-  - Result: LOCOMO readers can interpret category metrics with denominators without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface recency baseline LOCOMO category metrics.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoRecencyCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name recency recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
-  - Result: LOCOMO readers can compare real retrieval backends against the recency lower-bound category baseline without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface random baseline LOCOMO category metrics.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoRandomCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name random recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
-  - Result: LOCOMO readers can compare real retrieval backends against the random lower-bound category baseline without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface SQLite FTS5 LOCOMO category metrics.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoSQLiteFTS5CategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name SQLite FTS5 recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
-  - Result: LOCOMO readers can compare Goncho and BM25 against the local SQLite FTS5 lexical baseline without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface BM25 LOCOMO category metrics.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoBM25CategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name BM25 recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
-  - Result: LOCOMO readers can compare Goncho's category-level full-run performance against BM25 without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface Goncho LOCOMO category metrics.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoGonchoCategoryMetrics -count=1` proves README and Retrieval Benchmarks docs name Goncho recall_any@5, recall_any@10, and MRR for adversarial, multi-hop, open-domain, single-hop, and temporal retrieval categories.
-  - Result: LOCOMO readers can inspect Goncho's category-level full-run performance without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface LOCOMO category metric groups.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoCategoryMetricGroups -count=1` proves README and Retrieval Benchmarks docs name the adversarial, multi-hop, open-domain, single-hop, and temporal retrieval groups reported by the frozen full run.
-  - Result: LOCOMO readers can see which retrieval categories are summarized without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface LOCOMO leakage-check counts.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoLeakageCheckCounts -count=1` proves README and Retrieval Benchmarks docs name answer-text, gold-ID, and question-text leakage counts and explain why answer-text presence is reported separately from `answer_hint` indexing/scoring.
-  - Result: LOCOMO readers can distinguish literal answer spans in gold memories from benchmark leakage or answer-hint scoring.
-
-- 2026-05-22: Public benchmark docs now surface LOCOMO converted dataset evidence.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoConvertedDatasetEvidence -count=1` proves README and Retrieval Benchmarks docs name `data/locomo/memories.jsonl`, `data/locomo/questions.jsonl`, 1,982 questions, and 5,882 memories for the frozen full run.
-  - Result: LOCOMO readers can connect the frozen result JSON to the converted dataset files and full-run scale without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now surface LOCOMO source provenance.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoSourceProvenance -count=1` proves README and Retrieval Benchmarks docs name the LOCOMO source repository, pinned revision, source SHA256, and CC BY-NC license note.
-  - Result: LOCOMO readers can trace the frozen result back to source provenance without opening the generated full report first.
-
-- 2026-05-22: Public benchmark docs now name the frozen full LOCOMO baseline set.
-  - Evidence target: `go test . -run TestBenchmarkDocsNameLocomoFullBaselineSet -count=1` proves README and Retrieval Benchmarks docs name random, recency, BM25, SQLite FTS5, and Goncho as the frozen full LOCOMO run's baseline set.
-  - Result: LOCOMO readers can distinguish the full-run comparison set from smoke-only and external-backend adapter evidence.
-
-- 2026-05-22: Public benchmark docs now state the LOCOMO benchmark scope explicitly.
-  - Evidence target: `go test . -run TestBenchmarkDocsStateLocomoRetrievalOnlyScope -count=1` proves README and Retrieval Benchmarks docs say LOCOMO is retrieval-only, uses no answer generation, no LLM judge, ID-based scoring, and never indexes or scores `answer_hint` fields.
-  - Result: LOCOMO readers can distinguish deterministic retrieval evidence from answer-generation or judge-based benchmark claims.
-
-- 2026-05-22: Public benchmark docs now link the LOCOMO BM25-vs-Goncho candidate-generation failure comparison audit.
-  - Evidence target: `go test . -run TestBenchmarkDocsLinkLocomoCandidateFailureComparisonAudit -count=1` proves README and Retrieval Benchmarks docs link `docs/benchmarks/failures/locomo-2026-05-20-bm25-vs-goncho.jsonl` and name the BM25-win `missing_candidate` diagnosis.
-  - Result: LOCOMO readers can trace the candidate-generation milestone back to the failure-comparison audit instead of trusting the summary alone.
-
-- 2026-05-22: Public benchmark docs now label LOCOMO smoke failure audits as smoke-only evidence.
-  - Evidence target: `go test . -run TestBenchmarkDocsLabelSmokeFailureAuditArtifacts -count=1` proves README and Retrieval Benchmarks docs distinguish `docs/benchmarks/failures/locomo-smoke-categories.jsonl` and `docs/benchmarks/failures/locomo-backend-comparison-smoke.jsonl` from historical full-run evidence.
-  - Result: LOCOMO readers can use smoke failure audits for harness checks without mistaking them for frozen full-run audit artifacts.
-
-- 2026-05-22: Public benchmark docs now link LOCOMO failure-audit artifacts beside result JSON evidence.
-  - Evidence target: `go test . -run TestBenchmarkDocsLinkLocomoFailureAuditArtifacts -count=1` proves README and Retrieval Benchmarks docs link `docs/benchmarks/failures/locomo-2026-05-20-categories.jsonl` and `docs/benchmarks/failures/locomo-backend-comparison.jsonl`.
-  - Result: LOCOMO readers can inspect retrieval-miss categories and not-comparable backend evidence without treating result JSON as the only audit trail.
-
-- 2026-05-22: `make release-metadata-smoke` now runs the LOCOMO benchmark-result docs guards.
-  - Evidence target: `go test . -run TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards -count=1` proves the release metadata smoke regex includes the LOCOMO metric-surface, frozen-artifact, and reproduction-command guards.
-  - Result: the narrow release gate keeps the public LOCOMO benchmark-result claims wired after future docs edits.
-
-- 2026-05-22: Public benchmark docs now name exact LOCOMO reproduction commands for full, smoke, backend-smoke, and full-backend runs.
-  - Evidence target: `go test . -run TestBenchmarkDocsNameLocomoReproductionCommands -count=1` proves README and Retrieval Benchmarks docs label `make bench-locomo`, `make bench-locomo-smoke`, `make bench-locomo-backends-smoke`, and `make bench-locomo-backends` with their reproduction roles.
-  - Result: LOCOMO operators can pick the right command without confusing CI-safe smoke regeneration with manual full-result reproduction.
-
-- 2026-05-22: Public benchmark docs now distinguish frozen LOCOMO full-run evidence from regenerated smoke/backend artifacts.
-  - Evidence target: `go test . -run TestBenchmarkDocsDistinguishFrozenLocomoResultArtifacts -count=1` proves README and Retrieval Benchmarks docs say the frozen full-run JSON is not regenerated by smoke targets while regenerated smoke/backend artifacts are fresh harness checks with host-sensitive latency/RSS measurements.
-  - Result: LOCOMO readers can cite the correct JSON artifact without treating smoke regeneration as a historical full-run update.
-
-- 2026-05-22: Public benchmark docs now surface the LOCOMO result metric set beyond recall and MRR.
-  - Evidence target: `go test . -run TestBenchmarkDocsSurfaceLocomoResultMetricSet -count=1` proves README and Retrieval Benchmarks docs mention NDCG@5, NDCG@10, latency distribution, RSS, database size, memory token estimate, Top-K, failure categories, leakage checks, and the frozen JSON evidence files.
-  - Result: LOCOMO result readers see the full metric surface without rewriting frozen benchmark artifacts.
-
-- 2026-05-22: Root package documentation now includes a trust-boundary guide for pkg.go.dev readers embedding Goncho in host agents.
-  - Evidence target: `go test . -run 'Test(PackageDocSurfacesTrustBoundaryGuide|ReleaseMetadataSmokeIncludesPackageDocTrustBoundaryGuard)' -count=1` proves `go doc .` distinguishes Goncho orientation from host authority over authorization, live filesystem/API/deployment/credential state, money movement, destructive writes, external side effects, and live verification.
-  - Result: readers landing directly on pkg.go.dev can adopt Goncho without mistaking memory retrieval for permission to skip host-side gates.
-
-- 2026-05-22: README now includes a trust-boundary guide for pkg.go.dev readers embedding Goncho in host agents.
-  - Evidence target: `go test . -run 'Test(ReadmeSurfacesTrustBoundaryGuide|ReleaseMetadataSmokeIncludesReadmeTrustBoundaryGuard)' -count=1` proves the README distinguishes Goncho orientation from host authority over authorization, live filesystem/API/deployment/credential state, money movement, destructive writes, external side effects, and live verification.
-  - Result: readers can adopt Goncho without mistaking memory retrieval for permission to skip host-side gates.
-
-- 2026-05-22: Root package documentation now includes a host integration checklist for pkg.go.dev readers embedding Goncho.
-  - Evidence target: `go test . -run 'Test(PackageDocSurfacesHostIntegrationChecklist|ReleaseMetadataSmokeIncludesPackageDocHostIntegrationGuard)' -count=1` proves `go doc .` walks host integrators through SQLite opening, migrations before service construction, attribution config, explicit profile/peer/session scoping, context-before-tools, evidence-backed conclusions, and live verification.
-  - Result: readers landing directly on pkg.go.dev can wire a safe host integration path without opening the README first.
-
-- 2026-05-22: README now includes a host integration checklist for pkg.go.dev readers embedding Goncho.
-  - Evidence target: `go test . -run 'Test(ReadmeSurfacesHostIntegrationChecklist|ReleaseMetadataSmokeIncludesReadmeHostIntegrationGuard)' -count=1` proves the README walks host integrators through SQLite opening, migrations, service construction, explicit profile/peer/session scoping, context-before-tools, evidence-backed conclusions, and live verification.
-  - Result: readers can move from install/import guidance to a safe host wiring checklist without inferring operational boundaries from examples alone.
-
-- 2026-05-22: Root package documentation now includes an import path guide for pkg.go.dev readers.
-  - Evidence target: `go test . -run 'Test(PackageDocSurfacesImportPathGuide|ReleaseMetadataSmokeIncludesPackageDocImportPathGuard)' -count=1` proves `go doc .` distinguishes the root library package, `memory` SQLite opener, and `cmd/goncho-bench` command-only path while release metadata smoke keeps the guard wired.
-  - Result: readers landing directly on pkg.go.dev can choose the correct import/install path without opening the README first.
-
-- 2026-05-22: README now includes an import path guide for pkg.go.dev readers.
-  - Evidence target: `go test . -run 'Test(ReadmeSurfacesImportPathGuide|ReleaseMetadataSmokeIncludesReadmeImportPathGuard)' -count=1` proves the README distinguishes the root library package, `memory` SQLite opener, and `cmd/goncho-bench` command path while release metadata smoke keeps the guard wired.
-  - Result: readers can choose the correct Go import/install path without starting from the full pkg.go.dev symbol index.
-
-- 2026-05-22: Root package documentation now explains versioning and adoption notes for pkg.go.dev readers.
-  - Evidence target: `go test . -run 'Test(PackageDocSurfacesVersioningAndAdoptionNotes|ReleaseMetadataSmokeIncludesPackageDocVersioningGuard)' -count=1` proves `go doc .` includes pre-1.0 stability guidance, pinned v0.1.1 install guidance, `@latest` deployment-lock warning, Stable version interpretation, Imported by 0 interpretation, reverse-dependency context, and ecosystem smoke guidance while release metadata smoke keeps the guard wired.
-  - Result: readers landing on pkg.go.dev can interpret go.dev stability and adoption metadata directly from the package overview.
-
-- 2026-05-22: README now explains versioning and adoption notes for pkg.go.dev readers.
-  - Evidence target: `go test . -run 'Test(ReadmeSurfacesVersioningAndAdoptionNotes|ReleaseMetadataSmokeIncludesReadmeVersioningGuard)' -count=1` proves the README includes pre-1.0 stability guidance, a pinned v0.1.1 dependency command, an `@latest` deployment-lock warning, Imported by 0 interpretation, and ecosystem smoke guidance while release metadata smoke keeps the guard wired.
-  - Result: readers can interpret go.dev stability and adoption metadata without confusing popularity counters or `@latest` with deployment readiness.
-
-- 2026-05-22: Root package documentation now maps go.dev package signals to local proof commands.
-  - Evidence target: `go test . -run 'Test(PackageDocSurfacesGoDevPackageSignals|ReleaseMetadataSmokeIncludesPackageDocGoDevSignalGuard)' -count=1` proves `go doc .` includes public version, go.mod, MIT license, package-doc, external-import, and command-install smoke guidance while release metadata smoke keeps the guard wired.
-  - Result: pkg.go.dev readers can connect the package page metadata to reproducible local checks without leaving the API overview.
-
-- 2026-05-22: README now maps go.dev package signals to local proof commands.
-  - Evidence target: `go test . -run 'Test(ReadmeSurfacesGoDevSignalMap|ReleaseMetadataSmokeIncludesReadmeGoDevSignalGuard)' -count=1` proves the README includes go.dev version, published date, go.mod, license, package-doc, external-import, install-path, and Imported by guidance while release metadata smoke keeps the guard wired.
-  - Result: readers can connect the pkg.go.dev metadata panel to reproducible local checks instead of trusting badges alone.
-
-- 2026-05-22: README now gives pkg.go.dev readers a minimal embedded host skeleton.
-  - Evidence target: `go test . -run 'Test(ReadmeSurfacesMinimalEmbeddedSkeleton|ReleaseMetadataSmokeIncludesReadmeMinimalSkeletonGuard)' -count=1` proves the README includes a copy-paste local SQLite service skeleton and release metadata smoke keeps the guard wired.
-  - Result: readers can start a Go module around Goncho without confusing the library package with the benchmark CLI.
-
-- 2026-05-22: Root package documentation now maps pkg.go.dev readers to the primary API path.
-  - Evidence target: `go test . -run 'Test(PackageDocSurfacesPrimaryAPIPath|ReleaseMetadataSmokeIncludesPackageDocAPIPathGuard)' -count=1` proves `go doc .` names `Service.Conclude`, `Service.Search`, `Service.Context`, the public tool constructors, and the database-internals boundary while release metadata smoke keeps the guard wired.
-  - Result: readers can orient on the service/tool entry points before scanning the large API index.
-
-- 2026-05-22: Root package documentation now tells pkg.go.dev readers how to install the library versus the benchmark command.
-  - Evidence target: `go test . -run 'Test(PackageDocSurfacesInstallAndCommandBoundary|ReleaseMetadataSmokeIncludesPackageDocInstallGuard)' -count=1` proves `go doc .` includes the `go get` path, root-library boundary, and `goncho-bench@latest` command path while release metadata smoke keeps the guard wired.
-  - Result: pkg.go.dev readers can distinguish the importable library from the installable benchmark CLI without learning that boundary from a failed `go install` attempt.
-
-- 2026-05-22: README now gives pkg.go.dev readers an API map from evaluation goals to public entry points.
-  - Evidence target: `go test . -run 'Test(ReadmeSurfacesPkgGoDevAPIMap|ReleaseMetadataSmokeIncludesReadmeAPIMapGuard)' -count=1` proves the README includes the map and release metadata smoke keeps it guarded.
-  - Result: readers can find `memory.OpenSqlite`, `goncho.RunMigrations`, `goncho.NewService`, `svc.Conclude`, `svc.Search`, `svc.Context`, public tools, and `goncho-bench@latest` without scanning the full package index.
-
-- 2026-05-22: Root package overview now points pkg.go.dev readers to compiled examples for setup, orientation packs, and scoped retrieval.
-  - Evidence target: `go test . -run 'Test(PackageDocPointsPkgGoDevReadersToCompiledExamples|ReleaseMetadataSmokeIncludesPackageDocExamplesGuard)' -count=1` proves `go doc .` includes the example path and release metadata smoke keeps it guarded.
-  - Result: pkg.go.dev readers can jump from the overview to checked examples instead of inferring the first API path from the large index.
-
-- 2026-05-22: Root package examples now give pkg.go.dev readers a compiled `Service.Search` scoped-retrieval path.
-  - Evidence target: `go test . -run 'Test(PackageDocsIncludeCompiledSearchExample|ReleaseMetadataSmokeIncludesSearchExampleGuard)' -count=1` plus `go test . -run ExampleService_Search -count=1` proves the example is present, release-smoke guarded, and executable.
-  - Result: pkg.go.dev can render a minimal search call that retrieves a stored conclusion by query and prints its evidence source.
-
-- 2026-05-22: Root package examples now give pkg.go.dev readers a compiled `Service.Context` orientation-pack path.
-  - Evidence target: `go test . -run 'Test(PackageDocsIncludeCompiledContextExample|ReleaseMetadataSmokeIncludesContextExampleGuard)' -count=1` plus `go test . -run ExampleService_Context -count=1` proves the example is present, release-smoke guarded, and executable.
-  - Result: pkg.go.dev can render the first useful orientation call after SQLite setup, profile facts, and a stored conclusion.
-
-- 2026-05-22: Root package examples now give pkg.go.dev readers a compiled `NewService` setup path.
-  - Evidence target: `go test . -run 'Test(PackageDocsIncludeCompiledNewServiceExample|ReleaseMetadataSmokeIncludesPackageExampleGuard)' -count=1` plus `go test . -run ExampleNewService -count=1` proves the example is present, release-smoke guarded, and executable.
-  - Result: pkg.go.dev can render an example that opens SQLite, runs migrations, creates `goncho.NewService`, writes a profile fact, and reads it back.
-
-- 2026-05-22: README now gives pkg.go.dev readers a concise `At a Glance` evaluation path.
-  - Evidence target: `go test . -run TestReadmeSurfacesPkgGoDevEvaluationPath -count=1` proves the README includes pkg.go.dev evaluation, first-call, and next-reading markers.
-  - Result: README readers can quickly identify install command, use cases, non-goals, first useful service call, and trust boundary.
-
-- 2026-05-22: Root package documentation now gives pkg.go.dev readers a stronger landing page.
-  - Evidence target: `go test . -run TestPackageDocSurfacesPkgGoDevLandingContent -count=1` proves `go doc .` includes use-case, quick-start, verification-before-action, and `goncho.NewService` markers.
-  - Result: pkg.go.dev/go.dev package readers see a clearer first screen before the API index.
-
-- 2026-05-22: Checked-in LOCOMO smoke benchmark artifacts now include `goncho-no-rank` retrieval and backend-comparison baselines.
-  - Evidence target: `make bench-locomo-smoke` plus `AGENTMEMORY_SOURCE_DIR=/home/xel/git/sages-openclaw/workspace-mineru/goncho/docs/opensource-memory-systems/agentmemory make bench-locomo-backends-smoke` regenerates the tracked smoke JSON, markdown, and failure-audit artifacts with `goncho-no-rank`; `python3 -m json.tool` validates the regenerated JSON artifacts.
-  - Result: CI-safe smoke evidence now matches the current benchmark harness and documents the no-ranking baseline in checked-in artifacts.
-
-- 2026-05-22: LOCOMO backend-comparison reports now include a `goncho-no-rank` no-ranking baseline alongside current Goncho.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves backend-comparison JSON and markdown include `goncho-no-rank` as a comparable local no-ranking baseline.
-  - Result: backend-comparison artifacts now satisfy the roadmap baseline requirement for Goncho without current ranking while preserving centralized stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval reports now include a `goncho-no-rank` no-ranking baseline alongside current Goncho.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomoSmokeProducesReport|TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits' -count=1` proves the smoke JSON includes `goncho-no-rank`, the markdown baseline note names Goncho no-rank, and non-positive limits remain safe for the new baseline.
-  - Result: retrieval benchmark artifacts now satisfy the roadmap baseline requirement for Goncho without current ranking while preserving deterministic stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval and backend-comparison markdown now include one-command reproduction lines.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomoMarkdownIncludesReproductionCommand|TestRunLocomoBackendComparisonWritesJSONAndMarkdown' -count=1` proves markdown summaries emit copy-pasteable `go run ./cmd/goncho-bench` commands with the same fixture, output, failure-audit, markdown, and limit paths.
-  - Result: benchmark markdown now satisfies the one-command reproduction scientific-control requirement without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval markdown now includes converted-artifact checksums when metadata is available.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoMarkdownIncludesConvertedChecksums -count=1` proves markdown summaries include converted memories and questions SHA256 values from source metadata.
-  - Result: retrieval markdown now surfaces the converted-artifact checksum scientific control already present in JSON metadata without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO backend-comparison markdown now includes dataset provenance when metadata is available.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves markdown summaries include source URL, source revision, source checksum, converted fixture checksums, and license note.
-  - Result: backend-comparison markdown now surfaces the scientific controls already present in JSON metadata without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO backend-comparison reports now include per-backend category metrics.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves JSON artifacts emit `category_metrics` and markdown summaries include per-backend category metric tables.
-  - Result: backend-comparison artifacts now mirror LOCOMO retrieval category-metric reporting without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO backend-comparison markdown now includes per-backend failure-category counts.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves markdown summaries include `## Failure categories` and backend/category count rows.
-  - Result: backend-comparison markdown now surfaces the failure taxonomy already emitted in JSON without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO backend-comparison reports now include per-backend latency distribution stats.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves JSON artifacts emit `latency_ms` and markdown summaries include latency distribution columns.
-  - Result: backend-comparison artifacts now mirror LOCOMO retrieval latency min/p50/p95/max reporting without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO backend-comparison markdown now includes per-backend insert latency and RSS metrics.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves markdown summaries include `Insert latency ms` and `RSS bytes` columns alongside existing search latency.
-  - Result: backend-comparison markdown now surfaces the resource metrics already emitted in JSON without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO backend-comparison reports now record per-backend NDCG@5 and NDCG@10 metrics.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoBackendComparisonUsesStableMemoryIDs|TestRunLocomoBackendComparisonWritesJSONAndMarkdown' -count=1` proves backend-comparison entries aggregate ID-based NDCG metrics and markdown summaries include `NDCG@5`/`NDCG@10` columns.
-  - Result: backend-comparison artifacts now satisfy the roadmap's NDCG reporting requirement without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO backend-comparison reports now record LOCOMO leakage checks.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBackendComparisonWritesJSONAndMarkdown -count=1` proves JSON artifacts emit `leakage_checks` and markdown summaries include `## Leakage checks`.
-  - Result: backend-comparison artifacts now satisfy the roadmap's same-leakage-checks requirement without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval and backend-comparison reports now record converted fixture database byte sizes.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomoBenchmarkHonorsConfiguredLimit|TestRunLocomoSmokeProducesReport|TestRunLocomoBackendComparisonWritesJSONAndMarkdown' -count=1` proves JSON artifacts emit `database_size_bytes` and markdown summaries print `Database size bytes`.
-  - Result: benchmark artifacts now satisfy the roadmap's database-size reporting requirement without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval reports now record per-system NDCG@5 and NDCG@10 metrics.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoScoringStrictAnyAndMRR|TestLocomoCategoryMetricAggregation|TestRunLocomoSmokeProducesReport' -count=1` proves ID-based NDCG scoring, system/category aggregation, JSON fields, and markdown columns.
-  - Result: retrieval artifacts now satisfy the roadmap's NDCG reporting requirement without changing retrieval or stable-ID scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval reports now record per-system latency distribution stats.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoLatencyMetricAggregation|TestRunLocomoSmokeProducesReport' -count=1` proves JSON system rows emit `latency_ms` min/p50/p95/max and markdown summaries include latency distribution columns.
-  - Result: retrieval artifacts now satisfy the roadmap's latency min/p50/p95/max reporting requirement without changing scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval reports now record per-system failure-category counts.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoSmokeProducesReport -count=1` proves JSON system rows emit `failure_categories` and markdown summaries include a failure-category section.
-  - Result: retrieval artifacts now satisfy the roadmap's failure-category reporting requirement without changing scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval and backend-comparison reports now record deterministic memory token estimates.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomo(BenchmarkHonorsConfiguredLimit|BackendComparisonWritesJSONAndMarkdown|SmokeProducesReport)' -count=1` proves JSON artifacts emit `memory_token_estimate` and markdown summaries print the value.
-  - Result: benchmark artifacts now satisfy the roadmap's memory-count plus total-token-estimate reporting requirement without changing scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval reports now record per-system search latency and RSS metrics.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoSmokeProducesReport -count=1` proves JSON system rows emit `search_latency_ms` and `rss_bytes`, and markdown summaries include resource metric columns.
-  - Result: retrieval artifacts now satisfy the benchmark roadmap's latency/RSS evidence requirement without changing scoring semantics.
-
-- 2026-05-22: LOCOMO retrieval and backend-comparison reports now record the effective top-K scoring window.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestRunLocomo(BenchmarkHonorsConfiguredLimit|BackendComparisonHonorsConfiguredLimitForExternalRows|SmokeProducesReport|BackendComparisonWritesJSONAndMarkdown)' -count=1` proves JSON artifacts emit `top_k` and markdown summaries print `Top-K`.
-  - Result: benchmark artifacts are self-describing when operators run LOCOMO with non-default retrieval limits.
-
-- 2026-05-22: LOCOMO failure-audit notes now report the actual retrieved top-K window.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoFailureJSONL(Generation|NotesUseRetrievedWindow)|TestWriteLocomoBackendComparisonFailuresRejectsUnknownRetrievedID' -count=1` proves failure JSONL says `top 1` for a top-1 miss instead of hard-coding `top 10`.
-  - Result: benchmark miss notes remain accurate when LOCOMO reports run with non-default retrieval limits.
-
-- 2026-05-22: `goncho_review` list output now echoes the effective status filter.
-  - Evidence target: `go test . -run 'TestReviewTool(ListOutputIncludesEffectiveStatus|TreatsBlankStatusAsOpenDefault|ListFiltersByWorkspaceID|FiltersReviewChainsBySubjectAndRelatedID|ListsAndResolvesReviewItems)' -count=1` proves blank status requests default to `open` and the list response reports that effective status.
-  - Result: operators can audit which review queue status was listed without inferring silent defaults from item rows.
-
-- 2026-05-22: `goncho_review` list requests now support workspace ID filters.
-  - Evidence target: `go test . -run 'TestReviewTool(ListFiltersByWorkspaceID|ResolveOutputIncludesWorkspaceID|ResolveOutputIncludesCreatedAt|ResolveOutputIncludesReason|ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves list responses honor `workspace_id` filters instead of falling back to the service default workspace.
-  - Result: operators can inspect a workspace-specific review queue through the public review tool.
-
-- 2026-05-22: `goncho_review` resolve output now includes workspace IDs.
-  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesWorkspaceID|ResolveOutputIncludesCreatedAt|ResolveOutputIncludesReason|ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `workspace_id`.
-  - Result: operators can audit which workspace owned the closed review item without issuing a second list call.
-
-- 2026-05-22: `goncho_review` resolve output now includes original creation timestamps.
-  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesCreatedAt|ResolveOutputIncludesReason|ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `created_at` timestamp.
-  - Result: operators can audit when the review item was opened without issuing a second list call.
-
-- 2026-05-22: `goncho_review` resolve output now includes original review reasons.
-  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesReason|ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `reason`.
-  - Result: operators can audit why the review item existed without issuing a second list call.
-
-- 2026-05-22: `goncho_review` resolve output now includes evidence IDs.
-  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesEvidenceIDs|ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `evidence_ids`.
-  - Result: operators can audit which proof identifiers were reviewed without issuing a second list call.
-
-- 2026-05-22: `goncho_review` resolve output now includes peer/session scope.
-  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesScope|ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `peer_id` and `session_key`.
-  - Result: operators can audit which scoped review queue item was closed without issuing a second list call.
-
-- 2026-05-22: `goncho_review` resolve output now includes review kind.
-  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesKind|ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the adjudicated review item's `kind`.
-  - Result: operators can audit whether a closed review item was conflict or stale without issuing a second list call.
-
-- 2026-05-22: `goncho_review` resolve output now includes review-chain identifiers.
-  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesReviewChain|ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses echo the `subject_id` and `related_id` for the adjudicated review item.
-  - Result: operators can audit which memory/review chain was adjudicated without issuing a second list call.
-
-- 2026-05-22: `goncho_review` resolve output now includes `resolved_at` audit timestamps.
-  - Evidence target: `go test . -run 'TestReviewTool(ResolveOutputIncludesResolvedAt|ListsAndResolvesReviewItems)' -count=1` proves resolve responses include a parseable `resolved_at` timestamp matching the persisted resolved review item.
-  - Result: operators can audit when a review item was adjudicated without issuing a second list call.
-
-- 2026-05-22: single-item `review_required` context warnings now use singular wording.
-  - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedEvidenceIDs|MarksOmittedDetails)' -count=1` proves one open review item says `1 open review item requires adjudication` while multi-item warnings keep plural wording.
-  - Result: lifecycle review warnings read cleanly for both single-item and multi-item review queues.
-
-- 2026-05-22: bounded `review_required` context warnings now report omitted evidence-ID counts.
-  - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedEvidenceIDs|MarksOmittedDetails)' -count=1` proves context unavailable evidence says `evidence_omitted=N` when more unique evidence IDs exist than the bounded preview shows.
-  - Result: lifecycle review warnings stay compact without hiding that additional proof identifiers exist for open review work.
-
-- 2026-05-22: unscoped `review_required` context warnings now report omitted session-key counts.
-  - Evidence target: `go test . -run 'TestContextReportsReviewWarning(MarksOmittedSessionKeys|IncludesSessionKeysWhenUnscoped)' -count=1` proves peer-level review warnings include `session_keys_omitted=N` when more distinct affected sessions exist than the bounded preview shows.
-  - Result: lifecycle review warnings stay compact without hiding that additional sessions have open review work.
-
-- 2026-05-22: unscoped `review_required` context warnings now preview affected session keys.
-  - Evidence target: `go test . -run 'TestContextReports(OpenReviewItemsAsUnavailableEvidence|ReviewWarningIncludesSessionKeysWhenUnscoped)' -count=1` proves peer-level context warnings include bounded `session_keys=...` detail while session-scoped warnings keep `session_key=<session>`.
-  - Result: lifecycle review warnings are easier to triage when a peer has open review work spread across multiple sessions.
-
-- 2026-05-22: session-scoped `review_required` context warnings now name their session key.
-  - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence includes `session_key=<session>` while keeping same-session counts, review item IDs, chains, and evidence IDs.
-  - Result: lifecycle review warnings are easier to audit because the compact warning states the scope used to filter open review items.
-
-- 2026-05-22: bounded `review_required` context warnings now report omitted detail counts.
-  - Evidence target: `go test . -run 'TestContextReports(OpenReviewItemsAsUnavailableEvidence|ReviewWarningMarksOmittedDetails)' -count=1` proves context unavailable evidence says `item_details_omitted=N` when more open review items exist than the bounded item/chains/evidence preview shows.
-  - Result: lifecycle review warnings stay compact without hiding that additional open review items need adjudication.
-
-- 2026-05-22: `review_required` context warnings are scoped to the requested session.
-  - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence excludes open review items from another session for the same peer while keeping same-session review counts, chains, item IDs, and evidence IDs.
-  - Result: lifecycle review warnings no longer let unrelated same-peer sessions steer the current session context.
-
-- 2026-05-22: `review_required` context warnings now include review item IDs.
-  - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence surfaces bounded review item IDs alongside counts, subject chains, and evidence IDs.
-  - Result: lifecycle review warnings are directly actionable because operators can resolve the listed review items without first running a separate list call.
-
-- 2026-05-22: `review_required` context warnings now include review evidence IDs.
-  - Evidence target: `go test . -run TestContextReportsOpenReviewItemsAsUnavailableEvidence -count=1` proves context unavailable evidence surfaces bounded `evidence_ids` alongside review counts and subject chains.
-  - Result: lifecycle review warnings are easier to audit from context output without silently dropping proof identifiers.
-
-- 2026-05-22: LOCOMO failure audits now reject out-of-conversation gold stable IDs.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsOutOfConversationGoldMemoryID|BackendComparisonFailuresRejectsOutOfConversationGoldMemoryID)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a report row carries a `gold_memory_id` from a different `conversation_id` than the question.
-  - Result: failure reports preserve conversation-scoped evidence IDs for expected and retrieved memory rows.
-
-- 2026-05-22: LOCOMO failure audits now reject unknown gold stable IDs.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsUnknownGoldMemoryID|BackendComparisonFailuresRejectsUnknownGoldMemoryID)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a report row carries a `gold_memory_id` absent from the loaded LOCOMO fixture.
-  - Result: failure reports preserve known evidence IDs for both expected and retrieved memory rows.
-
-- 2026-05-22: LOCOMO failure audits now reject question conversation mismatches.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsQuestionConversationMismatch|BackendComparisonFailuresRejectsQuestionConversationMismatch)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a report row's `question_id` exists but its `conversation_id` disagrees with the loaded LOCOMO fixture.
-  - Result: failure reports preserve fixture-scoped question identity before evaluating retrieved stable IDs.
-
-- 2026-05-22: LOCOMO failure audits now reject unknown question IDs.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsUnknownQuestionID|BackendComparisonFailuresRejectsUnknownQuestionID)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a failure row references a `question_id` absent from the loaded LOCOMO fixture.
-  - Result: failure reports preserve the same fixture-scoped stable question-ID invariant as centralized scoring.
-
-- 2026-05-22: LOCOMO failure audits now reject out-of-conversation retrieved stable IDs.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestWriteLocomo(FailureAuditRejectsOutOfConversationRetrievedID|BackendComparisonFailuresRejectsOutOfConversationRetrievedID)' -count=1` proves both Goncho and backend-comparison failure JSONL fail closed when a top-hit `memory_id` belongs to another `conversation_id`.
-  - Result: failure reports preserve the same conversation-scoped stable-ID invariant as centralized scoring.
-
-- 2026-05-22: LOCOMO backend-comparison failure audits now reject unknown retrieved stable IDs.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoBackendComparisonFailuresRejectsUnknownRetrievedID -count=1` proves backend-comparison failure JSONL fails closed when a top-hit `memory_id` is not present in the loaded LOCOMO fixture.
-  - Result: comparison failure reports no longer hide backend/report stable-ID drift behind blank memory metadata rows.
-
-- 2026-05-22: LOCOMO SQLite FTS retrieval now skips temporary database setup for tokenless queries.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRetrieveLocomoSQLiteFTSSkipsStoreForTokenlessQuery -count=1` proves stopword-only LOCOMO questions use the recency fallback without creating a temporary SQLite FTS store.
-  - Result: report generation avoids wasted temp DB creation/population for questions with no indexable FTS tokens while preserving fallback ordering.
-
-- 2026-05-22: LOCOMO failure audits now reject unknown retrieved stable IDs.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestWriteLocomoFailureAuditRejectsUnknownRetrievedID -count=1` proves Goncho failure-audit output fails closed when a top-hit `memory_id` is not present in the loaded LOCOMO fixture.
-  - Result: failure JSONL no longer hides retrieval/stable-ID drift behind blank memory metadata rows.
-
-- 2026-05-22: LOCOMO leakage checks now reuse the conversation index.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestCheckLocomoLeakageUsesConversationIndex -count=1` proves leakage auditing reads the precomputed per-conversation LOCOMO memory index when available.
-  - Result: LOCOMO report generation avoids rebuilding a duplicate conversation map for leakage checks while preserving conversation-scoped answer/gold/question leakage accounting.
-
-- 2026-05-22: LOCOMO direct retrieval now rejects non-positive limits before backend work.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits -count=1` proves direct calls with zero or negative limits return no IDs across random, recency, BM25, SQLite FTS5, and Goncho retrieval paths.
-  - Result: internal LOCOMO retrieval now treats non-positive top-K windows as empty instead of panicking in slice helpers or letting SQLite FTS5 return all rows for `LIMIT -1`.
-
-- 2026-05-22: LOCOMO fixture loading now rejects duplicate gold stable IDs before scoring.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestLoadLocomoDatasetRejectsDuplicateGoldStableIDs -count=1` proves repeated `gold_memory_ids` within one question fail at fixture-load time instead of silently reaching centralized stable-ID scoring.
-  - Result: LOCOMO reports and external-backend comparisons now fail closed when gold evidence IDs are not unique per question.
-
-- 2026-05-22: LOCOMO Goncho adapters now cap duplicate-content stable-ID fan-out to top-K.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'Test(RunLocomoBenchmarkCapsGonchoStableIDFanoutToLimit|GonchoBackendScopedSearchCapsStableIDFanoutToTopK)' -count=1` proves duplicate content mapping to multiple stable IDs cannot expand a configured top-K window in the LOCOMO report path or backend-comparison Goncho adapter.
-  - Result: reproducible LOCOMO scoring now treats content-to-ID collisions like external duplicate rows: the requested top-K result window is the scoring boundary.
-
-- 2026-05-22: LOCOMO fixture loading now rejects invalid gold stable IDs before scoring.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestLoadLocomoDatasetRejectsInvalidGoldStableIDs -count=1` proves unknown `gold_memory_ids` and gold IDs from a different `conversation_id` fail at fixture-load time.
-  - Result: LOCOMO reports and external-backend comparisons now fail closed when gold evidence cannot be scored as known same-conversation memory IDs.
-
-- 2026-05-22: LOCOMO fixture loading now rejects duplicate stable IDs before scoring.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestLoadLocomoDatasetRejectsDuplicateStableIDs -count=1` proves duplicate `memory_id` and `question_id` values fail at fixture-load time instead of reaching centralized stable-ID scoring.
-  - Result: LOCOMO reports and external-backend comparisons now fail closed when converted fixture IDs are not unique enough for deterministic evidence scoring.
-
-- 2026-05-22: LOCOMO smoke/full retrieval reports now honor the configured top-K limit.
-  - Evidence target: `go test ./cmd/goncho-bench -run TestRunLocomoBenchmarkHonorsConfiguredLimit -count=1` proves `--limit 1` reaches the LOCOMO retrieval report path and caps each local system's reported retrieved IDs.
-  - Result: reproducible LOCOMO retrieval reports now use the operator-requested top-K window instead of always evaluating every local system with top 10.
-
-- 2026-05-22: LOCOMO backend comparison now honors the configured top-K limit in the full report path.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'Test(RunLocomoBackendComparisonHonorsConfiguredLimitForExternalRows|LocomoBackendComparisonDuplicateExternalRowsDoNotExpandTopK)' -count=1` proves `--limit 1` reaches external adapter scoring and duplicate external rows cannot expand the top-K window.
-  - Result: reproducible backend comparison reports now use the operator-requested top-K window consistently across local and external backends.
-
-- 2026-05-22: LOCOMO external adapter scoring now clamps top-K rows and rejects out-of-conversation stable IDs.
-  - Evidence target: `go test ./cmd/goncho-bench -run 'TestLocomoBackendComparison(LimitsExternalRowsToTopK|RejectsExternalOutOfConversationMemoryID)' -count=1` proves comparable external rows obey the requested top-K window and cannot return a stable `memory_id` from a different `conversation_id` than the question.
-  - Result: the Go scorer now enforces the documented conversation-scoped backend comparison contract before stable-ID scoring, so external adapters cannot get comparable credit by over-returning rows or crossing conversation boundaries.
-
-- 2026-05-22: benchmark docs now surface conversation-scoped backend comparison.
-  - Evidence target: `go test . -run TestBenchmarkDocsMentionConversationScopedBackendComparison -count=1` proves README, Retrieval Benchmarks, operator runbook, and external adapter docs say LOCOMO backend comparison is conversation-scoped.
-  - Result: public benchmark methodology now explains why duplicate or near-duplicate content in another conversation cannot win by content-only matching before stable-ID scoring.
-
-- 2026-05-22: public release metadata smoke now checks documented latest metadata.
-  - Evidence target: `go test . -run 'Test(PublicReleaseSmokeChecksDocumentedLatestMetadata|PublicDocsExplainDocumentedLatestPublicReleaseSmoke)' -count=1` proves `make public-release-smoke` checks the documented public `@latest` version and published date, and first-touch public docs explain that guard.
-  - Result: ecosystem-readiness smoke now catches drift between official public module metadata and the documented v0.1.1 / May 22, 2026 milestone instead of accepting any `Version`/`Time` fields.
-
-- 2026-05-22: first-touch public docs now surface the public docs site smoke.
-  - Evidence target: `go test . -run 'Test(DocsSiteSmokeBuildsPublicDocs|PublicDocsMentionDocsSiteSmoke)' -count=1` proves `make docs-site-smoke` checks the local docs-site build with `npm run build`, and first-touch public docs mention the command.
-  - Result: ecosystem-readiness docs now expose a narrow proof for the public docs site signal without claiming local smoke proves remote hosting or indexing.
-
-- 2026-05-22: first-touch public docs now surface the package documentation smoke.
-  - Evidence target: `go test . -run 'Test(PackageDocSmokeChecksLocalGoDoc|PublicDocsMentionPackageDocSmoke)' -count=1` proves `make package-doc-smoke` checks local package docs with `go doc .`, and first-touch public docs mention the command.
-  - Result: ecosystem-readiness docs now expose a narrow proof for the package documentation signal without claiming that local smoke proves remote pkg.go.dev indexing.
-
-- 2026-05-22: first-touch public docs now surface the local go.mod metadata smoke.
-  - Evidence target: `go test . -run 'Test(LocalModuleSmokeChecksGoModMetadata|PublicDocsMentionLocalModuleSmoke)' -count=1` proves `make local-module-smoke` checks the local module path and Go version with `go list -m -json`, and first-touch public docs mention the command.
-  - Result: ecosystem-readiness docs now expose a narrow proof for the valid Go module signal without conflating it with public `@latest` metadata or root CLI installability.
-
-- 2026-05-22: first-touch public docs now surface the external backend comparison smoke.
-  - Evidence target: `go test . -run TestPublicDocsMentionBackendComparisonSmoke -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `make bench-locomo-backends-smoke`.
-  - Result: ecosystem-readiness docs now expose the CI-safe local proof command for external adapter comparison without rerunning or changing frozen benchmark artifacts.
-
-- 2026-05-22: first-touch public docs now surface the external adapter contract.
-  - Evidence target: `go test . -run TestPublicDocsSurfaceExternalAdapterContract -count=1` proves README, docs home, current-capabilities, and quick-start docs mention the external adapter contract and current agentmemory PR #583 stable-ID status.
-  - Result: ecosystem-readiness docs now expose adapter/upstream credibility at adoption time without overstating backend scores or root CLI installability.
-
-- 2026-05-22: first-touch public docs now link benchmark methodology.
-  - Evidence target: `go test . -run TestPublicDocsLinkRetrievalBenchmarksReference -count=1` proves README, docs home, current-capabilities, and quick-start docs link the Retrieval Benchmarks reference.
-  - Result: public package adoption now exposes deterministic benchmark methodology and stable-ID backend comparison evidence without making benchmark claims in setup prose.
-
-- 2026-05-22: public docs now warn against root-level `go install` overclaims.
-  - Evidence target: `go test . -run TestPublicDocsWarnRootGoInstallIsUnsupported -count=1` proves README, docs home, current-capabilities, and quick-start docs say the root module is not a root `go install` target.
-  - Result: first-touch docs preserve the `go get github.com/TrebuchetDynamics/goncho@latest` library path without implying an unavailable root CLI install.
-
-- 2026-05-22: public docs now surface the v0.1.1 published date.
-  - Evidence target: `go test . -run TestPublicDocsMentionPublishedReleaseDate -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `published May 22, 2026`.
-  - Result: first-touch docs now show both public version and published-date signals from the official module metadata.
-
-- 2026-05-22: public adoption docs now use version-qualified `go get`.
-  - Evidence target: `go test . -run TestPublicDocsUseLatestQualifiedGoGet -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `go get github.com/TrebuchetDynamics/goncho@latest`.
-  - Result: first-touch setup guidance matches the public `@latest` release signal while keeping the root module framed as a library package.
-
-- 2026-05-22: public release metadata smoke added.
-  - Evidence target: `make public-release-smoke` checks `go list -m -json github.com/TrebuchetDynamics/goncho@latest` for public version and published-time metadata.
-  - Result: the pkg.go.dev-style `Version` and `Published` signal is locally checkable before broader ecosystem smoke and release decisions.
-
-- 2026-05-22: docs home now frames the root module as a library package.
-  - Evidence target: `go test . -run TestPublicDocsFrameRootModuleAsLibrary -count=1` proves README, docs home, current-capabilities, and quick-start docs say the root module is a library package.
-  - Result: first-touch public docs preserve `go get` library semantics and avoid implying root-level CLI installability.
-
-- 2026-05-22: docs home now names the current public `@latest` release as v0.1.1.
-  - Evidence target: `go test . -run TestPublicDocsMentionLatestReleaseVersion -count=1` proves README, docs home, current-capabilities, and quick-start docs mention v0.1.1.
-  - Result: first-touch public docs show the official tagged release signal and public benchmark CLI availability at `@latest`.
-
-- 2026-05-22: README and docs home now expose the narrower public module smoke.
-  - Evidence target: `go test . -run TestPublicAdoptionDocsMentionPublicModuleSmoke -count=1` proves README, docs home, current-capabilities, and quick-start docs mention `make public-module-smoke`.
-  - Result: public adoption docs separate the broad ecosystem smoke from the external-import-only proof for `github.com/TrebuchetDynamics/goncho@latest`.
-
-- 2026-05-22: docs home now surfaces local ecosystem smoke.
-  - Evidence target: `go test . -run TestPublicDocsMentionEcosystemSmoke -count=1` proves README, docs home, operator runbook, current-capabilities, and quick-start docs mention `make ecosystem-smoke`.
-  - Result: public adoption docs expose the local proof command for module resolution, package docs, external importability, and checkout-local benchmark CLI readiness.
-
-- 2026-05-22: docs home and quick-start docs now link the public Go reference.
-  - Evidence target: `go test . -run TestPublicDocsLinkGoReference -count=1` proves README, docs home, current-capabilities, and quick-start docs link `https://pkg.go.dev/github.com/TrebuchetDynamics/goncho`.
-  - Result: public adoption docs surface pkg.go.dev API reference at first use instead of hiding it in status pages.
-
-- 2026-05-21: operator-facing release smoke docs now mention the release metadata guard.
-  - Evidence target: `go test . -run TestReleaseSmokeDocsMentionMetadataGuard -count=1` proves README, quick-start, and runbook release-smoke guidance mention release metadata checks.
-  - Result: public docs stay aligned with the local pre-tag gate instead of describing only ecosystem smoke plus Go/docs checks.
-
-- 2026-05-22: release metadata now has an explicit smoke target.
-  - Evidence target: `make release-metadata-smoke` runs tag/changelog consistency and release-smoke docs drift tests before broader release checks.
-  - Result: operators can check changelog/tag consistency and release-smoke docs directly, and `make release-smoke` includes that guard before ecosystem validation.
-
-- 2026-05-22: changelog release headings are now guarded against untagged version overclaims.
-  - Evidence target: `go test . -run TestChangelogReleaseHeadingsHaveMatchingTags -count=1` proves each `## vX.Y.Z - ...` changelog release heading has a matching local git tag.
-  - Result: public release notes can keep candidate notes without implying that untagged versions are already published.
-
-- 2026-05-22: blank `goncho_review` list status values now default to open review items.
-  - Evidence target: `go test . -run TestReviewToolTreatsBlankStatusAsOpenDefault -count=1` proves whitespace-only `status` behaves like omitted `status` and does not leak resolved items into the default review queue.
-  - Result: review queue inspection is safer when host/tool callers pass blank form values instead of omitting optional fields.
-
-- 2026-05-22: invalid `goncho_review` resolve resolution values now return enum-specific guidance.
-  - Evidence target: `go test . -run TestReviewToolRejectsInvalidResolveResolution -count=1` proves an invalid `resolution` value is rejected without closing the open review item.
-  - Result: lifecycle review queues are safer when host/tool callers bypass schema enum validation.
-
-- 2026-05-22: same-timestamp review item ID collision fixed.
-  - Evidence target: `go test . -run TestCreateReviewItemAllowsDistinctItemsWithSameCreatedAt -count=1` proves two distinct review items sharing one `CreatedAt` get distinct IDs and remain listable.
-  - Result: review queues are safer when lifecycle scanners create multiple findings in the same timestamp bucket.
-
-- 2026-05-22: `goncho_review` list filter validation added.
-  - Evidence target: `go test . -run TestReviewToolRejectsInvalidListFilters -count=1` proves invalid `status` and `kind` list filters return operator-visible errors instead of empty review queues.
-  - Result: review queue inspection is safer when host/tool callers bypass schema enum validation.
-
-- 2026-05-22: local release smoke added.
-  - Evidence target: `make release-smoke` runs `make ecosystem-smoke`, `go test ./...`, `go vet ./...`, `go test -race ./...`, and the docs-site build.
-  - Result: next v0.1.x prep has one local pre-tag command without claiming CI or creating a tag.
-
-- 2026-05-22: `goncho_review` review-chain filters added.
-  - Evidence target: `go test . -run TestReviewToolFiltersReviewChainsBySubjectAndRelatedID -count=1` proves `subject_id` plus `related_id` narrows open review items to one matching chain edge.
-  - Result: review/staleness/supersession items are easier to inspect without losing historical evidence.
-
-- 2026-05-22: ecosystem smoke added for core public release-readiness signals.
-  - Evidence target: `make ecosystem-smoke` runs public module resolution, local `go doc .`, external import smoke, and checkout-local benchmark CLI installation.
-  - Result: the milestone now has one operator command for library importability plus local benchmark CLI readiness without overstating `cmd/goncho-bench@latest`.
-
-- 2026-05-22: public module adoption smoke added for `github.com/TrebuchetDynamics/goncho@latest`.
-  - Evidence target: `make public-module-smoke` creates a temporary external Go module, runs `go get github.com/TrebuchetDynamics/goncho@latest`, and compiles a minimal public API import.
-  - Result: release readiness now separates library importability proof from the still-checkout-local benchmark CLI.
-
-- 2026-05-22: public `@latest` now resolves to v0.1.1, so `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` is available.
-  - Evidence target: `GOBIN=$(mktemp -d) go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` verifies the public benchmark CLI installs from the published tag.
-  - Result: docs now point benchmark CLI users at the public `go install .../cmd/goncho-bench@latest` path while keeping checkout-local `make install-smoke` as a local verification path.
-
-- 2026-05-22: generated primer/token-budget E2E coverage added for the public `goncho_context` tool.
-  - Focused evidence: `go test . -run TestGonchoGoalPublicContextToolGeneratesPrimerWithinTokenBudgetE2E -count=1` passed.
-  - Result: public context-tool coverage now proves generated orientation output preserves the newest in-budget turns and excludes older turns outside `max_tokens`.
-
-- 2026-05-21 20:11 CST: stale `cmd/goncho-bench` expectation-drift blocker from 2026-05-20 is resolved on current `main`.
-  - Focused evidence: `go test ./cmd/goncho-bench -run 'TestClassifyFailureCasesSelectsHardRanksAndCategories|TestWriteFailureCategoryReportsEmitsJSONLAndMarkdown' -count=1` passed.
-  - Full Go evidence: `go test ./... -count=1` passed.
-  - Result: benchmark classifier expectation drift no longer blocks Go verification.
-
-- 2026-05-19: stale full-verification blocker resolved. Current release gate passes with:
-  - `go test ./integration/gormes`
-  - `go test ./...`
-  - `cd docs-site && npm run build`
-
-## Next roadmap items
-
-- Wire a real local embedding/index adapter behind `Config.VectorStore`; the public seam and deterministic fake-vector RRF test are in place.
-- Add concrete host adapters on top of `CaptureHostHook`; the host-neutral prompt/tool/failure/session lifecycle capture contract is in place.
-- Expand the transparent synonym table from production misses; the Search/Recall query-expansion provenance contract is in place.
-- Wire concrete host resource registries from `NewMemoryResourceRegistry`; the Go-neutral status/profile/latest/graph/recall-prompt registry is in place.
-- Build host UX around memory slots; scoped create/get/list/append/replace/delete with audit observations and profile isolation is in place.
-- Refine four-tier consolidation heuristics; explicit local working/episodic/semantic/procedural consolidation with provenance is in place.
-- Add server-mode leases later; local action graph dependencies/frontier/next-action/signals are in place without leases.
-- Let host adapters own git commands; deterministic snapshot manifest/diff/rollback metadata is in place without git side effects.
-- Add real image embeddings later; image references/checksums/alt text storage and search are in place with embedding status deferred.
-- Continue lifecycle trust work: temporal validity, supersession chains, and confidence/freshness scoring.
-- Expand graph/cognitive-map features behind deterministic tests.
-- Add optional PostgreSQL/team adapter only after local SQLite API remains stable.
+### B. Conversation-to-memory extraction proposals
+
+Agentmemory and mem0 both make memory feel automatic by extracting durable facts/preferences from conversations. Goncho should do this as proposals, not silent truth writes.
+
+Deliverables:
+
+- [ ] Add `ExtractMemoryProposals` over a bounded session window.
+- [ ] Classify proposed operations as `add`, `update`, `supersede`, `delete`, or `noop` with evidence IDs.
+- [ ] Route low-confidence, contradictory, or privacy-sensitive proposals into review instead of writing active memory.
+- [ ] Add preference extraction for stable user/project preferences with scope and expiry hints.
+- [ ] Add procedural/lesson extraction for reusable workflows and known failure patterns.
+
+Acceptance tests:
+
+- [ ] Golden fixtures for add/update/delete/noop proposal classification.
+- [ ] Conflict fixture proves contradictory claims enter review.
+- [ ] Preference fixture proves profile-scoped storage and no cross-profile leak.
+
+Non-goals:
+
+- Do not run extraction on every hook synchronously.
+- Do not promote LLM-extracted claims without evidence and confidence metadata.
+
+### C. Memory stewardship jobs as first-class product UX
+
+Agentmemory has tests and tools around retention, access logs, consistency, cascading updates, confidence, lessons, routines, sentinels, sketches, and facets. Goncho has pieces of lifecycle/trust, but needs operator-facing stewardship.
+
+Deliverables:
+
+- [ ] Add retention/access reports: least-used, stale, high-risk, oversized, and unreviewed memories.
+- [ ] Add consistency scan that groups duplicate/conflicting claims by entity/scope/time.
+- [ ] Add cascade preview when a canonical claim is superseded and dependent memories/context packs may change.
+- [ ] Add `lessons` and `routines` views for reusable engineering workflows, backed by evidence.
+- [ ] Add `sentinels` for important facts that should warn if contradicted or missing from context.
+- [ ] Add `facets` as lightweight entity/profile/project slices for viewer and context filters.
+
+Acceptance tests:
+
+- [ ] Report tests with deterministic stale/duplicate/conflict fixtures.
+- [ ] Cascade preview test with no writes until operator apply.
+- [ ] Context test proving sentinels warn without stuffing every sentinel into prompts.
+
+Non-goals:
+
+- Do not add autonomous deletion before retention policy and audit export exist.
+- Do not let stewardship jobs mutate trusted memories without review or explicit policy.
+
+### D. MCP compliance and resources/prompts polish
+
+Agentmemory exposes MCP prompts/resources and robust standalone transport behavior. Goncho's `goncho-server` now has a minimal JSON-RPC-compatible `/mcp`; it needs compliance hardening before connector claims broaden.
+
+Deliverables:
+
+- [ ] Add stdio MCP mode for hosts that do not use HTTP.
+- [ ] Add SSE/streaming transport only if a target host requires it.
+- [ ] Add MCP resources for health, latest observations, recall prompt, profile/context status, and graph stats.
+- [ ] Add MCP prompts for evidence-first recall, session handoff, review resolution, and verification-before-action.
+- [ ] Add protocol compliance tests for initialize, capabilities, JSON-RPC errors, cancellation/timeouts, and schema shapes.
+
+Acceptance tests:
+
+- [ ] MCP inspector-compatible smoke or protocol fixture test.
+- [ ] Tool/resource/prompt manifest tests.
+- [ ] Backward-compatible `/mcp` HTTP smoke remains green.
+
+Non-goals:
+
+- Do not expose new mutating tools through MCP until trust class, audit kind, and prompt-safety policy are explicit.
+
+### E. Governance, supply chain, and operational trust
+
+Agentmemory's roadmap includes governance docs, OpenSSF Scorecard, SSO, RBAC, audit export, LTS, and security audit. Goncho should adapt the boring operational parts when server/team mode becomes real.
+
+Deliverables:
+
+- [ ] Add `SECURITY.md`, vulnerability reporting, supported versions, and local-data threat model.
+- [ ] Add `GOVERNANCE.md`, `CONTRIBUTING.md`, and maintainer/release decision docs when outside contributors arrive.
+- [ ] Add audit export to JSONL/stdout first; defer S3/Loki until server mode needs it.
+- [ ] Add RBAC role vocabulary for server mode before implementing enforcement.
+- [ ] Add OpenSSF Scorecard/Dependency Review once CI is stable enough.
+- [ ] Add semver/API stability policy for `service`, `http`, `cmd/goncho-server`, and integration packages.
+
+Acceptance tests:
+
+- [ ] Docs guard tests for security/contact/supported-version markers.
+- [ ] Audit export smoke with redaction preserved.
+- [ ] API compatibility checklist in release smoke.
+
+Non-goals:
+
+- Do not perform security theater before public server mode has a concrete threat model.
+- Do not promise LTS before v1 API boundaries are frozen.
+
+### F. Onboarding, uninstall, and operator preference UX
+
+Agentmemory invests in first-run onboarding, preferences, connect/remove plans, and doctor autofix guidance. Goncho should make local-first setup understandable without hiding what it will mutate.
+
+Deliverables:
+
+- [ ] Add `goncho-server onboarding` or first-run guidance that explains DB path, config path, loopback bind, MCP URL, and next commands.
+- [ ] Add `goncho connect <host> --plan` and `goncho remove <host> --plan` outputs that are symmetric and reversible.
+- [ ] Add `goncho preferences` for local operator defaults: DB path, profile/workspace, redaction policy, connector permission level, and default bind address.
+- [ ] Add doctor autofix suggestions as patches/commands, not automatic mutation.
+- [ ] Add terminal-friendly copy-paste snippets for MCP configs and hook scripts.
+
+Acceptance tests:
+
+- [ ] Golden tests for onboarding text and connect/remove plans.
+- [ ] Preference read/write test using temp config paths.
+- [ ] Doctor suggestion test proving no mutation without `--apply`.
+
+Non-goals:
+
+- Do not make interactive prompts mandatory for CI or headless agents.
+- Do not auto-edit user config files from onboarding.
+
+### G. Provider resilience and background worker safety
+
+Agentmemory has circuit breakers, fallback chains, fetch timeouts, and resilient provider wrappers. Goncho should adapt the pattern for optional LLM/embedding/extraction providers so core memory stays reliable when adapters fail.
+
+Deliverables:
+
+- [ ] Add a provider health model for optional extraction, embedding, reranking, and summarization adapters.
+- [ ] Add circuit-breaker state and diagnostics: open/half-open/closed, last error, retry-after, failure counts.
+- [ ] Add fallback-chain support where local lexical/graph retrieval remains available when semantic providers fail.
+- [ ] Add per-provider timeout and max-payload controls.
+- [ ] Surface provider degradation in health, doctor, viewer, and recall warnings.
+
+Acceptance tests:
+
+- [ ] Circuit-breaker tests for repeated failure, cooldown, half-open success, and fail-closed writes.
+- [ ] Fallback-chain tests proving lexical/provenance recall still works when embeddings fail.
+- [ ] Health test showing degraded optional provider without failing core SQLite service.
+
+Non-goals:
+
+- Do not make hosted providers required.
+- Do not let provider fallback change benchmark scoring semantics silently.
+
+### H. Disk budgets, retention, and safe eviction
+
+Agentmemory has disk-size management, image quota cleanup, eviction, auto-forget, and retention tests. Goncho needs bounded local storage behavior before long-lived server mode.
+
+Deliverables:
+
+- [ ] Add DB/image/vector disk usage diagnostics to `goncho-server health` and `doctor`.
+- [ ] Add retention policy config: keep forever, max age, max DB size, max image/vector size, per-workspace limits.
+- [ ] Add eviction preview that lists candidates and reasons before any deletion/tombstone.
+- [ ] Add safe tombstone/archive path preserving audit and stable IDs.
+- [ ] Add image/vector refcount cleanup after retention applies.
+
+Acceptance tests:
+
+- [ ] Retention preview fixture with no writes.
+- [ ] Eviction apply fixture proves tombstones/audit remain and recall excludes evicted active content.
+- [ ] Disk quota smoke over temp DB/image/vector dirs.
+
+Non-goals:
+
+- Do not hard-delete user memory by default.
+- Do not evict evidence required by active claims unless policy explicitly allows archival with audit.
+
+### I. Branch-aware and project-state memory
+
+Agentmemory includes branch-aware behavior, post-commit hooks, file indexes, checkpoints, and snapshots. Goncho already has snapshots and stale-code verification; project memory should become branch/worktree aware without doing git operations inside core.
+
+Deliverables:
+
+- [ ] Add optional branch/worktree metadata to observations, conclusions, snapshots, and recall queries.
+- [ ] Add post-commit capture adapter plan that records commit hash, changed files, and summary as evidence.
+- [ ] Add checkpoint view tying memory snapshots to code snapshots without running git from core service APIs.
+- [ ] Add file-index observation import for code/docs with include/exclude and checksum provenance.
+- [ ] Add stale-branch warnings when recalling claims captured on a different branch or old commit.
+
+Acceptance tests:
+
+- [ ] Branch metadata isolation/routing tests.
+- [ ] Snapshot/checkpoint manifest tests with fake commit IDs.
+- [ ] Stale-branch warning test in context/recall output.
+
+Non-goals:
+
+- Do not let Goncho mutate git state.
+- Do not treat branch metadata as an authorization boundary; it is retrieval evidence.
+
+### J. Portable export formats and human-editable mirrors
+
+Agentmemory supports export/import and Obsidian export. Goncho has snapshot manifests and local markdown memory; it should make memory portable and inspectable across tools.
+
+Deliverables:
+
+- [ ] Add full JSONL export/import for observations, messages, conclusions, review items, snapshots, and memory slots.
+- [ ] Add Obsidian/Markdown export with backlinks, provenance blocks, review status, and stale warnings.
+- [ ] Add import preview with counts, conflicts, schema version, redaction summary, and stable-ID collision handling.
+- [ ] Add selective export by workspace/profile/session/time range and redaction policy.
+- [ ] Add signed/checksummed export manifest for reproducibility.
+
+Acceptance tests:
+
+- [ ] Export/import round-trip preserves IDs, provenance, review state, and tombstones.
+- [ ] Obsidian export snapshot test with deterministic markdown.
+- [ ] Import preview collision test fails closed without `--apply`.
+
+Non-goals:
+
+- Do not make exported markdown the source of truth.
+- Do not export secrets that were redacted/quarantined unless an explicit raw-evidence export mode is designed.
+
+### K. Evaluation, self-correction, and regression gates
+
+Agentmemory carries eval metrics, quality validators, self-correct loops, benchmark-in-CI roadmap, and many retrieval tests. Goncho already has strong benchmark harnesses; next step is productizing eval feedback into development and runtime diagnostics.
+
+Deliverables:
+
+- [ ] Add eval registry that records recall/context failures from benchmark runs as structured improvement candidates.
+- [ ] Add self-correction proposals for retrieval misses: query expansion hint, graph edge candidate, extraction gap, stale/contradictory memory, or scope bug.
+- [ ] Add benchmark trend reports comparing current branch to frozen baselines.
+- [ ] Add runtime feedback labels (`useful`, `wrong`, `stale`, `unsafe`, `missing`) that feed review/negative memory without direct promotion.
+- [ ] Add release gate that fails on regression beyond a configured tolerance for smoke datasets.
+
+Acceptance tests:
+
+- [ ] Eval registry test converts a known miss into a structured candidate.
+- [ ] Feedback label test writes review/negative-memory evidence without altering active claims.
+- [ ] Regression gate test rejects a synthetic metric drop and accepts noise within tolerance.
+
+Non-goals:
+
+- Do not use LLM judges for core recall regression gates unless the dataset explicitly requires judged answer quality.
+- Do not let self-correction mutate production memory without review.
+
+---
+
+## Cross-cutting Rules
+
+- Preserve Goncho's product thesis: **trust-preserving context architecture for long-horizon agents**.
+- Core library stays embedded, local-first, and dependency-light.
+- Server mode and broad integrations are adapters, not mandatory runtime requirements.
+- Retrieval evidence must remain reproducible: no answer hints, no hidden LLM judges, no content-only scoring when stable IDs are required.
+- Dangerous operations need explicit owner action: git writes, deletes, deploys, public binds, and distributed leases.
+- Every new product surface needs a smoke command and a docs link.
+
+---
+
+## Suggested Implementation Order
+
+1. **P0.1** `cmd/goncho-server serve/health` over current SQLite service. ✅
+2. **P0.2** `make server-smoke` with write/search/recall/context. ✅
+3. **P0.3** `goncho-server init/demo/doctor` plus minimal MCP-compatible `/mcp`. ✅
+4. **P1.1** host hook schema package + privacy/redaction + docs guards. ✅
+5. **P1.2** `goncho connect gormes` and one external connector dry-run.
+6. **P2.1** read-only JSON viewer API before UI assets.
+7. **P2.2** session timeline/replay JSON from observations.
+8. **P3.1** compatibility tool registry for delivered safe aliases.
+9. **P4.1** local vector index behind `Config.VectorStore` with fake-vector tests.
+10. **Backlog A.1** mem0-style tiny facade over Goncho evidence APIs.
+11. **Backlog D.1** MCP protocol compliance/resources/prompts hardening.
+12. **Backlog F.1** onboarding/connect/remove/preference UX.
+13. **Backlog B.1** conversation-to-memory extraction proposals.
+14. **Backlog G.1** provider resilience and fallback diagnostics.
+15. **Backlog H.1** disk-budget and retention preview.
+16. **Backlog J.1** portable JSONL/Markdown export-import.
+17. **Backlog K.1** eval feedback and regression gates.
+18. **P5.1** server-mode threat model and auth requirements.
+19. **P6.1** connector docs and doctor/upgrade-check polish.
+
+---
+
+## Current State Snapshot
+
+What Goncho already has:
+
+- Embedded Go SDK and service API.
+- SQLite local storage and migrations.
+- First-class `cmd/goncho-server` with `init`, `serve`, `health`, `demo`, `doctor`, minimal `/mcp`, and `make server-smoke`.
+- Scoped search, recall, context packs, and provenance traces.
+- Host-neutral hook capture API with P1 event schemas, redaction/truncation filters, and capture/permission docs.
+- Optional vector-store seam and semantic RRF fusion.
+- Query expansion provenance.
+- Memory slots.
+- Four-tier explicit consolidation API.
+- Local action graph and signals.
+- Snapshot manifests/diffs/rollback metadata.
+- Image refs/checksums/metadata.
+- Public tools: context, search, recall, remember, review, handoff.
+- Memorymirror source-pinned architecture map against agentmemory.
+- Deterministic LongMemEval-S, LOCOMO, BEAM, and backend-comparison benchmark harnesses.
+
+What Goncho still lacks versus agentmemory:
+
+- Polished standalone server release packaging beyond the first `goncho-server` runtime.
+- Browser viewer and session replay UX.
+- One-command broad agent connector/install flows.
+- Automatic hook installation.
+- Large documented compatibility MCP catalog.
+- Bundled local embedding runtime and image embeddings.
+- Distributed leases/signals/team sync.
+- Transcript import UX.
+- Operational deployment packaging.
+- Top-level `goncho doctor`, `version --json`, and `upgrade-check` polish beyond `goncho-server doctor`.
+- Connector-breadth docs and marketplace polish.
+- Mem0-simple API facade with stable IDs, metadata filters, and history.
+- Onboarding/remove/preference UX and portable export formats.
+- Provider resilience, disk-budget retention, and eval feedback loops.
