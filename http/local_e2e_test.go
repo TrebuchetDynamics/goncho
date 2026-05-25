@@ -77,6 +77,15 @@ func TestLocalE2E_HTTPServiceLifecycleUsesHonchoCompatibleRoutes(t *testing.T) {
 		t.Fatalf("search results = %#v, want conclusion %q", searchResult.Results, conclusion)
 	}
 
+	recallTrace := postJSON[goncho.RecallTrace](t, handler, "/v3/workspaces/"+workspace+"/peers/"+peer+"/recall", map[string]any{
+		"query":       "httptest",
+		"session_key": session,
+		"limit":       5,
+	}, http.StatusOK)
+	if !recallSelectedContainContent(recallTrace.Selected, conclusion) {
+		t.Fatalf("recall selected = %#v, want conclusion %q", recallTrace.Selected, conclusion)
+	}
+
 	chatResult := postJSON[goncho.ChatResult](t, handler, "/v3/workspaces/"+workspace+"/peers/"+peer+"/chat", map[string]any{
 		"query":      "How should I test Goncho HTTP locally?",
 		"session_id": session,
@@ -155,6 +164,15 @@ func messageSlicesContain(messages []goncho.MessageSlice, content string) bool {
 func searchHitsContainSourceContent(hits []goncho.SearchHit, source, content string) bool {
 	for _, hit := range hits {
 		if hit.Source == source && hit.Content == content {
+			return true
+		}
+	}
+	return false
+}
+
+func recallSelectedContainContent(selected []goncho.ScoredRecallCandidate, content string) bool {
+	for _, item := range selected {
+		if item.Candidate.Content == content {
 			return true
 		}
 	}

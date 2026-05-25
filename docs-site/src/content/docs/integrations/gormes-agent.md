@@ -125,6 +125,40 @@ _, err := mem.Svc.Conclude(ctx, goncho.ConcludeParams{
 
 At handoff or compaction time, save a handoff memory through `goncho_handoff` or your adapted `MemoryToolStore`.
 
+## Host Hook Event Schemas
+
+Hosts that want automatic capture should translate runtime-specific hooks into Goncho's host-neutral `HostHookEvent` envelope before calling `CaptureHostHook`. `HostHookEventSchemas()` exposes the supported event catalog for adapters and dry-run installers:
+
+```text
+prompt
+assistant_response
+pre_tool_use
+post_tool_use
+tool_failure
+compaction
+subagent_start
+subagent_stop
+stop
+session_end
+```
+
+These schemas preserve lifecycle/tool evidence as observations. Prompt and assistant-response events also append session messages; session-end summaries persist as session summaries. `CaptureHostHook` redacts common secret shapes and truncates large hook payloads before writing observations, messages, summaries, or hook metadata.
+
+| Event | Captured behavior | Ignored by default | Host-specific permission |
+| --- | --- | --- | --- |
+| `prompt` | Observation plus user session message after redaction/truncation. | Host-only prompt UI metadata not placed in `metadata`. | Permission to read submitted prompt text. |
+| `assistant_response` | Observation plus assistant session message after redaction/truncation. | Streaming deltas unless the adapter coalesces them. | Permission to read final assistant output. |
+| `pre_tool_use` | `tool_call` observation with tool name and input. | Tool execution is not blocked or approved by Goncho. | Permission to inspect tool name/input; redact host payloads first when possible. |
+| `post_tool_use` | `tool_result` or `tool_error` observation with output/error evidence. | Large raw artifacts beyond hook payload limits. | Permission to inspect tool output. |
+| `tool_failure` | `tool_error` observation with failure evidence. | Retry policy and host error handling. | Permission to inspect error text. |
+| `compaction` | `compact` observation with summary/context evidence. | Host-specific transcript rewrite internals. | Permission to read compaction summary. |
+| `subagent_start` | Custom observation with `custom_kind=subagent_start`. | Subagent private scratchpad unless explicitly forwarded. | Permission to read subagent identity/context id. |
+| `subagent_stop` | Custom observation with `custom_kind=subagent_stop`. | Subagent private scratchpad unless explicitly forwarded. | Permission to read subagent result/status. |
+| `stop` | Session-end-style observation for host stop hooks. | Process shutdown mechanics. | Permission to observe lifecycle stop events. |
+| `session_end` | Session-end observation; summary persists as short session summary when supplied. | Full transcript export unless separately imported. | Permission to read final session summary. |
+
+Ignored or adapter-owned events include raw keystrokes, terminal scrollback, screenshots, file contents, environment dumps, credentials, and host-private scratchpads unless the host explicitly forwards a redacted field in the `HostHookEvent` envelope. Goncho's filter is a last line of defense; connector installers should still request the narrowest permission available from each host.
+
 ## Recommended Gormes Tool Policy
 
 Register these first:

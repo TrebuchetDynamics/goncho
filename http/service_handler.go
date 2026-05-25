@@ -42,6 +42,8 @@ func (h serviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handlePeerContext(w, r, rest[1])
 	case r.Method == http.MethodPost && len(rest) == 3 && rest[0] == "peers" && rest[2] == "search":
 		h.handlePeerSearch(w, r, rest[1])
+	case r.Method == http.MethodPost && len(rest) == 3 && rest[0] == "peers" && rest[2] == "recall":
+		h.handlePeerRecall(w, r, workspaceID, rest[1])
 	case r.Method == http.MethodPost && len(rest) == 3 && rest[0] == "peers" && rest[2] == "chat":
 		h.handlePeerChat(w, r, rest[1])
 	case r.Method == http.MethodPost && len(rest) == 3 && rest[0] == "sessions" && rest[2] == "messages":
@@ -155,6 +157,38 @@ func (h serviceHandler) handlePeerSearch(w http.ResponseWriter, r *http.Request,
 	}
 	body.Peer = peer
 	result, err := h.svc.Search(r.Context(), body)
+	if err != nil {
+		writeHTTPError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h serviceHandler) handlePeerRecall(w http.ResponseWriter, r *http.Request, workspaceID, peer string) {
+	var body struct {
+		WorkspaceID string   `json:"workspace_id"`
+		Query       string   `json:"query"`
+		SessionKey  string   `json:"session_key"`
+		SessionID   string   `json:"session_id"`
+		Scope       string   `json:"scope"`
+		ScopeID     string   `json:"scope_id"`
+		Sources     []string `json:"sources"`
+		Limit       int      `json:"limit"`
+		MaxTokens   int      `json:"max_tokens"`
+	}
+	if !decodeJSONBody(w, r, &body) {
+		return
+	}
+	result, err := h.svc.Recall(r.Context(), goncho.RecallQuery{
+		WorkspaceID: firstNonEmpty(body.WorkspaceID, workspaceID),
+		Peer:        peer,
+		Query:       body.Query,
+		SessionKey:  firstNonEmpty(body.SessionKey, body.SessionID),
+		ScopeID:     firstNonEmpty(body.ScopeID, body.Scope),
+		Sources:     body.Sources,
+		Limit:       body.Limit,
+		MaxTokens:   body.MaxTokens,
+	})
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err.Error())
 		return
