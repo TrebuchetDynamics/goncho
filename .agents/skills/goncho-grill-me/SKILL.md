@@ -1,92 +1,64 @@
 ---
 name: goncho-grill-me
-description: Use when stress-testing Goncho plans, challenging Goncho designs, checking readiness to implement, or responding to user requests to grill me.
+description: Stress-test Goncho-specific implementation plans before coding. Use when asked to grill a Goncho roadmap slice, validate readiness for TDD, challenge a memory-system design, or find gaps against Goncho docs/metaanalysis.
 ---
 
 # Goncho Grill Me
 
-## Purpose
+## Quick start
 
-Interrogate a Goncho design until the implementation slice is clear, testable, and aligned with `docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md`.
+Inspect relevant Goncho docs/code first, then ask one hard question at a time with a recommended answer.
 
-Ask one question at a time. For each question, include your recommended answer.
+Use generic `grill-me` for non-Goncho plans. Use this skill only when the plan must fit Goncho's memory architecture, roadmap, tests, or metaanalysis.
 
-If a question can be answered by reading the codebase, inspect the codebase instead of asking.
+## Workflow
 
-## Required Context
+1. **Ground the plan**
+   - Identify the TODO/README/docs/metaanalysis capability.
+   - Inspect current files/tests instead of asking questions the repo can answer.
+   - Name the current implementation status and public contract/API surface.
+2. **Challenge the design**
+   - Capability fit: what gap closes?
+   - Trust model: evidence, scope, time, confidence, authority, lifecycle.
+   - User-visible behavior: search, context, review, audit, tool, HTTP, or CLI output.
+   - Failure mode: stale, conflicting, leaking, noisy, or repeated-bad-memory case.
+   - TDD proof: first failing test and why it fails now.
+   - Minimal slice: smallest vertical behavior.
+   - Non-goals: tempting phase work excluded.
+3. **Stop before implementation**
+   - If implementation is approved, switch to `goncho-tdd-implementation`.
 
-Before grilling, identify:
-
-- target metaanalysis capability,
-- current implementation status,
-- relevant files and tests,
-- public contract or API surface,
-- smallest TDD slice.
-
-**REQUIRED SUB-SKILL:** Use `goncho-tdd-implementation` before turning answers into code.
-
-## Quick Reference
-
-| Need | Ask or inspect |
-| --- | --- |
-| Capability fit | Which metaanalysis gap or roadmap item this closes |
-| Trust model | Evidence, scope, time, confidence, authority, lifecycle state |
-| User-visible behavior | Search, context, review, audit, tool, or API change |
-| Failure mode | Stale, conflicting, leaking, noisy, or repeated-bad-memory case |
-| TDD proof | First failing test and why it fails now |
-| Minimal slice | Smallest shippable vertical behavior |
-| Non-goals | Architecture or phase work explicitly excluded |
-
-## Grill Sequence
-
-1. **Capability fit** — Which metaanalysis gap does this close?
-2. **Trust model** — What evidence, scope, time, confidence, or authority does it need?
-3. **User-visible behavior** — What changes in search, context, review, audit, or tools?
-4. **Failure mode** — What stale, conflicting, leaking, or noisy memory case must be prevented?
-5. **TDD proof** — What is the first failing test, and why should it fail now?
-6. **Minimal slice** — What can be shipped without building the whole phase?
-7. **Non-goals** — What tempting architecture work is explicitly out of scope?
-
-## Question Format
+## Question format
 
 ```text
 Question N: <specific challenge>
 Why it matters: <risk or design dependency>
-Recommended answer: <concrete answer or default>
+Recommended answer: <concrete default>
 ```
 
-Stop when each answer produces a small implementation contract that can be tested.
+Ask only one decision-driving question at a time.
 
-## Done Criteria
+## Skill contract
 
-- relevant code/docs were inspected before asking answerable questions,
-- each question is single-focus and includes a recommended answer,
-- final slice has one failing test name and likely touched files,
-- implementation is not started during grilling,
-- approval is requested before TDD begins.
+### Entry protocol
+- Trivial: if the plan is already concrete, summarize readiness and the first failing test.
+- Medium ambiguity: propose the likely slice and ask the single hard owner decision.
+- High ambiguity/risk: stop if ownership, trust boundary, or destructive/public behavior is unclear.
 
-## Approval Gate
+### Topology check
+- State/ownership: memory data, evidence, lifecycle, host authority, and adapter boundaries.
+- Feedback/validation: exact RED test, user-visible output, and full verification command.
+- Blast radius: public API/tool behavior, migrations, benchmarks, docs, server/team mode.
+- Timing/ordering: imports, recalls, review, supersession, concurrency, release sequencing.
 
-Do not implement during grilling. End with:
+### Verification gate
+A grill session is done when it names the chosen slice, first failing test, likely files, risks/non-goals, and asks for approval before TDD.
 
-- chosen slice,
-- first failing test name,
-- files likely touched,
-- risks,
-- explicit ask for approval to start TDD.
+### Red lines
+- Do not implement during grilling.
+- Do not ask broad questionnaires; inspect first and ask one hard question.
+- Do not accept schema-only completion for user-visible features.
+- Do not expand one slice into a whole roadmap phase.
 
-## Common Mistakes
-
-| Mistake | Fix |
-| --- | --- |
-| Asking several broad questions at once | Ask one decision-driving question at a time |
-| Asking what the repo can answer | Inspect files/tests first and cite the evidence |
-| Treating schema as feature completion | Demand user-visible behavior and a failing contract test |
-| Letting one slice become a whole phase | Name non-goals and choose the smallest vertical proof |
-
-## Avoid
-
-- asking multiple questions at once,
-- accepting schema-only answers as feature completion,
-- skipping code inspection when the answer is on disk,
-- expanding one slice into a full metaanalysis phase.
+### Output contract
+End with: chosen slice, first failing test, likely files, risks/non-goals, and explicit ask to start TDD.

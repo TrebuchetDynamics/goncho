@@ -1,70 +1,59 @@
 ---
 name: goncho-graph-cognitive-map
-description: Use when implementing Goncho graph retrieval, relation extraction, cognitive-map routing, topology, entity links, or multi-hop recall.
+description: Implement Goncho graph and cognitive-map recall. Use when working on relation extraction, entity links, graph-expanded retrieval, topology, branch routing, or multi-hop recall provenance.
 ---
 
 # Goncho Graph and Cognitive Map
 
-## Goal
+## Quick start
 
-Move Goncho beyond similar-text recall into relationship-aware orientation.
+Load `goncho-tdd-implementation`, then start from a failing recall/context test that graph data makes pass.
 
-## Required TDD Shape
+## Workflow
 
-**REQUIRED SUB-SKILL:** Use `goncho-tdd-implementation` first. Every graph slice needs a failing test that proves one observable recall improvement:
+1. **Pick one graph behavior**
+   - Conservative entity/relation extraction.
+   - Pending relation candidates and review acceptance.
+   - Multi-hop recall that lexical search misses.
+   - Cognitive-map branch gating.
+   - Relation-path provenance in results/context.
+2. **Write the contract test**
+   - Good names: `TestGraphRecallConnectsOwnerThroughServiceRelation`, `TestRelationCandidatesRemainPendingBeforeReview`, `TestCognitiveMapSuppressesLowActivationBranches`, `TestContextIncludesRelationPathCitation`.
+3. **Implement minimally**
+   - Store evidence IDs for every node/relation.
+   - Keep speculative relations pending until accepted.
+   - Budget graph expansion and keep lexical/local recall working without graph data.
+4. **Verify**
+   - Run the narrow graph test, relevant recall/context tests, then `go test ./...`.
 
-- entity extraction creates conservative nodes or relations,
-- relation candidates are pending until accepted,
-- graph expansion finds a multi-hop fact that lexical search alone would miss,
-- cognitive-map branch gating suppresses unrelated memories,
-- context packs cite the relation path used.
+## Design rules
 
-## Quick Reference
+- Fewer edges beats hallucinated topology.
+- Relation confidence must affect review state, ranking, inclusion, or warning behavior.
+- Graph-expanded results must explain the relation path used.
+- Graph must enhance local recall, not become required for basic memory.
 
-| Need | Prove with |
-| --- | --- |
-| Extract entities | Conservative nodes/relations are created with evidence IDs |
-| Review relation candidates | Candidate state stays pending until accepted |
-| Improve recall | Multi-hop graph path finds a fact lexical search misses |
-| Gate context | Low-activation or unrelated branches stay out of packs |
-| Explain retrieval | Result cites relation path and provenance |
+## Skill contract
 
-## Minimal Contract Examples
+### Entry protocol
+- Trivial: answer architecture questions using current files/tests.
+- Medium ambiguity: propose one observable recall improvement and ask only which path should be optimized first.
+- High ambiguity/risk: stop before wholesale graph schema rewrites or benchmark artifact regeneration.
 
-Good test names:
+### Topology check
+- State/ownership: entity store, relation candidates, accepted relations, recall pipeline, context output.
+- Feedback/validation: one lexical-miss or branch-gating test plus provenance assertions.
+- Blast radius: ranking, context budget, retrieval latency, review queues, and adapter compatibility.
+- Timing/ordering: extraction before review, acceptance before use as truth, replay/import determinism.
 
-- `TestGraphRecallConnectsOwnerThroughServiceRelation`
-- `TestRelationCandidatesRemainPendingBeforeReview`
-- `TestCognitiveMapSuppressesLowActivationBranches`
-- `TestContextIncludesRelationPathCitation`
+### Verification gate
+Done requires tested graph read/write, at least one search/context path using graph data, visible relation provenance, unrelated-branch suppression, and `go test ./...` pass or blocker output.
 
-## Design Rules
+### Red lines
+- Do not promote speculative extracted relations as truth.
+- Do not add topology structs unused by retrieval/context/review.
+- Do not return graph-expanded memories without path citations.
+- Do not tune against benchmark gold IDs or regenerate frozen full-run artifacts unless explicitly requested.
 
-- Start conservative: fewer edges beats hallucinated edges.
-- Preserve evidence IDs for every relation.
-- Keep graph retrieval budgeted and explainable.
-- Relation confidence must affect ranking or review state.
-- Do not make graph mandatory for basic local memory.
-
-## Done Criteria
-
-- graph storage has tested read/write behavior,
-- at least one search/context path uses graph data,
-- relation provenance is visible,
-- unrelated branches stay out of context,
-- `go test ./...` passes.
-
-## Common Mistakes
-
-| Mistake | Fix |
-| --- | --- |
-| Building topology structs before recall uses them | Start from a failing recall/context test |
-| Extracting speculative relations as truth | Keep candidates pending and evidence-backed |
-| Returning graph-expanded memories without explanation | Include relation path citations in the result |
-| Making graph required for simple local recall | Keep lexical/local memory path working without graph data |
-
-## Avoid
-
-- extracting speculative entity graphs without review,
-- adding topology structs that retrieval never uses,
-- returning graph-expanded memories without explanation.
+### Output contract
+End with: graph behavior covered, test names, provenance shape, validation commands, and recall/latency risks.

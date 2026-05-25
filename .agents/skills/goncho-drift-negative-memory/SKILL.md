@@ -1,78 +1,54 @@
 ---
 name: goncho-drift-negative-memory
-description: Use when implementing Goncho negative memory, dead-end recall, drift detection, anchors, anti-repeat alerts, or feedback labels.
+description: Implement Goncho negative memory and anti-repeat behavior. Use when working on dead-end recall, drift anchors, repeated-failure warnings, feedback labels, or negative-memory supersession.
 ---
 
 # Goncho Drift and Negative Memory
 
-## Goal
+## Quick start
 
-Make memory prevent repeated mistakes, not only recall useful facts.
+Load `goncho-tdd-implementation`, then prove one anti-repeat behavior with a failing test before changing code.
 
-## Required TDD Shape
+## Workflow
 
-**REQUIRED SUB-SKILL:** Use `goncho-tdd-implementation` first. Each slice must prove one anti-repeat behavior:
+1. **Choose one repeat-risk**
+   - Failed command/action, stale path, bad plan pattern, noisy alert, or resolved dead end.
+   - Record scope: workspace, profile, session, path, command, entity, or task pattern.
+2. **Write the contract test**
+   - Good names: `TestContextSurfacesRelevantDeadEndBeforeRepeatingCommand`, `TestNegativeAnchorWarnsOnRepeatedFailurePattern`, `TestFeedbackLabelSuppressesFalsePositiveDriftAlert`, `TestSuccessfulFixSupersedesPriorDeadEnds`.
+3. **Implement minimally**
+   - Persist failure evidence, reason, timestamp, scope, and optional alternative.
+   - Surface warnings only when relevant to the current task.
+   - Preserve resolved failures with supersession/resolution state.
+4. **Verify**
+   - Run the narrow test, then `go test ./...`.
+   - Update docs/status if the public warning or feedback behavior changed.
 
-- failed attempts are stored as negative memory,
-- context packs surface relevant dead ends,
-- drift anchors warn before repeated bad behavior,
-- feedback labels reduce false positives,
-- successful fixes supersede older failed paths without deleting them.
+## Data rules
 
-## Quick Reference
+Negative memory should include attempted action, failure evidence, scope, timestamp, why it failed, what to do instead if known, and supersession or resolution state.
 
-| Need | Prove with |
-| --- | --- |
-| Store a dead end | Failed action, evidence, scope, timestamp, and reason are persisted |
-| Surface a warning | Relevant context pack includes the prior dead end before repetition |
-| Detect drift | Anchor fires only for a matching repeated failure pattern |
-| Reduce noise | Feedback label suppresses or demotes noisy alerts |
-| Resolve old failures | Successful fix supersedes prior dead ends while preserving history |
+## Skill contract
 
-## Minimal Contract Examples
+### Entry protocol
+- Trivial: answer design questions or inspect existing dead-end behavior directly.
+- Medium ambiguity: propose the smallest anti-repeat slice and ask only what failure pattern matters most.
+- High ambiguity/risk: stop if the requested behavior would globally suppress memories, hide evidence, or mutate unrelated review/lifecycle state.
 
-Good tests:
+### Topology check
+- State/ownership: where dead ends, anchors, feedback labels, and supersession live.
+- Feedback/validation: storage proof plus search/context/warning proof.
+- Blast radius: warning noise, false suppression, review queues, imports, and recall ranking.
+- Timing/ordering: repeated attempts, feedback updates, and successful-fix supersession.
 
-- `TestContextSurfacesRelevantDeadEndBeforeRepeatingCommand`
-- `TestNegativeAnchorWarnsOnRepeatedFailurePattern`
-- `TestFeedbackLabelSuppressesFalsePositiveDriftAlert`
-- `TestSuccessfulFixSupersedesPriorDeadEnds`
+### Verification gate
+Done requires tested storage/retrieval, at least one user-visible context/search/warning path, scope-aware alerts, and `go test ./...` pass or blocker output.
 
-## Data Rules
+### Red lines
+- Do not turn every transient error into durable negative memory.
+- Do not emit global warnings for local failures.
+- Do not delete or hide resolved failures; preserve history with state.
+- Do not add alerts without feedback/noise handling when false positives are plausible.
 
-Negative memory should record:
-
-- attempted action,
-- failure evidence,
-- scope,
-- timestamp,
-- why it failed,
-- what to do instead if known,
-- supersession or resolution state.
-
-## Context Rules
-
-Dead ends should appear only when relevant to the current task. They must include enough evidence for the agent to avoid repeating the mistake.
-
-## Done Criteria
-
-- negative memory has tested storage and retrieval,
-- at least one context path can surface it,
-- alerts are scope-aware,
-- feedback can mark useful or noisy alerts,
-- `go test ./...` passes.
-
-## Common Mistakes
-
-| Mistake | Fix |
-| --- | --- |
-| Treating every transient error as durable memory | Require failure evidence, scope, and repeat-risk rationale |
-| Emitting global warnings everywhere | Gate alerts by task, command, path, or entity relevance |
-| Hiding resolved failures | Preserve history and mark supersession or resolution explicitly |
-| Recording dead ends without retrieval tests | Add a context/search test that proves the warning is usable |
-
-## Avoid
-
-- global warnings that fire everywhere,
-- hiding successful resolutions,
-- treating every error as durable negative memory.
+### Output contract
+End with: failure pattern covered, test names, warning/suppression behavior, validation commands, and remaining false-positive risks.

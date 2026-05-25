@@ -1,86 +1,74 @@
 ---
 name: goncho-tdd-implementation
-description: Use when implementing any Goncho feature from the memory-systems metaanalysis, feature matrix, README roadmap, or docs/superpowers plans.
+description: Implement Goncho roadmap features with red-green-refactor. Use when changing Goncho behavior from TODO.md, README roadmap, docs/superpowers plans, or memory-system metaanalysis gaps.
 ---
 
 # Goncho TDD Implementation
 
-## Core Rule
+## Quick start
 
-No Goncho production code without a failing test first.
-
-Every feature from `docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md` must be implemented as a small vertical slice:
+Identify the smallest user-visible contract, then write the failing test before production code.
 
 ```text
-matrix gap -> failing contract test -> minimal code -> full go test ./... -> commit
+roadmap gap -> RED contract test -> minimal code -> GREEN -> go test ./... -> docs/status -> commit
 ```
 
-## Required Inputs
+## Workflow
 
-Before coding, identify:
+1. **Locate the slice**
+   - Name the TODO/README/docs/metaanalysis capability.
+   - Inspect current code/tests before asking questions the repo can answer.
+   - State what is explicitly out of scope.
+2. **RED**
+   - Add one focused test proving missing behavior.
+   - Run the narrow test and confirm it fails for the expected reason.
+3. **GREEN**
+   - Implement the smallest behavior that satisfies the test.
+   - Run the narrow test until it passes.
+4. **Refactor and verify**
+   - Refactor only while tests stay green.
+   - Run `go test ./...`; add docs/status updates for public behavior.
+5. **Closeout**
+   - Summarize the slice, tests, docs, and remaining gaps.
 
-- the metaanalysis capability being implemented,
-- the current implementation status,
-- the public API or internal contract that should prove it,
-- the smallest test that fails for the right reason.
+## Test target guide
 
-## Quick Reference
-
-| Step | Required evidence |
+| Capability type | Preferred proof |
 | --- | --- |
-| Pick slice | Metaanalysis/roadmap gap and current implementation status |
-| RED | Narrow test fails for the expected missing behavior |
-| GREEN | Minimal implementation makes the narrow test pass |
-| Full verify | `go test ./...` passes or blocker is documented |
-| Docs/status | README/docs updated if public behavior changed |
-| Commit | One feature slice named in commit message |
-
-## TDD Loop
-
-1. Add or update a test first.
-2. Run the narrow test and confirm RED.
-3. Implement the smallest code that makes it pass.
-4. Run the narrow test and confirm GREEN.
-5. Run `go test ./...`.
-6. Refactor only while tests stay green.
-7. Commit one feature slice.
-
-## Test Targets
-
-Prefer tests in this order:
-
-| Capability type | Preferred test |
-| --- | --- |
-| Public API behavior | root package `*_test.go` |
+| Public API behavior | package or service `*_test.go` |
 | Storage contract | package-specific storage test |
-| HTTP compatibility | `http/*_test.go` |
-| Tool compatibility | `memory_tools_test.go`, `host_integration_test.go` |
-| Recall quality | `recall_*_test.go`, `proof_matrix_test.go` |
-| Lifecycle behavior | focused unit test plus integration test |
+| HTTP/server behavior | `http/*_test.go` or `cmd/goncho-server/*_test.go` |
+| Tool compatibility | `memory_tools_test.go`, `goncho_public_tools_test.go`, host integration tests |
+| Recall quality | `recall_*_test.go`, benchmark harness tests |
+| Lifecycle/trust | focused service test plus context/search/review proof |
+| Docs/release metadata | guard test plus rendered/build smoke |
 
-## Done Criteria
+## Skill contract
 
-A feature is done only when:
+### Entry protocol
+- Trivial: if the change is docs/test-only and scoped, proceed with a narrow validation plan.
+- Medium ambiguity: propose the smallest slice and ask only the missing owner decision.
+- High ambiguity/risk: stop before broad rewrites, schema migrations, destructive operations, or behavior changes without a testable contract.
 
-- test failed before implementation,
-- test passes after implementation,
-- `go test ./...` passes,
-- docs or README status are updated if public behavior changed,
-- commit message names the feature slice.
+### Topology check
+- State/ownership: which package/API owns the behavior and data.
+- Feedback/validation: exact narrow test, full test, and docs guard if public.
+- Blast radius: public API, migrations, benchmark artifacts, adapters, and host contracts.
+- Timing/ordering: migrations, background jobs, replay/import order, and external side effects.
 
-## Common Mistakes
+### Verification gate
+Done requires:
+- expected RED output captured or described,
+- narrow GREEN test passes,
+- `go test ./...` passes or blocker output is reported,
+- public docs/status updated when behavior changes.
 
-| Mistake | Fix |
-| --- | --- |
-| Writing schema or structs before a failing behavior test | Delete/ignore the draft and start from RED |
-| Testing only storage for a user-visible feature | Add API, search, context, tool, or lifecycle behavior proof |
-| Claiming a phase complete from one internal piece | Report the exact slice and remaining gaps |
-| Letting refactor expand behavior | Keep refactors green and add a new RED for new behavior |
-| Ignoring unrelated failing tests | Document blocker with exact output before claiming partial completion |
+### Red lines
+- No production behavior before a failing test.
+- No broad rewrites hidden inside a feature slice.
+- No schema or metadata fields that are not consumed by retrieval, lifecycle, context, review, audit, or tools.
+- No regenerating benchmark/full-run artifacts unless explicitly in scope.
+- No staging/committing unrelated local edits.
 
-## Avoid
-
-- broad rewrites,
-- hidden behavior without tests,
-- adding metadata fields that are not used by retrieval or lifecycle logic,
-- claiming a metaanalysis phase is complete from schema alone.
+### Output contract
+End with: slice name, tests added/changed, commands run, files changed, and remaining gaps/blockers.
