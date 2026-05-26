@@ -21,6 +21,11 @@ func TestGonchoProofMatrixFullLocalReportFixture(t *testing.T) {
 	if !report.SQLiteRestartVerified || len(report.APIContractsVerified) < 6 {
 		t.Fatalf("report storage/api proof = %+v", report)
 	}
+	for _, contract := range []string{"observe", "list_observations", "filesystem_watcher_import"} {
+		if !gonchoProofContains(report.APIContractsVerified, contract) {
+			t.Fatalf("api contracts = %v, missing full local E2E contract %s", report.APIContractsVerified, contract)
+		}
+	}
 	if !report.ScopeIsolationVerified || !report.TombstoneExclusionVerified {
 		t.Fatalf("report isolation/tombstone proof = %+v", report)
 	}
@@ -100,6 +105,9 @@ func runGonchoProofStorageMatrix(t *testing.T) (bool, []string, bool, bool) {
 	if err != nil {
 		t.Fatalf("OpenSqlite: %v", err)
 	}
+	if err := RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
 	svc := NewService(store.DB(), Config{WorkspaceID: "default", ObserverPeerID: "gormes", RecentMessages: 4}, nil)
 	other := NewService(store.DB(), Config{WorkspaceID: "other", ObserverPeerID: "gormes", RecentMessages: 4}, nil)
 
@@ -173,6 +181,57 @@ func runGonchoProofStorageMatrix(t *testing.T) (bool, []string, bool, bool) {
 	if !tombstoneExclusionVerified {
 		t.Fatalf("tombstone search results = %+v, want no deleted obsidian content", tombstoneSearch.Results)
 	}
+
+	toolSuccess := true
+	if _, err := svc.Observe(ctx, ObservationParams{
+		ID:         "obs-proof-tool-result",
+		Kind:       ObservationKindToolResult,
+		PeerID:     "user-juan",
+		SessionKey: "sess-proof",
+		Input:      "run full local proof matrix",
+		Output:     "full local proof matrix observation recorded",
+		Success:    &toolSuccess,
+		Metadata:   map[string]string{"proof": "full_local_e2e"},
+		Reason:     "prove raw observation audit path",
+	}); err != nil {
+		t.Fatalf("Observe proof tool result: %v", err)
+	}
+	observations, err := svc.ListObservations(ctx, ObservationQuery{PeerID: "user-juan", SessionKey: "sess-proof", Kinds: []ObservationKind{ObservationKindToolResult}, Limit: 10})
+	if err != nil {
+		t.Fatalf("ListObservations proof tool result: %v", err)
+	}
+	if observations.Count != 1 || observations.Observations[0].ID != "obs-proof-tool-result" || observations.Observations[0].Metadata["proof"] != "full_local_e2e" {
+		t.Fatalf("observations = %+v, want persisted proof observation", observations)
+	}
+
+	watchRoot := t.TempDir()
+	watchPath := filepath.Join(watchRoot, "docs", "proof.md")
+	if err := os.MkdirAll(filepath.Dir(watchPath), 0o700); err != nil {
+		t.Fatalf("mkdir watcher proof dir: %v", err)
+	}
+	if err := os.WriteFile(watchPath, []byte("# Proof\nFilesystem watcher import joins full local E2E."), 0o600); err != nil {
+		t.Fatalf("write watcher proof file: %v", err)
+	}
+	watchImport, err := svc.ImportFilesystemWatcherChanges(ctx, FilesystemWatcherImportParams{
+		RootDir:      watchRoot,
+		Paths:        []string{watchPath},
+		IncludeGlobs: []string{"**/*.md"},
+		PeerID:       "user-juan",
+		SessionKey:   "sess-proof",
+	})
+	if err != nil {
+		t.Fatalf("ImportFilesystemWatcherChanges proof: %v", err)
+	}
+	if watchImport.ImportedCount != 1 || !watchImport.Mutates || len(watchImport.Observations) != 1 {
+		t.Fatalf("watch import = %+v, want one mutating filesystem observation", watchImport)
+	}
+	watchObservations, err := svc.ListObservations(ctx, ObservationQuery{PeerID: "user-juan", SessionKey: "sess-proof", Kinds: []ObservationKind{ObservationKindCustom}, Limit: 10})
+	if err != nil {
+		t.Fatalf("ListObservations watcher proof: %v", err)
+	}
+	if watchObservations.Count != 1 || watchObservations.Observations[0].Metadata["connector"] != "filesystem_watcher" || watchObservations.Observations[0].Metadata["path"] != "docs/proof.md" {
+		t.Fatalf("watch observations = %+v, want filesystem watcher proof observation", watchObservations)
+	}
 	if err := store.Close(ctx); err != nil {
 		t.Fatalf("Close first store: %v", err)
 	}
@@ -201,6 +260,9 @@ func runGonchoProofStorageMatrix(t *testing.T) (bool, []string, bool, bool) {
 		"conclude",
 		"search",
 		"context",
+		"observe",
+		"list_observations",
+		"filesystem_watcher_import",
 		"delete_conclusion",
 		"sqlite_restart_search",
 	}, scopeIsolationVerified, tombstoneExclusionVerified

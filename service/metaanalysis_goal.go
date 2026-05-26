@@ -59,8 +59,11 @@ func BuildGonchoMetaanalysisCoverageReport(input GonchoMetaanalysisCoverageInput
 	if input.MemoryToolLoopVerified {
 		features = append(features, "negative_memory_tool_recall", "small_public_tool_surface")
 	}
-	if proofMatrixHasAPIContract(input.ProofMatrix, "create_messages") {
+	if proofMatrixHasAPIContract(input.ProofMatrix, "observe") && proofMatrixHasAPIContract(input.ProofMatrix, "list_observations") {
 		features = append(features, "raw_observations_with_audit")
+	}
+	if proofMatrixHasAPIContract(input.ProofMatrix, "filesystem_watcher_import") {
+		features = append(features, "filesystem_watcher_connector_import")
 	}
 
 	allPassed := input.ProofMatrix.SQLiteRestartVerified &&
@@ -121,6 +124,7 @@ func BuildGonchoMetaanalysisCoverageReport(input GonchoMetaanalysisCoverageInput
 		PublicToolsVerified: sortedGonchoProofStrings([]string{
 			"goncho_context",
 			"goncho_search",
+			"goncho_recall",
 			"goncho_remember",
 			"goncho_review",
 			"goncho_handoff",

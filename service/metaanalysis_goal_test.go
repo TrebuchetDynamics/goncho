@@ -65,7 +65,7 @@ func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitect
 			t.Fatalf("principles = %#v, missing %s", report.PrinciplesCovered, principle)
 		}
 	}
-	for _, tool := range []string{"goncho_context", "goncho_search", "goncho_remember", "goncho_review", "goncho_handoff"} {
+	for _, tool := range []string{"goncho_context", "goncho_search", "goncho_recall", "goncho_remember", "goncho_review", "goncho_handoff"} {
 		if !containsMetaanalysisValue(report.PublicToolsVerified, tool) {
 			t.Fatalf("public tools = %#v, missing %s", report.PublicToolsVerified, tool)
 		}
@@ -73,6 +73,7 @@ func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitect
 	for _, feature := range []string{
 		"sqlite_local_first",
 		"raw_observations_with_audit",
+		"filesystem_watcher_connector_import",
 		"profile_conclusion_message_context_pack",
 		"workspace_scope_isolation",
 		"tombstone_exclusion",

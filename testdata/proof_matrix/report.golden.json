@@ -7,6 +7,9 @@
     "context",
     "create_messages",
     "delete_conclusion",
+    "filesystem_watcher_import",
+    "list_observations",
+    "observe",
     "search",
     "set_profile",
     "sqlite_restart_search"
