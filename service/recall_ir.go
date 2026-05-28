@@ -103,12 +103,24 @@ type RecallWarning struct {
 	Evidence map[string]string `json:"evidence,omitempty"`
 }
 
+type RecallVoiceDiagnostic struct {
+	Name           string  `json:"name"`
+	Enabled        bool    `json:"enabled"`
+	Weight         float64 `json:"weight"`
+	CandidatesWith int     `json:"candidates_with"`
+	MaxScore       float64 `json:"max_score"`
+	MinScore       float64 `json:"min_score"`
+	AvgScore       float64 `json:"avg_score"`
+	SelectedCount  int     `json:"selected_count"`
+}
+
 type RecallTrace struct {
 	TraceID         string                    `json:"trace_id"`
 	PipelineVersion string                    `json:"pipeline_version"`
 	CreatedAt       time.Time                 `json:"created_at"`
 	Query           RecallQuery               `json:"query"`
 	ScoringConfig   RecallScoringConfig       `json:"scoring_config"`
+	VoiceDiagnostics []RecallVoiceDiagnostic  `json:"voice_diagnostics,omitempty"`
 	Candidates      []ScoredRecallCandidate   `json:"candidates"`
 	Selected        []ScoredRecallCandidate   `json:"selected"`
 	Rejected        []RejectedRecallCandidate `json:"rejected"`

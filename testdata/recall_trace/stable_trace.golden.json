@@ -27,6 +27,78 @@
     ],
     "token_budget": 80
   },
+  "voice_diagnostics": [
+    {
+      "name": "keyword",
+      "enabled": true,
+      "weight": 0.25,
+      "candidates_with": 3,
+      "max_score": 0.8,
+      "min_score": 0.2,
+      "avg_score": 0.566667,
+      "selected_count": 2
+    },
+    {
+      "name": "semantic",
+      "enabled": true,
+      "weight": 0.3,
+      "candidates_with": 3,
+      "max_score": 0.9,
+      "min_score": 0.3,
+      "avg_score": 0.686667,
+      "selected_count": 2
+    },
+    {
+      "name": "graph",
+      "enabled": true,
+      "weight": 0.2,
+      "candidates_with": 3,
+      "max_score": 0.95,
+      "min_score": 0.3,
+      "avg_score": 0.583333,
+      "selected_count": 2
+    },
+    {
+      "name": "fact",
+      "enabled": false,
+      "weight": 0,
+      "candidates_with": 0,
+      "max_score": 0,
+      "min_score": 0,
+      "avg_score": 0,
+      "selected_count": 0
+    },
+    {
+      "name": "recency",
+      "enabled": true,
+      "weight": 0.1,
+      "candidates_with": 3,
+      "max_score": 0.999519,
+      "min_score": 0.998076,
+      "avg_score": 0.998878,
+      "selected_count": 2
+    },
+    {
+      "name": "importance",
+      "enabled": true,
+      "weight": 0.1,
+      "candidates_with": 3,
+      "max_score": 0.9,
+      "min_score": 0.6,
+      "avg_score": 0.733333,
+      "selected_count": 2
+    },
+    {
+      "name": "scope",
+      "enabled": true,
+      "weight": 0.05,
+      "candidates_with": 3,
+      "max_score": 1,
+      "min_score": 1,
+      "avg_score": 1,
+      "selected_count": 2
+    }
+  ],
   "candidates": [
     {
       "candidate": {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	goncho "github.com/TrebuchetDynamics/goncho/service"
@@ -40,6 +41,8 @@ func (h serviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleViewerSnapshot(w, r)
 	case r.Method == http.MethodGet && len(rest) == 4 && rest[0] == "viewer" && rest[1] == "sessions" && rest[3] == "timeline":
 		h.handleViewerSessionTimeline(w, r, rest[2])
+	case r.Method == http.MethodGet && len(rest) == 2 && rest[0] == "viewer" && rest[1] == "recall":
+		h.handleViewerRecallTrace(w, r)
 	case r.Method == http.MethodPut && len(rest) == 3 && rest[0] == "peers" && rest[2] == "card":
 		h.handleSetPeerCard(w, r, rest[1])
 	case r.Method == http.MethodGet && len(rest) == 3 && rest[0] == "peers" && rest[2] == "context":
@@ -70,6 +73,22 @@ func (h serviceHandler) handleViewerSnapshot(w http.ResponseWriter, r *http.Requ
 
 func (h serviceHandler) handleViewerSessionTimeline(w http.ResponseWriter, r *http.Request, sessionKey string) {
 	result, err := h.svc.ViewerSessionTimeline(r.Context(), sessionKey)
+	if err != nil {
+		writeHTTPError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h serviceHandler) handleViewerRecallTrace(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	peer := query.Get("peer")
+	search := query.Get("query")
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	if limit <= 0 {
+		limit = 5
+	}
+	result, err := h.svc.ViewerRecallTrace(r.Context(), peer, search, limit)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err.Error())
 		return

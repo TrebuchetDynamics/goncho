@@ -792,8 +792,14 @@ What Goncho still lacks versus agentmemory:
 - Distributed leases/signals/team sync.
 - Transcript import UX.
 - Operational deployment packaging.
-- Top-level `goncho doctor`, `version --json`, and `upgrade-check` polish beyond `goncho-server doctor`.
 - Connector-breadth docs and marketplace polish.
-- Mem0-simple API facade with stable IDs, metadata filters, and history.
-- Onboarding/remove/preference UX and portable export formats.
-- Provider resilience, disk-budget retention, and eval feedback loops.
+
+### Delivered but may need UX polish
+
+- Top-level `goncho doctor`, `version --json`, and `upgrade-check` — exist in `cmd/goncho`. Polish gaps: golden-file tests for doctor output, `goncho-server`-aware doctor when server is running, and automated `--latest` discovery in upgrade-check.
+- Mem0-simple `MemoryFacade` — exists in `service/memory_facade.go`. Polish gaps: standalone mem0-style HTTP aliases and Go examples that feel as short as mem0 quick starts.
+- Provider resilience diagnostics — exist in `service/provider_resilience.go`. Polish gaps: operator-facing `goncho provider health` command and MCP resource surface for provider degradation.
+- Disk-budget retention preview/archive — exists in `service/retention.go`. Polish gaps: retention policy cron trigger and eviction apply `--dry-run` in `goncho-server`.
+- Preference/connect/remove CLI UX — exists in `cmd/goncho`. Polish gaps: interactive onboarding wizard and golden-tested `--apply` paths.
+- Portable JSONL/Markdown export-import — exists in `service/portable_export.go` + `service/portable_import.go`. Polish gaps: `goncho export` and `goncho import` top-level commands.
+- Eval/regression gate helpers — exist in `service/eval_registry.go`. Polish gaps: operator-facing `goncho eval report` and CI-usable regression gate binary.

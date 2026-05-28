@@ -81,6 +81,7 @@ func (e *recallPipelineEngine) Run(ctx context.Context, q RecallQuery) (RecallTr
 		CreatedAt:       e.opts.now().UTC(),
 		Query:           q,
 		ScoringConfig:   cloneRecallScoringConfig(e.opts.scoringConfig),
+		VoiceDiagnostics: buildRecallVoiceDiagnostics(scored, selected, e.opts.scoringConfig),
 		Candidates:      scored,
 		Selected:        selected,
 		Rejected:        rejected,
@@ -392,6 +393,67 @@ func scopeRecallScore(q RecallQuery, candidate RecallCandidate) float64 {
 
 func recallScopeMismatch(q RecallQuery, candidate RecallCandidate) bool {
 	return q.ScopeID != "" && candidate.ScopeID != "" && candidate.ScopeID != q.ScopeID
+}
+
+func buildRecallVoiceDiagnostics(scored, selected []ScoredRecallCandidate, config RecallScoringConfig) []RecallVoiceDiagnostic {
+	type voiceAccessor struct {
+		name  string
+		score func(RecallScore) float64
+	}
+	voices := []voiceAccessor{
+		{"keyword", func(s RecallScore) float64 { return s.KeywordScore }},
+		{"semantic", func(s RecallScore) float64 { return s.SemanticScore }},
+		{"graph", func(s RecallScore) float64 { return s.GraphScore }},
+		{"fact", func(s RecallScore) float64 { return s.FactScore }},
+		{"recency", func(s RecallScore) float64 { return s.RecencyScore }},
+		{"importance", func(s RecallScore) float64 { return s.ImportanceScore }},
+		{"scope", func(s RecallScore) float64 { return s.ScopeScore }},
+	}
+	diags := make([]RecallVoiceDiagnostic, 0, len(voices))
+	for _, v := range voices {
+		weight := config.Weights[v.name]
+		enabled := weight > 0
+		var candWith int
+		var maxScore, minScore, sumScore float64
+		minScore = -1 // sentinel: first non-zero will set it
+		for _, c := range scored {
+			s := v.score(c.Score)
+			if s > 0 {
+				candWith++
+			}
+			if minScore < 0 || s < minScore {
+				minScore = s
+			}
+			if s > maxScore {
+				maxScore = s
+			}
+			sumScore += s
+		}
+		var avgScore float64
+		if len(scored) > 0 {
+			avgScore = sumScore / float64(len(scored))
+		}
+		if minScore < 0 {
+			minScore = 0
+		}
+		selectedCount := 0
+		for _, s := range selected {
+			if v.score(s.Score) > 0 {
+				selectedCount++
+			}
+		}
+		diags = append(diags, RecallVoiceDiagnostic{
+			Name:           v.name,
+			Enabled:        enabled,
+			Weight:         weight,
+			CandidatesWith: candWith,
+			MaxScore:       roundRecallFloat(maxScore),
+			MinScore:       roundRecallFloat(minScore),
+			AvgScore:       roundRecallFloat(avgScore),
+			SelectedCount:  selectedCount,
+		})
+	}
+	return diags
 }
 
 func weightedRecallScore(score RecallScore, weights map[string]float64) float64 {

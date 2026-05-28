@@ -91,6 +91,79 @@ func timelineEventsContainContent(events []goncho.ViewerTimelineEvent, want stri
 	return false
 }
 
+func TestViewerRecallTraceEndpointReturnsSelectedAndRejectedCandidates(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "recall-viewer.db")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+
+	workspace := "recall-viewer-workspace"
+	peer := "user-recall"
+	session := "recall-viewer-session"
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: workspace, ObserverPeerID: "assistant"}, nil)
+	handler := NewServiceHandler(svc)
+
+	// Seed a conclusion that recall can find.
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: peer, SessionKey: session, Conclusion: "The recall viewer endpoint returns trace JSON."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+
+	recallResult := getJSON[goncho.ViewerRecallTrace](t, handler,
+		"/v3/workspaces/"+workspace+"/viewer/recall?peer="+peer+"&query=recall+viewer+endpoint",
+		http.StatusOK)
+
+	if recallResult.Status != "ok" || !recallResult.ReadOnly {
+		t.Fatalf("recall viewer status/read_only = %q/%v, want ok/read-only", recallResult.Status, recallResult.ReadOnly)
+	}
+	if recallResult.WorkspaceID != workspace || recallResult.Peer != peer || recallResult.Query != "recall viewer endpoint" {
+		t.Fatalf("recall viewer identity = %+v, want workspace/peer/query", recallResult)
+	}
+	if recallResult.Trace.TraceID == "" {
+		t.Fatalf("recall viewer trace missing trace_id")
+	}
+	if len(recallResult.Trace.Selected) == 0 {
+		t.Fatalf("recall viewer trace has zero selected candidates, want at least one from seeded conclusion")
+	}
+	// Verify rejected candidates are included even when empty.
+	if recallResult.Trace.Rejected == nil {
+		t.Fatalf("recall viewer trace rejected is nil, want empty slice")
+	}
+
+	// Verify warnings are included even when empty.
+	if recallResult.Trace.Warnings == nil {
+		t.Fatalf("recall viewer trace warnings is nil, want empty slice")
+	}
+
+	// Verify the seeded conclusion appears in selected candidates.
+	found := false
+	for _, s := range recallResult.Trace.Selected {
+		if s.Candidate.Content == "The recall viewer endpoint returns trace JSON." {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("recall viewer trace selected = %+v, missing seeded conclusion", recallResult.Trace.Selected)
+	}
+
+	// Verify scoring config is present.
+	if recallResult.Trace.ScoringConfig.Version == "" {
+		t.Fatalf("recall viewer trace missing scoring config version")
+	}
+
+	// POST should return 404 (read-only viewer).
+	_ = requestJSON[map[string]any](t, handler, http.MethodPost,
+		"/v3/workspaces/"+workspace+"/viewer/recall",
+		map[string]any{"mutate": true},
+		http.StatusNotFound)
+}
+
 func TestViewerEndpointReturnsReadOnlyWorkspaceSnapshot(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "viewer.db")
@@ -118,6 +191,12 @@ func TestViewerEndpointReturnsReadOnlyWorkspaceSnapshot(t *testing.T) {
 	if _, err := svc.Observe(ctx, goncho.ObservationParams{Kind: goncho.ObservationKindUserPrompt, PeerID: peer, SessionKey: session, Input: "show me viewer state"}); err != nil {
 		t.Fatalf("Observe: %v", err)
 	}
+	failed := false
+	for _, id := range []string{"viewer-fail-1", "viewer-fail-2"} {
+		if _, err := svc.Observe(ctx, goncho.ObservationParams{ID: id, Kind: goncho.ObservationKindToolError, PeerID: peer, SessionKey: session, Success: &failed, Input: "private viewer command", Output: "private viewer stack", Metadata: map[string]string{"tool_name": "bash"}}); err != nil {
+			t.Fatalf("Observe failure %s: %v", id, err)
+		}
+	}
 	review, err := svc.CreateReviewItem(ctx, goncho.ReviewItemCreateParams{Kind: goncho.ReviewKindStale, PeerID: peer, SessionKey: session, SubjectID: "viewer-memory", Reason: "viewer test review item"})
 	if err != nil {
 		t.Fatalf("CreateReviewItem: %v", err)
@@ -137,11 +216,17 @@ func TestViewerEndpointReturnsReadOnlyWorkspaceSnapshot(t *testing.T) {
 	if snapshot.DB.Path != dbPath {
 		t.Fatalf("db path = %q, want %q", snapshot.DB.Path, dbPath)
 	}
-	if snapshot.Counts.Sessions != 1 || snapshot.Counts.Messages != 1 || snapshot.Counts.Observations != 1 || snapshot.Counts.Conclusions != 1 || snapshot.Counts.ReviewOpen != 1 {
-		t.Fatalf("counts = %+v, want one session/message/observation/conclusion/open review", snapshot.Counts)
+	if snapshot.Counts.Sessions != 1 || snapshot.Counts.Messages != 1 || snapshot.Counts.Observations != 3 || snapshot.Counts.Conclusions != 1 || snapshot.Counts.ReviewOpen != 1 {
+		t.Fatalf("counts = %+v, want one session/message/conclusion/open review and three observations", snapshot.Counts)
 	}
-	if len(snapshot.LatestObservations) != 1 || snapshot.LatestObservations[0].Kind != goncho.ObservationKindUserPrompt {
-		t.Fatalf("latest observations = %+v, want user_prompt", snapshot.LatestObservations)
+	if len(snapshot.NegativeEvidenceCandidates) != 1 || snapshot.NegativeEvidenceCandidates[0].FailureCount != 2 || snapshot.NegativeEvidenceCandidates[0].ToolName != "bash" {
+		t.Fatalf("negative evidence candidates = %+v, want repeated bash failure", snapshot.NegativeEvidenceCandidates)
+	}
+	if snapshot.NegativeEvidenceCandidates[0].String() == "" || timelineEventsContainContent([]goncho.ViewerTimelineEvent{{Content: snapshot.NegativeEvidenceCandidates[0].String()}}, "private viewer command") {
+		t.Fatalf("negative evidence candidate leaked raw content: %+v", snapshot.NegativeEvidenceCandidates[0])
+	}
+	if len(snapshot.LatestObservations) != 3 || snapshot.LatestObservations[0].Kind != goncho.ObservationKindToolError {
+		t.Fatalf("latest observations = %+v, want latest tool_error first", snapshot.LatestObservations)
 	}
 	if len(snapshot.LatestConclusions) != 1 || snapshot.LatestConclusions[0].Content != "Viewer endpoint is read-only JSON." {
 		t.Fatalf("latest conclusions = %+v, want seeded conclusion", snapshot.LatestConclusions)

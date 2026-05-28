@@ -45,6 +45,9 @@ type config struct {
 	CurrentVersion        string
 	LatestVersion         string
 	SchemaFingerprintJSON bool
+	QuickstartDBPath      string
+	QuickstartServerAddr  string
+	EmbeddingReindexPlan  bool
 	Stdout                io.Writer
 	Stderr                io.Writer
 }
@@ -128,6 +131,22 @@ type doctorReport struct {
 	Mutates bool          `json:"mutates"`
 	DBPath  string        `json:"db_path,omitempty"`
 	Checks  []doctorCheck `json:"checks"`
+}
+
+type quickstartStep struct {
+	Command     string `json:"command"`
+	Description string `json:"description"`
+}
+
+type quickstartPlan struct {
+	Status       string           `json:"status"`
+	Mutates      bool             `json:"mutates"`
+	DatabasePath string           `json:"database_path,omitempty"`
+	ServerAddr   string           `json:"server_addr,omitempty"`
+	ViewerURL    string           `json:"viewer_url,omitempty"`
+	Steps        []quickstartStep `json:"steps"`
+	DemoProof    string           `json:"demo_proof"`
+	NextSteps    []string         `json:"next_steps,omitempty"`
 }
 
 type doctorCheck struct {
@@ -222,14 +241,48 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 		fs.BoolVar(&cfg.DoctorJSON, "json", false, "print doctor report as JSON")
 		fs.StringVar(&cfg.DatabasePath, "db", "", "Goncho SQLite database path to inspect without creating it")
 		fs.StringVar(&cfg.PreferencesConfigPath, "config", "", "Goncho preferences JSON path")
+		fs.BoolVar(&cfg.EmbeddingReindexPlan, "embedding-reindex-plan", false, "preview embedding reindex counts without mutating")
 		if err := fs.Parse(args); err != nil {
 			return cfg, err
+		}
+		return cfg, nil
+	case "embeddings":
+		if len(args) == 0 {
+			return cfg, errors.New("goncho embeddings: subcommand required (reindex)")
+		}
+		sub := strings.TrimSpace(args[0])
+		if sub != "reindex" {
+			return cfg, fmt.Errorf("goncho embeddings: unknown subcommand %q (want reindex)", sub)
+		}
+		args = args[1:]
+		fs := flag.NewFlagSet("goncho embeddings reindex", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		fs.BoolVar(&cfg.Plan, "plan", false, "print non-mutating reindex preview")
+		fs.BoolVar(&cfg.DryRun, "dry-run", false, "alias for --plan")
+		fs.StringVar(&cfg.DatabasePath, "db", "", "Goncho SQLite database path")
+		fs.StringVar(&cfg.PreferencesConfigPath, "config", "", "Goncho preferences JSON path")
+		if err := fs.Parse(args); err != nil {
+			return cfg, err
+		}
+		if !cfg.Plan && !cfg.DryRun {
+			return cfg, errors.New("goncho embeddings reindex: pass --plan or --dry-run to inspect the non-mutating preview")
 		}
 		return cfg, nil
 	case "version":
 		fs := flag.NewFlagSet("goncho version", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		fs.BoolVar(&cfg.VersionJSON, "json", false, "print version metadata as JSON")
+		if err := fs.Parse(args); err != nil {
+			return cfg, err
+		}
+		return cfg, nil
+	case "quickstart":
+		fs := flag.NewFlagSet("goncho quickstart", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		fs.BoolVar(&cfg.Plan, "plan", false, "print a non-mutating quickstart guide")
+		fs.BoolVar(&cfg.DryRun, "dry-run", false, "alias for --plan")
+		fs.StringVar(&cfg.QuickstartDBPath, "db", "", "database path for the quickstart guide")
+		fs.StringVar(&cfg.QuickstartServerAddr, "addr", "", "server listen address")
 		if err := fs.Parse(args); err != nil {
 			return cfg, err
 		}
@@ -246,7 +299,7 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 		cfg.PreferenceUpdates = map[string]string(updates)
 		return cfg, nil
 	default:
-		return cfg, fmt.Errorf("goncho: unknown command %q (want connect, remove, preferences, doctor, upgrade-check, schema-fingerprint, or version)", cfg.Command)
+		return cfg, fmt.Errorf("goncho: unknown command %q (want connect, remove, preferences, doctor, upgrade-check, schema-fingerprint, version, quickstart, or embeddings)", cfg.Command)
 	}
 }
 
@@ -296,8 +349,12 @@ func run(ctx context.Context, cfg config) error {
 		return runSchemaFingerprint(ctx, cfg)
 	case "version":
 		return runVersion(ctx, cfg)
+	case "quickstart":
+		return runQuickstart(ctx, cfg)
+	case "embeddings":
+		return runEmbeddings(ctx, cfg)
 	default:
-		return fmt.Errorf("goncho: unknown command %q", cfg.Command)
+		return fmt.Errorf("goncho: unknown command %q (want connect, remove, preferences, doctor, upgrade-check, schema-fingerprint, version, quickstart, or embeddings)", cfg.Command)
 	}
 }
 
@@ -540,6 +597,46 @@ func checkDoctorPreferences(path string) error {
 	return nil
 }
 
+func runEmbeddings(ctx context.Context, cfg config) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if cfg.Stdout == nil {
+		cfg.Stdout = os.Stdout
+	}
+	dbPath := strings.TrimSpace(cfg.DatabasePath)
+	prefs := defaultPreferences()
+	if configPath, err := preferenceConfigPath(cfg.PreferencesConfigPath); err == nil {
+		if loaded, err := readPreferences(configPath); err == nil {
+			prefs = loaded
+			if dbPath == "" {
+				dbPath = strings.TrimSpace(loaded.DBPath)
+			}
+		}
+	}
+	if dbPath == "" {
+		return errors.New("goncho embeddings reindex: --db or preferences db_path is required")
+	}
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return fmt.Errorf("goncho embeddings reindex: open sqlite: %w", err)
+	}
+	defer db.Close()
+	if err := db.PingContext(ctx); err != nil {
+		return fmt.Errorf("goncho embeddings reindex: ping sqlite: %w", err)
+	}
+	workspaceID := strings.TrimSpace(prefs.WorkspaceID)
+	if workspaceID == "" {
+		workspaceID = goncho.DefaultWorkspaceID
+	}
+	svc := goncho.NewService(db, goncho.Config{WorkspaceID: workspaceID, ObserverPeerID: goncho.DefaultObserverPeerID}, nil)
+	preview, err := svc.ReindexPreview(ctx)
+	if err != nil {
+		return fmt.Errorf("goncho embeddings reindex: preview: %w", err)
+	}
+	return json.NewEncoder(cfg.Stdout).Encode(preview)
+}
+
 func runVersion(ctx context.Context, cfg config) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -585,6 +682,74 @@ func buildGitCommit() string {
 
 func publicToolNames() []string {
 	return []string{"goncho_context", "goncho_search", "goncho_recall", "goncho_remember", "goncho_review", "goncho_handoff"}
+}
+
+func runQuickstart(ctx context.Context, cfg config) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if cfg.Stdout == nil {
+		cfg.Stdout = os.Stdout
+	}
+	if !cfg.Plan && !cfg.DryRun {
+		return fmt.Errorf("goncho quickstart: pass --plan or --dry-run to inspect the non-mutating guide")
+	}
+
+	dbPath := strings.TrimSpace(cfg.QuickstartDBPath)
+	if dbPath == "" {
+		// Try to derive from preferences if available.
+		if configPath, err := preferenceConfigPath(""); err == nil {
+			if prefs, err := readPreferences(configPath); err == nil && strings.TrimSpace(prefs.DBPath) != "" {
+				dbPath = prefs.DBPath
+			}
+		}
+	}
+	if dbPath == "" {
+		dbPath = "goncho.db"
+	}
+
+	serverAddr := strings.TrimSpace(cfg.QuickstartServerAddr)
+	if serverAddr == "" {
+		serverAddr = "127.0.0.1:8765"
+	}
+
+	viewerURL := fmt.Sprintf("http://%s/v3/workspaces/default/viewer", serverAddr)
+
+	plan := quickstartPlan{
+		Status:       "plan",
+		Mutates:      false,
+		DatabasePath: dbPath,
+		ServerAddr:   serverAddr,
+		ViewerURL:    viewerURL,
+		Steps: []quickstartStep{
+			{
+				Command:     "goncho-server init -db " + dbPath,
+				Description: "Create or migrate the local Goncho SQLite database.",
+			},
+			{
+				Command:     "goncho-server serve -db " + dbPath + " -addr " + serverAddr,
+				Description: "Start the local memory server on loopback. The server stays in the foreground; open another terminal or use -bg / a service manager for background operation.",
+			},
+			{
+				Command:     "curl -X POST http://" + serverAddr + "/v3/workspaces/default/conclusions -d '{\"peer\":\"demo\",\"conclusion\":\"Goncho remembers local state across sessions.\"}' -H 'Content-Type: application/json'",
+				Description: "Write a memory conclusion to prove local persistence.",
+			},
+			{
+				Command:     "curl http://" + serverAddr + "/v3/workspaces/default/viewer",
+				Description: "Open the workspace viewer to verify the conclusion appears in Latest Conclusions.",
+			},
+		},
+		DemoProof: "Write\n  curl -X POST http://" + serverAddr + "/v3/workspaces/default/conclusions -d '{\"peer\":\"demo\",\"conclusion\":\"Your first fact.\"}' -H 'Content-Type: application/json'\n\nRecall\n  curl http://" + serverAddr + "/v3/workspaces/default/viewer\n\nContext pack for an agent\n  curl http://" + serverAddr + "/v3/workspaces/default/peers/demo/context?q=remembered+facts\n\nRestart the server and re-run viewer — the fact is still there.",
+		NextSteps: []string{
+			"Run `goncho-server init -db " + dbPath + "` to prepare the database.",
+			"Start the server with `goncho-server serve -db " + dbPath + " -addr " + serverAddr + "`.",
+			"Write and recall a fact using the demo commands above.",
+			"Open " + viewerURL + " in a browser to inspect state.",
+			"Connect an agent: run `goncho connect <host> --plan` to see non-mutating config.",
+		},
+	}
+
+	return json.NewEncoder(cfg.Stdout).Encode(plan)
 }
 
 func runPreferences(ctx context.Context, cfg config) error {

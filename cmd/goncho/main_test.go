@@ -283,6 +283,89 @@ func TestRunConnectPiDryRunPrintsExtensionPlanWithoutMutating(t *testing.T) {
 	}
 }
 
+func TestRunEmbeddingsReindexPlanReportsPreviewWithoutMutation(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "goncho.db")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "default", ObserverPeerID: "gormes"}, nil)
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: "user-reindex", Conclusion: "Preview-only reindex candidate."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+	if err := store.Close(ctx); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	if err := run(ctx, config{Command: "embeddings", Plan: true, DatabasePath: dbPath, Stdout: &stdout}); err != nil {
+		t.Fatalf("run embeddings reindex --plan: %v", err)
+	}
+	var preview goncho.ReindexPreviewResult
+	if err := json.Unmarshal(stdout.Bytes(), &preview); err != nil {
+		t.Fatalf("decode reindex preview: %v\n%s", err, stdout.String())
+	}
+	if preview.Status != "ok" || preview.Mutates || preview.Total != 1 || preview.NotIndexed != 1 {
+		t.Fatalf("preview = %+v, want non-mutating one missing vector", preview)
+	}
+}
+
+func TestRunQuickstartPlanPrintsNonMutatingGuideWithStepsAndNextCommands(t *testing.T) {
+	dir := t.TempDir()
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{
+		Command:              "quickstart",
+		Plan:                 true,
+		QuickstartDBPath:     filepath.Join(dir, "goncho.db"),
+		QuickstartServerAddr: "127.0.0.1:8765",
+		Stdout:               &stdout,
+	}); err != nil {
+		t.Fatalf("run quickstart --plan: %v", err)
+	}
+	// Plan must not create any files.
+	dbPath := filepath.Join(dir, "goncho.db")
+	if _, err := os.Stat(dbPath); !os.IsNotExist(err) {
+		t.Fatalf("quickstart --plan created db at %s or unexpected stat error: %v", dbPath, err)
+	}
+
+	var plan quickstartPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode quickstart plan: %v\n%s", err, stdout.String())
+	}
+	if plan.Status != "plan" || plan.Mutates {
+		t.Fatalf("quickstart plan = %+v, want non-mutating plan", plan)
+	}
+	if plan.DatabasePath == "" {
+		t.Fatalf("quickstart plan missing database_path")
+	}
+	if len(plan.Steps) == 0 {
+		t.Fatalf("quickstart plan has zero steps")
+	}
+	// Each step must have a command and description.
+	for i, step := range plan.Steps {
+		if step.Command == "" || step.Description == "" {
+			t.Fatalf("quickstart step %d missing command or description: %+v", i, step)
+		}
+	}
+	// Must include viewer URL, demo write, recall, and context proof.
+	if plan.ViewerURL == "" {
+		t.Fatalf("quickstart plan missing viewer_url")
+	}
+	if !strings.Contains(plan.DemoProof, "conclusion") || !strings.Contains(plan.DemoProof, "viewer") || !strings.Contains(plan.DemoProof, "context") {
+		t.Fatalf("quickstart plan demo_proof = %q, want conclusion/viewer/context commands", plan.DemoProof)
+	}
+	// Must include recommended next steps for connectors.
+	if len(plan.NextSteps) == 0 {
+		t.Fatalf("quickstart plan missing next_steps")
+	}
+}
+
 func TestRunConnectCodexDryRunPrintsMCPConfigPatchWithoutMutating(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, ".codex", "config.toml")

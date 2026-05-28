@@ -12,17 +12,18 @@ import (
 
 // ViewerSnapshot is the read-only JSON model for Goncho's local viewer API.
 type ViewerSnapshot struct {
-	Status              string             `json:"status"`
-	ReadOnly            bool               `json:"read_only"`
-	WorkspaceID         string             `json:"workspace_id"`
-	ObserverPeerID      string             `json:"observer_peer_id"`
-	DB                  ViewerDBInfo       `json:"db"`
-	Counts              ViewerCounts       `json:"counts"`
-	LatestObservations  []Observation      `json:"latest_observations"`
-	LatestConclusions   []ViewerConclusion `json:"latest_conclusions"`
-	ReviewQueue         ViewerReviewQueue  `json:"review_queue"`
-	GeneratedAt         time.Time          `json:"generated_at"`
-	UnavailableWarnings []string           `json:"unavailable_warnings,omitempty"`
+	Status                     string                      `json:"status"`
+	ReadOnly                   bool                        `json:"read_only"`
+	WorkspaceID                string                      `json:"workspace_id"`
+	ObserverPeerID             string                      `json:"observer_peer_id"`
+	DB                         ViewerDBInfo                `json:"db"`
+	Counts                     ViewerCounts                `json:"counts"`
+	LatestObservations         []Observation               `json:"latest_observations"`
+	LatestConclusions          []ViewerConclusion          `json:"latest_conclusions"`
+	ReviewQueue                ViewerReviewQueue           `json:"review_queue"`
+	NegativeEvidenceCandidates []NegativeEvidenceCandidate `json:"negative_evidence_candidates,omitempty"`
+	GeneratedAt                time.Time                   `json:"generated_at"`
+	UnavailableWarnings        []string                    `json:"unavailable_warnings,omitempty"`
 }
 
 type ViewerDBInfo struct {
@@ -56,6 +57,17 @@ type ViewerReviewQueue struct {
 	Open       int          `json:"open"`
 	Resolved   int          `json:"resolved"`
 	LatestOpen []ReviewItem `json:"latest_open"`
+}
+
+// ViewerRecallTrace is the read-only viewer wrapper around a recall trace.
+type ViewerRecallTrace struct {
+	Status      string      `json:"status"`
+	ReadOnly    bool        `json:"read_only"`
+	WorkspaceID string      `json:"workspace_id"`
+	Peer        string      `json:"peer"`
+	Query       string      `json:"query"`
+	Trace       RecallTrace `json:"trace"`
+	GeneratedAt time.Time   `json:"generated_at"`
 }
 
 type ViewerSessionTimeline struct {
@@ -137,11 +149,56 @@ func (s *Service) ViewerSnapshot(ctx context.Context) (ViewerSnapshot, error) {
 	} else {
 		snapshot.ReviewQueue.LatestOpen = openReviews.Items
 	}
+	candidates, err := s.NegativeEvidenceCandidates(ctx, ObservationQuery{WorkspaceID: workspaceID, Limit: 500})
+	if err != nil {
+		warnings = append(warnings, "negative_evidence_candidates: "+err.Error())
+	} else {
+		snapshot.NegativeEvidenceCandidates = candidates
+	}
 	snapshot.ReviewQueue.Open = snapshot.Counts.ReviewOpen
 	snapshot.ReviewQueue.Resolved = snapshot.Counts.ReviewResolved
 	warnings = append(warnings, providerWarnings(s.ProviderHealthDiagnostics())...)
 	snapshot.UnavailableWarnings = warnings
 	return snapshot, nil
+}
+
+func (s *Service) ViewerRecallTrace(ctx context.Context, peer, query string, limit int) (ViewerRecallTrace, error) {
+	if err := ctx.Err(); err != nil {
+		return ViewerRecallTrace{}, err
+	}
+	if s == nil || s.db == nil {
+		return ViewerRecallTrace{}, fmt.Errorf("goncho: nil service")
+	}
+	if strings.TrimSpace(peer) == "" {
+		return ViewerRecallTrace{}, fmt.Errorf("goncho: peer is required")
+	}
+	if strings.TrimSpace(query) == "" {
+		return ViewerRecallTrace{}, fmt.Errorf("goncho: query is required")
+	}
+	if limit <= 0 {
+		limit = 5
+	}
+	if limit > 50 {
+		limit = 50
+	}
+	trace, err := s.Recall(ctx, RecallQuery{
+		WorkspaceID: s.workspaceID,
+		Peer:        strings.TrimSpace(peer),
+		Query:       strings.TrimSpace(query),
+		Limit:       limit,
+	})
+	if err != nil {
+		return ViewerRecallTrace{}, err
+	}
+	return ViewerRecallTrace{
+		Status:      "ok",
+		ReadOnly:    true,
+		WorkspaceID: s.workspaceID,
+		Peer:        strings.TrimSpace(peer),
+		Query:       strings.TrimSpace(query),
+		Trace:       trace,
+		GeneratedAt: time.Now().UTC(),
+	}, nil
 }
 
 func (s *Service) ViewerSessionTimeline(ctx context.Context, sessionKey string) (ViewerSessionTimeline, error) {

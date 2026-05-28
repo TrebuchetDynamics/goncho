@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Added Gormes live profile/session/memory evidence inspection, generic session evidence projection, and privacy-safe negative evidence candidate generation for repeated tool failures.
+- Added a review-queue creation path that accepts repeated-failure candidates into formal stale review items without exposing raw private command or output payloads.
+- Added `goncho://negative-evidence/candidates` and viewer snapshot fields so hosts can inspect reviewable negative-memory candidates.
+- Added non-mutating `goncho embeddings reindex --plan` preview support for local embedding-index freshness checks.
+- Added a local `live-session-debugger` agent skill for read-only Gormes profile/session/memory audits used to guide Goncho improvements.
+
 ## v0.3.0 - 2026-05-25
 
 ### Added
