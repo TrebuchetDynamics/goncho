@@ -53,6 +53,7 @@ func (r *MemoryResourceRegistry) Descriptors() []MemoryResourceDescriptor {
 		{URI: "goncho://profile", Name: "profile", Kind: MemoryResourceKindResource, Description: "Peer profile facts for the requested peer/profile scope.", MimeType: "application/json"},
 		{URI: "goncho://latest", Name: "latest_memories", Kind: MemoryResourceKindResource, Description: "Latest local memories visible to the requested peer/session scope.", MimeType: "application/json"},
 		{URI: "goncho://graph/stats", Name: "graph_stats", Kind: MemoryResourceKindResource, Description: "Local annotation graph counts and relation-like fact counts.", MimeType: "application/json"},
+		{URI: "goncho://negative-evidence/candidates", Name: "negative_evidence_candidates", Kind: MemoryResourceKindResource, Description: "Reviewable repeated-failure candidates for negative memory without raw private payloads.", MimeType: "application/json"},
 		{URI: "goncho://recall/prompt", Name: "recall_prompt", Kind: MemoryResourceKindPrompt, Description: "Prompt template for evidence-first recall with provenance.", MimeType: "text/plain"},
 		{URI: "goncho://handoff/prompt", Name: "session_handoff", Kind: MemoryResourceKindPrompt, Description: "Prompt template for session handoff with evidence and next actions.", MimeType: "text/plain"},
 		{URI: "goncho://review/prompt", Name: "review_resolution", Kind: MemoryResourceKindPrompt, Description: "Prompt template for resolving review items with explicit evidence.", MimeType: "text/plain"},
@@ -76,6 +77,8 @@ func (r *MemoryResourceRegistry) Read(ctx context.Context, req MemoryResourceReq
 		return r.latest(ctx, req)
 	case "goncho://graph/stats":
 		return r.graphStats(ctx, req)
+	case "goncho://negative-evidence/candidates":
+		return r.negativeEvidenceCandidates(ctx, req)
 	case "goncho://recall/prompt":
 		return r.recallPrompt(ctx, req)
 	case "goncho://handoff/prompt":
@@ -152,6 +155,21 @@ func (r *MemoryResourceRegistry) graphStats(ctx context.Context, req MemoryResou
 		"relation_count":     relationCount,
 		"graph_source":       "goncho_memory_annotations",
 		"relation_heuristic": "annotation values containing relation phrases: uses, depends on, runs on, owns, located at",
+	}), nil
+}
+
+func (r *MemoryResourceRegistry) negativeEvidenceCandidates(ctx context.Context, req MemoryResourceRequest) (MemoryResourceContent, error) {
+	candidates, err := r.svc.NegativeEvidenceCandidates(ctx, ObservationQuery{WorkspaceID: r.svc.workspaceID, ProfileID: req.ProfileID, PeerID: req.Peer, SessionKey: req.SessionKey, Limit: req.Limit})
+	if err != nil {
+		return MemoryResourceContent{}, err
+	}
+	return memoryResourceJSON("goncho://negative-evidence/candidates", map[string]any{
+		"workspace_id": r.svc.workspaceID,
+		"profile_id":   strings.TrimSpace(req.ProfileID),
+		"peer":         strings.TrimSpace(req.Peer),
+		"session_key":  strings.TrimSpace(req.SessionKey),
+		"count":        len(candidates),
+		"candidates":   candidates,
 	}), nil
 }
 

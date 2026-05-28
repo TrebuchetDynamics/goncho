@@ -24,10 +24,16 @@ func TestMemoryResourceRegistryExposesStatusProfileLatestGraphAndRecallPrompt(t 
 	if _, err := svc.Conclude(ctx, ConcludeParams{Peer: "peer-resources", SessionKey: "sess-resources", Conclusion: "The authentication service uses SQLite for local recall."}); err != nil {
 		t.Fatal(err)
 	}
+	failed := false
+	for _, id := range []string{"resource-fail-1", "resource-fail-2"} {
+		if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, PeerID: "peer-resources", SessionKey: "sess-resources", Success: &failed, Input: "private command", Output: "private stack", Metadata: map[string]string{"tool_name": "bash"}}); err != nil {
+			t.Fatalf("Observe failure %s: %v", id, err)
+		}
+	}
 
 	registry := NewMemoryResourceRegistry(svc)
 	descriptors := registry.Descriptors()
-	if got, want := resourceDescriptorNames(descriptors), []string{"goncho://graph/stats", "goncho://handoff/prompt", "goncho://latest", "goncho://profile", "goncho://recall/prompt", "goncho://review/prompt", "goncho://status", "goncho://verify/prompt"}; !slices.Equal(got, want) {
+	if got, want := resourceDescriptorNames(descriptors), []string{"goncho://graph/stats", "goncho://handoff/prompt", "goncho://latest", "goncho://negative-evidence/candidates", "goncho://profile", "goncho://recall/prompt", "goncho://review/prompt", "goncho://status", "goncho://verify/prompt"}; !slices.Equal(got, want) {
 		t.Fatalf("resource descriptors = %v, want %v", got, want)
 	}
 	for _, descriptor := range descriptors {
@@ -78,6 +84,21 @@ func TestMemoryResourceRegistryExposesStatusProfileLatestGraphAndRecallPrompt(t 
 	}
 	if graph.Payload["annotation_count"] == nil || graph.Payload["relation_count"] == nil {
 		t.Fatalf("graph payload = %+v, want annotation/relation stats", graph.Payload)
+	}
+
+	negative, err := registry.Read(ctx, MemoryResourceRequest{URI: "goncho://negative-evidence/candidates", Peer: "peer-resources", SessionKey: "sess-resources"})
+	if err != nil {
+		t.Fatalf("negative evidence resource: %v", err)
+	}
+	if negative.Payload["count"] != 1 {
+		t.Fatalf("negative payload = %+v, want one candidate", negative.Payload)
+	}
+	candidates, ok := negative.Payload["candidates"].([]NegativeEvidenceCandidate)
+	if !ok || len(candidates) != 1 || candidates[0].FailureCount != 2 || candidates[0].ToolName != "bash" {
+		t.Fatalf("negative candidates = %#v", negative.Payload["candidates"])
+	}
+	if strings.Contains(candidates[0].String(), "private command") || strings.Contains(candidates[0].String(), "private stack") {
+		t.Fatalf("negative candidate leaked raw observation content: %s", candidates[0].String())
 	}
 
 	prompt, err := registry.Read(ctx, MemoryResourceRequest{URI: "goncho://recall/prompt", Peer: "peer-resources", Query: "who owns auth?", Limit: 3})
