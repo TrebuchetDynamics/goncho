@@ -39,6 +39,8 @@ type config struct {
 	LocomoCompareReport               string
 	LocomoCompareJSONL                string
 	LocomoCompareMD                   string
+	LocomoCompareA                    string
+	LocomoCompareB                    string
 	LocomoBackendComparisonJSON       string
 	LocomoBackendComparisonMD         string
 	LocomoBackendComparisonFailures   string
@@ -142,7 +144,7 @@ func main() {
 	flag.StringVar(&cfg.OutPath, "out", "", "JSON report output path")
 	flag.StringVar(&cfg.FailurePath, "failures", "", "JSONL failure audit output path")
 	flag.StringVar(&cfg.DatabasePath, "db", "", "SQLite database path; defaults to a temp file")
-	flag.StringVar(&cfg.System, "system", "goncho", "retrieval system: goncho, goncho-no-rank, random, bm25, sqlite-fts5")
+	flag.StringVar(&cfg.System, "system", "goncho", "retrieval system: goncho, goncho-no-rank, random, bm25, sqlite-fts5; LOCOMO also supports goncho-recall, goncho-recall-rank, and goncho-recall-annotated")
 	flag.StringVar(&cfg.DatasetRevision, "dataset-revision", "", "dataset source revision for report metadata")
 	flag.StringVar(&cfg.DatasetSHA256, "dataset-sha256", "", "dataset source sha256 for report metadata")
 	flag.BoolVar(&cfg.FailOnLeakage, "fail-on-leakage", false, "exit non-zero if leakage checks find query/gold-id leakage or BEAM rubric-label leakage")
@@ -154,9 +156,11 @@ func main() {
 	flag.StringVar(&cfg.LocomoQuestionsPath, "locomo-questions", "", "LOCOMO-style questions JSONL path for retrieval-first benchmark")
 	flag.StringVar(&cfg.LocomoMarkdownOut, "locomo-md-out", "", "Markdown output path for LOCOMO benchmark report")
 	flag.StringVar(&cfg.LocomoName, "locomo-name", "", "LOCOMO benchmark display name; defaults to LOCOMO smoke")
-	flag.StringVar(&cfg.LocomoCompareReport, "locomo-compare-report", "", "existing LOCOMO JSON report to compare BM25 vs Goncho")
-	flag.StringVar(&cfg.LocomoCompareJSONL, "locomo-compare-jsonl-out", "", "JSONL output path for LOCOMO BM25 vs Goncho comparison")
-	flag.StringVar(&cfg.LocomoCompareMD, "locomo-compare-md-out", "", "Markdown output path for LOCOMO BM25 vs Goncho comparison")
+	flag.StringVar(&cfg.LocomoCompareReport, "locomo-compare-report", "", "existing LOCOMO JSON report for paired system comparison")
+	flag.StringVar(&cfg.LocomoCompareJSONL, "locomo-compare-jsonl-out", "", "JSONL output path for LOCOMO paired system comparison")
+	flag.StringVar(&cfg.LocomoCompareMD, "locomo-compare-md-out", "", "Markdown output path for LOCOMO paired system comparison")
+	flag.StringVar(&cfg.LocomoCompareA, "locomo-compare-a", "bm25", "A system for LOCOMO paired comparison")
+	flag.StringVar(&cfg.LocomoCompareB, "locomo-compare-b", "goncho", "B system for LOCOMO paired comparison")
 	flag.StringVar(&cfg.LocomoBackendComparisonJSON, "locomo-backend-comparison-json-out", "", "JSON output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoBackendComparisonMD, "locomo-backend-comparison-md-out", "", "Markdown output path for LOCOMO external-backend adapter comparison")
 	flag.StringVar(&cfg.LocomoBackendComparisonFailures, "locomo-backend-comparison-failures-out", "", "JSONL failure output path for LOCOMO external-backend adapter comparison")
@@ -211,7 +215,7 @@ func run(ctx context.Context, cfg config) error {
 		return runBeamServiceBenchmark(ctx, cfg)
 	}
 	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
-		return generateLocomoComparison(cfg.LocomoCompareReport, cfg.LocomoCompareJSONL, cfg.LocomoCompareMD)
+		return generateLocomoComparison(cfg.LocomoCompareReport, cfg.LocomoCompareJSONL, cfg.LocomoCompareMD, cfg.LocomoCompareA, cfg.LocomoCompareB)
 	}
 	if strings.TrimSpace(cfg.LocomoBackendComparisonJSON) != "" || strings.TrimSpace(cfg.LocomoBackendComparisonMD) != "" {
 		return runLocomoBackendComparison(ctx, cfg)

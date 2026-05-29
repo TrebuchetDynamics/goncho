@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -17,6 +18,7 @@ type retrievalModule struct {
 	dreamEnabled   bool
 	sessions       SessionDirectory
 	vectorStore    VectorStore
+	searchReranker SearchReranker
 	providers      *ProviderHealthRegistry
 	recallWarnings *recallWarningBuffer
 }
@@ -30,6 +32,7 @@ func (s *Service) retrieval() retrievalModule {
 		dreamEnabled:   s.dreamEnabled,
 		sessions:       s.sessions,
 		vectorStore:    s.vectorStore,
+		searchReranker: s.searchReranker,
 		providers:      s.providerRegistry,
 		recallWarnings: &recallWarningBuffer{},
 	}
@@ -183,6 +186,10 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 		}
 	}
 
+	results, err = r.mergeVectorSearch(ctx, params, profileID, peer, memoryScope, results, limit)
+	if err != nil {
+		return SearchResultSet{}, err
+	}
 	if len(results) == 0 {
 		fallback, err := r.searchTurnFallback(ctx, params, compiled, limit)
 		if err != nil {
@@ -191,6 +198,7 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 		results = fallback.Results
 		scopeEvidence = fallback.ScopeEvidence
 	}
+	results = applySearchReranker(ctx, r.searchReranker, params.Query, results)
 	results = limitHitsByTokens(results, params.MaxTokens)
 
 	if scopeEvidence == nil && profileID != "" {
@@ -204,6 +212,98 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 		ScopeEvidence: scopeEvidence,
 		Results:       results,
 	}, nil
+}
+
+func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchParams, profileID, peer, scopeID string, base []SearchHit, limit int) ([]SearchHit, error) {
+	if r.vectorStore == nil || strings.TrimSpace(params.Query) == "" || !vectorSourceAllowed(params.Sources, "conclusion") {
+		return base, nil
+	}
+	query := VectorSearchQuery{
+		WorkspaceID: r.workspaceID,
+		ProfileID:   profileID,
+		Peer:        peer,
+		Query:       params.Query,
+		SessionKey:  params.SessionKey,
+		ScopeID:     scopeID,
+		Sources:     append([]string(nil), params.Sources...),
+		Limit:       recallCandidateSearchLimit(limit),
+	}
+	if maxPayload := r.providers.MaxPayloadBytes(string(ProviderKindEmbedding)); maxPayload > 0 && len(query.Query) > maxPayload {
+		return base, nil
+	}
+	var hits []VectorSearchHit
+	err := r.providers.Execute(ctx, string(ProviderKindEmbedding), func(providerCtx context.Context) error {
+		var searchErr error
+		hits, searchErr = r.vectorStore.Search(providerCtx, query)
+		return searchErr
+	})
+	if err != nil {
+		return base, nil
+	}
+	out := append([]SearchHit(nil), base...)
+	index := map[string]int{}
+	for i, hit := range out {
+		index[searchHitVectorMergeKey(hit)] = i
+	}
+	sort.SliceStable(hits, func(i, j int) bool {
+		return hits[i].Score > hits[j].Score
+	})
+	for _, hit := range hits {
+		if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(params.Sources, hit.SourceType) {
+			continue
+		}
+		searchHit := searchHitFromVectorHit(hit)
+		key := searchHitVectorMergeKey(searchHit)
+		if idx, ok := index[key]; ok {
+			if len(searchHit.Provenance) > 0 && !evidenceListHas(out[idx].Provenance, "semantic", searchHit.Provenance[0].ID) {
+				out[idx].Provenance = append(out[idx].Provenance, searchHit.Provenance...)
+			}
+			continue
+		}
+		index[key] = len(out)
+		out = append(out, searchHit)
+	}
+	return trimSearchHits(out, limit), nil
+}
+
+func trimSearchHits(hits []SearchHit, limit int) []SearchHit {
+	if limit > 0 && len(hits) > limit {
+		return append([]SearchHit(nil), hits[:limit]...)
+	}
+	return hits
+}
+
+func searchHitFromVectorHit(hit VectorSearchHit) SearchHit {
+	id, _ := strconv.ParseInt(strings.TrimSpace(hit.MemoryID), 10, 64)
+	source := strings.TrimSpace(hit.SourceType)
+	if source == "" {
+		source = "vector"
+	}
+	memoryID := strings.TrimSpace(hit.MemoryID)
+	if memoryID == "" {
+		memoryID = semanticMemoryID(hit)
+	}
+	return SearchHit{
+		ID:         id,
+		Source:     source,
+		Content:    hit.Content,
+		SessionKey: hit.SessionID,
+		Provenance: []EvidenceItem{{
+			Kind:     "semantic",
+			Source:   "vector_store",
+			ID:       memoryID,
+			Score:    clampRecall(hit.Score),
+			Note:     "matched optional vector store",
+			Metadata: cloneVectorMetadata(hit.Metadata),
+		}},
+	}
+}
+
+func searchHitVectorMergeKey(hit SearchHit) string {
+	if hit.ID > 0 {
+		return "id:" + strconv.FormatInt(hit.ID, 10)
+	}
+	return "content:" + strings.TrimSpace(hit.Content)
 }
 
 func (r retrievalModule) searchTurnFallback(ctx context.Context, params SearchParams, compiled compiledSearchFilter, limit int) (turnFallbackResult, error) {

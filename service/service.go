@@ -34,6 +34,7 @@ type Service struct {
 	dreamIdle        time.Duration
 	sessions         SessionDirectory
 	vectorStore      VectorStore
+	searchReranker   SearchReranker
 	providerRegistry *ProviderHealthRegistry
 	log              *slog.Logger
 	dialecticCaller  DialecticCaller
@@ -77,6 +78,7 @@ func NewService(db *sql.DB, cfg Config, log *slog.Logger) *Service {
 		dreamIdle:        cfg.DreamIdleTimeout,
 		sessions:         cfg.SessionDirectory,
 		vectorStore:      cfg.VectorStore,
+		searchReranker:   cfg.SearchReranker,
 		providerRegistry: NewProviderHealthRegistry(providerResilienceConfigFromServiceConfig(cfg), cfg.VectorStore),
 		log:              log,
 	}
@@ -256,13 +258,25 @@ func (s *Service) Context(ctx context.Context, params ContextParams) (ContextRes
 // the scoring and provenance chain so hosts can audit why each memory was
 // selected or rejected.
 func (s *Service) Recall(ctx context.Context, q RecallQuery) (RecallTrace, error) {
+	return s.recallWithOptions(ctx, q, recallPipelineOptions{})
+}
+
+// RecallWithScoringConfig runs Recall with an explicit scoring configuration.
+// It is intended for evaluation harnesses and advanced integrations that need
+// to compare ranking profiles without changing the default Service.Recall
+// behavior.
+func (s *Service) RecallWithScoringConfig(ctx context.Context, q RecallQuery, config RecallScoringConfig) (RecallTrace, error) {
+	return s.recallWithOptions(ctx, q, recallPipelineOptions{scoringConfig: config})
+}
+
+func (s *Service) recallWithOptions(ctx context.Context, q RecallQuery, opts recallPipelineOptions) (RecallTrace, error) {
 	if strings.TrimSpace(q.Peer) == "" {
 		return RecallTrace{}, fmt.Errorf("goncho: peer is required")
 	}
 	if strings.TrimSpace(q.WorkspaceID) == "" {
 		q.WorkspaceID = s.workspaceID
 	}
-	engine := newRecallPipelineEngine(s.retrieval(), recallPipelineOptions{})
+	engine := newRecallPipelineEngine(s.retrieval(), opts)
 	return engine.Run(ctx, q)
 }
 

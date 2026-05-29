@@ -23,6 +23,9 @@ var (
 )
 
 func searchFactIntentScore(query, content string) float64 {
+	if score := searchSpeakerFactIntentScore(query, content); score > 0 {
+		return score
+	}
 	if score := searchOwnerFactIntentScore(query, content); score > 0 {
 		return score
 	}
@@ -64,6 +67,38 @@ func searchHitFactIntentScore(query string, hit SearchHit) float64 {
 		}
 	}
 	return score
+}
+
+func searchSpeakerFactIntentScore(query, content string) float64 {
+	if !searchSpeakerAttributionQuestion(query) {
+		return 0
+	}
+	content = strings.TrimSpace(strings.Trim(content, ".!?"))
+	lower := strings.ToLower(content)
+	if !strings.HasPrefix(lower, "speaker ") {
+		return 0
+	}
+	speaker := strings.TrimSpace(content[len("speaker "):])
+	if speaker == "" {
+		return 0
+	}
+	speakerTokens := searchRankTokenSet(speaker)
+	queryTokens := searchRankTokenSet(query)
+	if len(speakerTokens) == 0 || len(queryTokens) == 0 {
+		return 0
+	}
+	if searchRankTokenCoverage(speakerTokens, query) >= 1 || searchRankTokenCoverage(queryTokens, speaker) >= 1 {
+		return 1
+	}
+	return 0
+}
+
+func searchSpeakerAttributionQuestion(query string) bool {
+	q := strings.ToLower(strings.TrimSpace(query))
+	if q == "" {
+		return false
+	}
+	return strings.Contains(q, " who said") || strings.HasPrefix(q, "who said") || strings.Contains(q, " said") || strings.Contains(q, " say") || strings.Contains(q, " told") || strings.Contains(q, " mention") || strings.Contains(q, " according to")
 }
 
 func searchOwnerFactIntentScore(query, content string) float64 {

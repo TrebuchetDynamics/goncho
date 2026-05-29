@@ -25,6 +25,7 @@ type Config struct {
 	DialecticDefaultLevel        DialecticLevel
 	SessionDirectory             SessionDirectory
 	VectorStore                  VectorStore
+	SearchReranker               SearchReranker
 	ProviderFailureThreshold     int
 	ProviderCooldown             time.Duration
 	ProviderTimeout              time.Duration

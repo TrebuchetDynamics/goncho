@@ -118,21 +118,50 @@ type locomoCategoryMetrics struct {
 }
 
 type locomoQuestionResult struct {
-	QuestionID         string   `json:"question_id"`
-	ConversationID     string   `json:"conversation_id"`
-	Category           string   `json:"category"`
-	Question           string   `json:"question"`
-	GoldMemoryIDs      []string `json:"gold_memory_ids"`
-	RetrievedIDs       []string `json:"retrieved_ids"`
-	Rank               int      `json:"rank"`
-	RecallAnyAt5       float64  `json:"recall_any_at_5"`
-	RecallAnyAt10      float64  `json:"recall_any_at_10"`
-	StrictRecallAt5    float64  `json:"strict_recall_at_5"`
-	StrictRecallAt10   float64  `json:"strict_recall_at_10"`
-	NDCGAt5            float64  `json:"ndcg_at_5"`
-	NDCGAt10           float64  `json:"ndcg_at_10"`
-	MRR                float64  `json:"mrr"`
-	RetrievalLatencyMs int64    `json:"retrieval_latency_ms"`
+	QuestionID         string                   `json:"question_id"`
+	ConversationID     string                   `json:"conversation_id"`
+	Category           string                   `json:"category"`
+	Question           string                   `json:"question"`
+	GoldMemoryIDs      []string                 `json:"gold_memory_ids"`
+	RetrievedIDs       []string                 `json:"retrieved_ids"`
+	Rank               int                      `json:"rank"`
+	RecallAnyAt5       float64                  `json:"recall_any_at_5"`
+	RecallAnyAt10      float64                  `json:"recall_any_at_10"`
+	StrictRecallAt5    float64                  `json:"strict_recall_at_5"`
+	StrictRecallAt10   float64                  `json:"strict_recall_at_10"`
+	NDCGAt5            float64                  `json:"ndcg_at_5"`
+	NDCGAt10           float64                  `json:"ndcg_at_10"`
+	MRR                float64                  `json:"mrr"`
+	RetrievalLatencyMs int64                    `json:"retrieval_latency_ms"`
+	RecallDiagnostics  *locomoRecallDiagnostics `json:"recall_diagnostics,omitempty"`
+}
+
+type locomoRecallDiagnostics struct {
+	GoldInCandidates          bool     `json:"gold_in_candidates"`
+	GoldInSelected            bool     `json:"gold_in_selected"`
+	BestCandidateRank         int      `json:"best_candidate_rank"`
+	BestSelectedRank          int      `json:"best_selected_rank"`
+	Bucket                    string   `json:"bucket"`
+	RejectionReasons          []string `json:"rejection_reasons,omitempty"`
+	BestCandidateFinalScore   float64  `json:"best_candidate_final_score,omitempty"`
+	BestCandidateKeywordScore float64  `json:"best_candidate_keyword_score,omitempty"`
+	BestCandidateFactScore    float64  `json:"best_candidate_fact_score,omitempty"`
+	BestCandidateGraphScore   float64  `json:"best_candidate_graph_score,omitempty"`
+	BestCandidateRRFScore     float64  `json:"best_candidate_rrf_score,omitempty"`
+	SelectedFloorFinalScore   float64  `json:"selected_floor_final_score,omitempty"`
+	SelectedFloorKeywordScore float64  `json:"selected_floor_keyword_score,omitempty"`
+	SelectedFloorFactScore    float64  `json:"selected_floor_fact_score,omitempty"`
+	SelectedFloorGraphScore   float64  `json:"selected_floor_graph_score,omitempty"`
+	SelectedFloorRRFScore     float64  `json:"selected_floor_rrf_score,omitempty"`
+	ScoreGapToSelectedFloor   float64  `json:"score_gap_to_selected_floor,omitempty"`
+}
+
+type locomoRecallScoreSnapshot struct {
+	FinalScore   float64
+	KeywordScore float64
+	FactScore    float64
+	GraphScore   float64
+	RRFScore     float64
 }
 
 type locomoFailureRow struct {
@@ -168,7 +197,7 @@ func runLocomoBenchmark(ctx context.Context, cfg config) error {
 	if limit <= 0 {
 		limit = 10
 	}
-	systems := []string{"random", "goncho-no-rank", "recency", "bm25", "sqlite-fts5", "goncho"}
+	systems := []string{"random", "goncho-no-rank", "recency", "bm25", "sqlite-fts5", "goncho", "goncho-hybrid", "goncho-rerank", "goncho-recall", "goncho-recall-rank", "goncho-recall-annotated"}
 	databaseSizeBytes, err := locomoDatabaseSizeBytes(cfg.LocomoMemoriesPath, cfg.LocomoQuestionsPath)
 	if err != nil {
 		return err
@@ -331,7 +360,7 @@ func loadLocomoQuestions(path string) ([]locomoQuestionRow, error) {
 func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string, limit int) (locomoSystemReport, error) {
 	var svc *goncho.Service
 	contentIDs := map[string][]string{}
-	if system == "goncho" {
+	if system == "goncho" || system == "goncho-hybrid" || system == "goncho-rerank" || system == "goncho-recall" || system == "goncho-recall-rank" || system == "goncho-recall-annotated" {
 		dir, err := os.MkdirTemp("", "goncho-locomo-*")
 		if err != nil {
 			return locomoSystemReport{}, err
@@ -345,7 +374,20 @@ func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string
 		if err := goncho.RunMigrations(store.DB()); err != nil {
 			return locomoSystemReport{}, err
 		}
-		svc = goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-locomo-smoke", ObserverPeerID: "goncho-locomo-smoke", RecentMessages: 0}, nil)
+		var vectorStore goncho.VectorStore
+		var vectorIndex *goncho.LocalVectorIndex
+		if system == "goncho-hybrid" {
+			vectorIndex, err = goncho.NewLocalVectorIndex(ctx, goncho.LocalVectorIndexOptions{Path: filepath.Join(dir, "locomo-vectors.json"), Provider: locomoEmbeddingProvider{}})
+			if err != nil {
+				return locomoSystemReport{}, err
+			}
+			vectorStore = vectorIndex
+		}
+		var searchReranker goncho.SearchReranker
+		if system == "goncho-rerank" {
+			searchReranker = locomoSearchReranker{}
+		}
+		svc = goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-locomo-smoke", ObserverPeerID: "goncho-locomo-smoke", RecentMessages: 0, VectorStore: vectorStore, SearchReranker: searchReranker}, nil)
 		for i, mem := range data.Memories {
 			content := locomoIndexableContent(mem)
 			result, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: mem.ConversationID, SessionKey: mem.SessionID, Conclusion: content, Scope: "benchmark"})
@@ -355,6 +397,16 @@ func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string
 			if _, err := store.DB().ExecContext(ctx, `UPDATE goncho_conclusions SET created_at = ?, updated_at = ? WHERE id = ?`, i+1, i+1, result.ID); err != nil {
 				return locomoSystemReport{}, err
 			}
+			if vectorIndex != nil {
+				if err := vectorIndex.Upsert(ctx, goncho.LocalVectorMemory{MemoryID: fmt.Sprintf("%d", result.ID), WorkspaceID: "goncho-locomo-smoke", Peer: mem.ConversationID, SourceType: "conclusion", Content: content, SessionID: mem.SessionID, ScopeID: goncho.MemoryScopeWorkspace}); err != nil {
+					return locomoSystemReport{}, err
+				}
+			}
+			if system == "goncho-recall-annotated" {
+				if err := storeLocomoStructuredAnnotations(ctx, store.DB(), "goncho-locomo-smoke", "goncho-locomo-smoke", mem.ConversationID, result.ID, locomoStructuredAnnotationFacts(mem)); err != nil {
+					return locomoSystemReport{}, err
+				}
+			}
 			contentIDs[contentIDKey(mem.ConversationID, content)] = append(contentIDs[contentIDKey(mem.ConversationID, content)], mem.MemoryID)
 		}
 	}
@@ -362,13 +414,14 @@ func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string
 	results := []locomoQuestionResult{}
 	for _, q := range data.Questions {
 		questionStart := time.Now()
-		ids, err := retrieveLocomo(ctx, svc, data, q, system, contentIDs, limit)
+		ids, diagnostics, err := retrieveLocomoWithDiagnostics(ctx, svc, data, q, system, contentIDs, limit)
 		latencyMs := time.Since(questionStart).Milliseconds()
 		if err != nil {
 			return locomoSystemReport{}, err
 		}
 		result := scoreLocomoQuestion(q, ids)
 		result.RetrievalLatencyMs = latencyMs
+		result.RecallDiagnostics = diagnostics
 		results = append(results, result)
 	}
 	report := summarizeLocomoSystem(system, results)
@@ -378,8 +431,13 @@ func evaluateLocomoSystem(ctx context.Context, data locomoDataset, system string
 }
 
 func retrieveLocomo(ctx context.Context, svc *goncho.Service, data locomoDataset, q locomoQuestionRow, system string, contentIDs map[string][]string, limit int) ([]string, error) {
+	ids, _, err := retrieveLocomoWithDiagnostics(ctx, svc, data, q, system, contentIDs, limit)
+	return ids, err
+}
+
+func retrieveLocomoWithDiagnostics(ctx context.Context, svc *goncho.Service, data locomoDataset, q locomoQuestionRow, system string, contentIDs map[string][]string, limit int) ([]string, *locomoRecallDiagnostics, error) {
 	if limit <= 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	items := locomoConversationMemories(data, q.ConversationID)
 	switch system {
@@ -387,39 +445,276 @@ func retrieveLocomo(ctx context.Context, svc *goncho.Service, data locomoDataset
 		sort.SliceStable(items, func(i, j int) bool {
 			return stableHash(q.QuestionID+"/"+items[i].MemoryID) < stableHash(q.QuestionID+"/"+items[j].MemoryID)
 		})
-		return locomoFirstIDs(items, limit), nil
+		return locomoFirstIDs(items, limit), nil, nil
 	case "goncho-no-rank", "recency":
 		sortLocomoRecency(items)
-		return locomoFirstIDs(items, limit), nil
+		return locomoFirstIDs(items, limit), nil, nil
 	case "bm25":
-		return locomoFirstIDs(rankLocomoBM25(q.Question, items), limit), nil
+		return locomoFirstIDs(rankLocomoBM25(q.Question, items), limit), nil, nil
 	case "sqlite-fts5":
-		return retrieveLocomoSQLiteFTS(ctx, items, q, limit)
-	case "goncho":
-		if limit <= 0 {
-			return nil, nil
-		}
+		ids, err := retrieveLocomoSQLiteFTS(ctx, items, q, limit)
+		return ids, nil, err
+	case "goncho", "goncho-hybrid", "goncho-rerank":
 		result, err := svc.Search(ctx, goncho.SearchParams{Peer: q.ConversationID, Query: q.Question, Limit: limit, MaxTokens: 100_000})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		out := []string{}
-		seen := map[string]struct{}{}
+		contents := make([]string, 0, len(result.Results))
 		for _, hit := range result.Results {
-			for _, id := range contentIDs[contentIDKey(q.ConversationID, hit.Content)] {
-				if _, ok := seen[id]; !ok {
-					seen[id] = struct{}{}
-					out = append(out, id)
-					if len(out) >= limit {
-						return out, nil
-					}
+			contents = append(contents, hit.Content)
+		}
+		return locomoStableIDsForContents(q.ConversationID, contents, contentIDs, limit), nil, nil
+	case "goncho-recall":
+		return retrieveLocomoRecallTrace(ctx, svc, q, contentIDs, limit, goncho.RecallScoringConfig{})
+	case "goncho-recall-rank":
+		return retrieveLocomoRecallTrace(ctx, svc, q, contentIDs, limit, locomoRecallRankScoringConfig())
+	case "goncho-recall-annotated":
+		return retrieveLocomoRecallTrace(ctx, svc, q, contentIDs, limit, locomoRecallRankScoringConfig())
+	default:
+		return nil, nil, fmt.Errorf("unknown LOCOMO system %q", system)
+	}
+}
+
+type locomoSearchReranker struct{}
+
+func (locomoSearchReranker) RerankSearch(_ context.Context, query string, candidates []goncho.SearchRerankCandidate) ([]goncho.SearchRerankScore, error) {
+	queryTokens := benchTokenSet(query)
+	out := make([]goncho.SearchRerankScore, 0, len(candidates))
+	for _, candidate := range candidates {
+		score := 0.0
+		for token := range benchTokenSet(candidate.Content) {
+			if _, ok := queryTokens[token]; ok {
+				score++
+			}
+		}
+		out = append(out, goncho.SearchRerankScore{ID: candidate.ID, Score: score})
+	}
+	return out, nil
+}
+
+type locomoEmbeddingProvider struct{}
+
+func (locomoEmbeddingProvider) EmbedText(_ context.Context, text string) ([]float64, error) {
+	const dims = 64
+	vector := make([]float64, dims)
+	for _, token := range benchTokens(text) {
+		bucket := stableHash(token) % dims
+		vector[bucket]++
+	}
+	return vector, nil
+}
+
+func locomoStructuredAnnotationFacts(mem locomoMemoryRow) []string {
+	facts := []string{}
+	if speaker := strings.TrimSpace(mem.Speaker); speaker != "" {
+		facts = append(facts, "speaker "+speaker)
+	}
+	if session := strings.TrimSpace(mem.SessionID); session != "" {
+		facts = append(facts, "session "+session)
+	}
+	if timestamp := strings.TrimSpace(mem.Timestamp); timestamp != "" {
+		facts = append(facts, "timestamp "+timestamp)
+	}
+	if mem.TurnIndex > 0 {
+		facts = append(facts, fmt.Sprintf("turn %d", mem.TurnIndex))
+	}
+	return facts
+}
+
+func storeLocomoStructuredAnnotations(ctx context.Context, db *sql.DB, workspaceID, observer, peer string, memoryID int64, facts []string) error {
+	if len(facts) == 0 {
+		return nil
+	}
+	now := time.Now().Unix()
+	for _, fact := range facts {
+		fact = strings.TrimSpace(fact)
+		if fact == "" {
+			continue
+		}
+		if _, err := db.ExecContext(ctx, `
+			INSERT OR IGNORE INTO goncho_memory_annotations(
+				workspace_id, profile_id, observer_peer_id, peer_id, memory_source, memory_id,
+				kind, value, source, confidence, created_at
+			)
+			VALUES(?, '', ?, ?, 'conclusion', ?, 'fact', ?, 'locomo_structured_metadata', 1.0, ?)
+		`, workspaceID, observer, peer, memoryID, fact, now); err != nil {
+			return fmt.Errorf("goncho-bench: store LOCOMO structured annotation: %w", err)
+		}
+	}
+	return nil
+}
+
+func locomoRecallRankScoringConfig() goncho.RecallScoringConfig {
+	return goncho.RecallScoringConfig{
+		Version: "locomo-recall-rank-v1",
+		Weights: map[string]float64{
+			"keyword":    0.70,
+			"semantic":   0.00,
+			"graph":      0.10,
+			"fact":       0.10,
+			"recency":    0.02,
+			"importance": 0.00,
+			"scope":      0.08,
+		},
+		RRFK:        60,
+		MMRLambda:   1.0,
+		TokenBudget: 0,
+	}
+}
+
+func retrieveLocomoRecallTrace(ctx context.Context, svc *goncho.Service, q locomoQuestionRow, contentIDs map[string][]string, limit int, config goncho.RecallScoringConfig) ([]string, *locomoRecallDiagnostics, error) {
+	query := goncho.RecallQuery{Peer: q.ConversationID, Query: q.Question, Limit: limit, MaxTokens: 100_000}
+	var (
+		trace goncho.RecallTrace
+		err   error
+	)
+	if strings.TrimSpace(config.Version) == "" {
+		trace, err = svc.Recall(ctx, query)
+	} else {
+		trace, err = svc.RecallWithScoringConfig(ctx, query, config)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	contents := make([]string, 0, len(trace.Selected))
+	for _, item := range trace.Selected {
+		contents = append(contents, item.Candidate.Content)
+	}
+	selectedIDs := locomoStableIDsForContents(q.ConversationID, contents, contentIDs, limit)
+	diagnostics := locomoRecallDiagnosticsFromTrace(q, trace, contentIDs)
+	return selectedIDs, &diagnostics, nil
+}
+
+func locomoStableIDsForContents(conversationID string, contents []string, contentIDs map[string][]string, limit int) []string {
+	out := []string{}
+	seen := map[string]struct{}{}
+	for _, content := range contents {
+		for _, id := range contentIDs[contentIDKey(conversationID, content)] {
+			if _, ok := seen[id]; !ok {
+				seen[id] = struct{}{}
+				out = append(out, id)
+				if limit > 0 && len(out) >= limit {
+					return out
 				}
 			}
 		}
-		return out, nil
-	default:
-		return nil, fmt.Errorf("unknown LOCOMO system %q", system)
 	}
+	return out
+}
+
+func locomoRecallDiagnosticsFromTrace(q locomoQuestionRow, trace goncho.RecallTrace, contentIDs map[string][]string) locomoRecallDiagnostics {
+	candidateContents := make([]string, 0, len(trace.Candidates))
+	for _, item := range trace.Candidates {
+		candidateContents = append(candidateContents, item.Candidate.Content)
+	}
+	selectedContents := make([]string, 0, len(trace.Selected))
+	for _, item := range trace.Selected {
+		selectedContents = append(selectedContents, item.Candidate.Content)
+	}
+	candidateIDs := locomoStableIDsForContents(q.ConversationID, candidateContents, contentIDs, 0)
+	selectedIDs := locomoStableIDsForContents(q.ConversationID, selectedContents, contentIDs, 0)
+	candidateRank := locomoBestGoldRank(candidateIDs, q.GoldMemoryIDs)
+	selectedRank := locomoBestGoldRank(selectedIDs, q.GoldMemoryIDs)
+	candidateScore := locomoRecallScoreSnapshot{}
+	if candidateRank > 0 && candidateRank <= len(trace.Candidates) {
+		candidateScore = locomoRecallScoreSnapshotFromScored(trace.Candidates[candidateRank-1])
+	}
+	diagnostics := locomoRecallDiagnosticsWithScores(candidateRank, selectedRank, q.GoldMemoryIDs, candidateScore, locomoRecallSelectedFloorScore(trace.Selected))
+	diagnostics.RejectionReasons = locomoRecallGoldRejectionReasons(q, trace, contentIDs)
+	return diagnostics
+}
+
+func locomoRecallDiagnosticsWithScores(candidateRank, selectedRank int, goldIDs []string, candidateScore, selectedFloorScore locomoRecallScoreSnapshot) locomoRecallDiagnostics {
+	diagnostics := locomoRecallDiagnostics{
+		GoldInCandidates:          candidateRank > 0,
+		GoldInSelected:            selectedRank > 0,
+		BestCandidateRank:         candidateRank,
+		BestSelectedRank:          selectedRank,
+		Bucket:                    locomoRecallDiagnosticBucket(goldIDs, candidateRank, selectedRank),
+		BestCandidateFinalScore:   roundMetric(candidateScore.FinalScore),
+		BestCandidateKeywordScore: roundMetric(candidateScore.KeywordScore),
+		BestCandidateFactScore:    roundMetric(candidateScore.FactScore),
+		BestCandidateGraphScore:   roundMetric(candidateScore.GraphScore),
+		BestCandidateRRFScore:     roundMetric(candidateScore.RRFScore),
+		SelectedFloorFinalScore:   roundMetric(selectedFloorScore.FinalScore),
+		SelectedFloorKeywordScore: roundMetric(selectedFloorScore.KeywordScore),
+		SelectedFloorFactScore:    roundMetric(selectedFloorScore.FactScore),
+		SelectedFloorGraphScore:   roundMetric(selectedFloorScore.GraphScore),
+		SelectedFloorRRFScore:     roundMetric(selectedFloorScore.RRFScore),
+	}
+	if candidateRank > 0 && selectedFloorScore.FinalScore > 0 {
+		diagnostics.ScoreGapToSelectedFloor = roundMetric(selectedFloorScore.FinalScore - candidateScore.FinalScore)
+	}
+	return diagnostics
+}
+
+func locomoRecallScoreSnapshotFromScored(item goncho.ScoredRecallCandidate) locomoRecallScoreSnapshot {
+	return locomoRecallScoreSnapshot{
+		FinalScore:   item.Score.FinalScore,
+		KeywordScore: item.Score.KeywordScore,
+		FactScore:    item.Score.FactScore,
+		GraphScore:   item.Score.GraphScore,
+		RRFScore:     item.Score.RRFScore,
+	}
+}
+
+func locomoRecallSelectedFloorScore(selected []goncho.ScoredRecallCandidate) locomoRecallScoreSnapshot {
+	if len(selected) == 0 {
+		return locomoRecallScoreSnapshot{}
+	}
+	return locomoRecallScoreSnapshotFromScored(selected[len(selected)-1])
+}
+
+func locomoRecallDiagnosticBucket(goldIDs []string, candidateRank, selectedRank int) string {
+	if len(goldIDs) == 0 {
+		return "unknown"
+	}
+	if selectedRank > 0 && (candidateRank == 0 || selectedRank <= candidateRank) {
+		return "selected_hit"
+	}
+	if selectedRank > candidateRank && candidateRank > 0 {
+		return "selected_hit_rank_regression"
+	}
+	if candidateRank > 0 {
+		return "candidate_present_selection_loss"
+	}
+	return "candidate_missing"
+}
+
+func locomoBestGoldRank(ids, goldIDs []string) int {
+	gold := set(goldIDs)
+	for i, id := range ids {
+		if _, ok := gold[id]; ok {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func locomoRecallGoldRejectionReasons(q locomoQuestionRow, trace goncho.RecallTrace, contentIDs map[string][]string) []string {
+	gold := set(q.GoldMemoryIDs)
+	seen := map[string]struct{}{}
+	out := []string{}
+	for _, rejected := range trace.Rejected {
+		ids := contentIDs[contentIDKey(q.ConversationID, rejected.Candidate.Content)]
+		matchesGold := false
+		for _, id := range ids {
+			if _, ok := gold[id]; ok {
+				matchesGold = true
+				break
+			}
+		}
+		if !matchesGold || strings.TrimSpace(rejected.Reason) == "" {
+			continue
+		}
+		if _, ok := seen[rejected.Reason]; ok {
+			continue
+		}
+		seen[rejected.Reason] = struct{}{}
+		out = append(out, rejected.Reason)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func locomoConversationMemories(data locomoDataset, conversationID string) []locomoMemoryRow {
@@ -911,7 +1206,7 @@ func writeLocomoMarkdown(path string, report locomoReport, jsonPath, failurePath
 	fmt.Fprintf(&b, "- Gold IDs present in memory content: `%d`\n", report.LeakageChecks.GoldIDInMemoryContent)
 	fmt.Fprintf(&b, "- Question text present in memory content: `%d`\n\n", report.LeakageChecks.QuestionTextInMemory)
 	b.WriteString("`answer_hint` is not indexed or scored. Answer-text presence is reported because LOCOMO answers may be literal spans from the gold memories.\n\n")
-	b.WriteString("## Notes\n\n- Retrieval-first only.\n- No answer generation.\n- No LLM judge.\n- Baselines included: random, Goncho no-rank, recency, BM25, SQLite FTS5, Goncho current.\n")
+	b.WriteString("## Notes\n\n- Retrieval-first only.\n- No answer generation.\n- No LLM judge.\n- Baselines included: random, Goncho no-rank, recency, BM25, SQLite FTS5, Goncho current.\n- `goncho-hybrid` evaluates `Service.Search` with an explicit local semantic vector lane plus the existing lexical/search lane; it does not index answer hints or gold IDs.\n- `goncho-rerank` evaluates the opt-in `Service.Search` reranker seam with a deterministic lexical reranker; it does not change default Search behavior.\n- `goncho-recall` is an experimental diagnostic system that evaluates projected `Service.Recall` output; `goncho` remains the stable `Service.Search` baseline.\n- `goncho-recall-rank` evaluates `Service.Recall` with the experimental `locomo-recall-rank-v1` ranking profile; it is not the default host recall behavior.\n- `goncho-recall-annotated` evaluates benchmark-only LOCOMO structured annotations from speaker, session, timestamp, and turn metadata; it does not index answer hints or gold IDs.\n")
 	if strings.Contains(strings.ToLower(report.BenchmarkName), "smoke") {
 		b.WriteString("- The smoke fixture intentionally includes latest-state, historical, speaker-attribution, contradiction/supersession, multi-session, lexical miss, gold ambiguity, and true retrieval failure categories.\n")
 	} else {

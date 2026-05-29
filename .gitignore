@@ -35,6 +35,7 @@ Thumbs.db
 
 # Memory files (test artifacts)
 GONCHO_MEMORY.md
+.peers.json
 
 # Benchmark datasets and local run artifacts
 artifacts/

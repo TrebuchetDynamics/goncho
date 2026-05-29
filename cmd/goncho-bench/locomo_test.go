@@ -5,8 +5,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/memory"
+	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
 func TestLoadLocomoDatasetParsesSchema(t *testing.T) {
@@ -358,6 +362,101 @@ func TestLocomoAnswerHintIsNotIndexedOrScored(t *testing.T) {
 	}
 }
 
+func TestLocomoAnnotatedFactsUseStructuredMetadataWithoutAnswerHints(t *testing.T) {
+	mem := locomoMemoryRow{MemoryID: "m1", ConversationID: "c1", SessionID: "session-04", Speaker: "Melanie", TurnIndex: 7, Timestamp: "2026-05-01T10:00:00Z", Content: "I am planning on going camping this weekend."}
+	facts := locomoStructuredAnnotationFacts(mem)
+	joined := strings.Join(facts, "\n")
+	for _, want := range []string{"speaker Melanie", "session session-04", "turn 7", "timestamp 2026-05-01T10:00:00Z"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("facts = %q, want %q", joined, want)
+		}
+	}
+	if strings.Contains(joined, "answer_hint") || strings.Contains(joined, "gold") {
+		t.Fatalf("facts leak benchmark labels: %q", joined)
+	}
+}
+
+func TestLocomoRecallRankScoringConfig(t *testing.T) {
+	config := locomoRecallRankScoringConfig()
+	if config.Version != "locomo-recall-rank-v1" {
+		t.Fatalf("version = %q", config.Version)
+	}
+	if config.Weights["keyword"] != 0.70 || config.Weights["semantic"] != 0 || config.Weights["graph"] != 0.10 || config.Weights["fact"] != 0.10 {
+		t.Fatalf("weights = %+v", config.Weights)
+	}
+	if config.MMRLambda != 1.0 {
+		t.Fatalf("MMRLambda = %v, want no diversity penalty", config.MMRLambda)
+	}
+	if len(config.DiversityKeys) != 0 {
+		t.Fatalf("DiversityKeys = %+v, want none", config.DiversityKeys)
+	}
+}
+
+func TestLocomoRecallDiagnosticScoreGap(t *testing.T) {
+	diagnostics := locomoRecallDiagnosticsWithScores(4, 0, []string{"m1"}, locomoRecallScoreSnapshot{FinalScore: 0.40, KeywordScore: 0.30, FactScore: 0.20, GraphScore: 0.10, RRFScore: 0.05}, locomoRecallScoreSnapshot{FinalScore: 0.55, KeywordScore: 0.45, FactScore: 0.10, GraphScore: 0.05, RRFScore: 0.04})
+	if diagnostics.Bucket != "candidate_present_selection_loss" {
+		t.Fatalf("bucket = %s, want candidate_present_selection_loss", diagnostics.Bucket)
+	}
+	if diagnostics.BestCandidateFinalScore != 0.40 || diagnostics.BestCandidateKeywordScore != 0.30 || diagnostics.BestCandidateFactScore != 0.20 || diagnostics.BestCandidateGraphScore != 0.10 || diagnostics.BestCandidateRRFScore != 0.05 {
+		t.Fatalf("candidate score snapshot = %+v", diagnostics)
+	}
+	if diagnostics.SelectedFloorFinalScore != 0.55 || diagnostics.SelectedFloorKeywordScore != 0.45 || diagnostics.SelectedFloorFactScore != 0.10 || diagnostics.SelectedFloorGraphScore != 0.05 || diagnostics.SelectedFloorRRFScore != 0.04 || diagnostics.ScoreGapToSelectedFloor != 0.15 {
+		t.Fatalf("score gap diagnostics = %+v", diagnostics)
+	}
+}
+
+func TestLocomoRecallDiagnosticBuckets(t *testing.T) {
+	cases := []struct {
+		name          string
+		candidateRank int
+		selectedRank  int
+		goldIDs       []string
+		want          string
+	}{
+		{name: "selected hit", candidateRank: 2, selectedRank: 1, goldIDs: []string{"m1"}, want: "selected_hit"},
+		{name: "selected rank regression", candidateRank: 1, selectedRank: 3, goldIDs: []string{"m1"}, want: "selected_hit_rank_regression"},
+		{name: "selection loss", candidateRank: 4, selectedRank: 0, goldIDs: []string{"m1"}, want: "candidate_present_selection_loss"},
+		{name: "candidate missing", candidateRank: 0, selectedRank: 0, goldIDs: []string{"m1"}, want: "candidate_missing"},
+		{name: "unknown", candidateRank: 0, selectedRank: 0, goldIDs: nil, want: "unknown"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := locomoRecallDiagnosticBucket(tc.goldIDs, tc.candidateRank, tc.selectedRank)
+			if got != tc.want {
+				t.Fatalf("bucket = %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRetrieveLocomoRecallReturnsStableFixtureIDs(t *testing.T) {
+	ctx := context.Background()
+	store, err := memory.OpenSqlite(filepath.Join(t.TempDir(), "locomo-recall.db"), 0, nil)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "locomo-recall-test", ObserverPeerID: "locomo-recall-test", RecentMessages: 0}, nil)
+	mem := locomoMemoryRow{MemoryID: "fixture-m1", ConversationID: "conv-1", SessionID: "sess-1", Speaker: "Maya", TurnIndex: 1, Timestamp: "2026-05-28T10:00:00Z", Content: "Maya stores the orchid launch note in the blue notebook."}
+	content := locomoIndexableContent(mem)
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: mem.ConversationID, SessionKey: mem.SessionID, Conclusion: content, Scope: "benchmark"}); err != nil {
+		t.Fatalf("conclude memory: %v", err)
+	}
+	contentIDs := map[string][]string{contentIDKey(mem.ConversationID, content): {mem.MemoryID}}
+	data := locomoDataset{Memories: []locomoMemoryRow{mem}, Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: mem.ConversationID, Question: "Where is the orchid launch note?", GoldMemoryIDs: []string{mem.MemoryID}, Category: "single_hop_retrieval"}}}
+
+	got, err := retrieveLocomo(ctx, svc, data, data.Questions[0], "goncho-recall", contentIDs, 10)
+	if err != nil {
+		t.Fatalf("retrieve goncho-recall: %v", err)
+	}
+	if strings.Join(got, ",") != mem.MemoryID {
+		t.Fatalf("goncho-recall IDs = %v, want stable fixture ID %q", got, mem.MemoryID)
+	}
+}
+
 func TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits(t *testing.T) {
 	data := locomoDataset{
 		Memories: []locomoMemoryRow{
@@ -366,7 +465,7 @@ func TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits(t *testing.T) {
 		},
 		Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "orchid marker", GoldMemoryIDs: []string{"m2"}, Category: "single_hop_retrieval"}},
 	}
-	for _, system := range []string{"random", "goncho-no-rank", "recency", "bm25", "sqlite-fts5", "goncho"} {
+	for _, system := range []string{"random", "goncho-no-rank", "recency", "bm25", "sqlite-fts5", "goncho", "goncho-hybrid", "goncho-rerank", "goncho-recall", "goncho-recall-rank", "goncho-recall-annotated"} {
 		for _, limit := range []int{0, -1} {
 			t.Run(system+"/limit", func(t *testing.T) {
 				defer func() {
@@ -383,6 +482,51 @@ func TestRetrieveLocomoReturnsNoIDsForNonPositiveLimits(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestRetrieveLocomoHybridProjectsSemanticVectorHitsToStableIDs(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	store, err := memory.OpenSqlite(filepath.Join(dir, "locomo.db"), 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	index, err := goncho.NewLocalVectorIndex(ctx, goncho.LocalVectorIndexOptions{Path: filepath.Join(dir, "vectors.json"), Provider: locomoEmbeddingProvider{}})
+	if err != nil {
+		t.Fatalf("NewLocalVectorIndex: %v", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "locomo-hybrid-test", ObserverPeerID: "locomo-hybrid-test", RecentMessages: 0, VectorStore: index}, nil)
+	mem := locomoMemoryRow{MemoryID: "fixture-hybrid-m1", ConversationID: "conv-1", SessionID: "sess-1", Speaker: "Maya", TurnIndex: 1, Timestamp: "2026-05-28T10:00:00Z", Content: "Maya stores the orchid launch note in the blue notebook."}
+	content := locomoIndexableContent(mem)
+	result, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: mem.ConversationID, SessionKey: mem.SessionID, Conclusion: content, Scope: "benchmark"})
+	if err != nil {
+		t.Fatalf("conclude memory: %v", err)
+	}
+	if err := index.Upsert(ctx, goncho.LocalVectorMemory{MemoryID: strconv.FormatInt(result.ID, 10), WorkspaceID: "locomo-hybrid-test", Peer: mem.ConversationID, SourceType: "conclusion", Content: content, SessionID: mem.SessionID, ScopeID: goncho.MemoryScopeWorkspace}); err != nil {
+		t.Fatalf("upsert vector memory: %v", err)
+	}
+	contentIDs := map[string][]string{contentIDKey(mem.ConversationID, content): {mem.MemoryID}}
+	data := locomoDataset{Memories: []locomoMemoryRow{mem}, Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: mem.ConversationID, Question: "botanical launch dossier location", GoldMemoryIDs: []string{mem.MemoryID}, Category: "single_hop_retrieval"}}}
+
+	got, err := retrieveLocomo(ctx, svc, data, data.Questions[0], "goncho-hybrid", contentIDs, 10)
+	if err != nil {
+		t.Fatalf("retrieve goncho-hybrid: %v", err)
+	}
+	if strings.Join(got, ",") != mem.MemoryID {
+		t.Fatalf("goncho-hybrid IDs = %v, want stable fixture ID %q", got, mem.MemoryID)
+	}
+}
+
+func TestRetrieveLocomoRejectsUnknownSystem(t *testing.T) {
+	data := locomoDataset{Questions: []locomoQuestionRow{{QuestionID: "q1", ConversationID: "c1", Question: "orchid", GoldMemoryIDs: []string{"m1"}}}}
+	_, err := retrieveLocomo(context.Background(), nil, data, data.Questions[0], "nope", nil, 10)
+	if err == nil || !strings.Contains(err.Error(), `unknown LOCOMO system "nope"`) {
+		t.Fatalf("retrieve unknown system error = %v", err)
 	}
 }
 
@@ -541,11 +685,35 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	if err := json.Unmarshal(raw, &report); err != nil {
 		t.Fatalf("decode report: %v", err)
 	}
-	if report.Mode != "retrieval" || !report.NoLLMJudge || len(report.Systems) != 6 {
+	if report.Mode != "retrieval" || !report.NoLLMJudge || len(report.Systems) != 11 {
 		t.Fatalf("report mode/judge/systems = %+v", report)
 	}
 	if !locomoReportIncludesSystem(report, "goncho-no-rank") {
 		t.Fatalf("report systems = %+v, want goncho-no-rank baseline", report.Systems)
+	}
+	if !locomoReportIncludesSystem(report, "goncho-hybrid") {
+		t.Fatalf("report systems = %+v, want goncho-hybrid semantic-lane system", report.Systems)
+	}
+	if !locomoReportIncludesSystem(report, "goncho-rerank") {
+		t.Fatalf("report systems = %+v, want goncho-rerank opt-in reranker system", report.Systems)
+	}
+	if !locomoReportIncludesSystem(report, "goncho-recall") {
+		t.Fatalf("report systems = %+v, want goncho-recall diagnostic system", report.Systems)
+	}
+	if !locomoReportIncludesSystem(report, "goncho-recall-rank") {
+		t.Fatalf("report systems = %+v, want goncho-recall-rank diagnostic system", report.Systems)
+	}
+	if !locomoReportIncludesSystem(report, "goncho-recall-annotated") {
+		t.Fatalf("report systems = %+v, want goncho-recall-annotated diagnostic system", report.Systems)
+	}
+	if diagnostics := firstLocomoRecallDiagnostics(report, "goncho-recall"); diagnostics == nil || diagnostics.Bucket == "" || diagnostics.BestCandidateFinalScore == 0 || diagnostics.SelectedFloorFinalScore == 0 {
+		t.Fatalf("goncho-recall diagnostics = %+v, want per-question recall diagnostics with score components", diagnostics)
+	}
+	if diagnostics := firstLocomoRecallDiagnostics(report, "goncho-recall-rank"); diagnostics == nil || diagnostics.Bucket == "" || diagnostics.BestCandidateFinalScore == 0 || diagnostics.SelectedFloorFinalScore == 0 {
+		t.Fatalf("goncho-recall-rank diagnostics = %+v, want per-question recall diagnostics with score components", diagnostics)
+	}
+	if diagnostics := firstLocomoRecallDiagnostics(report, "goncho-recall-annotated"); diagnostics == nil || diagnostics.Bucket == "" || diagnostics.BestCandidateFinalScore == 0 || diagnostics.SelectedFloorFinalScore == 0 {
+		t.Fatalf("goncho-recall-annotated diagnostics = %+v, want per-question recall diagnostics with score components", diagnostics)
 	}
 	if _, err := os.Stat(failures); err != nil {
 		t.Fatalf("failure JSONL missing: %v", err)
@@ -559,6 +727,21 @@ func TestRunLocomoSmokeProducesReport(t *testing.T) {
 	}
 	if !strings.Contains(string(mdRaw), "Goncho no-rank") {
 		t.Fatalf("markdown missing goncho-no-rank baseline note:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "`goncho-hybrid` evaluates `Service.Search` with an explicit local semantic vector lane") {
+		t.Fatalf("markdown missing goncho-hybrid note:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "`goncho-rerank` evaluates the opt-in `Service.Search` reranker seam") {
+		t.Fatalf("markdown missing goncho-rerank note:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "`goncho-recall` is an experimental diagnostic system") {
+		t.Fatalf("markdown missing goncho-recall diagnostic note:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "`goncho-recall-rank` evaluates `Service.Recall` with the experimental `locomo-recall-rank-v1` ranking profile") {
+		t.Fatalf("markdown missing goncho-recall-rank diagnostic note:\n%s", mdRaw)
+	}
+	if !strings.Contains(string(mdRaw), "`goncho-recall-annotated` evaluates benchmark-only LOCOMO structured annotations") {
+		t.Fatalf("markdown missing goncho-recall-annotated diagnostic note:\n%s", mdRaw)
 	}
 	if !strings.Contains(string(mdRaw), "- Top-K: `10`") {
 		t.Fatalf("markdown missing effective top-K provenance:\n%s", mdRaw)
@@ -590,6 +773,20 @@ func locomoReportIncludesSystem(report locomoReport, name string) bool {
 		}
 	}
 	return false
+}
+
+func firstLocomoRecallDiagnostics(report locomoReport, name string) *locomoRecallDiagnostics {
+	for _, system := range report.Systems {
+		if system.System != name {
+			continue
+		}
+		for _, question := range system.QuestionsDetail {
+			if question.RecallDiagnostics != nil {
+				return question.RecallDiagnostics
+			}
+		}
+	}
+	return nil
 }
 
 func TestWriteLocomoMarkdownIncludesConvertedChecksums(t *testing.T) {

@@ -12,42 +12,53 @@ import (
 const locomoNotFoundRank = 999999
 
 type locomoComparisonRow struct {
-	QuestionID         string   `json:"question_id"`
-	Category           string   `json:"category"`
-	Question           string   `json:"question"`
-	GoldMemoryIDs      []string `json:"gold_memory_ids"`
-	BM25GoldBestRank   int      `json:"bm25_gold_best_rank"`
-	GonchoGoldBestRank int      `json:"goncho_gold_best_rank"`
-	BM25Top10          []string `json:"bm25_top_10"`
-	GonchoTop10        []string `json:"goncho_top_10"`
-	Winner             string   `json:"winner"`
-	RankDelta          int      `json:"rank_delta"`
-	LikelyFailureMode  string   `json:"likely_failure_mode"`
+	QuestionID     string   `json:"question_id"`
+	Category       string   `json:"category"`
+	Question       string   `json:"question"`
+	GoldMemoryIDs  []string `json:"gold_memory_ids"`
+	ASystem        string   `json:"a_system"`
+	BSystem        string   `json:"b_system"`
+	AGoldBestRank  int      `json:"a_gold_best_rank"`
+	BGoldBestRank  int      `json:"b_gold_best_rank"`
+	ATop10         []string `json:"a_top_10"`
+	BTop10         []string `json:"b_top_10"`
+	Winner         string   `json:"winner"`
+	RankDelta      int      `json:"rank_delta"`
+	DeltaBucket    string   `json:"delta_bucket"`
+	DiagnosticHint string   `json:"diagnostic_hint,omitempty"`
 }
 
 type locomoComparisonSummary struct {
-	BM25Wins      int
-	GonchoWins    int
+	ASystem       string
+	BSystem       string
+	AWins         int
+	BWins         int
 	Ties          int
 	BothMiss      int
 	ByCategory    map[string]map[string]int
-	ByFailureMode map[string]int
+	ByDeltaBucket map[string]int
 	Rows          []locomoComparisonRow
 }
 
-func generateLocomoComparison(reportPath, jsonlOut, mdOut string) error {
+func generateLocomoComparison(reportPath, jsonlOut, mdOut, aName, bName string) error {
 	report, err := loadLocomoReport(reportPath)
 	if err != nil {
 		return err
 	}
-	rows, err := compareLocomoSystems(report, "bm25", "goncho")
+	if strings.TrimSpace(aName) == "" {
+		aName = "bm25"
+	}
+	if strings.TrimSpace(bName) == "" {
+		bName = "goncho"
+	}
+	rows, err := compareLocomoSystems(report, aName, bName)
 	if err != nil {
 		return err
 	}
 	if err := writeLocomoComparisonJSONL(jsonlOut, rows); err != nil {
 		return err
 	}
-	return writeLocomoComparisonMarkdown(mdOut, report, summarizeLocomoComparison(rows), reportPath, jsonlOut)
+	return writeLocomoComparisonMarkdown(mdOut, report, summarizeLocomoComparison(aName, bName, rows), reportPath, jsonlOut)
 }
 
 func loadLocomoReport(path string) (locomoReport, error) {
@@ -88,12 +99,14 @@ func compareLocomoSystems(report locomoReport, aName, bName string) ([]locomoCom
 		ar, br := normalizedRank(aq.Rank), normalizedRank(bq.Rank)
 		row := locomoComparisonRow{
 			QuestionID: aq.QuestionID, Category: aq.Category, Question: aq.Question,
-			GoldMemoryIDs:    append([]string(nil), aq.GoldMemoryIDs...),
-			BM25GoldBestRank: ar, GonchoGoldBestRank: br,
-			BM25Top10: topN(aq.RetrievedIDs, 10), GonchoTop10: topN(bq.RetrievedIDs, 10),
+			GoldMemoryIDs: append([]string(nil), aq.GoldMemoryIDs...),
+			ASystem:       aName, BSystem: bName,
+			AGoldBestRank: ar, BGoldBestRank: br,
+			ATop10: topN(aq.RetrievedIDs, 10), BTop10: topN(bq.RetrievedIDs, 10),
 			Winner: compareWinner(ar, br), RankDelta: br - ar,
 		}
-		row.LikelyFailureMode = classifyLocomoComparison(row)
+		row.DeltaBucket = classifyLocomoDeltaBucket(row)
+		row.DiagnosticHint = classifyLocomoComparison(row)
 		rows = append(rows, row)
 	}
 	return rows, nil
@@ -106,15 +119,15 @@ func normalizedRank(rank int) int {
 	return rank
 }
 
-func compareWinner(bm25Rank, gonchoRank int) string {
-	if bm25Rank == locomoNotFoundRank && gonchoRank == locomoNotFoundRank {
+func compareWinner(aRank, bRank int) string {
+	if aRank == locomoNotFoundRank && bRank == locomoNotFoundRank {
 		return "both_miss"
 	}
-	if bm25Rank < gonchoRank {
-		return "bm25"
+	if aRank < bRank {
+		return "a"
 	}
-	if gonchoRank < bm25Rank {
-		return "goncho"
+	if bRank < aRank {
+		return "b"
 	}
 	return "tie"
 }
@@ -126,18 +139,41 @@ func topN(ids []string, n int) []string {
 	return append([]string(nil), ids[:n]...)
 }
 
+func classifyLocomoDeltaBucket(row locomoComparisonRow) string {
+	switch row.Winner {
+	case "a":
+		if row.BGoldBestRank == locomoNotFoundRank {
+			return "a_only_hit"
+		}
+		return "a_rank_better"
+	case "b":
+		if row.AGoldBestRank == locomoNotFoundRank {
+			return "b_only_hit"
+		}
+		return "b_rank_better"
+	case "tie":
+		return "same_rank"
+	case "both_miss":
+		return "both_miss"
+	default:
+		return "unknown"
+	}
+}
+
 func classifyLocomoComparison(row locomoComparisonRow) string {
 	q := strings.ToLower(row.Question)
 	if len(row.GoldMemoryIDs) > 1 {
 		return "gold_ambiguity"
 	}
-	if row.Winner == "bm25" {
-		if row.BM25GoldBestRank != locomoNotFoundRank && row.GonchoGoldBestRank == locomoNotFoundRank {
-			return "missing_candidate"
-		}
-		if row.BM25GoldBestRank != locomoNotFoundRank && row.GonchoGoldBestRank != locomoNotFoundRank {
-			return "rerank_regression"
-		}
+	switch row.DeltaBucket {
+	case "a_only_hit":
+		return "b_candidate_missing"
+	case "a_rank_better":
+		return "b_rank_regression"
+	case "b_only_hit":
+		return "b_candidate_improvement"
+	case "b_rank_better":
+		return "b_rank_improvement"
 	}
 	if containsAny(q, []string{"who ", "said", "told", "mentioned", "according to"}) {
 		return "speaker_attribution"
@@ -157,14 +193,14 @@ func classifyLocomoComparison(row locomoComparisonRow) string {
 	return "lexical_grounding"
 }
 
-func summarizeLocomoComparison(rows []locomoComparisonRow) locomoComparisonSummary {
-	s := locomoComparisonSummary{ByCategory: map[string]map[string]int{}, ByFailureMode: map[string]int{}, Rows: rows}
+func summarizeLocomoComparison(aName, bName string, rows []locomoComparisonRow) locomoComparisonSummary {
+	s := locomoComparisonSummary{ASystem: aName, BSystem: bName, ByCategory: map[string]map[string]int{}, ByDeltaBucket: map[string]int{}, Rows: rows}
 	for _, row := range rows {
 		switch row.Winner {
-		case "bm25":
-			s.BM25Wins++
-		case "goncho":
-			s.GonchoWins++
+		case "a":
+			s.AWins++
+		case "b":
+			s.BWins++
 		case "tie":
 			s.Ties++
 		case "both_miss":
@@ -173,10 +209,8 @@ func summarizeLocomoComparison(rows []locomoComparisonRow) locomoComparisonSumma
 		if _, ok := s.ByCategory[row.Category]; !ok {
 			s.ByCategory[row.Category] = map[string]int{}
 		}
-		s.ByCategory[row.Category][row.Winner]++
-		if row.Winner == "bm25" {
-			s.ByFailureMode[row.LikelyFailureMode]++
-		}
+		s.ByCategory[row.Category][row.DeltaBucket]++
+		s.ByDeltaBucket[row.DeltaBucket]++
 	}
 	return s
 }
@@ -209,37 +243,38 @@ func writeLocomoComparisonMarkdown(path string, report locomoReport, s locomoCom
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	bm25, goncho := findLocomoSystem(report, "bm25"), findLocomoSystem(report, "goncho")
+	a, bsys := findLocomoSystem(report, s.ASystem), findLocomoSystem(report, s.BSystem)
 	var b strings.Builder
-	b.WriteString("# LOCOMO BM25 vs Goncho Failure Analysis — 2026-05-20\n\n")
-	b.WriteString("Diagnosis only: no ranking changes, no LLM judge, no answer-generation scoring.\n\n")
-	fmt.Fprintf(&b, "- Source report: `%s`\n- JSONL comparison: `%s`\n- Questions: `%d`\n\n", reportPath, jsonlPath, report.QuestionCount)
-	b.WriteString("## Summary metrics\n\n| System | recall_any@5 | recall_any@10 | strict@5 | strict@10 | MRR |\n| --- | ---: | ---: | ---: | ---: | ---: |\n")
-	for _, sys := range []locomoSystemReport{bm25, goncho} {
-		fmt.Fprintf(&b, "| %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% |\n", sys.System, sys.RecallAnyAt5*100, sys.RecallAnyAt10*100, sys.StrictRecallAt5*100, sys.StrictRecallAt10*100, sys.MRR*100)
+	b.WriteString("# LOCOMO Paired Delta Audit\n\n")
+	b.WriteString("Diagnosis only: no ranking changes, no LLM judge, no answer-generation scoring. Winner labels `a` and `b` refer to the systems named below.\n\n")
+	fmt.Fprintf(&b, "- Source report: `%s`\n- JSONL comparison: `%s`\n- A system: `%s`\n- B system: `%s`\n- Questions: `%d`\n\n", reportPath, jsonlPath, s.ASystem, s.BSystem, report.QuestionCount)
+	b.WriteString("## Summary metrics\n\n| Side | System | recall_any@5 | recall_any@10 | strict@5 | strict@10 | MRR |\n| --- | --- | ---: | ---: | ---: | ---: | ---: |\n")
+	for _, item := range []struct {
+		side string
+		sys  locomoSystemReport
+	}{{"a", a}, {"b", bsys}} {
+		fmt.Fprintf(&b, "| %s | `%s` | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% |\n", item.side, item.sys.System, item.sys.RecallAnyAt5*100, item.sys.RecallAnyAt10*100, item.sys.StrictRecallAt5*100, item.sys.StrictRecallAt10*100, item.sys.MRR*100)
 	}
 	b.WriteString("\n## Winner counts\n\n| Winner | Count |\n| --- | ---: |\n")
-	fmt.Fprintf(&b, "| BM25 wins | %d |\n| Goncho wins | %d |\n| Ties | %d |\n| Both miss | %d |\n", s.BM25Wins, s.GonchoWins, s.Ties, s.BothMiss)
-	b.WriteString("\n## Category breakdown\n\n| Category | BM25 wins | Goncho wins | Ties | Both miss |\n| --- | ---: | ---: | ---: | ---: |\n")
+	fmt.Fprintf(&b, "| a (`%s`) wins | %d |\n| b (`%s`) wins | %d |\n| Ties | %d |\n| Both miss | %d |\n", s.ASystem, s.AWins, s.BSystem, s.BWins, s.Ties, s.BothMiss)
+	b.WriteString("\n## Delta bucket counts\n\n| Delta bucket | Count |\n| --- | ---: |\n")
+	for _, bucket := range sortedIntKeys(s.ByDeltaBucket) {
+		fmt.Fprintf(&b, "| `%s` | %d |\n", bucket, s.ByDeltaBucket[bucket])
+	}
+	b.WriteString("\n## Category × delta bucket\n\n| Category | a_only_hit | b_only_hit | a_rank_better | b_rank_better | same_rank | both_miss |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n")
 	for _, cat := range sortedNestedKeys(s.ByCategory) {
 		m := s.ByCategory[cat]
-		fmt.Fprintf(&b, "| `%s` | %d | %d | %d | %d |\n", cat, m["bm25"], m["goncho"], m["tie"], m["both_miss"])
+		fmt.Fprintf(&b, "| `%s` | %d | %d | %d | %d | %d | %d |\n", cat, m["a_only_hit"], m["b_only_hit"], m["a_rank_better"], m["b_rank_better"], m["same_rank"], m["both_miss"])
 	}
-	b.WriteString("\n## BM25-win failure modes\n\n| Failure mode | Count |\n| --- | ---: |\n")
-	for _, mode := range sortedIntKeys(s.ByFailureMode) {
-		fmt.Fprintf(&b, "| `%s` | %d |\n", mode, s.ByFailureMode[mode])
+	b.WriteString("\n## Largest a-over-b cases\n\n")
+	for _, row := range topComparisonRows(s.Rows, "a", 10) {
+		fmt.Fprintf(&b, "- `%s` delta `%d` bucket `%s`: %s\n", row.QuestionID, row.RankDelta, row.DeltaBucket, row.Question)
 	}
-	b.WriteString("\n## Worst BM25-over-Goncho cases\n\n")
-	for _, row := range topComparisonRows(s.Rows, "bm25", 10) {
-		fmt.Fprintf(&b, "- `%s` delta `%d` mode `%s`: %s\n", row.QuestionID, row.RankDelta, row.LikelyFailureMode, row.Question)
+	b.WriteString("\n## Largest b-over-a cases\n\n")
+	for _, row := range topComparisonRows(s.Rows, "b", 10) {
+		fmt.Fprintf(&b, "- `%s` delta `%d` bucket `%s`: %s\n", row.QuestionID, row.RankDelta, row.DeltaBucket, row.Question)
 	}
-	b.WriteString("\n## Top Goncho-over-BM25 cases\n\n")
-	for _, row := range topComparisonRows(s.Rows, "goncho", 10) {
-		fmt.Fprintf(&b, "- `%s` delta `%d` mode `%s`: %s\n", row.QuestionID, row.RankDelta, row.LikelyFailureMode, row.Question)
-	}
-	b.WriteString("\n## Interpretation\n\n")
-	b.WriteString("BM25's lead is primarily a lexical/candidate-ranking signal. The comparison separates missing candidates from reranking regressions: `missing_candidate` means BM25 retrieved a gold memory in top 10 while Goncho did not; `rerank_regression` means both found gold but Goncho ranked it lower. Optimize only after reviewing these buckets.\n\n")
-	b.WriteString("Recommended next slice: inspect BM25-win `missing_candidate` and `rerank_regression` rows side by side with memory content, then decide whether candidate generation, metadata/noise, or conservative reranking needs work.\n")
+	b.WriteString("\n## Next action\n\nInspect the largest `a_only_hit` and `a_rank_better` buckets before tuning. `a_only_hit` means system B missed a gold memory that system A retrieved; `a_rank_better` means both retrieved gold but B ranked it lower.\n")
 	return os.WriteFile(path, []byte(b.String()), 0o644)
 }
 
