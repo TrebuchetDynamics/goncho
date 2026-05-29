@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/recallscore"
 )
 
 const defaultRecallPipelineVersion = "goncho-recall-v1"
@@ -77,15 +79,15 @@ func (e *recallPipelineEngine) Run(ctx context.Context, q RecallQuery) (RecallTr
 	selected, rejected, selectWarnings := e.selectCandidates(q, scored)
 	warnings = appendRecallWarnings(warnings, selectWarnings...)
 	trace := RecallTrace{
-		PipelineVersion: e.opts.pipelineVersion,
-		CreatedAt:       e.opts.now().UTC(),
-		Query:           q,
-		ScoringConfig:   cloneRecallScoringConfig(e.opts.scoringConfig),
+		PipelineVersion:  e.opts.pipelineVersion,
+		CreatedAt:        e.opts.now().UTC(),
+		Query:            q,
+		ScoringConfig:    cloneRecallScoringConfig(e.opts.scoringConfig),
 		VoiceDiagnostics: buildRecallVoiceDiagnostics(scored, selected, e.opts.scoringConfig),
-		Candidates:      scored,
-		Selected:        selected,
-		Rejected:        rejected,
-		Warnings:        warnings,
+		Candidates:       scored,
+		Selected:         selected,
+		Rejected:         rejected,
+		Warnings:         warnings,
 	}
 	trace.TraceID = recallTraceID(trace)
 	return trace, nil
@@ -328,50 +330,10 @@ func maxEvidenceScore(items []EvidenceItem, kind string, fallback float64) float
 	return clampRecall(score)
 }
 
-func keywordRecallScore(content, query string) float64 {
-	query = strings.ToLower(strings.TrimSpace(query))
-	if query == "" {
-		return 0
-	}
-	content = strings.ToLower(content)
-	if strings.Contains(content, query) {
-		return 1
-	}
-	tokens := strings.Fields(query)
-	if len(tokens) == 0 {
-		return 0
-	}
-	hits := 0
-	seen := map[string]struct{}{}
-	for _, token := range tokens {
-		token = strings.TrimSpace(token)
-		if token == "" {
-			continue
-		}
-		if _, ok := seen[token]; ok {
-			continue
-		}
-		seen[token] = struct{}{}
-		if strings.Contains(content, token) {
-			hits++
-		}
-	}
-	if len(seen) == 0 {
-		return 0
-	}
-	return clampRecall(float64(hits) / float64(len(seen)))
-}
+func keywordRecallScore(content, query string) float64 { return recallscore.Keyword(content, query) }
 
 func recallRecencyScore(createdAt, now time.Time) float64 {
-	if createdAt.IsZero() {
-		return 0
-	}
-	age := now.Sub(createdAt.UTC())
-	if age <= 0 {
-		return 1
-	}
-	halfLives := float64(age) / float64(defaultDecayHalfLife)
-	return clampRecall(math.Exp2(-halfLives))
+	return recallscore.Recency(createdAt, now, defaultDecayHalfLife)
 }
 
 func scopeRecallScore(q RecallQuery, candidate RecallCandidate) float64 {

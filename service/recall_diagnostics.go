@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/recalldiag"
 )
 
 type RecallDiagnosticsReport struct {
@@ -169,17 +171,17 @@ func FormatRecallDiagnosticsReport(report RecallDiagnosticsReport) string {
 }
 
 func formatRecallDiagnosticScores(scores RecallScore) string {
-	return fmt.Sprintf("scores: keyword=%.6f semantic=%.6f graph=%.6f fact=%.6f recency=%.6f importance=%.6f scope=%.6f rrf=%.6f diversity_penalty=%.6f",
-		scores.KeywordScore,
-		scores.SemanticScore,
-		scores.GraphScore,
-		scores.FactScore,
-		scores.RecencyScore,
-		scores.ImportanceScore,
-		scores.ScopeScore,
-		scores.RRFScore,
-		scores.DiversityPenalty,
-	)
+	return recalldiag.FormatScores(recalldiag.ScoreBreakdown{
+		KeywordScore:     scores.KeywordScore,
+		SemanticScore:    scores.SemanticScore,
+		GraphScore:       scores.GraphScore,
+		FactScore:        scores.FactScore,
+		RecencyScore:     scores.RecencyScore,
+		ImportanceScore:  scores.ImportanceScore,
+		ScopeScore:       scores.ScopeScore,
+		RRFScore:         scores.RRFScore,
+		DiversityPenalty: scores.DiversityPenalty,
+	})
 }
 
 func recallDiagnosticsCandidate(item ScoredRecallCandidate) RecallDiagnosticsCandidate {
@@ -211,10 +213,4 @@ func recallDiagnosticsRejection(item RejectedRecallCandidate) RecallDiagnosticsR
 	}
 }
 
-func previewRecallContent(content string) string {
-	content = strings.Join(strings.Fields(content), " ")
-	if len(content) <= 96 {
-		return content
-	}
-	return content[:93] + "..."
-}
+func previewRecallContent(content string) string { return recalldiag.PreviewContent(content) }

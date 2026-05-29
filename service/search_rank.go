@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
 )
 
 var searchRankTokenPattern = regexp.MustCompile(`[a-z0-9]+`)
@@ -222,47 +224,13 @@ func searchRankBM25Score(queryTokens map[string]struct{}, tf map[string]int, df 
 }
 
 func searchRankTermFrequency(value string) map[string]int {
-	out := map[string]int{}
-	for _, token := range searchRankTokens(value) {
-		out[token]++
-	}
-	return out
+	return searchtokens.TermFrequency(value)
 }
 
 func searchRankTokenSet(value string) map[string]struct{} {
-	out := map[string]struct{}{}
-	for _, token := range searchRankTokens(value) {
-		out[token] = struct{}{}
-	}
-	return out
+	return searchtokens.TokenSet(value)
 }
 
 func searchRankTokens(value string) []string {
-	out := []string{}
-	for _, token := range searchRankTokenPattern.FindAllString(strings.ToLower(value), -1) {
-		token = searchRankStem(token)
-		if len(token) < 3 || searchRankStopword(token) {
-			continue
-		}
-		out = append(out, token)
-	}
-	return out
-}
-
-func searchRankStem(token string) string {
-	for _, suffix := range []string{"ing", "edly", "edly", "ed", "es", "s"} {
-		if len(token) > len(suffix)+3 && strings.HasSuffix(token, suffix) {
-			return strings.TrimSuffix(token, suffix)
-		}
-	}
-	return token
-}
-
-func searchRankStopword(token string) bool {
-	switch token {
-	case "the", "and", "for", "who", "what", "when", "where", "which", "should", "not", "did", "does", "with", "that", "this", "from", "are", "was", "were", "has", "have", "had", "you", "your", "about", "can", "could", "would", "there", "their", "they", "them", "then", "than":
-		return true
-	default:
-		return false
-	}
+	return searchtokens.Tokens(value)
 }

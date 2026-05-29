@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/annotationgraph"
 )
 
 const (
-	kgRelationUses      = "uses"
-	kgRelationDependsOn = "depends_on"
-	kgRelationRunsOn    = "runs_on"
+	kgRelationUses      = annotationgraph.RelationUses
+	kgRelationDependsOn = annotationgraph.RelationDependsOn
+	kgRelationRunsOn    = annotationgraph.RelationRunsOn
 )
 
 type annotationGraphOwnerTarget struct {
@@ -656,192 +658,48 @@ func annotationFactEvidence(query string, fact memoryFactAnnotation) EvidenceIte
 	}
 }
 
+func annotationGraphEvidenceItem(sourceMemoryID string, details annotationgraph.EvidenceDetails) EvidenceItem {
+	return EvidenceItem{Kind: "graph", Source: sourceMemoryID, ID: details.ID, Score: 1, Note: details.Note, Metadata: details.Metadata}
+}
+
 func annotationGraphEvidence(sourceMemoryID, targetMemoryID, relation, entity, sourceFactID string, targetFactID int64) EvidenceItem {
-	targetFactIDText := strconv.FormatInt(targetFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + targetFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> owned_by -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":          entity,
-			"relation":        relation,
-			"source_fact_id":  sourceFactID,
-			"target_fact_id":  targetFactIDText,
-			"target_relation": "owned_by",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.RelationEvidence(sourceMemoryID, targetMemoryID, relation, entity, sourceFactID, targetFactID))
 }
 
 func annotationGraphTimelineEvidence(sourceMemoryID, targetMemoryID, entity, sourceFactID string, timelineFactID int64) EvidenceItem {
-	timelineFactIDText := strconv.FormatInt(timelineFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + timelineFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> owned_entity -> " + entity + " -> timeline -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":          entity,
-			"relation":        "owned_entity",
-			"source_fact_id":  sourceFactID,
-			"target_fact_id":  timelineFactIDText,
-			"target_relation": "timeline",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.TimelineEvidence(sourceMemoryID, targetMemoryID, entity, sourceFactID, timelineFactID))
 }
 
 func annotationGraphLocationEvidence(sourceMemoryID, targetMemoryID, relation, entity, locationEntity, sourceFactID string, locationFactID int64) EvidenceItem {
-	locationFactIDText := strconv.FormatInt(locationFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + locationFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> location -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":          entity,
-			"location_entity": locationEntity,
-			"relation":        relation,
-			"source_fact_id":  sourceFactID,
-			"target_fact_id":  locationFactIDText,
-			"target_relation": "location",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.RelatedEvidence(sourceMemoryID, targetMemoryID, relation, entity, "location", "location_entity", locationEntity, sourceFactID, locationFactID))
 }
 
 func annotationGraphPreferenceEvidence(sourceMemoryID, targetMemoryID, relation, entity, preferenceEntity, attribute, sourceFactID string, preferenceFactID int64) EvidenceItem {
-	preferenceFactIDText := strconv.FormatInt(preferenceFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + preferenceFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> preference -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"attribute":         attribute,
-			"entity":            entity,
-			"preference_entity": preferenceEntity,
-			"relation":          relation,
-			"source_fact_id":    sourceFactID,
-			"target_fact_id":    preferenceFactIDText,
-			"target_relation":   "preference",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.PreferenceEvidence(sourceMemoryID, targetMemoryID, relation, entity, preferenceEntity, attribute, sourceFactID, preferenceFactID))
 }
 
 func annotationGraphInstructionEvidence(sourceMemoryID, targetMemoryID, relation, entity, instructionEntity, sourceFactID string, instructionFactID int64) EvidenceItem {
-	instructionFactIDText := strconv.FormatInt(instructionFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + instructionFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> instruction -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":             entity,
-			"instruction_entity": instructionEntity,
-			"relation":           relation,
-			"source_fact_id":     sourceFactID,
-			"target_fact_id":     instructionFactIDText,
-			"target_relation":    "instruction",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.RelatedEvidence(sourceMemoryID, targetMemoryID, relation, entity, "instruction", "instruction_entity", instructionEntity, sourceFactID, instructionFactID))
 }
 
 func annotationGraphSequenceEvidence(sourceMemoryID, targetMemoryID, relation, entity, sequenceEntity, sourceFactID string, sequenceFactID int64) EvidenceItem {
-	sequenceFactIDText := strconv.FormatInt(sequenceFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + sequenceFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> sequence -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":          entity,
-			"relation":        relation,
-			"sequence_entity": sequenceEntity,
-			"source_fact_id":  sourceFactID,
-			"target_fact_id":  sequenceFactIDText,
-			"target_relation": "sequence",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.RelatedEvidence(sourceMemoryID, targetMemoryID, relation, entity, "sequence", "sequence_entity", sequenceEntity, sourceFactID, sequenceFactID))
 }
 
 func annotationGraphDecisionEvidence(sourceMemoryID, targetMemoryID, relation, entity, sourceFactID string, decisionFactID int64) EvidenceItem {
-	decisionFactIDText := strconv.FormatInt(decisionFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + decisionFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> decision -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":          entity,
-			"relation":        relation,
-			"source_fact_id":  sourceFactID,
-			"target_fact_id":  decisionFactIDText,
-			"target_relation": "decision",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.RelatedEvidence(sourceMemoryID, targetMemoryID, relation, entity, "decision", "", "", sourceFactID, decisionFactID))
 }
 
 func annotationGraphNegationEvidence(sourceMemoryID, targetMemoryID, relation, entity, sourceFactID string, negationFactID int64) EvidenceItem {
-	negationFactIDText := strconv.FormatInt(negationFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + negationFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> negation -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":          entity,
-			"relation":        relation,
-			"source_fact_id":  sourceFactID,
-			"target_fact_id":  negationFactIDText,
-			"target_relation": "negation",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.RelatedEvidence(sourceMemoryID, targetMemoryID, relation, entity, "negation", "", "", sourceFactID, negationFactID))
 }
 
 func annotationGraphMetricEvidence(sourceMemoryID, targetMemoryID, relation, entity, metricEntity, sourceFactID string, metricFactID int64) EvidenceItem {
-	metricFactIDText := strconv.FormatInt(metricFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + metricFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(relation) + " -> " + entity + " -> metric -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":          entity,
-			"metric_entity":   metricEntity,
-			"relation":        relation,
-			"source_fact_id":  sourceFactID,
-			"target_fact_id":  metricFactIDText,
-			"target_relation": "metric",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.RelatedEvidence(sourceMemoryID, targetMemoryID, relation, entity, "metric", "metric_entity", metricEntity, sourceFactID, metricFactID))
 }
 
 func annotationGraphVersionEvidence(sourceMemoryID, targetMemoryID, firstRelation, firstEntity, secondRelation, secondEntity, sourceFactID string, relationFactID, versionFactID int64) EvidenceItem {
-	relationFactIDText := strconv.FormatInt(relationFactID, 10)
-	versionFactIDText := strconv.FormatInt(versionFactID, 10)
-	return EvidenceItem{
-		Kind:   "graph",
-		Source: sourceMemoryID,
-		ID:     "annotation:" + sourceFactID + "->annotation:" + relationFactIDText + "->annotation:" + versionFactIDText,
-		Score:  1,
-		Note:   sourceMemoryID + " -> " + kgRelationPhrase(firstRelation) + " -> " + firstEntity + " -> " + kgRelationPhrase(secondRelation) + " -> " + secondEntity + " -> version -> " + targetMemoryID,
-		Metadata: map[string]string{
-			"entity":               firstEntity,
-			"relation":             firstRelation,
-			"source_fact_id":       sourceFactID,
-			"intermediate_fact_id": relationFactIDText,
-			"target_fact_id":       versionFactIDText,
-			"target_relation":      "version",
-		},
-	}
+	return annotationGraphEvidenceItem(sourceMemoryID, annotationgraph.VersionEvidence(sourceMemoryID, targetMemoryID, firstRelation, firstEntity, secondRelation, secondEntity, sourceFactID, relationFactID, versionFactID))
 }
 
 func appendAnnotationGraphCandidate(out []RecallCandidate, indexByID map[string]int, candidate RecallCandidate, evidence EvidenceItem) []RecallCandidate {
@@ -879,145 +737,32 @@ func annotationGraphVersionQuery(query string) bool {
 	return strings.Contains(query, "version") && (strings.Contains(query, "what") || strings.Contains(query, "which"))
 }
 
-func annotationGraphTimelineQuery(query string) bool {
-	query = strings.ToLower(query)
-	if !(strings.Contains(query, "when") || strings.Contains(query, "deadline") || strings.Contains(query, "scheduled") || strings.Contains(query, "date")) {
-		return false
-	}
-	return strings.Contains(query, "owner") || strings.Contains(query, "owned") || strings.Contains(query, "responsible") || strings.Contains(query, "accountable")
-}
-
-func annotationGraphMetricQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "how fast") || strings.Contains(query, "how many") || strings.Contains(query, "how much") || strings.Contains(query, "latency") || strings.Contains(query, "metric") || strings.Contains(query, "measurement")
-}
-
-func annotationGraphLocationQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "where") || strings.Contains(query, "location") || strings.Contains(query, "located")
-}
-
+func annotationGraphTimelineQuery(query string) bool { return annotationgraph.TimelineQuery(query) }
+func annotationGraphMetricQuery(query string) bool   { return annotationgraph.MetricQuery(query) }
+func annotationGraphLocationQuery(query string) bool { return annotationgraph.LocationQuery(query) }
 func annotationGraphPreferenceQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "prefer") || strings.Contains(query, "preference")
+	return annotationgraph.PreferenceQuery(query)
 }
-
 func annotationGraphInstructionQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "instruction") || strings.Contains(query, "rule")
+	return annotationgraph.InstructionQuery(query)
 }
-
-func annotationGraphSequenceQuery(query string) bool {
-	if _, ok := searchSequenceQuestionSubject(query); ok {
-		return true
-	}
-	query = strings.ToLower(query)
-	return strings.Contains(query, "sequence") || strings.Contains(query, "order")
-}
-
-func annotationGraphDecisionQuery(query string) bool {
-	if _, ok := searchDecisionQuestionTopic(query); ok {
-		return true
-	}
-	query = strings.ToLower(query)
-	return strings.Contains(query, "decision") || strings.Contains(query, "decide")
-}
-
-func annotationGraphNegationQuery(query string) bool {
-	if _, ok := searchNegationQuestionObject(query); ok {
-		return true
-	}
-	query = strings.ToLower(query)
-	return strings.Contains(query, "never") || strings.Contains(query, " not ")
-}
-
+func annotationGraphSequenceQuery(query string) bool { return annotationgraph.SequenceQuery(query) }
+func annotationGraphDecisionQuery(query string) bool { return annotationgraph.DecisionQuery(query) }
+func annotationGraphNegationQuery(query string) bool { return annotationgraph.NegationQuery(query) }
 func annotationGraphQueryMatchesOwnerFact(query, owner string) bool {
-	ownerTokens := searchRankTokenSet(owner)
-	return len(ownerTokens) > 0 && searchRankTokenCoverage(ownerTokens, query) >= 0.80
+	return annotationgraph.QueryMatchesOwnerFact(query, owner)
 }
-
 func annotationGraphQueryMatchesKGRelation(query, subject, relation string) bool {
-	subjectTokens := searchRankTokenSet(subject)
-	if len(subjectTokens) == 0 || searchRankTokenCoverage(subjectTokens, query) < 0.80 {
-		return false
-	}
-	query = strings.ToLower(query)
-	switch relation {
-	case kgRelationUses:
-		return strings.Contains(query, "use") || strings.Contains(query, "used") || strings.Contains(query, "using")
-	case kgRelationDependsOn:
-		return strings.Contains(query, "depend") || strings.Contains(query, "dependency")
-	case kgRelationRunsOn:
-		return strings.Contains(query, "runs on") || strings.Contains(query, "running on")
-	default:
-		return false
-	}
+	return annotationgraph.QueryMatchesKGRelation(query, subject, relation)
 }
-
-func annotationGraphEntityMatches(a, b string) bool {
-	a = cleanFactObject(a)
-	b = cleanFactObject(b)
-	if strings.EqualFold(a, b) {
-		return true
-	}
-	aTokens := searchRankTokenSet(a)
-	bTokens := searchRankTokenSet(b)
-	return len(aTokens) > 0 && searchRankTokenCoverage(aTokens, b) >= 0.80 && searchRankTokenCoverage(bTokens, a) >= 0.80
-}
-
+func annotationGraphEntityMatches(a, b string) bool { return annotationgraph.EntityMatches(a, b) }
 func annotationGraphEntityMentionedInFact(entity, factKey string) bool {
-	entityTokens := searchRankTokenSet(cleanFactObject(entity))
-	return len(entityTokens) > 0 && searchRankTokenCoverage(entityTokens, factKey) >= 0.80
+	return annotationgraph.EntityMentionedInFact(entity, factKey)
 }
-
 func annotationGraphOwnerFactParts(fact string) (owner, entity string, ok bool) {
-	fact = strings.TrimSpace(strings.Trim(fact, ".!?"))
-	lower := strings.ToLower(fact)
-	idx := strings.Index(lower, " owns ")
-	if idx <= 0 {
-		return "", "", false
-	}
-	owner = cleanFactValue(fact[:idx])
-	entity = cleanFactObject(fact[idx+len(" owns "):])
-	return owner, entity, searchFactSubjectLooksAssertive(owner) && searchFactObjectLooksAssertive(entity)
+	return annotationgraph.OwnerFactParts(fact)
 }
-
 func kgRelationAnswerParts(sentence string) (subject, relation, object string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
-	if sentence == "" || strings.Contains(sentence, "?") {
-		return "", "", "", false
-	}
-	lower := strings.ToLower(sentence)
-	for _, marker := range []struct {
-		text     string
-		relation string
-	}{
-		{text: " depends on ", relation: kgRelationDependsOn},
-		{text: " runs on ", relation: kgRelationRunsOn},
-		{text: " uses ", relation: kgRelationUses},
-	} {
-		idx := strings.Index(lower, marker.text)
-		if idx <= 0 {
-			continue
-		}
-		subject = cleanFactObject(sentence[:idx])
-		object = cleanFactValue(sentence[idx+len(marker.text):])
-		if searchFactObjectLooksAssertive(subject) && searchFactObjectLooksAssertive(object) {
-			return subject, marker.relation, object, true
-		}
-	}
-	return "", "", "", false
+	return annotationgraph.KGRelationAnswerParts(sentence)
 }
-
-func kgRelationPhrase(relation string) string {
-	switch relation {
-	case kgRelationUses:
-		return "uses"
-	case kgRelationDependsOn:
-		return "depends on"
-	case kgRelationRunsOn:
-		return "runs on"
-	default:
-		return ""
-	}
-}
+func kgRelationPhrase(relation string) string { return annotationgraph.KGRelationPhrase(relation) }
