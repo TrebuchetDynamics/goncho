@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -160,7 +161,7 @@ func (h serviceHandler) handleConclude(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSONBody(w, r, &body) {
 		return
 	}
-	peer := firstNonEmpty(body.Peer, body.PeerID)
+	peer := stringutil.FirstNonEmpty(body.Peer, body.PeerID)
 	result, err := h.svc.Conclude(r.Context(), goncho.ConcludeParams{
 		ProfileID:  body.ProfileID,
 		Peer:       peer,
@@ -180,8 +181,8 @@ func (h serviceHandler) handlePeerContext(w http.ResponseWriter, r *http.Request
 	result, err := h.svc.Context(r.Context(), goncho.ContextParams{
 		ProfileID:  query.Get("profile_id"),
 		Peer:       peer,
-		Query:      firstNonEmpty(query.Get("query"), query.Get("search_query")),
-		SessionKey: firstNonEmpty(query.Get("session_key"), query.Get("session_id")),
+		Query:      stringutil.FirstNonEmpty(query.Get("query"), query.Get("search_query")),
+		SessionKey: stringutil.FirstNonEmpty(query.Get("session_key"), query.Get("session_id")),
 		Scope:      query.Get("scope"),
 	})
 	if err != nil {
@@ -221,11 +222,11 @@ func (h serviceHandler) handlePeerRecall(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	result, err := h.svc.Recall(r.Context(), goncho.RecallQuery{
-		WorkspaceID: firstNonEmpty(body.WorkspaceID, workspaceID),
+		WorkspaceID: stringutil.FirstNonEmpty(body.WorkspaceID, workspaceID),
 		Peer:        peer,
 		Query:       body.Query,
-		SessionKey:  firstNonEmpty(body.SessionKey, body.SessionID),
-		ScopeID:     firstNonEmpty(body.ScopeID, body.Scope),
+		SessionKey:  stringutil.FirstNonEmpty(body.SessionKey, body.SessionID),
+		ScopeID:     stringutil.FirstNonEmpty(body.ScopeID, body.Scope),
 		Sources:     body.Sources,
 		Limit:       body.Limit,
 		MaxTokens:   body.MaxTokens,
@@ -278,11 +279,4 @@ func writeHTTPError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
-}
+

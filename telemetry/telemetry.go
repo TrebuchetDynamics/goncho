@@ -75,10 +75,3 @@ func NewTelemetryEvent(input TelemetryEventInput) Event {
 	}
 	return NormalizeEvent(event, input.Timestamp)
 }
-
-func nonNegativeTelemetryMetric(value int) int {
-	if value < 0 {
-		return 0
-	}
-	return value
-}

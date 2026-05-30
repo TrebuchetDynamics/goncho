@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
 	memory "github.com/TrebuchetDynamics/goncho/memory"
 )
 
@@ -112,7 +113,7 @@ func (s *Store) Store(ctx context.Context, entry Entry) error {
 		AgentID:        s.agentID(),
 		WorkspaceID:    s.workspaceID(),
 		PeerID:         s.peerID(),
-		SessionID:      firstNonEmpty(entry.SessionID, s.sessionID()),
+		SessionID:      stringutil.FirstNonEmpty(entry.SessionID, s.sessionID()),
 		Scope:          "private",
 		State:          "active",
 		SourceKind:     "tool",
@@ -419,19 +420,19 @@ func (s *Store) upsertItem(ctx context.Context, item memory.GonchoMemoryV1Item, 
 }
 
 func (s *Store) agentID() string {
-	return firstNonEmpty(s.cfg.AgentID, "default-agent")
+	return stringutil.FirstNonEmpty(s.cfg.AgentID, "default-agent")
 }
 
 func (s *Store) workspaceID() string {
-	return firstNonEmpty(s.cfg.WorkspaceID, "default-workspace")
+	return stringutil.FirstNonEmpty(s.cfg.WorkspaceID, "default-workspace")
 }
 
 func (s *Store) observerPeerID() string {
-	return firstNonEmpty(s.cfg.ObserverPeerID, s.agentID())
+	return stringutil.FirstNonEmpty(s.cfg.ObserverPeerID, s.agentID())
 }
 
 func (s *Store) peerID() string {
-	return firstNonEmpty(s.cfg.PeerID, s.agentID())
+	return stringutil.FirstNonEmpty(s.cfg.PeerID, s.agentID())
 }
 
 func (s *Store) sessionID() string {
@@ -480,14 +481,7 @@ func localMarkdownProvenance(meta map[string]string) string {
 	return string(raw)
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
-}
+
 
 func memoryV1ToolNames() []string {
 	return []string{"forget_memory", "retrieve_memory", "store_memory", "summarize_memories", "update_memory"}

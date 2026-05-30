@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
@@ -97,7 +98,7 @@ func executeMemorySave(ctx context.Context, svc *goncho.Service, opts ToolRegist
 	if extra := upstreamMetadataSuffix(in.Type, in.Concepts, in.Files); extra != "" {
 		content += "\n" + extra
 	}
-	out, err := svc.Conclude(ctx, goncho.ConcludeParams{ProfileID: opts.DefaultProfileID, Peer: peerFromInputs(opts, in.PeerID, in.Peer), Conclusion: content, SessionKey: firstNonEmpty(in.SessionID, opts.DefaultSessionKey), Scope: strings.TrimSpace(in.Type)})
+	out, err := svc.Conclude(ctx, goncho.ConcludeParams{ProfileID: opts.DefaultProfileID, Peer: peerFromInputs(opts, in.PeerID, in.Peer), Conclusion: content, SessionKey: stringutil.FirstNonEmpty(in.SessionID, opts.DefaultSessionKey), Scope: strings.TrimSpace(in.Type)})
 	if err != nil {
 		return nil, fmt.Errorf("memory_save: %w", err)
 	}
@@ -121,7 +122,7 @@ func executeMemorySmartSearch(ctx context.Context, svc *goncho.Service, opts Too
 	if strings.TrimSpace(in.Query) == "" {
 		return nil, errors.New("memory_smart_search: query is required")
 	}
-	out, err := svc.Search(ctx, goncho.SearchParams{ProfileID: opts.DefaultProfileID, Peer: peerFromInputs(opts, in.PeerID, in.Peer), Query: in.Query, SessionKey: firstNonEmpty(in.SessionID, opts.DefaultSessionKey)})
+	out, err := svc.Search(ctx, goncho.SearchParams{ProfileID: opts.DefaultProfileID, Peer: peerFromInputs(opts, in.PeerID, in.Peer), Query: in.Query, SessionKey: stringutil.FirstNonEmpty(in.SessionID, opts.DefaultSessionKey)})
 	if err != nil {
 		return nil, fmt.Errorf("memory_smart_search: %w", err)
 	}
@@ -151,12 +152,12 @@ func executeMemoryRecall(ctx context.Context, svc *goncho.Service, opts ToolRegi
 	if strings.TrimSpace(in.Query) == "" {
 		return nil, errors.New("memory_recall: query is required")
 	}
-	trace, err := svc.Recall(ctx, goncho.RecallQuery{WorkspaceID: opts.DefaultWorkspaceID, Peer: peerFromInputs(opts, in.PeerID, in.Peer), Query: in.Query, SessionKey: firstNonEmpty(in.SessionID, opts.DefaultSessionKey), Limit: in.Limit, MaxTokens: in.TokenBudget})
+	trace, err := svc.Recall(ctx, goncho.RecallQuery{WorkspaceID: opts.DefaultWorkspaceID, Peer: peerFromInputs(opts, in.PeerID, in.Peer), Query: in.Query, SessionKey: stringutil.FirstNonEmpty(in.SessionID, opts.DefaultSessionKey), Limit: in.Limit, MaxTokens: in.TokenBudget})
 	if err != nil {
 		return nil, fmt.Errorf("memory_recall: %w", err)
 	}
 	selected := trace.Selected
-	return json.Marshal(map[string]any{"success": true, "tool": "memory_recall", "backend": "goncho", "retrieval": "goncho_recall", "format": firstNonEmpty(in.Format, "full"), "trace_id": trace.TraceID, "selected_count": len(selected), "results": selected, "warnings": trace.Warnings, "local_first": true})
+	return json.Marshal(map[string]any{"success": true, "tool": "memory_recall", "backend": "goncho", "retrieval": "goncho_recall", "format": stringutil.FirstNonEmpty(in.Format, "full"), "trace_id": trace.TraceID, "selected_count": len(selected), "results": selected, "warnings": trace.Warnings, "local_first": true})
 }
 
 func executeMemoryProfile(ctx context.Context, svc *goncho.Service, opts ToolRegistryOptions, args json.RawMessage) (json.RawMessage, error) {
@@ -187,7 +188,7 @@ func executeMemoryTimeline(ctx context.Context, svc *goncho.Service, opts ToolRe
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("memory_timeline: %w", err)
 	}
-	sessionKey := firstNonEmpty(in.SessionID, opts.DefaultSessionKey)
+	sessionKey := stringutil.FirstNonEmpty(in.SessionID, opts.DefaultSessionKey)
 	if sessionKey == "" {
 		return nil, errors.New("memory_timeline: session_id is required")
 	}
@@ -212,7 +213,7 @@ func executeMemoryAudit(ctx context.Context, svc *goncho.Service, opts ToolRegis
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("memory_audit: %w", err)
 	}
-	result, err := svc.AuditTrail(ctx, goncho.AuditQuery{TargetID: strings.TrimSpace(in.TargetID), PeerID: firstNonEmpty(in.PeerID, in.Peer), SessionKey: firstNonEmpty(in.SessionID), Limit: in.Limit})
+	result, err := svc.AuditTrail(ctx, goncho.AuditQuery{TargetID: strings.TrimSpace(in.TargetID), PeerID: stringutil.FirstNonEmpty(in.PeerID, in.Peer), SessionKey: stringutil.FirstNonEmpty(in.SessionID), Limit: in.Limit})
 	if err != nil {
 		return nil, fmt.Errorf("memory_audit: %w", err)
 	}
@@ -237,14 +238,7 @@ func upstreamMetadataSuffix(memoryType, concepts, files string) string {
 }
 
 func peerFromInputs(opts ToolRegistryOptions, values ...string) string {
-	return firstNonEmpty(append(values, opts.DefaultPeerID, "memorymirror")...)
+	return stringutil.FirstNonEmpty(append(values, opts.DefaultPeerID, "memorymirror")...)
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
-}
+

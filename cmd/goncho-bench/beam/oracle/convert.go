@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
 )
 
 const beamConvertDefaultPeer = "beam"
@@ -194,11 +196,11 @@ func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fall
 	for _, ability := range abilities {
 		questions := questionsByAbility[ability]
 		for i, question := range questions {
-			query := firstNonEmpty(question.Question, question.Query, question.Prompt)
+			query := stringutil.FirstNonEmpty(question.Question, question.Query, question.Prompt)
 			if strings.TrimSpace(query) == "" {
 				continue
 			}
-			qid := firstNonEmpty(question.ID, question.QID)
+			qid := stringutil.FirstNonEmpty(question.ID, question.QID)
 			if qid == "" {
 				qid = fmt.Sprintf("%s-%s-%03d", idPrefix, strings.ToLower(ability), i+1)
 			}
@@ -216,7 +218,7 @@ func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fall
 				SessionKey:            sessionKey,
 				Ability:               strings.ToUpper(strings.TrimSpace(ability)),
 				Query:                 query,
-				IdealAnswer:           firstNonEmpty(question.IdealAnswer, question.IdealResponse, question.Answer, question.IdealSummary),
+				IdealAnswer:           stringutil.FirstNonEmpty(question.IdealAnswer, question.IdealResponse, question.Answer, question.IdealSummary),
 				Rubric:                append([]string(nil), question.Rubric...),
 				RelevantIDs:           relevantIDs,
 				RequiredEvidenceKinds: append([]string(nil), question.RequiredEvidenceKinds...),
@@ -470,15 +472,7 @@ func stableBeamIDSegment(value string) string {
 	return out
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value != "" {
-			return value
-		}
-	}
-	return ""
-}
+
 
 var pythonLiteralBarewordPattern = regexp.MustCompile(`\b(True|False|None)\b`)
 

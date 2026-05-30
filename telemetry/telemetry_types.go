@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
 )
 
 type DivergenceClassification string
@@ -133,7 +135,7 @@ func LookupTelemetryEvent(upstream string) (EventMatrixEntry, bool) {
 func NormalizeEvent(event Event, now time.Time) Event {
 	event.Name = strings.TrimSpace(event.Name)
 	event.UpstreamEvent = strings.TrimSpace(event.UpstreamEvent)
-	if entry, ok := LookupTelemetryEvent(firstNonEmpty(event.UpstreamEvent, event.Name)); ok {
+	if entry, ok := LookupTelemetryEvent(stringutil.FirstNonEmpty(event.UpstreamEvent, event.Name)); ok {
 		if event.Name == "" {
 			event.Name = entry.LocalEvent
 		}
