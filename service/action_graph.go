@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type ActionStatus string
@@ -395,19 +397,5 @@ func actionFrontier(nodes []ActionNode) []ActionNode {
 }
 
 func normalizeActionIDs(values []string) []string {
-	seen := map[string]struct{}{}
-	out := []string{}
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" {
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		out = append(out, value)
-	}
-	sort.Strings(out)
-	return out
+	return textutil.UniqueTrimmed(values, true)
 }

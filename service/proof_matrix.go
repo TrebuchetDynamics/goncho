@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const gonchoProofMatrixVersion = "goncho-full-local-proof-v1"
@@ -135,21 +137,7 @@ func buildGonchoProofMatrixReport(input gonchoProofMatrixReportInput) (gonchoPro
 }
 
 func sortedGonchoProofStrings(values []string) []string {
-	out := make([]string, 0, len(values))
-	seen := map[string]struct{}{}
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" {
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		out = append(out, value)
-	}
-	sort.Strings(out)
-	return out
+	return textutil.UniqueTrimmed(values, true)
 }
 
 func sortedGonchoProofStringSet(values map[string]struct{}) []string {

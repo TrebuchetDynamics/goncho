@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const (
@@ -427,24 +429,7 @@ func normalizeRecallBenchmarkAbility(ability string) string {
 }
 
 func normalizeRecallBenchmarkEvidenceKinds(kinds []string) []string {
-	seen := map[string]struct{}{}
-	out := []string{}
-	for _, kind := range kinds {
-		kind = strings.ToLower(strings.TrimSpace(kind))
-		if kind == "" {
-			continue
-		}
-		if _, ok := seen[kind]; ok {
-			continue
-		}
-		seen[kind] = struct{}{}
-		out = append(out, kind)
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	sort.Strings(out)
-	return out
+	return textutil.UniqueLowerTrimmed(kinds, true)
 }
 
 func recallBenchmarkEvidenceKinds(items []ScoredRecallCandidate) []string {

@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -212,36 +213,13 @@ func sameChatKey(a, b string) bool {
 }
 
 func normalizeSources(sources []string) []string {
-	if len(sources) == 0 {
-		return nil
-	}
-	out := make([]string, 0, len(sources))
-	for _, src := range sources {
-		src = strings.ToLower(strings.TrimSpace(src))
-		if src == "" || slices.Contains(out, src) {
-			continue
-		}
-		out = append(out, src)
-	}
-	return out
+	return textutil.UniqueLowerTrimmed(sources, false)
 }
 
 func normalizeSessionIDs(sessionIDs []string) []string {
-	if len(sessionIDs) == 0 {
+	out := textutil.UniqueTrimmed(sessionIDs, false)
+	if slices.Contains(out, "*") {
 		return nil
-	}
-	out := make([]string, 0, len(sessionIDs))
-	for _, sessionID := range sessionIDs {
-		sessionID = strings.TrimSpace(sessionID)
-		if sessionID == "" {
-			continue
-		}
-		if sessionID == "*" {
-			return nil
-		}
-		if !slices.Contains(out, sessionID) {
-			out = append(out, sessionID)
-		}
 	}
 	return out
 }
@@ -430,18 +408,7 @@ func buildTurnSearchQuery(rawQuery string, sessionIDs, chatKeys, roles []string,
 }
 
 func normalizeRoles(roles []string) []string {
-	if len(roles) == 0 {
-		return nil
-	}
-	out := make([]string, 0, len(roles))
-	for _, role := range roles {
-		role = strings.ToLower(strings.TrimSpace(role))
-		if role == "" || slices.Contains(out, role) {
-			continue
-		}
-		out = append(out, role)
-	}
-	return out
+	return textutil.UniqueLowerTrimmed(roles, false)
 }
 
 // SearchMessages returns matching turns across the canonical sessions bound to

@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type Expanded struct {
@@ -30,21 +31,11 @@ func Expand(query string) Expanded {
 	if original == "" {
 		return Expanded{}
 	}
-	seen := map[string]struct{}{}
 	terms := []string{}
 	for _, token := range searchtokens.Tokens(original) {
-		for _, synonym := range synonyms[token] {
-			synonym = strings.TrimSpace(strings.ToLower(synonym))
-			if synonym == "" {
-				continue
-			}
-			if _, ok := seen[synonym]; ok {
-				continue
-			}
-			seen[synonym] = struct{}{}
-			terms = append(terms, synonym)
-		}
+		terms = append(terms, synonyms[token]...)
 	}
+	terms = textutil.UniqueLowerTrimmed(terms, false)
 	if len(terms) == 0 {
 		return Expanded{Original: original, Expanded: original}
 	}

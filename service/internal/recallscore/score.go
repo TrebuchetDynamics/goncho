@@ -4,6 +4,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 func Keyword(content, query string) float64 {
@@ -19,25 +21,17 @@ func Keyword(content, query string) float64 {
 	if len(tokens) == 0 {
 		return 0
 	}
-	seen := map[string]struct{}{}
+	tokens = textutil.UniqueTrimmed(tokens, false)
 	hits := 0
 	for _, token := range tokens {
-		token = strings.TrimSpace(token)
-		if token == "" {
-			continue
-		}
-		if _, ok := seen[token]; ok {
-			continue
-		}
-		seen[token] = struct{}{}
 		if strings.Contains(content, token) {
 			hits++
 		}
 	}
-	if len(seen) == 0 {
+	if len(tokens) == 0 {
 		return 0
 	}
-	return Clamp(float64(hits) / float64(len(seen)))
+	return Clamp(float64(hits) / float64(len(tokens)))
 }
 
 func Recency(createdAt, now time.Time, halfLife time.Duration) float64 {

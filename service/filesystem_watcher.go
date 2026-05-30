@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const defaultFilesystemWatcherPreviewBytes = 4 * 1024
@@ -212,21 +214,10 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 }
 
 func normalizeWatcherGlobs(values []string) []string {
-	out := []string{}
-	seen := map[string]struct{}{}
-	for _, value := range values {
+	return textutil.NormalizeUnique(values, func(value string) string {
 		value = filepath.ToSlash(strings.TrimSpace(value))
-		value = strings.TrimPrefix(value, "./")
-		if value == "" {
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		out = append(out, value)
-	}
-	return out
+		return strings.TrimPrefix(value, "./")
+	}, false)
 }
 
 func matchesAnyWatcherGlob(rel string, patterns []string) bool {
