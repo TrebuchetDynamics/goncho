@@ -10,6 +10,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const (
@@ -666,7 +667,7 @@ func approxTokens(text string) int {
 	if text == "" {
 		return 1
 	}
-	if n := len(strings.Fields(text)); n > 0 {
+	if n := textutil.WordCount(text); n > 0 {
 		return n
 	}
 	return 1

@@ -1,6 +1,10 @@
 package sourcefilter
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+)
 
 // Allows reports whether a normalized source allow-list permits sourceType.
 // Empty allow-lists and wildcard entries permit all sources. When
@@ -14,7 +18,7 @@ func Allows(sources []string, sourceType string, emptySourceAllowed bool) bool {
 		return emptySourceAllowed
 	}
 	for _, source := range sources {
-		if strings.EqualFold(strings.TrimSpace(source), strings.TrimSpace(sourceType)) {
+		if textutil.EqualFoldTrimmed(source, sourceType) {
 			return true
 		}
 	}

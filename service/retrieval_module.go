@@ -11,6 +11,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type retrievalModule struct {
@@ -302,7 +303,7 @@ func searchHitVectorMergeKey(hit SearchHit) string {
 }
 
 func (r retrievalModule) searchTurnFallback(ctx context.Context, params SearchParams, compiled compiledSearchFilter, limit int) (turnFallbackResult, error) {
-	if strings.EqualFold(strings.TrimSpace(params.Scope), "user") {
+	if textutil.EqualFoldTrimmed(params.Scope, "user") {
 		userID := strings.TrimSpace(params.Peer)
 		filter := SearchFilter{
 			UserID:           userID,

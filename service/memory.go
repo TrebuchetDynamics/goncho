@@ -209,7 +209,7 @@ func canonicalChatKey(meta SessionMetadata) string {
 }
 
 func sameChatKey(a, b string) bool {
-	return strings.ToLower(strings.TrimSpace(a)) == strings.ToLower(strings.TrimSpace(b))
+	return textutil.EqualFoldTrimmed(a, b)
 }
 
 func normalizeSources(sources []string) []string {

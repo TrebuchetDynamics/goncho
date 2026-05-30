@@ -86,7 +86,7 @@ func HasWildcard(values []string) bool {
 // ContainsFold reports whether slice contains value (case-insensitive comparison).
 func ContainsFold(slice []string, value string) bool {
 	return sliceutil.ContainsFunc(slice, func(item string) bool {
-		return strings.EqualFold(strings.TrimSpace(item), value)
+		return textutil.EqualFoldTrimmed(item, value)
 	})
 }
 

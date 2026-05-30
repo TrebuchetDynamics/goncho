@@ -24,6 +24,11 @@ func FirstWords(content string, n int) string {
 	return strings.Join(words[:n], " ")
 }
 
+// WordCount returns the number of whitespace-delimited words in content.
+func WordCount(content string) int {
+	return len(strings.Fields(content))
+}
+
 // CompactWhitespace collapses whitespace and limits the result to limit bytes,
 // trimming a partial trailing word/space boundary the same way existing preview
 // callers historically did.

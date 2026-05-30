@@ -632,7 +632,7 @@ func recallDiversityValue(candidate RecallCandidate, key string) string {
 }
 
 func estimateRecallTokens(content string) int {
-	n := len(strings.Fields(content))
+	n := textutil.WordCount(content)
 	if n == 0 && strings.TrimSpace(content) != "" {
 		return 1
 	}

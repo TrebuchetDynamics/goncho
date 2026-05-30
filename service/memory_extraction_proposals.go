@@ -258,7 +258,7 @@ func (s *Service) findContradictoryMemory(ctx context.Context, peer, sessionKey,
 		if hit.Source != "conclusion" {
 			continue
 		}
-		if strings.EqualFold(strings.TrimSpace(hit.Content), strings.TrimSpace(content)) {
+		if textutil.EqualFoldTrimmed(hit.Content, content) {
 			continue
 		}
 		if strings.Contains(strings.ToLower(hit.Content), strings.ToLower(subject)) {

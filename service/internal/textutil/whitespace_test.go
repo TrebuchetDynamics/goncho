@@ -38,3 +38,12 @@ func TestCompactWhitespaceCollapsesLimitsAndHandlesEmpty(t *testing.T) {
 		t.Fatalf("CompactWhitespace empty = %q", got)
 	}
 }
+
+func TestWordCountCountsWhitespaceDelimitedWords(t *testing.T) {
+	if got := WordCount(" alpha\n\tbeta  gamma "); got != 3 {
+		t.Fatalf("WordCount = %d, want 3", got)
+	}
+	if got := WordCount(" \n\t "); got != 0 {
+		t.Fatalf("WordCount blank = %d, want 0", got)
+	}
+}
