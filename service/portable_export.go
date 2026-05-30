@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 )
 
@@ -604,7 +605,7 @@ func (s *Service) importPortableRecord(ctx context.Context, record PortableExpor
 				success = 0
 			}
 		}
-		_, err := s.db.ExecContext(ctx, `INSERT INTO goncho_observations(id, kind, workspace_id, profile_id, peer_id, session_key, context_id, input, output, success, metadata_json, input_truncated, output_truncated, input_original_bytes, output_original_bytes, redacted, redaction_count, checksum, observed_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, o.ID, string(o.Kind), o.WorkspaceID, o.ProfileID, o.PeerID, o.SessionKey, o.ContextID, o.Input, o.Output, success, string(meta), boolInt(o.InputTruncated), boolInt(o.OutputTruncated), o.InputOriginalBytes, o.OutputOriginalBytes, boolInt(o.Redacted), o.RedactionCount, o.Checksum, o.ObservedAt.UnixNano())
+		_, err := s.db.ExecContext(ctx, `INSERT INTO goncho_observations(id, kind, workspace_id, profile_id, peer_id, session_key, context_id, input, output, success, metadata_json, input_truncated, output_truncated, input_original_bytes, output_original_bytes, redacted, redaction_count, checksum, observed_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, o.ID, string(o.Kind), o.WorkspaceID, o.ProfileID, o.PeerID, o.SessionKey, o.ContextID, o.Input, o.Output, success, string(meta), dbscan.BoolInt(o.InputTruncated), dbscan.BoolInt(o.OutputTruncated), o.InputOriginalBytes, o.OutputOriginalBytes, dbscan.BoolInt(o.Redacted), o.RedactionCount, o.Checksum, o.ObservedAt.UnixNano())
 		return err
 	case "message":
 		var m portableMessage
@@ -657,10 +658,4 @@ func portableReviewStatus(records []PortableExportRecord, subject string) string
 		}
 	}
 	return "none"
-}
-func boolInt(v bool) int {
-	if v {
-		return 1
-	}
-	return 0
 }

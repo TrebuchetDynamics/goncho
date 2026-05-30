@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sensitive"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type MemoryProposalOperation string
@@ -301,9 +302,5 @@ func firstString(values []string) string {
 }
 
 func firstWords(content string, n int) string {
-	words := strings.Fields(content)
-	if len(words) <= n {
-		return strings.TrimSpace(content)
-	}
-	return strings.Join(words[:n], " ")
+	return textutil.FirstWords(content, n)
 }

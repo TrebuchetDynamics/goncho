@@ -9,6 +9,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
 )
 
 // VectorStore is the optional host-owned semantic retrieval seam. Implementations
@@ -173,18 +174,7 @@ func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCand
 }
 
 func vectorSourceAllowed(sources []string, sourceType string) bool {
-	if len(sources) == 0 || filterHasWildcard(sources) {
-		return true
-	}
-	if strings.TrimSpace(sourceType) == "" {
-		return true
-	}
-	for _, source := range sources {
-		if strings.EqualFold(strings.TrimSpace(source), strings.TrimSpace(sourceType)) {
-			return true
-		}
-	}
-	return false
+	return sourcefilter.Allows(sources, sourceType, true)
 }
 
 func cloneVectorMetadata(in map[string]string) map[string]string {

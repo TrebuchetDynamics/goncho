@@ -10,6 +10,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
 )
 
 type retrievalModule struct {
@@ -88,15 +89,7 @@ func recallCandidateSearchLimit(selectionLimit int) int {
 }
 
 func recallSourcesAllowConclusions(sources []string) bool {
-	if len(sources) == 0 || filterHasWildcard(sources) {
-		return true
-	}
-	for _, source := range sources {
-		if strings.EqualFold(strings.TrimSpace(source), "conclusion") {
-			return true
-		}
-	}
-	return false
+	return sourcefilter.Allows(sources, "conclusion", false)
 }
 
 func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeID string) RecallCandidate {

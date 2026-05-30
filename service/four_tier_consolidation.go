@@ -176,12 +176,5 @@ func lastNonBlank(values []string) string {
 }
 
 func compactText(value string, limit int) string {
-	value = textutil.CollapseWhitespace(value)
-	if value == "" {
-		return "empty"
-	}
-	if limit <= 0 || len(value) <= limit {
-		return value
-	}
-	return strings.TrimSpace(value[:limit])
+	return textutil.CompactWhitespace(value, limit, "empty")
 }
