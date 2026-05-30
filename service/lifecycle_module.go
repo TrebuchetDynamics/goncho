@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type lifecycleModule struct {
@@ -148,10 +150,11 @@ func isTransientSQLiteLockError(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "database is locked") ||
-		strings.Contains(msg, "database table is locked") ||
-		strings.Contains(msg, "database is busy") ||
-		strings.Contains(msg, "sqlite_busy") ||
-		strings.Contains(msg, "sqlite_locked")
+	return textutil.ContainsAnySubstringFold(err.Error(), []string{
+		"database is locked",
+		"database table is locked",
+		"database is busy",
+		"sqlite_busy",
+		"sqlite_locked",
+	})
 }

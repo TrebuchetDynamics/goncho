@@ -1,6 +1,10 @@
 package sensitive
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+)
 
 var contentSecretNeedles = []string{"password", "api token", "secret", "private key", "sk-live", "bearer "}
 
@@ -21,11 +25,5 @@ func MetadataKeySecretLike(key string) bool {
 }
 
 func containsAnyLower(value string, needles []string) bool {
-	lower := strings.ToLower(value)
-	for _, needle := range needles {
-		if strings.Contains(lower, needle) {
-			return true
-		}
-	}
-	return false
+	return textutil.ContainsAnySubstringFold(value, needles)
 }

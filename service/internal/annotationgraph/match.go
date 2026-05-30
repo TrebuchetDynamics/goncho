@@ -5,6 +5,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchintent"
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const (
@@ -14,55 +15,44 @@ const (
 )
 
 func TimelineQuery(query string) bool {
-	query = strings.ToLower(query)
-	if !(strings.Contains(query, "when") || strings.Contains(query, "deadline") || strings.Contains(query, "scheduled") || strings.Contains(query, "date")) {
-		return false
-	}
-	return strings.Contains(query, "owner") || strings.Contains(query, "owned") || strings.Contains(query, "responsible") || strings.Contains(query, "accountable")
+	return queryHasAny(query, "when", "deadline", "scheduled", "date") && queryHasAny(query, "owner", "owned", "responsible", "accountable")
 }
 
 func MetricQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "how fast") || strings.Contains(query, "how many") || strings.Contains(query, "how much") || strings.Contains(query, "latency") || strings.Contains(query, "metric") || strings.Contains(query, "measurement")
+	return queryHasAny(query, "how fast", "how many", "how much", "latency", "metric", "measurement")
 }
 
 func LocationQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "where") || strings.Contains(query, "location") || strings.Contains(query, "located")
+	return queryHasAny(query, "where", "location", "located")
 }
 
 func PreferenceQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "prefer") || strings.Contains(query, "preference")
+	return queryHasAny(query, "prefer", "preference")
 }
 
 func InstructionQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "instruction") || strings.Contains(query, "rule")
+	return queryHasAny(query, "instruction", "rule")
 }
 
 func SequenceQuery(query string) bool {
 	if _, ok := searchintent.SequenceQuestionSubject(query); ok {
 		return true
 	}
-	query = strings.ToLower(query)
-	return strings.Contains(query, "sequence") || strings.Contains(query, "order")
+	return queryHasAny(query, "sequence", "order")
 }
 
 func DecisionQuery(query string) bool {
 	if _, ok := searchintent.DecisionQuestionTopic(query); ok {
 		return true
 	}
-	query = strings.ToLower(query)
-	return strings.Contains(query, "decision") || strings.Contains(query, "decide")
+	return queryHasAny(query, "decision", "decide")
 }
 
 func NegationQuery(query string) bool {
 	if _, ok := searchintent.NegationQuestionObject(query); ok {
 		return true
 	}
-	query = strings.ToLower(query)
-	return strings.Contains(query, "never") || strings.Contains(query, " not ")
+	return queryHasAny(query, "never", " not ")
 }
 
 func QueryMatchesOwnerFact(query, owner string) bool {
@@ -75,17 +65,20 @@ func QueryMatchesKGRelation(query, subject, relation string) bool {
 	if len(subjectTokens) == 0 || searchtokens.Coverage(subjectTokens, query) < 0.80 {
 		return false
 	}
-	query = strings.ToLower(query)
 	switch relation {
 	case RelationUses:
-		return strings.Contains(query, "use") || strings.Contains(query, "used") || strings.Contains(query, "using")
+		return queryHasAny(query, "use", "used", "using")
 	case RelationDependsOn:
-		return strings.Contains(query, "depend") || strings.Contains(query, "dependency")
+		return queryHasAny(query, "depend", "dependency")
 	case RelationRunsOn:
-		return strings.Contains(query, "runs on") || strings.Contains(query, "running on")
+		return queryHasAny(query, "runs on", "running on")
 	default:
 		return false
 	}
+}
+
+func queryHasAny(query string, markers ...string) bool {
+	return textutil.ContainsAnySubstringFold(query, markers)
 }
 
 func EntityMatches(a, b string) bool {
