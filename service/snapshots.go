@@ -2,13 +2,13 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 )
 
 type SnapshotParams struct {
@@ -195,7 +195,7 @@ func snapshotSlotEntries(ctx context.Context, db *sql.DB, workspaceID, profileID
 		var scope, name, kind, value string
 		var revision int
 		var deleted bool
-		if err := rows.Scan(&scope, &name, &kind, &value, &revision, boolScan(&deleted)); err != nil {
+		if err := rows.Scan(&scope, &name, &kind, &value, &revision, dbscan.Bool(&deleted)); err != nil {
 			return nil, fmt.Errorf("goncho: scan snapshot slot: %w", err)
 		}
 		out = append(out, snapshotEntry("slot", "slot:"+scope+":"+name, map[string]any{"scope": scope, "name": name, "kind": kind, "value": value, "revision": revision, "deleted": deleted}, map[string]string{"scope": scope, "name": name, "kind": kind}))
@@ -224,9 +224,7 @@ func snapshotActionEntries(ctx context.Context, db *sql.DB, workspaceID, profile
 }
 
 func snapshotEntry(kind, key string, payload any, metadata map[string]string) SnapshotEntry {
-	raw, _ := json.Marshal(payload)
-	sum := sha256.Sum256(raw)
-	return SnapshotEntry{Kind: kind, Key: key, Checksum: hex.EncodeToString(sum[:]), Metadata: metadata}
+	return SnapshotEntry{Kind: kind, Key: key, Checksum: hashutil.JSONSHA256Hex(payload), Metadata: metadata}
 }
 
 func snapshotCounts(entries []SnapshotEntry) map[string]int {
@@ -255,7 +253,5 @@ func snapshotManifestID(manifest SnapshotManifest) string {
 		Counts          map[string]int  `json:"counts"`
 		Entries         []SnapshotEntry `json:"entries"`
 	}{ManifestVersion: manifest.ManifestVersion, WorkspaceID: manifest.WorkspaceID, ProfileID: manifest.ProfileID, Peer: manifest.Peer, Counts: manifest.Counts, Entries: manifest.Entries}
-	raw, _ := json.Marshal(view)
-	sum := sha256.Sum256(raw)
-	return "snap:" + hex.EncodeToString(sum[:12])
+	return "snap:" + hashutil.JSONSHA256HexPrefix(view, 12)
 }

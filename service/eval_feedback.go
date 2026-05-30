@@ -2,15 +2,14 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
@@ -437,11 +436,11 @@ func feedbackID(f RecallFeedback) string {
 	return stableEvalID("feedback", f.WorkspaceID, f.TraceID, f.MemoryID, string(f.Label), f.Reason)
 }
 func stableEvalID(parts ...string) string {
-	h := sha256.New()
+	var seed strings.Builder
 	for _, p := range parts {
-		_, _ = h.Write([]byte(strings.TrimSpace(p)))
-		_, _ = h.Write([]byte{0})
+		seed.WriteString(strings.TrimSpace(p))
+		seed.WriteByte(0)
 	}
-	return hex.EncodeToString(h.Sum(nil))[:24]
+	return hashutil.SHA256HexStringPrefix(seed.String(), 12)
 }
 func roundRegression(v float64) float64 { return math.Round(v*1000) / 1000 }

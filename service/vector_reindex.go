@@ -2,10 +2,10 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 )
 
 // ReindexPreviewResult is the non-mutating preview for embedding reindex.
@@ -101,8 +101,7 @@ func (s *Service) ReindexPreview(ctx context.Context) (ReindexPreviewResult, err
 
 // contentChecksum returns the SHA-256 hex checksum of content.
 func contentChecksum(content string) string {
-	sum := sha256.Sum256([]byte(strings.TrimSpace(content)))
-	return hex.EncodeToString(sum[:])
+	return hashutil.SHA256HexString(strings.TrimSpace(content))
 }
 
 // readVectorIndexEntries reads memory_id -> content_checksum from the vector store.

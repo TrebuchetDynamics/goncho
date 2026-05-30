@@ -2,12 +2,11 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
@@ -99,8 +98,7 @@ func recallCandidateFromVectorHit(hit VectorSearchHit, observer, scopeID string)
 
 func semanticMemoryID(hit VectorSearchHit) string {
 	seed := strings.TrimSpace(hit.SourceType) + "\x00" + strings.TrimSpace(hit.SessionID) + "\x00" + strings.TrimSpace(hit.Content)
-	sum := sha256.Sum256([]byte(seed))
-	return "vector:" + hex.EncodeToString(sum[:8])
+	return "vector:" + hashutil.SHA256HexStringPrefix(seed, 8)
 }
 
 func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, workspaceID, profileID, peer, scopeID string, base []RecallCandidate) ([]RecallCandidate, error) {

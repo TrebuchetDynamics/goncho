@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 )
 
 const PortableExportSchemaVersion = "goncho-portable-v1"
@@ -364,8 +364,7 @@ func marshalPortableRecords(records []PortableExportRecord) ([]byte, string, err
 		b.Write(raw)
 		b.WriteByte('\n')
 	}
-	sum := sha256.Sum256(b.Bytes())
-	return b.Bytes(), hex.EncodeToString(sum[:]), nil
+	return b.Bytes(), hashutil.SHA256Hex(b.Bytes()), nil
 }
 
 func parsePortableJSONL(data []byte) (PortableExportManifest, []PortableExportRecord, error) {

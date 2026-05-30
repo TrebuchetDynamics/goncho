@@ -2,8 +2,6 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
@@ -331,8 +330,7 @@ func cosineSimilarity(a, b []float64) float64 {
 }
 
 func localVectorContentChecksum(content string) string {
-	sum := sha256.Sum256([]byte(content))
-	return hex.EncodeToString(sum[:])
+	return hashutil.SHA256HexString(content)
 }
 
 func localVectorIndexChecksum(dimensions int, entries []localVectorEntry) string {
@@ -340,9 +338,7 @@ func localVectorIndexChecksum(dimensions int, entries []localVectorEntry) string
 		Dimensions int                `json:"dimensions"`
 		Entries    []localVectorEntry `json:"entries"`
 	}{Dimensions: dimensions, Entries: entries}
-	raw, _ := json.Marshal(view)
-	sum := sha256.Sum256(raw)
-	return hex.EncodeToString(sum[:])
+	return hashutil.JSONSHA256Hex(view)
 }
 
 func sortLocalVectorEntries(entries []localVectorEntry) {

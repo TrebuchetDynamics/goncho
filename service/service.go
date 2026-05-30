@@ -2,14 +2,13 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
@@ -587,15 +586,15 @@ func buildChatContent(peer, query, reasoningLevel string, card []string, hits []
 
 func makeIdempotencyKey(workspaceID, profileID, observer, peer, sessionKey, conclusion string) string {
 	normalized := strings.ToLower(strings.TrimSpace(conclusion))
-	sum := sha256.Sum256([]byte(strings.Join([]string{
+	seed := strings.Join([]string{
 		workspaceID,
 		profileID,
 		observer,
 		peer,
 		strings.TrimSpace(sessionKey),
 		normalized,
-	}, "\x1f")))
-	return hex.EncodeToString(sum[:])
+	}, "\x1f")
+	return hashutil.SHA256HexString(seed)
 }
 
 type turnFallbackResult struct {

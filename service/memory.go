@@ -3,15 +3,14 @@ package goncho
 import (
 	"bufio"
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
 	"slices"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"gopkg.in/yaml.v3"
 )
@@ -489,8 +488,7 @@ type GonchoMemoryV1Item struct {
 
 // GonchoMemoryV1Checksum returns a SHA-256 hex digest of the content.
 func GonchoMemoryV1Checksum(content string) string {
-	sum := sha256.Sum256([]byte(content))
-	return hex.EncodeToString(sum[:])
+	return hashutil.SHA256HexString(content)
 }
 
 // ValidateGonchoMemoryV1Item checks required fields on a V1 item.

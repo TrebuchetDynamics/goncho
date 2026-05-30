@@ -2,7 +2,6 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/pathutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
@@ -201,7 +201,7 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 	if !params.AllowBinary && looksBinary(raw) {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "binary"}, nil
 	}
-	sum := sha256.Sum256(raw)
+	checksum := hashutil.SHA256Hex(raw)
 	content := string(raw)
 	if !utf8.Valid(raw) {
 		content = hex.EncodeToString(raw)
@@ -211,7 +211,7 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 		content = truncateFilesystemWatcherUTF8(content, params.MaxPreviewBytes)
 		truncated = true
 	}
-	return FilesystemWatcherCandidate{Path: absPath, RelativePath: rel, ChangeKind: params.ChangeKind, SizeBytes: info.Size(), Checksum: hex.EncodeToString(sum[:]), Content: content, Truncated: truncated}, FilesystemWatcherSkipped{}, nil
+	return FilesystemWatcherCandidate{Path: absPath, RelativePath: rel, ChangeKind: params.ChangeKind, SizeBytes: info.Size(), Checksum: checksum, Content: content, Truncated: truncated}, FilesystemWatcherSkipped{}, nil
 }
 
 func normalizeWatcherGlobs(values []string) []string {
@@ -264,8 +264,8 @@ func looksBinary(raw []byte) bool {
 }
 
 func filesystemWatcherObservationID(params FilesystemWatcherImportParams, candidate FilesystemWatcherCandidate) string {
-	sum := sha256.Sum256([]byte(strings.Join([]string{params.WorkspaceID, params.ProfileID, params.PeerID, params.SessionKey, candidate.RelativePath, candidate.Checksum}, "\x00")))
-	return "fswatch_" + hex.EncodeToString(sum[:16])
+	seed := strings.Join([]string{params.WorkspaceID, params.ProfileID, params.PeerID, params.SessionKey, candidate.RelativePath, candidate.Checksum}, "\x00")
+	return "fswatch_" + hashutil.SHA256HexStringPrefix(seed, 16)
 }
 
 func truncateFilesystemWatcherUTF8(value string, limit int) string {

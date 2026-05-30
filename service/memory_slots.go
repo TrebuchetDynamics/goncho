@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
@@ -275,7 +276,7 @@ func getMemorySlotRow(ctx context.Context, db *sql.DB, workspaceID, profileID, p
 		query += ` AND deleted = 0`
 	}
 	var slot MemorySlot
-	err := db.QueryRowContext(ctx, query, workspaceID, profileID, peer, scope, name).Scan(&slot.WorkspaceID, &slot.ProfileID, &slot.Peer, &slot.Scope, &slot.Name, &slot.Kind, &slot.Value, &slot.Revision, boolScan(&slot.Deleted), &slot.CreatedAt, &slot.UpdatedAt)
+	err := db.QueryRowContext(ctx, query, workspaceID, profileID, peer, scope, name).Scan(&slot.WorkspaceID, &slot.ProfileID, &slot.Peer, &slot.Scope, &slot.Name, &slot.Kind, &slot.Value, &slot.Revision, dbscan.Bool(&slot.Deleted), &slot.CreatedAt, &slot.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return MemorySlot{}, false, nil
 	}
@@ -291,7 +292,7 @@ func upsertMemorySlotRow(ctx context.Context, db *sql.DB, slot MemorySlot) error
 		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(workspace_id, profile_id, peer_id, scope, name)
 		DO UPDATE SET kind = excluded.kind, value = excluded.value, revision = excluded.revision, deleted = excluded.deleted, updated_at = excluded.updated_at
-	`, slot.WorkspaceID, slot.ProfileID, slot.Peer, slot.Scope, slot.Name, slot.Kind, slot.Value, slot.Revision, slotBoolInt(slot.Deleted), slot.CreatedAt, slot.UpdatedAt)
+	`, slot.WorkspaceID, slot.ProfileID, slot.Peer, slot.Scope, slot.Name, slot.Kind, slot.Value, slot.Revision, dbscan.BoolInt(slot.Deleted), slot.CreatedAt, slot.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("goncho: upsert memory slot: %w", err)
 	}
@@ -300,7 +301,7 @@ func upsertMemorySlotRow(ctx context.Context, db *sql.DB, slot MemorySlot) error
 
 func scanMemorySlot(scanner interface{ Scan(...any) error }) (MemorySlot, error) {
 	var slot MemorySlot
-	if err := scanner.Scan(&slot.WorkspaceID, &slot.ProfileID, &slot.Peer, &slot.Scope, &slot.Name, &slot.Kind, &slot.Value, &slot.Revision, boolScan(&slot.Deleted), &slot.CreatedAt, &slot.UpdatedAt); err != nil {
+	if err := scanner.Scan(&slot.WorkspaceID, &slot.ProfileID, &slot.Peer, &slot.Scope, &slot.Name, &slot.Kind, &slot.Value, &slot.Revision, dbscan.Bool(&slot.Deleted), &slot.CreatedAt, &slot.UpdatedAt); err != nil {
 		return MemorySlot{}, fmt.Errorf("goncho: scan memory slot: %w", err)
 	}
 	return slot, nil
@@ -326,35 +327,4 @@ func (s *Service) auditMemorySlot(ctx context.Context, action string, slot Memor
 		},
 	})
 	return err
-}
-
-func slotBoolInt(value bool) int {
-	if value {
-		return 1
-	}
-	return 0
-}
-
-type boolScanner struct{ target *bool }
-
-func boolScan(target *bool) *boolScanner { return &boolScanner{target: target} }
-
-func (b *boolScanner) Scan(src any) error {
-	switch v := src.(type) {
-	case int64:
-		*b.target = v != 0
-	case int:
-		*b.target = v != 0
-	case bool:
-		*b.target = v
-	case []byte:
-		*b.target = string(v) == "1" || strings.EqualFold(string(v), "true")
-	case string:
-		*b.target = v == "1" || strings.EqualFold(v, "true")
-	case nil:
-		*b.target = false
-	default:
-		return fmt.Errorf("unsupported bool scan type %T", src)
-	}
-	return nil
 }

@@ -2,9 +2,6 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -12,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/recallscore"
@@ -697,9 +695,7 @@ func recallTraceID(trace RecallTrace) string {
 	for _, item := range trace.Candidates {
 		view.CandidateIDs = append(view.CandidateIDs, item.Candidate.MemoryID)
 	}
-	raw, _ := json.Marshal(view)
-	sum := sha256.Sum256(raw)
-	return hex.EncodeToString(sum[:])
+	return hashutil.JSONSHA256Hex(view)
 }
 
 func clampRecall(value float64) float64 {
