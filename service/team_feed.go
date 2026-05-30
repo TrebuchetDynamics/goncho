@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopeauth"
 )
 
 type TeamFeedDecision string
@@ -98,22 +101,18 @@ func (s *Service) TeamFeed(ctx context.Context, query TeamFeedQuery) (TeamFeedRe
 	if err != nil {
 		return TeamFeedResult{}, err
 	}
-	actorWorkspaceID := firstNonBlank(query.ActorWorkspaceID, norm.WorkspaceID)
-	actorProfileID := strings.TrimSpace(query.ActorProfileID)
+	actorScope := scopeauth.NormalizeActorScope(query.ActorWorkspaceID, query.ActorProfileID, norm.WorkspaceID)
 	role := strings.TrimSpace(query.Role)
-	allowed := role == "admin" || (actorWorkspaceID == norm.WorkspaceID && actorProfileID == norm.ProfileID)
+	allowed := role == "admin" || scopeauth.SameScope(actorScope, norm.WorkspaceID, norm.ProfileID)
 	if !allowed {
-		reason := fmt.Sprintf("actor scope workspace=%q profile=%q cannot read team feed scope workspace=%q profile=%q", actorWorkspaceID, actorProfileID, norm.WorkspaceID, norm.ProfileID)
-		auditID, err := s.insertTeamFeedAudit(ctx, norm, actorWorkspaceID, actorProfileID, role, TeamFeedDecisionDenied, reason)
+		reason := scopeauth.DeniedReadReason(actorScope, "team feed", norm.WorkspaceID, norm.ProfileID)
+		auditID, err := s.insertTeamFeedAudit(ctx, norm, actorScope.WorkspaceID, actorScope.ProfileID, role, TeamFeedDecisionDenied, reason)
 		if err != nil {
 			return TeamFeedResult{}, err
 		}
 		return TeamFeedResult{Decision: TeamFeedDecisionDenied, Reason: reason, Entries: []TeamFeedEntry{}, AuditID: auditID}, nil
 	}
-	limit := query.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 50
-	}
+	limit := limitutil.DefaultClamped(query.Limit, 50, 100)
 	cursor := int64(0)
 	if strings.TrimSpace(query.Cursor) != "" {
 		cursor, err = strconv.ParseInt(strings.TrimSpace(query.Cursor), 10, 64)
@@ -125,7 +124,7 @@ func (s *Service) TeamFeed(ctx context.Context, query TeamFeedQuery) (TeamFeedRe
 	if err != nil {
 		return TeamFeedResult{}, err
 	}
-	auditID, err := s.insertTeamFeedAudit(ctx, norm, actorWorkspaceID, actorProfileID, role, TeamFeedDecisionAllowed, "team feed read")
+	auditID, err := s.insertTeamFeedAudit(ctx, norm, actorScope.WorkspaceID, actorScope.ProfileID, role, TeamFeedDecisionAllowed, "team feed read")
 	if err != nil {
 		return TeamFeedResult{}, err
 	}
@@ -137,10 +136,7 @@ func (s *Service) ListTeamFeedAudit(ctx context.Context, query TeamFeedAuditQuer
 	if err != nil {
 		return TeamFeedAuditResult{}, err
 	}
-	limit := query.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 100
-	}
+	limit := limitutil.DefaultClamped(query.Limit, 100, 100)
 	rows, err := s.db.QueryContext(ctx, `SELECT id, workspace_id, profile_id, peer_id, actor, actor_workspace_id, actor_profile_id, role, decision, reason, created_at FROM goncho_team_feed_audit WHERE workspace_id = ? AND profile_id = ? AND peer_id = ? ORDER BY created_at DESC, id DESC LIMIT ?`, norm.WorkspaceID, norm.ProfileID, norm.Peer, limit)
 	if err != nil {
 		return TeamFeedAuditResult{}, fmt.Errorf("goncho: list team feed audit: %w", err)

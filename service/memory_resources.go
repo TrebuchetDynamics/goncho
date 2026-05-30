@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 type MemoryResourceKind string
@@ -124,10 +126,7 @@ func (r *MemoryResourceRegistry) profile(ctx context.Context, req MemoryResource
 }
 
 func (r *MemoryResourceRegistry) latest(ctx context.Context, req MemoryResourceRequest) (MemoryResourceContent, error) {
-	limit := req.Limit
-	if limit <= 0 {
-		limit = 10
-	}
+	limit := limitutil.Default(req.Limit, 10)
 	result, err := r.svc.Search(ctx, SearchParams{ProfileID: req.ProfileID, Peer: req.Peer, Query: "", SessionKey: req.SessionKey, Scope: req.Scope, Limit: limit})
 	if err != nil {
 		return MemoryResourceContent{}, err
@@ -175,10 +174,7 @@ func (r *MemoryResourceRegistry) negativeEvidenceCandidates(ctx context.Context,
 
 func (r *MemoryResourceRegistry) recallPrompt(ctx context.Context, req MemoryResourceRequest) (MemoryResourceContent, error) {
 	query := strings.TrimSpace(req.Query)
-	limit := req.Limit
-	if limit <= 0 {
-		limit = 5
-	}
+	limit := limitutil.Default(req.Limit, 5)
 	prompt := fmt.Sprintf("Use goncho_recall before answering. Query: %q. Peer: %q. Session: %q. Limit: %d. Require provenance: cite selected RecallTrace candidate memory_id values, evidence kinds, warnings, and any query_expansion/semantic/graph signals. If recall is empty, say no memory evidence was found and do not invent facts.", query, strings.TrimSpace(req.Peer), strings.TrimSpace(req.SessionKey), limit)
 	return MemoryResourceContent{URI: "goncho://recall/prompt", MimeType: "text/plain", Payload: map[string]any{"prompt": prompt, "query": query, "peer": strings.TrimSpace(req.Peer), "limit": limit}}, nil
 }

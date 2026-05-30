@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 var ErrMemorySlotNotFound = errors.New("goncho: memory slot not found")
@@ -212,10 +214,7 @@ func (s *Service) ListMemorySlots(ctx context.Context, query MemorySlotQuery) (M
 	if err != nil {
 		return MemorySlotList{}, err
 	}
-	limit := query.Limit
-	if limit <= 0 {
-		limit = 100
-	}
+	limit := limitutil.Default(query.Limit, 100)
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT workspace_id, profile_id, peer_id, scope, name, kind, value, revision, deleted, created_at, updated_at
 		FROM goncho_memory_slots

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/recallscore"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
@@ -128,10 +129,7 @@ func (e *recallPipelineEngine) score(q RecallQuery, candidates []RecallCandidate
 }
 
 func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRecallCandidate) ([]ScoredRecallCandidate, []RejectedRecallCandidate, []RecallWarning) {
-	limit := q.Limit
-	if limit <= 0 {
-		limit = 5
-	}
+	limit := limitutil.Default(q.Limit, 5)
 	budget := e.opts.scoringConfig.TokenBudget
 	if q.MaxTokens > 0 {
 		budget = q.MaxTokens

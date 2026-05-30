@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const hostHookPayloadMaxBytes = 16 * 1024
@@ -286,17 +288,7 @@ func filterHostHookString(value string, state hostHookFilterResult) (string, hos
 }
 
 func truncateHostHookUTF8(value string, limit int) string {
-	if limit <= 0 || len([]byte(value)) <= limit {
-		return value
-	}
-	for len([]byte(value)) > limit {
-		runes := []rune(value)
-		if len(runes) == 0 {
-			return ""
-		}
-		value = string(runes[:len(runes)-1])
-	}
-	return value
+	return textutil.TruncateUTF8Bytes(value, limit)
 }
 
 func hostHookSensitiveKey(key string) bool {

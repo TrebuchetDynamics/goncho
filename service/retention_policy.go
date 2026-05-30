@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/internal/importance"
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 const RetentionActionArchive RetentionAction = "archive"
@@ -203,10 +204,7 @@ func (s *Service) ApplyRetention(ctx context.Context, policy RetentionPolicy, ap
 
 func (s *Service) RetentionAudit(ctx context.Context, q RetentionAuditQuery) (RetentionAuditResult, error) {
 	workspaceID := serviceObservationWorkspace(s.workspaceID, q.WorkspaceID)
-	limit := q.Limit
-	if limit <= 0 {
-		limit = 50
-	}
+	limit := limitutil.Default(q.Limit, 50)
 	query := `SELECT id, workspace_id, stable_id, target_type, action, reason, applied_by, created_at FROM goncho_retention_audit WHERE workspace_id = ?`
 	args := []any{workspaceID}
 	if stableID := strings.TrimSpace(q.StableID); stableID != "" {

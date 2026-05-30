@@ -10,6 +10,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 var evalFeedbackDDL = []string{
@@ -222,10 +224,7 @@ func (s *Service) RecordEvalFailures(ctx context.Context, input EvalRegistryInpu
 
 func (s *Service) ListEvalCandidates(ctx context.Context, q EvalCandidateQuery) (EvalCandidateList, error) {
 	workspaceID := serviceObservationWorkspace(s.workspaceID, q.WorkspaceID)
-	limit := q.Limit
-	if limit <= 0 {
-		limit = 50
-	}
+	limit := limitutil.Default(q.Limit, 50)
 	query := `SELECT id, workspace_id, benchmark_name, run_id, question_id, kind, status, query, failure_bucket, rationale, evidence_ids_json, expected_ids_json, retrieved_ids_json, created_at FROM goncho_eval_candidates WHERE workspace_id = ?`
 	args := []any{workspaceID}
 	if strings.TrimSpace(q.BenchmarkName) != "" {
@@ -282,10 +281,7 @@ func (s *Service) RecordRecallFeedback(ctx context.Context, params RecallFeedbac
 
 func (s *Service) ListRecallFeedback(ctx context.Context, q RecallFeedbackQuery) (RecallFeedbackList, error) {
 	workspaceID := serviceObservationWorkspace(s.workspaceID, q.WorkspaceID)
-	limit := q.Limit
-	if limit <= 0 {
-		limit = 50
-	}
+	limit := limitutil.Default(q.Limit, 50)
 	query := `SELECT id, workspace_id, peer_id, session_key, trace_id, query, label, memory_id, reason, submitted_by, review_item_id, created_at FROM goncho_recall_feedback WHERE workspace_id = ?`
 	args := []any{workspaceID}
 	if strings.TrimSpace(q.TraceID) != "" {

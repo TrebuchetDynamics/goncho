@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	toolmeta "github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
@@ -215,10 +216,7 @@ func (t *GonchoHandoffTool) Execute(ctx context.Context, args json.RawMessage) (
 		}
 		return json.Marshal(map[string]any{"success": true, "action": "save", "id": entry.ID, "session_id": entry.SessionID})
 	case "load":
-		limit := in.Limit
-		if limit <= 0 {
-			limit = 10
-		}
+		limit := limitutil.Default(in.Limit, 10)
 		entries, err := t.store.Retrieve(ctx, "handoff", limit)
 		if err != nil {
 			return nil, fmt.Errorf("goncho_handoff load: %w", err)

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 type ActionLeaseDecision string
@@ -251,10 +253,7 @@ func (s *Service) ListActionLeaseAudit(ctx context.Context, query ActionLeaseAud
 	if err != nil {
 		return ActionLeaseAuditResult{}, err
 	}
-	limit := query.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 100
-	}
+	limit := limitutil.DefaultClamped(query.Limit, 100, 100)
 	args := []any{norm.WorkspaceID, norm.ProfileID, norm.Peer}
 	where := `workspace_id = ? AND profile_id = ? AND peer_id = ?`
 	if norm.ActionID != "" {

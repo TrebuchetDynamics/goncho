@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopeauth"
 )
 
 type ActionSignalReceiptDecision string
@@ -123,11 +126,10 @@ func (s *Service) RecordActionSignalReceipt(ctx context.Context, params ActionSi
 	if err != nil {
 		return ActionSignalReceiptResult{}, err
 	}
-	actorWorkspaceID := firstNonBlank(params.ActorWorkspaceID, norm.WorkspaceID)
-	actorProfileID := strings.TrimSpace(params.ActorProfileID)
-	if actorWorkspaceID != norm.WorkspaceID || actorProfileID != norm.ProfileID {
-		reason := fmt.Sprintf("actor scope workspace=%q profile=%q cannot read signal scope workspace=%q profile=%q", actorWorkspaceID, actorProfileID, norm.WorkspaceID, norm.ProfileID)
-		auditID, err := s.insertActionSignalReceiptAudit(ctx, norm, actorWorkspaceID, actorProfileID, ActionSignalReceiptDecisionDenied, reason)
+	actorScope := scopeauth.NormalizeActorScope(params.ActorWorkspaceID, params.ActorProfileID, norm.WorkspaceID)
+	if !scopeauth.SameScope(actorScope, norm.WorkspaceID, norm.ProfileID) {
+		reason := scopeauth.DeniedReadReason(actorScope, "signal", norm.WorkspaceID, norm.ProfileID)
+		auditID, err := s.insertActionSignalReceiptAudit(ctx, norm, actorScope.WorkspaceID, actorScope.ProfileID, ActionSignalReceiptDecisionDenied, reason)
 		if err != nil {
 			return ActionSignalReceiptResult{}, err
 		}
@@ -151,7 +153,7 @@ func (s *Service) RecordActionSignalReceipt(ctx context.Context, params ActionSi
 		id = lookupActionSignalReceiptID(ctx, s.db, norm)
 	}
 	receipt := ActionSignalReceipt{ID: id, WorkspaceID: norm.WorkspaceID, ProfileID: norm.ProfileID, Peer: norm.Peer, ActionID: norm.ActionID, SignalID: norm.SignalID, Actor: norm.Actor, ReadAt: now}
-	auditID, err := s.insertActionSignalReceiptAudit(ctx, norm, actorWorkspaceID, actorProfileID, ActionSignalReceiptDecisionAllowed, "read receipt recorded")
+	auditID, err := s.insertActionSignalReceiptAudit(ctx, norm, actorScope.WorkspaceID, actorScope.ProfileID, ActionSignalReceiptDecisionAllowed, "read receipt recorded")
 	if err != nil {
 		return ActionSignalReceiptResult{}, err
 	}
@@ -163,10 +165,7 @@ func (s *Service) ListActionSignalReceipts(ctx context.Context, query ActionSign
 	if err != nil {
 		return ActionSignalReceiptList{}, err
 	}
-	limit := query.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 100
-	}
+	limit := limitutil.DefaultClamped(query.Limit, 100, 100)
 	receipts, err := listActionSignalReceiptsFiltered(ctx, s.db, norm, limit)
 	if err != nil {
 		return ActionSignalReceiptList{}, err
@@ -179,10 +178,7 @@ func (s *Service) ListActionSignalReceiptAudit(ctx context.Context, query Action
 	if err != nil {
 		return ActionSignalReceiptAuditResult{}, err
 	}
-	limit := query.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 100
-	}
+	limit := limitutil.DefaultClamped(query.Limit, 100, 100)
 	args := []any{norm.WorkspaceID, norm.ProfileID, norm.Peer}
 	where := `workspace_id = ? AND profile_id = ? AND peer_id = ?`
 	if norm.ActionID != "" {

@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 type CrossSessionMemory struct {
@@ -42,10 +44,7 @@ func summarizeMemoryEntries(entries []MemoryToolEntry) string {
 }
 
 func (csm *CrossSessionMemory) LoadRelevant(ctx context.Context, query string, limit int) ([]MemoryToolEntry, error) {
-	if limit <= 0 {
-		limit = 5
-	}
-	return csm.store.Retrieve(ctx, query, limit)
+	return csm.store.Retrieve(ctx, query, limitutil.Default(limit, 5))
 }
 
 type CrossSessionKnowledge struct {

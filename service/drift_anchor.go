@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -39,10 +40,7 @@ func (d *DriftAnchorDetector) Check(ctx context.Context, params DriftAnchorCheck
 	if prompt == "" {
 		return DriftAnchorWarning{}, fmt.Errorf("goncho: drift anchor prompt is required")
 	}
-	limit := params.Limit
-	if limit <= 0 {
-		limit = 5
-	}
+	limit := limitutil.Default(params.Limit, 5)
 	entries, err := d.store.Retrieve(ctx, "dead-end", limit)
 	if err != nil {
 		return DriftAnchorWarning{}, err

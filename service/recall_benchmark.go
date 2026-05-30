@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
@@ -220,10 +221,7 @@ func runServiceRecallBenchmarkCase(ctx context.Context, svc *Service, index int,
 		}
 		relevantIDs = append(relevantIDs, memoryID)
 	}
-	limit := c.Limit
-	if limit <= 0 {
-		limit = 5
-	}
+	limit := limitutil.Default(c.Limit, 5)
 	pipelineVersion := strings.TrimSpace(c.PipelineVersion)
 	if pipelineVersion == "" {
 		pipelineVersion = RecallBenchmarkServicePipelineVersion

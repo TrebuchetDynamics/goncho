@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 // ViewerSnapshot is the read-only JSON model for Goncho's local viewer API.
@@ -175,12 +177,7 @@ func (s *Service) ViewerRecallTrace(ctx context.Context, peer, query string, lim
 	if strings.TrimSpace(query) == "" {
 		return ViewerRecallTrace{}, fmt.Errorf("goncho: query is required")
 	}
-	if limit <= 0 {
-		limit = 5
-	}
-	if limit > 50 {
-		limit = 50
-	}
+	limit = limitutil.DefaultClamped(limit, 5, 50)
 	trace, err := s.Recall(ctx, RecallQuery{
 		WorkspaceID: s.workspaceID,
 		Peer:        strings.TrimSpace(peer),
@@ -331,9 +328,7 @@ func countScalar(ctx context.Context, db *sql.DB, query string, args ...any) (in
 }
 
 func latestViewerConclusions(ctx context.Context, db *sql.DB, workspaceID, observer string, limit int) ([]ViewerConclusion, error) {
-	if limit <= 0 {
-		limit = 10
-	}
+	limit = limitutil.Default(limit, 10)
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, workspace_id, profile_id, peer_id, session_key, content, scope, status, created_at
 		FROM goncho_conclusions

@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 var ErrMemoryNotFound = errors.New("goncho: memory not found")
@@ -229,10 +231,7 @@ func (f *MemoryFacade) Search(ctx context.Context, p MemorySearchParams) (Memory
 	if err := f.validate(); err != nil {
 		return MemorySearchResult{}, err
 	}
-	limit := p.Limit
-	if limit <= 0 {
-		limit = 10
-	}
+	limit := limitutil.Default(p.Limit, 10)
 	list, err := f.svc.ListMemorySlots(ctx, MemorySlotQuery{WorkspaceID: p.WorkspaceID, ProfileID: p.ProfileID, Peer: p.UserID, Scope: normalizeMemoryScope("", p.ProfileID), Limit: max(limit*4, limit)})
 	if err != nil {
 		return MemorySearchResult{}, err
@@ -257,10 +256,7 @@ func (f *MemoryFacade) History(ctx context.Context, p MemoryHistoryParams) (Memo
 	if err := f.validate(); err != nil {
 		return MemoryHistoryResult{}, err
 	}
-	limit := p.Limit
-	if limit <= 0 {
-		limit = 50
-	}
+	limit := limitutil.Default(p.Limit, 50)
 	list, err := f.svc.ListObservations(ctx, ObservationQuery{WorkspaceID: p.WorkspaceID, ProfileID: p.ProfileID, PeerID: p.UserID, Kinds: []ObservationKind{ObservationKindCustom}, Limit: max(limit*4, limit)})
 	if err != nil {
 		return MemoryHistoryResult{}, err
