@@ -1,8 +1,9 @@
 package goncho
 
 import (
-	"strconv"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 )
 
 type RecallProjector struct{}
@@ -80,7 +81,7 @@ func graphRelationPathNotes(provenance []EvidenceItem) []string {
 }
 
 func parseRecallMemoryID(id string) int64 {
-	n, err := strconv.ParseInt(strings.TrimSpace(id), 10, 64)
+	n, err := idutil.ParseDecimal(id)
 	if err != nil {
 		return 0
 	}

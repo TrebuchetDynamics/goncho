@@ -6,11 +6,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/internal/importance"
+	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
@@ -277,7 +277,7 @@ func (s *Service) retentionCandidates(ctx context.Context, policy RetentionPolic
 			if err := rows.Scan(&id, &peer, &session, &content, &created); err != nil {
 				return nil, err
 			}
-			candidates = append(candidates, EvictionCandidate{StableID: "conclusion:" + strconv.FormatInt(id, 10), TargetType: "conclusion", Action: RetentionActionArchive, WorkspaceID: s.workspaceID, PeerID: peer, SessionKey: session, CreatedAt: time.Unix(created, 0).UTC(), Bytes: int64(len(content)), Reasons: []string{fmt.Sprintf("max_age exceeded: older than %s", policy.MaxAge)}, Preview: previewRetentionContent(content)})
+			candidates = append(candidates, EvictionCandidate{StableID: idutil.Prefixed("conclusion:", id), TargetType: "conclusion", Action: RetentionActionArchive, WorkspaceID: s.workspaceID, PeerID: peer, SessionKey: session, CreatedAt: time.Unix(created, 0).UTC(), Bytes: int64(len(content)), Reasons: []string{fmt.Sprintf("max_age exceeded: older than %s", policy.MaxAge)}, Preview: previewRetentionContent(content)})
 		}
 		if err := rows.Err(); err != nil {
 			return nil, err
@@ -315,7 +315,7 @@ func (s *Service) retentionImageCandidates(ctx context.Context, reason string) (
 		if err := rows.Scan(&id, &peer, &session, &ref, &updated); err != nil {
 			return nil, err
 		}
-		out = append(out, EvictionCandidate{StableID: "image:" + strconv.FormatInt(id, 10), TargetType: "image", Action: RetentionActionArchive, WorkspaceID: s.workspaceID, PeerID: peer, SessionKey: session, CreatedAt: time.Unix(updated, 0).UTC(), Reasons: []string{reason}, Preview: ref})
+		out = append(out, EvictionCandidate{StableID: idutil.Prefixed("image:", id), TargetType: "image", Action: RetentionActionArchive, WorkspaceID: s.workspaceID, PeerID: peer, SessionKey: session, CreatedAt: time.Unix(updated, 0).UTC(), Reasons: []string{reason}, Preview: ref})
 	}
 	return out, rows.Err()
 }
@@ -337,10 +337,7 @@ func retentionConclusionID(stableID string) (int64, error) {
 }
 
 func retentionTypedID(stableID, prefix string) (int64, error) {
-	if !strings.HasPrefix(stableID, prefix) {
-		return 0, fmt.Errorf("goncho: invalid retention stable id %q", stableID)
-	}
-	id, err := strconv.ParseInt(strings.TrimPrefix(stableID, prefix), 10, 64)
+	id, err := idutil.ParsePrefixed(stableID, prefix)
 	if err != nil {
 		return 0, fmt.Errorf("goncho: parse retention stable id %q: %w", stableID, err)
 	}

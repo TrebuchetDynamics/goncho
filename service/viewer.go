@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
@@ -248,7 +248,7 @@ func viewerTimelineEvents(messages []MessageRecord, observations []Observation, 
 	for _, message := range messages {
 		events = append(events, ViewerTimelineEvent{
 			Type:     "message",
-			ID:       "message:" + strconv.FormatInt(message.ID, 10),
+			ID:       idutil.Prefixed("message:", message.ID),
 			AtUnix:   message.CreatedAt,
 			Sequence: message.Sequence,
 			Role:     message.Role,

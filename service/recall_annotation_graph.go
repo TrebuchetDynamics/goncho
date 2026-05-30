@@ -3,10 +3,10 @@ package goncho
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/annotationgraph"
+	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
@@ -270,7 +270,7 @@ func (r retrievalModule) findAnnotationGraphOwnerTargets(ctx context.Context, q 
 		if err := rows.Scan(&fact.ID, &fact.MemorySource, &fact.MemoryID, &fact.Value, &fact.Source, &fact.Confidence, &content, &sessionKey); err != nil {
 			return nil, fmt.Errorf("goncho: scan annotation graph owner target: %w", err)
 		}
-		memoryID := strconv.FormatInt(fact.MemoryID, 10)
+		memoryID := idutil.Decimal(fact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -302,7 +302,7 @@ func (r retrievalModule) findAnnotationGraphTimelineTargets(ctx context.Context,
 	}
 	out := []annotationGraphTimelineTarget{}
 	for _, timelineFact := range facts {
-		memoryID := strconv.FormatInt(timelineFact.MemoryID, 10)
+		memoryID := idutil.Decimal(timelineFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -331,7 +331,7 @@ func (r retrievalModule) findAnnotationGraphLocationTargets(ctx context.Context,
 	}
 	out := []annotationGraphLocationTarget{}
 	for _, locationFact := range facts {
-		memoryID := strconv.FormatInt(locationFact.MemoryID, 10)
+		memoryID := idutil.Decimal(locationFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -362,7 +362,7 @@ func (r retrievalModule) findAnnotationGraphPreferenceTargets(ctx context.Contex
 	attributeTokens := searchRankTokenSet(queryAttribute)
 	out := []annotationGraphPreferenceTarget{}
 	for _, preferenceFact := range facts {
-		memoryID := strconv.FormatInt(preferenceFact.MemoryID, 10)
+		memoryID := idutil.Decimal(preferenceFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -396,7 +396,7 @@ func (r retrievalModule) findAnnotationGraphInstructionTargets(ctx context.Conte
 	topicTokens := searchRankTokenSet(queryTopic)
 	out := []annotationGraphInstructionTarget{}
 	for _, instructionFact := range facts {
-		memoryID := strconv.FormatInt(instructionFact.MemoryID, 10)
+		memoryID := idutil.Decimal(instructionFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -428,7 +428,7 @@ func (r retrievalModule) findAnnotationGraphSequenceTargets(ctx context.Context,
 	}
 	out := []annotationGraphSequenceTarget{}
 	for _, sequenceFact := range facts {
-		memoryID := strconv.FormatInt(sequenceFact.MemoryID, 10)
+		memoryID := idutil.Decimal(sequenceFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -457,7 +457,7 @@ func (r retrievalModule) findAnnotationGraphDecisionTargets(ctx context.Context,
 	}
 	out := []annotationGraphDecisionTarget{}
 	for _, decisionFact := range facts {
-		memoryID := strconv.FormatInt(decisionFact.MemoryID, 10)
+		memoryID := idutil.Decimal(decisionFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -486,7 +486,7 @@ func (r retrievalModule) findAnnotationGraphNegationTargets(ctx context.Context,
 	}
 	out := []annotationGraphNegationTarget{}
 	for _, negationFact := range facts {
-		memoryID := strconv.FormatInt(negationFact.MemoryID, 10)
+		memoryID := idutil.Decimal(negationFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -515,7 +515,7 @@ func (r retrievalModule) findAnnotationGraphMetricTargets(ctx context.Context, q
 	}
 	out := []annotationGraphMetricTarget{}
 	for _, metricFact := range facts {
-		memoryID := strconv.FormatInt(metricFact.MemoryID, 10)
+		memoryID := idutil.Decimal(metricFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -544,7 +544,7 @@ func (r retrievalModule) findAnnotationGraphVersionTargets(ctx context.Context, 
 	}
 	out := []annotationGraphVersionTarget{}
 	for _, relationFact := range facts {
-		memoryID := strconv.FormatInt(relationFact.MemoryID, 10)
+		memoryID := idutil.Decimal(relationFact.MemoryID)
 		if memoryID == sourceMemoryID {
 			continue
 		}
@@ -558,7 +558,7 @@ func (r retrievalModule) findAnnotationGraphVersionTargets(ctx context.Context, 
 				continue
 			}
 			candidate := RecallCandidate{
-				MemoryID:   strconv.FormatInt(versionFact.MemoryID, 10),
+				MemoryID:   idutil.Decimal(versionFact.MemoryID),
 				SourceType: memoryAnnotationSourceConclusion,
 				Content:    versionFact.Content,
 				SessionID:  versionFact.SessionKey,
@@ -646,12 +646,12 @@ func annotationFactEvidence(query string, fact memoryFactAnnotation) EvidenceIte
 	return EvidenceItem{
 		Kind:   "fact",
 		Source: "goncho_memory_annotations",
-		ID:     strconv.FormatInt(fact.ID, 10),
+		ID:     idutil.Decimal(fact.ID),
 		Score:  roundRecallFloat(searchFactIntentScore(query, fact.Value)),
 		Note:   "fact=" + strings.TrimSpace(fact.Value),
 		Metadata: map[string]string{
 			"memory_source": fact.MemorySource,
-			"memory_id":     strconv.FormatInt(fact.MemoryID, 10),
+			"memory_id":     idutil.Decimal(fact.MemoryID),
 			"source":        fact.Source,
 			"confidence":    fmt.Sprintf("%.3f", fact.Confidence),
 		},

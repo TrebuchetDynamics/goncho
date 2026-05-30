@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
@@ -111,7 +111,7 @@ func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeI
 		provenance = append(provenance, EvidenceItem{
 			Kind:   "keyword",
 			Source: "goncho_conclusions",
-			ID:     strconv.FormatInt(hit.ID, 10),
+			ID:     idutil.Decimal(hit.ID),
 			Score:  keywordScore,
 			Note:   "matched conclusion content",
 		})
@@ -139,7 +139,7 @@ func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeI
 		provenance = append(provenance, annotationFactEvidence(q.Query, fact))
 	}
 	return RecallCandidate{
-		MemoryID:   strconv.FormatInt(hit.ID, 10),
+		MemoryID:   idutil.Decimal(hit.ID),
 		SourceType: hit.Source,
 		Content:    hit.Content,
 		SessionID:  hit.SessionKey,
@@ -276,7 +276,7 @@ func trimSearchHits(hits []SearchHit, limit int) []SearchHit {
 }
 
 func searchHitFromVectorHit(hit VectorSearchHit) SearchHit {
-	id, _ := strconv.ParseInt(strings.TrimSpace(hit.MemoryID), 10, 64)
+	id, _ := idutil.ParseDecimal(hit.MemoryID)
 	source := strings.TrimSpace(hit.SourceType)
 	if source == "" {
 		source = "vector"
@@ -303,7 +303,7 @@ func searchHitFromVectorHit(hit VectorSearchHit) SearchHit {
 
 func searchHitVectorMergeKey(hit SearchHit) string {
 	if hit.ID > 0 {
-		return "id:" + strconv.FormatInt(hit.ID, 10)
+		return idutil.Prefixed("id:", hit.ID)
 	}
 	return "content:" + strings.TrimSpace(hit.Content)
 }

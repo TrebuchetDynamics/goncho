@@ -3,10 +3,10 @@ package goncho
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopeauth"
 )
@@ -115,7 +115,7 @@ func (s *Service) TeamFeed(ctx context.Context, query TeamFeedQuery) (TeamFeedRe
 	limit := limitutil.DefaultClamped(query.Limit, 50, 100)
 	cursor := int64(0)
 	if strings.TrimSpace(query.Cursor) != "" {
-		cursor, err = strconv.ParseInt(strings.TrimSpace(query.Cursor), 10, 64)
+		cursor, err = idutil.ParseDecimal(query.Cursor)
 		if err != nil || cursor < 0 {
 			return TeamFeedResult{}, fmt.Errorf("goncho: invalid team feed cursor %q", query.Cursor)
 		}
@@ -196,7 +196,7 @@ func (s *Service) listTeamFeedEntries(ctx context.Context, scope TeamFeedEntry, 
 		if err := rows.Scan(&entry.SignalID, &entry.WorkspaceID, &entry.ProfileID, &entry.Peer, &entry.ActionID, &entry.Signal, &entry.Message, &entry.Actor, &entry.CreatedAt); err != nil {
 			return nil, "", fmt.Errorf("goncho: scan team feed: %w", err)
 		}
-		entry.ID = "signal:" + strconv.FormatInt(entry.SignalID, 10)
+		entry.ID = idutil.Prefixed("signal:", entry.SignalID)
 		entry.Kind = "action_signal"
 		entries = append(entries, entry)
 	}
@@ -205,7 +205,7 @@ func (s *Service) listTeamFeedEntries(ctx context.Context, scope TeamFeedEntry, 
 	}
 	next := ""
 	if len(entries) > limit {
-		next = strconv.FormatInt(entries[limit-1].SignalID, 10)
+		next = idutil.Decimal(entries[limit-1].SignalID)
 		entries = entries[:limit]
 	}
 	return entries, next, nil
