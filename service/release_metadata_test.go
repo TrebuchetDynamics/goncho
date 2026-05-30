@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 func TestChangelogReleaseHeadingsHaveMatchingTags(t *testing.T) {
@@ -1909,7 +1911,7 @@ func TestPackageDocSurfacesPkgGoDevLandingContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"Use Goncho when",
 		"Quick start",
@@ -1927,7 +1929,7 @@ func TestPackageDocPointsPkgGoDevReadersToCompiledExamples(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"pkg.go.dev examples",
 		"ExampleNewService",
@@ -1945,7 +1947,7 @@ func TestPackageDocSurfacesInstallAndCommandBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"go get github.com/TrebuchetDynamics/goncho/service@latest",
 		"service package is a library package",
@@ -1962,7 +1964,7 @@ func TestPackageDocSurfacesImportPathGuide(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"Import path guide",
 		"github.com/TrebuchetDynamics/goncho/service is the service library package",
@@ -1982,7 +1984,7 @@ func TestPackageDocSurfacesTrustBoundaryGuide(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"Trust boundary for host agents",
 		"Goncho can orient the agent",
@@ -2003,7 +2005,7 @@ func TestPackageDocSurfacesHostIntegrationChecklist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"Host integration checklist",
 		"memory.OpenSqlite",
@@ -2025,7 +2027,7 @@ func TestPackageDocSurfacesPrimaryAPIPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"Primary API path",
 		"Service.Conclude",
@@ -2049,7 +2051,7 @@ func TestPackageDocSurfacesGoDevPackageSignals(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"go.dev package signals",
 		"v0.3.0",
@@ -2069,7 +2071,7 @@ func TestPackageDocSurfacesVersioningAndAdoptionNotes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("go doc .: %v", err)
 	}
-	text := strings.Join(strings.Fields(string(out)), " ")
+	text := textutil.CollapseWhitespace(string(out))
 	for _, want := range []string{
 		"Versioning and adoption notes",
 		"pre-1.0",

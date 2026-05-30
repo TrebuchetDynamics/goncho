@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type MemoryConsolidationTier string
@@ -174,7 +176,7 @@ func lastNonBlank(values []string) string {
 }
 
 func compactText(value string, limit int) string {
-	value = strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+	value = textutil.CollapseWhitespace(value)
 	if value == "" {
 		return "empty"
 	}
