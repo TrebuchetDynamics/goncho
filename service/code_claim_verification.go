@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/codeclaim"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type VerifiedCodeContextParams struct {
@@ -57,7 +58,7 @@ func (s *Service) VerifiedCodeContext(ctx context.Context, params VerifiedCodeCo
 		}
 	}
 
-	unavailable := append([]ContextUnavailableEvidence(nil), base.Unavailable...)
+	unavailable := sliceutil.Clone(base.Unavailable)
 	if len(stale) > 0 {
 		unavailable = append(unavailable, ContextUnavailableEvidence{
 			Field:      "code_claim",

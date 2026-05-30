@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/annotationgraph"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 const (
@@ -89,8 +90,7 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 	if len(base) == 0 || (!ownerQuery && !versionQuery && !timelineQuery && !metricQuery && !locationQuery && !preferenceQuery && !instructionQuery && !sequenceQuery && !decisionQuery && !negationQuery) {
 		return base, nil
 	}
-	out := make([]RecallCandidate, len(base))
-	copy(out, base)
+	out := sliceutil.Clone(base)
 	indexByID := make(map[string]int, len(out))
 	for i, candidate := range out {
 		indexByID[candidate.MemoryID] = i

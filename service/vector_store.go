@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 // VectorStore is the optional host-owned semantic retrieval seam. Implementations
@@ -119,7 +122,7 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 		r.recallWarnings.append(RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Message: "optional semantic provider unavailable; lexical/graph recall fallback remained active", Evidence: map[string]string{"provider": string(ProviderKindEmbedding), "error": err.Error()}})
 		return base, nil
 	}
-	out := append([]RecallCandidate(nil), base...)
+	out := sliceutil.Clone(base)
 	indexByID := make(map[string]int, len(out)+len(hits))
 	for i, candidate := range out {
 		if strings.TrimSpace(candidate.MemoryID) != "" {
@@ -190,9 +193,5 @@ func cloneVectorMetadata(in map[string]string) map[string]string {
 	if len(in) == 0 {
 		return nil
 	}
-	out := make(map[string]string, len(in))
-	for key, value := range in {
-		out[key] = value
-	}
-	return out
+	return maputil.CloneStringString(in)
 }

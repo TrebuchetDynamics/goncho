@@ -2,6 +2,7 @@ package goncho
 
 import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -26,5 +27,5 @@ func stringMapToAny(in map[string]string) map[string]any {
 }
 
 func cloneStrings(in []string) []string {
-	return textutil.CloneStrings(in)
+	return sliceutil.Clone(in)
 }

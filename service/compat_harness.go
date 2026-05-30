@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 // HonchoSDKCompatibilityHarness is a hermetic adapter for proving Honcho SDK
@@ -236,7 +238,7 @@ func (h *HonchoSDKCompatibilityHarness) ContextPreview(ctx context.Context, req 
 		Representation: result.Representation,
 		Summary:        mapHonchoSDKSummary(result.Summary),
 		SearchResults:  mapHonchoSDKSearchHits(result.SearchResults),
-		RecentMessages: append([]MessageSlice(nil), result.RecentMessages...),
+		RecentMessages: sliceutil.Clone(result.RecentMessages),
 		Unsupported:    mapContextUnsupportedFlows(result.Unavailable),
 	}, nil
 }

@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 // SearchReranker is an optional host-owned reranking seam. Implementations may
@@ -56,7 +58,7 @@ func applySearchReranker(ctx context.Context, reranker SearchReranker, query str
 	if len(scores) == 0 {
 		return hits
 	}
-	out := append([]SearchHit(nil), hits...)
+	out := sliceutil.Clone(hits)
 	sort.SliceStable(out, func(i, j int) bool {
 		left, leftOK := scores[searchHitRerankID(out[i])]
 		right, rightOK := scores[searchHitRerankID(out[j])]

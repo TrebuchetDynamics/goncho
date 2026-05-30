@@ -3,6 +3,8 @@ package goncho
 import (
 	"context"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type GraphExpansionIndex struct {
@@ -43,8 +45,7 @@ func (g graphExpandingRecallGenerator) Generate(ctx context.Context, q RecallQue
 	if err != nil {
 		return nil, err
 	}
-	out := make([]RecallCandidate, len(base))
-	copy(out, base)
+	out := sliceutil.Clone(base)
 	seen := make(map[string]bool, len(out))
 	for _, candidate := range out {
 		seen[candidate.MemoryID] = true
@@ -57,7 +58,7 @@ func (g graphExpandingRecallGenerator) Generate(ctx context.Context, q RecallQue
 		if !ok || recallScopeMismatch(q, target) {
 			continue
 		}
-		target.Provenance = append(cloneEvidenceItems(target.Provenance), EvidenceItem{
+		target.Provenance = append(sliceutil.Clone(target.Provenance), EvidenceItem{
 			Kind:   "graph",
 			ID:     relation.EvidenceID,
 			Source: relation.FromMemoryID,
@@ -83,10 +84,4 @@ func graphRelationMatchesQuery(query string, terms []string) bool {
 		}
 	}
 	return true
-}
-
-func cloneEvidenceItems(items []EvidenceItem) []EvidenceItem {
-	out := make([]EvidenceItem, len(items))
-	copy(out, items)
-	return out
 }

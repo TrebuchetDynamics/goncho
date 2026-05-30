@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type ProviderKind string
@@ -326,5 +328,5 @@ func (b *recallWarningBuffer) list() []RecallWarning {
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return append([]RecallWarning(nil), b.warnings...)
+	return sliceutil.Clone(b.warnings)
 }

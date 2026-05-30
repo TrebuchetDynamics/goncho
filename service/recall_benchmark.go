@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -672,7 +673,7 @@ func summarizeRecallBenchmarkLatency(latencies []int) RecallBenchmarkLatency {
 	if len(latencies) == 0 {
 		return RecallBenchmarkLatency{}
 	}
-	sorted := append([]int(nil), latencies...)
+	sorted := sliceutil.Clone(latencies)
 	sort.Ints(sorted)
 	return RecallBenchmarkLatency{
 		MinMS: sorted[0],

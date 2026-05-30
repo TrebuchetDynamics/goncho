@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 const (
@@ -235,9 +237,7 @@ func normalizePeerCard(card []string) []string {
 	if len(card) > maxPeerCardFacts {
 		card = card[:maxPeerCardFacts]
 	}
-	out := make([]string, len(card))
-	copy(out, card)
-	return out
+	return sliceutil.Clone(card)
 }
 
 func (s *Service) Conclude(ctx context.Context, params ConcludeParams) (ConcludeResult, error) {

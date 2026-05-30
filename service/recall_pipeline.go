@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/recallscore"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 const defaultRecallPipelineVersion = "goncho-recall-v1"
@@ -174,7 +176,7 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 	}
 
 	selected := make([]ScoredRecallCandidate, 0, min(limit, len(eligible)))
-	remaining := append([]ScoredRecallCandidate(nil), eligible...)
+	remaining := sliceutil.Clone(eligible)
 	usedTokens := 0
 	for len(selected) < limit && len(remaining) > 0 {
 		bestIdx := 0
@@ -253,10 +255,7 @@ func normalizeRecallScoringConfig(config RecallScoringConfig) RecallScoringConfi
 		config.Version = "default-v1"
 	}
 	if len(config.Weights) == 0 {
-		config.Weights = make(map[string]float64, len(defaultRecallWeights))
-		for key, value := range defaultRecallWeights {
-			config.Weights[key] = value
-		}
+		config.Weights = maputil.CloneStringFloat64(defaultRecallWeights)
 	}
 	config = cloneRecallScoringConfig(config)
 	if config.RRFK <= 0 {
@@ -270,11 +269,7 @@ func normalizeRecallScoringConfig(config RecallScoringConfig) RecallScoringConfi
 
 func cloneRecallScoringConfig(config RecallScoringConfig) RecallScoringConfig {
 	if config.Weights != nil {
-		weights := make(map[string]float64, len(config.Weights))
-		for key, value := range config.Weights {
-			weights[key] = value
-		}
-		config.Weights = weights
+		config.Weights = maputil.CloneStringFloat64(config.Weights)
 	}
 	if config.DiversityKeys != nil {
 		config.DiversityKeys = cloneStrings(config.DiversityKeys)

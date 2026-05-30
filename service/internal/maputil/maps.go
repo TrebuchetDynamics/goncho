@@ -25,6 +25,18 @@ func CloneStringAny(in map[string]any) map[string]any {
 	return out
 }
 
+// CloneStringFloat64 returns a shallow copy of a string-to-float64 map.
+func CloneStringFloat64(in map[string]float64) map[string]float64 {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]float64, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
 // StringStringToAny copies a string-to-string map into a string-to-any map.
 func StringStringToAny(in map[string]string) map[string]any {
 	if len(in) == 0 {

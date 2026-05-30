@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type retrievalModule struct {
@@ -98,7 +100,7 @@ func recallSourcesAllowConclusions(sources []string) bool {
 }
 
 func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeID string) RecallCandidate {
-	provenance := append([]EvidenceItem(nil), hit.Provenance...)
+	provenance := sliceutil.Clone(hit.Provenance)
 	keywordScore := roundRecallFloat(keywordRecallScore(hit.Content, q.Query))
 	expansion := expandSearchQuery(q.Query)
 	expandedKeywordScore := keywordScore
@@ -240,7 +242,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 	if err != nil {
 		return base, nil
 	}
-	out := append([]SearchHit(nil), base...)
+	out := sliceutil.Clone(base)
 	index := map[string]int{}
 	for i, hit := range out {
 		index[searchHitVectorMergeKey(hit)] = i
@@ -268,7 +270,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 
 func trimSearchHits(hits []SearchHit, limit int) []SearchHit {
 	if limit > 0 && len(hits) > limit {
-		return append([]SearchHit(nil), hits[:limit]...)
+		return sliceutil.Clone(hits[:limit])
 	}
 	return hits
 }
@@ -380,7 +382,7 @@ func (r retrievalModule) searchTurnFallback(ctx context.Context, params SearchPa
 }
 
 func (r retrievalModule) crossChatEvidenceMetadata(ctx context.Context, userID, currentKey string, metas []SessionMetadata) ([]SessionMetadata, error) {
-	out := append([]SessionMetadata(nil), metas...)
+	out := sliceutil.Clone(metas)
 	resolver, ok := r.sessions.(userBindingResolver)
 	if !ok {
 		return out, nil

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/recalldiag"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type RecallDiagnosticsReport struct {
@@ -89,7 +90,7 @@ func BuildRecallDiagnostics(trace RecallTrace) RecallDiagnosticsReport {
 		SelectedCount:        len(trace.Selected),
 		RejectedCount:        len(trace.Rejected),
 		WarningCount:         len(trace.Warnings),
-		Warnings:             append([]RecallWarning(nil), trace.Warnings...),
+		Warnings:             sliceutil.Clone(trace.Warnings),
 		ProjectionInvariant:  "no_projection_without_recall_trace",
 		DegradedPathContract: "all_degraded_paths_emit_code_first_warnings",
 	}

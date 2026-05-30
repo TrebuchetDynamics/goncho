@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 // TextEmbeddingProvider turns text into deterministic local vectors. It is kept
@@ -110,7 +112,7 @@ func (i *LocalVectorIndex) Upsert(ctx context.Context, memory LocalVectorMemory)
 	if err := validateLocalVector(vector); err != nil {
 		return err
 	}
-	entry := localVectorEntry{LocalVectorMemory: memory, Vector: cloneFloat64s(vector), ContentChecksum: localVectorContentChecksum(memory.Content), IndexedAt: time.Now().UTC()}
+	entry := localVectorEntry{LocalVectorMemory: memory, Vector: sliceutil.Clone(vector), ContentChecksum: localVectorContentChecksum(memory.Content), IndexedAt: time.Now().UTC()}
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if i.dimensions == 0 {
@@ -240,7 +242,7 @@ func (i *LocalVectorIndex) load(ctx context.Context) error {
 		return fmt.Errorf("goncho: unsupported local vector index version %q", file.Version)
 	}
 	i.dimensions = file.Dimensions
-	i.entries = append([]localVectorEntry(nil), file.Entries...)
+	i.entries = sliceutil.Clone(file.Entries)
 	sortLocalVectorEntries(i.entries)
 	return nil
 }
@@ -350,10 +352,4 @@ func sortLocalVectorEntries(entries []localVectorEntry) {
 		}
 		return entries[i].MemoryID < entries[j].MemoryID
 	})
-}
-
-func cloneFloat64s(in []float64) []float64 {
-	out := make([]float64, len(in))
-	copy(out, in)
-	return out
 }
