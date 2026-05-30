@@ -3,6 +3,8 @@ package searchtokens
 import (
 	"regexp"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textmatch"
 )
 
 var tokenPattern = regexp.MustCompile(`[a-z0-9]+`)
@@ -36,20 +38,7 @@ func TermFrequency(value string) map[string]int {
 }
 
 func Coverage(want map[string]struct{}, value string) float64 {
-	if len(want) == 0 {
-		return 0
-	}
-	got := TokenSet(value)
-	if len(got) == 0 {
-		return 0
-	}
-	hits := 0
-	for token := range want {
-		if _, ok := got[token]; ok {
-			hits++
-		}
-	}
-	return float64(hits) / float64(len(want))
+	return textmatch.Coverage(want, TokenSet(value))
 }
 
 func Stem(token string) string {

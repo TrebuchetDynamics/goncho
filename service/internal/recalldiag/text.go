@@ -2,7 +2,8 @@ package recalldiag
 
 import (
 	"fmt"
-	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type ScoreBreakdown struct {
@@ -32,7 +33,7 @@ func FormatScores(scores ScoreBreakdown) string {
 }
 
 func PreviewContent(content string) string {
-	content = strings.Join(strings.Fields(content), " ")
+	content = textutil.CollapseWhitespace(content)
 	if len(content) <= 96 {
 		return content
 	}

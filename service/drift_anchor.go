@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textmatch"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -91,25 +92,7 @@ func isNegativeDriftAnchor(entry MemoryToolEntry) bool {
 var driftAnchorTokenPattern = regexp.MustCompile(`[a-z0-9]+`)
 
 func driftAnchorSimilarity(prompt, memory string) float64 {
-	promptTokens := driftAnchorTokenSet(prompt)
-	memoryTokens := driftAnchorTokenSet(memory)
-	if len(promptTokens) == 0 || len(memoryTokens) == 0 {
-		return 0
-	}
-	shared := 0
-	for token := range promptTokens {
-		if _, ok := memoryTokens[token]; ok {
-			shared++
-		}
-	}
-	denom := len(promptTokens)
-	if len(memoryTokens) < denom {
-		denom = len(memoryTokens)
-	}
-	if denom == 0 {
-		return 0
-	}
-	return float64(shared) / float64(denom)
+	return textmatch.OverlapCoefficient(driftAnchorTokenSet(prompt), driftAnchorTokenSet(memory))
 }
 
 func driftAnchorTokenSet(value string) map[string]struct{} {
