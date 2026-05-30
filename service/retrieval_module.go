@@ -63,10 +63,9 @@ func (r retrievalModule) Generate(ctx context.Context, q RecallQuery) ([]RecallC
 	if err != nil {
 		return nil, err
 	}
-	out := make([]RecallCandidate, 0, len(hits))
-	for _, hit := range hits {
-		out = append(out, recallCandidateFromSearchHit(q, hit, r.observer, memoryScope))
-	}
+	out := sliceutil.Map(hits, func(hit SearchHit) RecallCandidate {
+		return recallCandidateFromSearchHit(q, hit, r.observer, memoryScope)
+	})
 	out, err = r.mergeVectorRecall(ctx, q, workspaceID, "", peer, memoryScope, out)
 	if err != nil {
 		return nil, err
@@ -466,13 +465,7 @@ func (r retrievalModule) Context(ctx context.Context, params ContextParams) (Con
 	}
 
 	var summary *SessionSummary
-	conclusions := make([]string, 0, len(searchResult.Results))
-	for _, hit := range searchResult.Results {
-		if hit.Source != "conclusion" {
-			continue
-		}
-		conclusions = append(conclusions, hit.Content)
-	}
+	conclusions := conclusionsFromSearchHits(searchResult.Results)
 
 	recentMessages := []MessageSlice{}
 	if sessionKey != "" {

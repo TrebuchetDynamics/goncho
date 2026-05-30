@@ -7,11 +7,9 @@ import (
 )
 
 func evidenceListKinds(items []EvidenceItem) []string {
-	kinds := make([]string, 0, len(items))
-	for _, item := range items {
-		kinds = append(kinds, item.Kind)
-	}
-	return kinds
+	return sliceutil.Map(items, func(item EvidenceItem) string {
+		return item.Kind
+	})
 }
 
 func evidenceListHas(items []EvidenceItem, kind, id string) bool {

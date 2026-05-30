@@ -541,11 +541,10 @@ func buildRepresentation(peer string, card, conclusions []string) string {
 }
 
 func buildChatContent(peer, query, reasoningLevel string, card []string, hits []SearchHit, unavailable []ContextUnavailableEvidence) string {
-	conclusions := make([]string, 0, len(hits))
+	conclusions := conclusionsFromSearchHits(hits)
 	otherEvidence := make([]SearchHit, 0)
 	for _, hit := range hits {
 		if hit.Source == "conclusion" {
-			conclusions = append(conclusions, hit.Content)
 			continue
 		}
 		otherEvidence = append(otherEvidence, hit)

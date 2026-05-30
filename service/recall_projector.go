@@ -4,20 +4,22 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type RecallProjector struct{}
 
-func (p *RecallProjector) ProjectSearch(trace RecallTrace) SearchResultSet {
-	results := make([]SearchHit, 0, len(trace.Selected))
-	for _, item := range trace.Selected {
-		results = append(results, SearchHit{
-			ID:         parseRecallMemoryID(item.Candidate.MemoryID),
-			Source:     item.Candidate.SourceType,
-			Content:    item.Candidate.Content,
-			SessionKey: item.Candidate.SessionID,
-		})
+func searchHitFromScoredRecallCandidate(item ScoredRecallCandidate) SearchHit {
+	return SearchHit{
+		ID:         parseRecallMemoryID(item.Candidate.MemoryID),
+		Source:     item.Candidate.SourceType,
+		Content:    item.Candidate.Content,
+		SessionKey: item.Candidate.SessionID,
 	}
+}
+
+func (p *RecallProjector) ProjectSearch(trace RecallTrace) SearchResultSet {
+	results := sliceutil.Map(trace.Selected, searchHitFromScoredRecallCandidate)
 	if results == nil {
 		results = []SearchHit{}
 	}
@@ -31,18 +33,10 @@ func (p *RecallProjector) ProjectSearch(trace RecallTrace) SearchResultSet {
 
 func (p *RecallProjector) ProjectContext(trace RecallTrace) ContextResult {
 	search := p.ProjectSearch(trace)
-	conclusions := make([]string, 0, len(search.Results))
+	conclusions := conclusionsFromSearchHits(search.Results)
 	var representation strings.Builder
 	for _, item := range trace.Selected {
-		hit := SearchHit{
-			ID:         parseRecallMemoryID(item.Candidate.MemoryID),
-			Source:     item.Candidate.SourceType,
-			Content:    item.Candidate.Content,
-			SessionKey: item.Candidate.SessionID,
-		}
-		if hit.Source == "conclusion" {
-			conclusions = append(conclusions, hit.Content)
-		}
+		hit := searchHitFromScoredRecallCandidate(item)
 		if strings.TrimSpace(hit.Content) == "" {
 			continue
 		}

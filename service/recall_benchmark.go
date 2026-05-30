@@ -474,19 +474,17 @@ func recallBenchmarkProvenanceSatisfied(trace RecallTrace, relevantIDs, required
 }
 
 func recallBenchmarkCandidateIDs(items []ScoredRecallCandidate) []string {
-	out := make([]string, 0, len(items))
-	for _, item := range items {
-		out = append(out, item.Candidate.MemoryID)
-	}
-	return out
+	return recallBenchmarkMemoryIDs(items)
 }
 
 func recallBenchmarkSelectedIDs(items []ScoredRecallCandidate) []string {
-	out := make([]string, 0, len(items))
-	for _, item := range items {
-		out = append(out, item.Candidate.MemoryID)
-	}
-	return out
+	return recallBenchmarkMemoryIDs(items)
+}
+
+func recallBenchmarkMemoryIDs(items []ScoredRecallCandidate) []string {
+	return sliceutil.Map(items, func(item ScoredRecallCandidate) string {
+		return item.Candidate.MemoryID
+	})
 }
 
 func recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, relevantIDs []string, expectedNoAnswer bool, k int) float64 {
