@@ -39,6 +39,12 @@ const (
 
 var ErrProviderCircuitOpen = errors.New("goncho: provider circuit open")
 
+const (
+	defaultProviderFailureThreshold = 3
+	defaultProviderCooldown         = 30 * time.Second
+	defaultProviderTimeout          = 5 * time.Second
+)
+
 type ProviderResilienceConfig struct {
 	FailureThreshold int
 	Cooldown         time.Duration
@@ -105,14 +111,8 @@ func NewProviderCircuitBreaker(cfg ProviderCircuitBreakerConfig) *ProviderCircui
 	if kind == "" {
 		kind = ProviderKind(name)
 	}
-	threshold := cfg.FailureThreshold
-	if threshold <= 0 {
-		threshold = 3
-	}
-	cooldown := cfg.Cooldown
-	if cooldown <= 0 {
-		cooldown = 30 * time.Second
-	}
+	threshold := defaultProviderThreshold(cfg.FailureThreshold)
+	cooldown := defaultProviderCooldownDuration(cfg.Cooldown)
 	now := cfg.Now
 	if now == nil {
 		now = time.Now
@@ -211,16 +211,26 @@ func NewProviderHealthRegistry(cfg ProviderResilienceConfig, vectorStore VectorS
 }
 
 func normalizeProviderResilienceConfig(cfg ProviderResilienceConfig) ProviderResilienceConfig {
-	if cfg.FailureThreshold <= 0 {
-		cfg.FailureThreshold = 3
-	}
-	if cfg.Cooldown <= 0 {
-		cfg.Cooldown = 30 * time.Second
-	}
+	cfg.FailureThreshold = defaultProviderThreshold(cfg.FailureThreshold)
+	cfg.Cooldown = defaultProviderCooldownDuration(cfg.Cooldown)
 	if cfg.Timeout <= 0 {
-		cfg.Timeout = 5 * time.Second
+		cfg.Timeout = defaultProviderTimeout
 	}
 	return cfg
+}
+
+func defaultProviderThreshold(threshold int) int {
+	if threshold <= 0 {
+		return defaultProviderFailureThreshold
+	}
+	return threshold
+}
+
+func defaultProviderCooldownDuration(cooldown time.Duration) time.Duration {
+	if cooldown <= 0 {
+		return defaultProviderCooldown
+	}
+	return cooldown
 }
 
 func providerResilienceConfigFromServiceConfig(cfg Config) ProviderResilienceConfig {

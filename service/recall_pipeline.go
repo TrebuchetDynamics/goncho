@@ -14,6 +14,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/recallscore"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const defaultRecallPipelineVersion = "goncho-recall-v1"
@@ -488,12 +489,7 @@ func recallTemporalAdjustment(candidate ScoredRecallCandidate, query string) flo
 
 func recallQueryAsksCurrentTruth(query string) bool {
 	query = strings.ToLower(query)
-	for _, marker := range []string{" now", "current", "currently", "latest", "today"} {
-		if strings.Contains(query, marker) {
-			return true
-		}
-	}
-	return false
+	return textutil.ContainsAnySubstring(query, []string{" now", "current", "currently", "latest", "today"})
 }
 
 func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {

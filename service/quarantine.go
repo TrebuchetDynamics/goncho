@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 func importLooksLikePromptInjection(text string) bool {
@@ -17,12 +19,7 @@ func importLooksLikePromptInjection(text string) bool {
 		"<script",
 		"system prompt",
 	}
-	for _, marker := range markers {
-		if strings.Contains(value, marker) {
-			return true
-		}
-	}
-	return false
+	return textutil.ContainsAnySubstring(value, markers)
 }
 
 func promptInjectionQuarantineEvidence() ContextUnavailableEvidence {

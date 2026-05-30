@@ -1,6 +1,10 @@
 package searchrank
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+)
 
 type TemporalDirection int
 
@@ -19,11 +23,11 @@ type TemporalFeatures struct {
 func TemporalIntent(query string) TemporalFeatures {
 	q := strings.ToLower(query)
 	features := TemporalFeatures{Markers: TemporalMarkers(q), Temporal: TemporalQuery(q)}
-	if strings.Contains(q, "first") || strings.Contains(q, "earliest") || strings.Contains(q, "initial") || strings.Contains(q, "original") || strings.Contains(q, "started first") {
+	if textutil.ContainsAnySubstring(q, []string{"first", "earliest", "initial", "original", "started first"}) {
 		features.Direction = TemporalOlder
 		return features
 	}
-	if strings.Contains(q, "latest") || strings.Contains(q, "current") || strings.Contains(q, "currently") || strings.Contains(q, "most recently") {
+	if textutil.ContainsAnySubstring(q, []string{"latest", "current", "currently", "most recently"}) {
 		features.Direction = TemporalNewer
 		return features
 	}
@@ -32,12 +36,7 @@ func TemporalIntent(query string) TemporalFeatures {
 
 func TemporalQuery(query string) bool {
 	needles := []string{"when", "first", "earliest", "initial", "original", "latest", "current", "currently", "recent", "today", "yesterday", "tomorrow", "last ", "this ", "past ", "how many days", "how many weeks", "how many months", "how many years", "how long", "order of"}
-	for _, needle := range needles {
-		if strings.Contains(query, needle) {
-			return true
-		}
-	}
-	return false
+	return textutil.ContainsAnySubstring(query, needles)
 }
 
 func TemporalMarkers(query string) []string {
@@ -77,7 +76,7 @@ func TemporalRerankBonus(features TemporalFeatures, content string, index, total
 		// Newer/current phrasing is common in distractors (for example "new products"),
 		// so only exact query temporal marker matches contribute positive evidence.
 	case TemporalOlder:
-		if strings.Contains(contentLower, "first") || strings.Contains(contentLower, "initial") || strings.Contains(contentLower, "original") || strings.Contains(contentLower, "earliest") || strings.Contains(contentLower, "started") || strings.Contains(contentLower, "began") {
+		if textutil.ContainsAnySubstring(contentLower, []string{"first", "initial", "original", "earliest", "started", "began"}) {
 			alignment += 0.5
 		}
 	}
