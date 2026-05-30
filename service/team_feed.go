@@ -9,6 +9,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopeauth"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 )
 
 type TeamFeedDecision string
@@ -159,22 +160,20 @@ func (s *Service) ListTeamFeedAudit(ctx context.Context, query TeamFeedAuditQuer
 }
 
 func (s *Service) normalizeTeamFeedQuery(query TeamFeedQuery) (TeamFeedEntry, error) {
-	workspaceID := firstNonBlank(query.WorkspaceID, s.workspaceID)
-	peer := strings.TrimSpace(query.Peer)
+	scope := scopekey.Normalize(s.workspaceID, query.WorkspaceID, query.ProfileID, query.Peer)
 	actor := strings.TrimSpace(query.Actor)
-	if workspaceID == "" || peer == "" || actor == "" {
+	if !scope.Complete() || actor == "" {
 		return TeamFeedEntry{}, fmt.Errorf("goncho: team feed workspace_id, peer, and actor are required")
 	}
-	return TeamFeedEntry{WorkspaceID: workspaceID, ProfileID: strings.TrimSpace(query.ProfileID), Peer: peer, Actor: actor}, nil
+	return TeamFeedEntry{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, Actor: actor}, nil
 }
 
 func (s *Service) normalizeTeamFeedAuditQuery(query TeamFeedAuditQuery) (TeamFeedEntry, error) {
-	workspaceID := firstNonBlank(query.WorkspaceID, s.workspaceID)
-	peer := strings.TrimSpace(query.Peer)
-	if workspaceID == "" || peer == "" {
+	scope := scopekey.Normalize(s.workspaceID, query.WorkspaceID, query.ProfileID, query.Peer)
+	if !scope.Complete() {
 		return TeamFeedEntry{}, fmt.Errorf("goncho: team feed audit workspace_id and peer are required")
 	}
-	return TeamFeedEntry{WorkspaceID: workspaceID, ProfileID: strings.TrimSpace(query.ProfileID), Peer: peer}, nil
+	return TeamFeedEntry{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer}, nil
 }
 
 func (s *Service) listTeamFeedEntries(ctx context.Context, scope TeamFeedEntry, cursor int64, limit int) ([]TeamFeedEntry, string, error) {

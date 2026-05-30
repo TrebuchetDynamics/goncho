@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 )
 
 type SnapshotParams struct {
@@ -59,29 +59,27 @@ type SnapshotRollbackMetadata struct {
 }
 
 func (s *Service) ExportSnapshotManifest(ctx context.Context, params SnapshotParams) (SnapshotManifest, error) {
-	workspaceID := firstNonBlank(params.WorkspaceID, s.workspaceID)
-	profileID := strings.TrimSpace(params.ProfileID)
-	peer := strings.TrimSpace(params.Peer)
-	if workspaceID == "" || peer == "" {
+	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.Peer)
+	if !scope.Complete() {
 		return SnapshotManifest{}, fmt.Errorf("goncho: snapshot workspace_id and peer are required")
 	}
 	entries := []SnapshotEntry{}
-	profileEntries, err := snapshotProfileEntries(ctx, s.db, workspaceID, profileID, s.observer, peer)
+	profileEntries, err := snapshotProfileEntries(ctx, s.db, scope.WorkspaceID, scope.ProfileID, s.observer, scope.Peer)
 	if err != nil {
 		return SnapshotManifest{}, err
 	}
 	entries = append(entries, profileEntries...)
-	conclusionEntries, err := snapshotConclusionEntries(ctx, s.db, workspaceID, profileID, s.observer, peer)
+	conclusionEntries, err := snapshotConclusionEntries(ctx, s.db, scope.WorkspaceID, scope.ProfileID, s.observer, scope.Peer)
 	if err != nil {
 		return SnapshotManifest{}, err
 	}
 	entries = append(entries, conclusionEntries...)
-	slotEntries, err := snapshotSlotEntries(ctx, s.db, workspaceID, profileID, peer)
+	slotEntries, err := snapshotSlotEntries(ctx, s.db, scope.WorkspaceID, scope.ProfileID, scope.Peer)
 	if err != nil {
 		return SnapshotManifest{}, err
 	}
 	entries = append(entries, slotEntries...)
-	actionEntries, err := snapshotActionEntries(ctx, s.db, workspaceID, profileID, peer)
+	actionEntries, err := snapshotActionEntries(ctx, s.db, scope.WorkspaceID, scope.ProfileID, scope.Peer)
 	if err != nil {
 		return SnapshotManifest{}, err
 	}
@@ -89,9 +87,9 @@ func (s *Service) ExportSnapshotManifest(ctx context.Context, params SnapshotPar
 	sortSnapshotEntries(entries)
 	manifest := SnapshotManifest{
 		ManifestVersion: "goncho-snapshot-v1",
-		WorkspaceID:     workspaceID,
-		ProfileID:       profileID,
-		Peer:            peer,
+		WorkspaceID:     scope.WorkspaceID,
+		ProfileID:       scope.ProfileID,
+		Peer:            scope.Peer,
 		Git: SnapshotGitMetadata{
 			AdapterOwned: true,
 			Operation:    "none",

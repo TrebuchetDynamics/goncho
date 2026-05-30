@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/jsonutil"
 )
 
 type gonchoJSONDiff struct {
@@ -21,12 +23,7 @@ func (d gonchoJSONDiff) Error() string {
 }
 
 func marshalStableJSON(v any) ([]byte, error) {
-	raw, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	raw = append(raw, '\n')
-	return raw, nil
+	return jsonutil.StableIndented(v)
 }
 
 func compareGoldenJSON(wantRaw, gotRaw []byte) error {

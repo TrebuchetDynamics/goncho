@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 )
 
 type ImageEmbeddingStatus string
@@ -78,15 +79,13 @@ type ImageMemoryList struct {
 }
 
 func (s *Service) StoreImageMemory(ctx context.Context, params ImageMemoryParams) (ImageMemory, error) {
-	workspaceID := firstNonBlank(params.WorkspaceID, s.workspaceID)
-	profileID := strings.TrimSpace(params.ProfileID)
-	peer := strings.TrimSpace(params.Peer)
+	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.Peer)
 	imageRef := strings.TrimSpace(params.ImageRef)
 	checksum := strings.TrimSpace(params.Checksum)
-	if workspaceID == "" || peer == "" || imageRef == "" || checksum == "" {
+	if !scope.Complete() || imageRef == "" || checksum == "" {
 		return ImageMemory{}, fmt.Errorf("goncho: image memory workspace_id, peer, image_ref, and checksum are required")
 	}
-	existing, found, err := getImageMemoryByChecksum(ctx, s.db, workspaceID, profileID, peer, checksum)
+	existing, found, err := getImageMemoryByChecksum(ctx, s.db, scope.WorkspaceID, scope.ProfileID, scope.Peer, checksum)
 	if err != nil {
 		return ImageMemory{}, err
 	}
@@ -102,7 +101,7 @@ func (s *Service) StoreImageMemory(ctx context.Context, params ImageMemoryParams
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO goncho_image_memories(workspace_id, profile_id, peer_id, session_key, image_ref, checksum, alt_text, embedding_status, metadata_json, created_at, updated_at)
 		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, workspaceID, profileID, peer, strings.TrimSpace(params.SessionKey), imageRef, checksum, strings.TrimSpace(params.AltText), string(ImageEmbeddingDeferred), metadataJSON, now, now)
+	`, scope.WorkspaceID, scope.ProfileID, scope.Peer, strings.TrimSpace(params.SessionKey), imageRef, checksum, strings.TrimSpace(params.AltText), string(ImageEmbeddingDeferred), metadataJSON, now, now)
 	if err != nil {
 		return ImageMemory{}, fmt.Errorf("goncho: store image memory: %w", err)
 	}
@@ -110,19 +109,17 @@ func (s *Service) StoreImageMemory(ctx context.Context, params ImageMemoryParams
 	if err != nil {
 		return ImageMemory{}, fmt.Errorf("goncho: image memory id: %w", err)
 	}
-	return ImageMemory{ID: id, WorkspaceID: workspaceID, ProfileID: profileID, Peer: peer, SessionKey: strings.TrimSpace(params.SessionKey), ImageRef: imageRef, Checksum: checksum, AltText: strings.TrimSpace(params.AltText), EmbeddingStatus: ImageEmbeddingDeferred, Metadata: cloneStringMap(params.Metadata), CreatedAt: now, UpdatedAt: now}, nil
+	return ImageMemory{ID: id, WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, SessionKey: strings.TrimSpace(params.SessionKey), ImageRef: imageRef, Checksum: checksum, AltText: strings.TrimSpace(params.AltText), EmbeddingStatus: ImageEmbeddingDeferred, Metadata: cloneStringMap(params.Metadata), CreatedAt: now, UpdatedAt: now}, nil
 }
 
 func (s *Service) SearchImageMemories(ctx context.Context, query ImageMemoryQuery) (ImageMemoryList, error) {
-	workspaceID := firstNonBlank(query.WorkspaceID, s.workspaceID)
-	profileID := strings.TrimSpace(query.ProfileID)
-	peer := strings.TrimSpace(query.Peer)
-	if workspaceID == "" || peer == "" {
+	scope := scopekey.Normalize(s.workspaceID, query.WorkspaceID, query.ProfileID, query.Peer)
+	if !scope.Complete() {
 		return ImageMemoryList{}, fmt.Errorf("goncho: image memory workspace_id and peer are required")
 	}
 	limit := limitutil.Default(query.Limit, 20)
 	base := `SELECT id, workspace_id, profile_id, peer_id, session_key, image_ref, checksum, alt_text, embedding_status, metadata_json, created_at, updated_at FROM goncho_image_memories WHERE workspace_id = ? AND profile_id = ? AND peer_id = ? AND embedding_status != 'archived'`
-	args := []any{workspaceID, profileID, peer}
+	args := []any{scope.WorkspaceID, scope.ProfileID, scope.Peer}
 	if sessionKey := strings.TrimSpace(query.SessionKey); sessionKey != "" {
 		base += ` AND session_key = ?`
 		args = append(args, sessionKey)
@@ -139,7 +136,7 @@ func (s *Service) SearchImageMemories(ctx context.Context, query ImageMemoryQuer
 		return ImageMemoryList{}, fmt.Errorf("goncho: search image memories: %w", err)
 	}
 	defer rows.Close()
-	out := ImageMemoryList{WorkspaceID: workspaceID, ProfileID: profileID, Peer: peer, Images: []ImageMemory{}}
+	out := ImageMemoryList{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, Images: []ImageMemory{}}
 	for rows.Next() {
 		image, err := scanImageMemory(rows)
 		if err != nil {

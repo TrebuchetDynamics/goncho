@@ -12,6 +12,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/pathutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -143,14 +144,13 @@ func (s *Service) ImportFilesystemWatcherChanges(ctx context.Context, params Fil
 }
 
 func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImportParams) (FilesystemWatcherImportParams, error) {
-	workspaceID := firstNonBlank(params.WorkspaceID, s.workspaceID)
+	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.PeerID)
 	root, err := filepath.Abs(strings.TrimSpace(params.RootDir))
 	if err != nil || strings.TrimSpace(params.RootDir) == "" {
 		return FilesystemWatcherImportParams{}, fmt.Errorf("goncho: filesystem watcher root_dir is required")
 	}
-	peer := strings.TrimSpace(params.PeerID)
 	session := strings.TrimSpace(params.SessionKey)
-	if workspaceID == "" || peer == "" || session == "" {
+	if !scope.Complete() || session == "" {
 		return FilesystemWatcherImportParams{}, fmt.Errorf("goncho: filesystem watcher workspace_id, peer_id, and session_key are required")
 	}
 	include := normalizeWatcherGlobs(params.IncludeGlobs)
@@ -165,7 +165,7 @@ func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImpor
 	if maxPreview <= 0 {
 		maxPreview = defaultFilesystemWatcherPreviewBytes
 	}
-	return FilesystemWatcherImportParams{WorkspaceID: workspaceID, ProfileID: strings.TrimSpace(params.ProfileID), PeerID: peer, SessionKey: session, RootDir: root, Paths: cloneStrings(params.Paths), IncludeGlobs: include, ExcludeGlobs: normalizeWatcherGlobs(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
+	return FilesystemWatcherImportParams{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, PeerID: scope.Peer, SessionKey: session, RootDir: root, Paths: cloneStrings(params.Paths), IncludeGlobs: include, ExcludeGlobs: normalizeWatcherGlobs(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
 }
 
 func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportParams) (FilesystemWatcherCandidate, FilesystemWatcherSkipped, error) {

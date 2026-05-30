@@ -1,8 +1,9 @@
 package goncho
 
 import (
-	"encoding/json"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/jsonutil"
 )
 
 const (
@@ -128,13 +129,7 @@ type RecallTrace struct {
 }
 
 func (t RecallTrace) StableJSON() ([]byte, error) {
-	normalized := normalizeRecallTrace(t)
-	raw, err := json.MarshalIndent(normalized, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	raw = append(raw, '\n')
-	return raw, nil
+	return jsonutil.StableIndented(normalizeRecallTrace(t))
 }
 
 func normalizeRecallTrace(trace RecallTrace) RecallTrace {

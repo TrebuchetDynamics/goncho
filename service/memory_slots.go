@@ -10,6 +10,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 )
 
 var ErrMemorySlotNotFound = errors.New("goncho: memory slot not found")
@@ -242,29 +243,25 @@ func (s *Service) ListMemorySlots(ctx context.Context, query MemorySlotQuery) (M
 }
 
 func (s *Service) normalizeMemorySlotParams(params MemorySlotParams) (MemorySlot, error) {
-	workspaceID := firstNonBlank(params.WorkspaceID, s.workspaceID)
-	profileID := strings.TrimSpace(params.ProfileID)
-	peer := strings.TrimSpace(params.Peer)
+	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.Peer)
 	name := strings.TrimSpace(params.Name)
 	kind := strings.TrimSpace(params.Kind)
 	if kind == "" {
 		kind = "fact"
 	}
 	value := strings.TrimSpace(params.Value)
-	if workspaceID == "" || peer == "" || name == "" || value == "" {
+	if !scope.Complete() || name == "" || value == "" {
 		return MemorySlot{}, fmt.Errorf("goncho: memory slot workspace_id, peer, name, and value are required")
 	}
-	return MemorySlot{WorkspaceID: workspaceID, ProfileID: profileID, Peer: peer, Scope: normalizeMemoryScope(params.Scope, profileID), Name: name, Kind: kind, Value: value}, nil
+	return MemorySlot{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, Scope: normalizeMemoryScope(params.Scope, scope.ProfileID), Name: name, Kind: kind, Value: value}, nil
 }
 
 func (s *Service) normalizeMemorySlotQuery(query MemorySlotQuery) (MemorySlot, error) {
-	workspaceID := firstNonBlank(query.WorkspaceID, s.workspaceID)
-	profileID := strings.TrimSpace(query.ProfileID)
-	peer := strings.TrimSpace(query.Peer)
-	if workspaceID == "" || peer == "" {
+	scope := scopekey.Normalize(s.workspaceID, query.WorkspaceID, query.ProfileID, query.Peer)
+	if !scope.Complete() {
 		return MemorySlot{}, fmt.Errorf("goncho: memory slot workspace_id and peer are required")
 	}
-	return MemorySlot{WorkspaceID: workspaceID, ProfileID: profileID, Peer: peer, Scope: normalizeMemoryScope(query.Scope, profileID), Name: strings.TrimSpace(query.Name)}, nil
+	return MemorySlot{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, Scope: normalizeMemoryScope(query.Scope, scope.ProfileID), Name: strings.TrimSpace(query.Name)}, nil
 }
 
 func getMemorySlotRow(ctx context.Context, db *sql.DB, workspaceID, profileID, peer, scope, name string, includeDeleted bool) (MemorySlot, bool, error) {

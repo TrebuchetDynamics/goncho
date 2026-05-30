@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -211,34 +212,31 @@ func (s *Service) ReadActionGraph(ctx context.Context, query ActionGraphQuery) (
 }
 
 func (s *Service) normalizeActionParams(params ActionParams) (ActionNode, error) {
-	workspaceID := firstNonBlank(params.WorkspaceID, s.workspaceID)
-	peer := strings.TrimSpace(params.Peer)
+	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.Peer)
 	actionID := strings.TrimSpace(params.ActionID)
 	title := strings.TrimSpace(params.Title)
-	if workspaceID == "" || peer == "" || actionID == "" || title == "" {
+	if !scope.Complete() || actionID == "" || title == "" {
 		return ActionNode{}, fmt.Errorf("goncho: action workspace_id, peer, action_id, and title are required")
 	}
-	return ActionNode{WorkspaceID: workspaceID, ProfileID: strings.TrimSpace(params.ProfileID), Peer: peer, ActionID: actionID, Title: title, DependsOn: normalizeActionIDs(params.DependsOn)}, nil
+	return ActionNode{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: actionID, Title: title, DependsOn: normalizeActionIDs(params.DependsOn)}, nil
 }
 
 func (s *Service) normalizeActionQuery(query ActionGraphQuery) (ActionNode, error) {
-	workspaceID := firstNonBlank(query.WorkspaceID, s.workspaceID)
-	peer := strings.TrimSpace(query.Peer)
-	if workspaceID == "" || peer == "" {
+	scope := scopekey.Normalize(s.workspaceID, query.WorkspaceID, query.ProfileID, query.Peer)
+	if !scope.Complete() {
 		return ActionNode{}, fmt.Errorf("goncho: action workspace_id and peer are required")
 	}
-	return ActionNode{WorkspaceID: workspaceID, ProfileID: strings.TrimSpace(query.ProfileID), Peer: peer, ActionID: strings.TrimSpace(query.ActionID)}, nil
+	return ActionNode{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: strings.TrimSpace(query.ActionID)}, nil
 }
 
 func (s *Service) normalizeActionSignal(params ActionSignalParams) (ActionNode, error) {
-	workspaceID := firstNonBlank(params.WorkspaceID, s.workspaceID)
-	peer := strings.TrimSpace(params.Peer)
+	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.Peer)
 	actionID := strings.TrimSpace(params.ActionID)
 	signal := strings.TrimSpace(params.Signal)
-	if workspaceID == "" || peer == "" || actionID == "" || signal == "" {
+	if !scope.Complete() || actionID == "" || signal == "" {
 		return ActionNode{}, fmt.Errorf("goncho: action signal workspace_id, peer, action_id, and signal are required")
 	}
-	return ActionNode{WorkspaceID: workspaceID, ProfileID: strings.TrimSpace(params.ProfileID), Peer: peer, ActionID: actionID, Signals: []ActionSignal{{ActionID: actionID, Signal: signal, Message: strings.TrimSpace(params.Message), Actor: strings.TrimSpace(params.Actor)}}}, nil
+	return ActionNode{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: actionID, Signals: []ActionSignal{{ActionID: actionID, Signal: signal, Message: strings.TrimSpace(params.Message), Actor: strings.TrimSpace(params.Actor)}}}, nil
 }
 
 func upsertActionNode(ctx context.Context, db *sql.DB, node ActionNode) error {
