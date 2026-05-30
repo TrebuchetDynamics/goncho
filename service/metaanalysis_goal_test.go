@@ -2,13 +2,12 @@ package goncho
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
@@ -32,7 +31,7 @@ func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitect
 			t.Fatalf("metaanalysis missing %q", phrase)
 		}
 	}
-	docHash := sha256.Sum256(docRaw)
+	docHash := hashutil.SHA256Hex(docRaw)
 
 	proof := runGonchoFullLocalProofMatrix(t)
 	reviewLoopVerified := runGonchoMetaanalysisReviewLoop(t)
@@ -40,7 +39,7 @@ func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitect
 
 	report := BuildGonchoMetaanalysisCoverageReport(GonchoMetaanalysisCoverageInput{
 		SourceDocumentPath:       docPath,
-		SourceDocumentSHA256:     hex.EncodeToString(docHash[:]),
+		SourceDocumentSHA256:     docHash,
 		ProofMatrix:              proof,
 		ReviewLoopVerified:       reviewLoopVerified,
 		MemoryToolLoopVerified:   memoryToolLoopVerified,

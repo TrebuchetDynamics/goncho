@@ -460,12 +460,9 @@ func searchSequenceMarkerCount(value string) int {
 }
 
 func cleanSequenceValue(value string) string {
-	value = strings.Trim(strings.TrimSpace(value), "\"'`“”‘’")
-	for _, sep := range []string{" because ", " but "} {
-		idx := strings.Index(strings.ToLower(value), sep)
-		if idx > 0 {
-			value = strings.TrimSpace(value[:idx])
-		}
+	value = textutil.TrimSpaceAndQuotes(value)
+	if before, ok := textutil.CutBeforeAnySubstringFold(value, " because ", " but "); ok && strings.TrimSpace(before) != "" {
+		value = strings.TrimSpace(before)
 	}
 	return value
 }
@@ -660,7 +657,7 @@ func searchPreferenceQuestion(query string) (subject, attribute string, ok bool)
 		subject = cleanFactValue(rest[:preferIdx])
 		after := strings.TrimSpace(rest[preferIdx+len(" prefer"):])
 		for _, prefix := range []string{"for ", "as "} {
-			if strings.HasPrefix(strings.ToLower(after), prefix) {
+			if textutil.HasAnyPrefixFold(after, prefix) {
 				attribute = cleanFactObject(after[len(prefix):])
 				return subject, attribute, subject != "" && attribute != ""
 			}
@@ -719,9 +716,9 @@ func cleanFactObject(value string) string {
 	if idx := strings.LastIndexAny(value, ":;"); idx >= 0 {
 		value = strings.TrimSpace(value[idx+1:])
 	}
-	value = strings.Trim(strings.TrimSpace(value), "\"'`“”‘’")
+	value = textutil.TrimSpaceAndQuotes(value)
 	for _, prefix := range []string{"the ", "a ", "an "} {
-		if strings.HasPrefix(strings.ToLower(value), prefix) {
+		if textutil.HasAnyPrefixFold(value, prefix) {
 			value = strings.TrimSpace(value[len(prefix):])
 		}
 	}
@@ -729,12 +726,9 @@ func cleanFactObject(value string) string {
 }
 
 func cleanFactValue(value string) string {
-	value = strings.Trim(strings.TrimSpace(value), "\"'`“”‘’")
-	for _, sep := range []string{";", ",", " because ", " but ", " and "} {
-		idx := strings.Index(strings.ToLower(value), sep)
-		if idx > 0 {
-			value = strings.TrimSpace(value[:idx])
-		}
+	value = textutil.TrimSpaceAndQuotes(value)
+	if before, ok := textutil.CutBeforeAnySubstringFold(value, ";", ",", " because ", " but ", " and "); ok && strings.TrimSpace(before) != "" {
+		value = strings.TrimSpace(before)
 	}
 	return value
 }

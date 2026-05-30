@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"regexp"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 var (
@@ -68,7 +70,7 @@ func extractStructuredSummary(messages []Message) *StructuredSummary {
 				seenQuestions[line] = true
 				summary.OpenQuestions = append(summary.OpenQuestions, line)
 			}
-			if strings.HasPrefix(strings.ToLower(line), "next:") || strings.HasPrefix(strings.ToLower(line), "todo:") || strings.HasPrefix(strings.ToLower(line), "still need") {
+			if textutil.HasAnyPrefixFold(line, "next:", "todo:", "still need") {
 				if !seenNextSteps[line] {
 					seenNextSteps[line] = true
 					summary.NextSteps = append(summary.NextSteps, line)
