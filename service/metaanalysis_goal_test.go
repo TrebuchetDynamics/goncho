@@ -11,7 +11,7 @@ import (
 )
 
 func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitecture(t *testing.T) {
-	docPath := "docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md"
+	docPath := "docs/opensource-memory-systems/analysis/METAANALYSIS-MEMORY-SYSTEMS.md"
 	docRaw, err := os.ReadFile(docPath)
 	if err != nil {
 		t.Fatalf("read metaanalysis: %v", err)

@@ -1,0 +1,20 @@
+# External donor/research corpora; not part of Goncho package topology.
+docs/opensource-memory-systems/
+
+# Generated/runtime benchmark outputs and large datasets.
+artifacts/
+data/
+docs/benchmarks/results/
+docs/benchmarks/failures/
+
+# Frontend dependency/build/cache output.
+node_modules/
+dist/
+.astro/
+
+# auto-folder-refactor smart ignores
+cmd/goncho-bench/testdata/
+testdata/
+memory/testdata/
+cmd/goncho/testdata/
+docs/benchmarks/

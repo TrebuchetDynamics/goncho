@@ -2,7 +2,7 @@
 
 Generated: 2026-05-19
 
-This document compares the locally cloned open-source memory systems in this directory against the academic memory architecture brief, "The Architecture of Memory in Artificial Agents: Bridging Academic Frontiers and Production Systems."
+This document compares the locally cloned open-source memory systems in the parent research-corpus directory against the academic memory architecture brief, "The Architecture of Memory in Artificial Agents: Bridging Academic Frontiers and Production Systems."
 
 The purpose is not to pick one project to copy. The purpose is to extract the taxonomy, flows, techniques, strengths, and gaps we need in order to design Goncho as trust-preserving context architecture.
 
@@ -12,17 +12,17 @@ Local repositories inspected:
 
 | Repository | Local directory | Observed role |
 | --- | --- | --- |
-| agentmemory | `agentmemory/` | Hook-native, local-first agent memory with SQLite, hybrid retrieval, graph retrieval, REST, MCP, and broad agent integrations. |
-| paradigm-memory | `paradigm-memory/` | Cognitive-map memory engine with tree activation, local SQLite, audit log, and desktop UI. |
-| agent-memory-mcp | `agent-memory-mcp/` | Go MCP server for typed engineering memory, RAG indexing, temporal validity, sedimentation, and knowledge stewardship. |
-| mii-memory | `mii-memory/` | Rust local-first CLI and MCP memory store with global/workspace/session scopes, tags, MiniLM embeddings, relevance, and expiration rules. |
-| memory-mcp | `memory-mcp/` | PostgreSQL/pgvector/ltree semantic memory server with taxonomy, conflict resolution, system primer, TTL, and admin tooling. |
-| memory-engine | `memory-engine/` | Timescale/PostgreSQL memory API and MCP proxy using pgvector, pg_textsearch, ltree, JSONB metadata, temporal ranges, and ACLs. |
-| anamnesis | `anamnesis/` | Strategic memory engine using 4D retrieval: semantic, temporal, relational, and strategic weighting. |
-| nautilus-compass | `nautilus-compass/` | Black-box local memory with raw embeddings, drift detection, feedback anchors, and hook integration. |
-| MARM-Systems | `MARM-Systems/` | MCP memory layer with semantic search, session logs, notebooks, summaries, and dashboard. |
-| nebu-ctx | `nebu-ctx/` | Broader context runtime with Rust client, .NET host, hooks, project/session/brain stores, search, graph context, and dashboard. |
-| shokunin | `shokunin/` | Coding ecosystem with Chroma-backed memory, hybrid recall, freshness decay, claim verification, and skills. |
+| agentmemory | `../agentmemory/` | Hook-native, local-first agent memory with SQLite, hybrid retrieval, graph retrieval, REST, MCP, and broad agent integrations. |
+| paradigm-memory | `../paradigm-memory/` | Cognitive-map memory engine with tree activation, local SQLite, audit log, and desktop UI. |
+| agent-memory-mcp | `../agent-memory-mcp/` | Go MCP server for typed engineering memory, RAG indexing, temporal validity, sedimentation, and knowledge stewardship. |
+| mii-memory | `../mii-memory/` | Rust local-first CLI and MCP memory store with global/workspace/session scopes, tags, MiniLM embeddings, relevance, and expiration rules. |
+| memory-mcp | `../memory-mcp/` | PostgreSQL/pgvector/ltree semantic memory server with taxonomy, conflict resolution, system primer, TTL, and admin tooling. |
+| memory-engine | `../memory-engine/` | Timescale/PostgreSQL memory API and MCP proxy using pgvector, pg_textsearch, ltree, JSONB metadata, temporal ranges, and ACLs. |
+| anamnesis | `../anamnesis/` | Strategic memory engine using 4D retrieval: semantic, temporal, relational, and strategic weighting. |
+| nautilus-compass | `../nautilus-compass/` | Black-box local memory with raw embeddings, drift detection, feedback anchors, and hook integration. |
+| MARM-Systems | `../MARM-Systems/` | MCP memory layer with semantic search, session logs, notebooks, summaries, and dashboard. |
+| nebu-ctx | `../nebu-ctx/` | Broader context runtime with Rust client, .NET host, hooks, project/session/brain stores, search, graph context, and dashboard. |
+| shokunin | `../shokunin/` | Coding ecosystem with Chroma-backed memory, hybrid recall, freshness decay, claim verification, and skills. |
 
 Inspection method:
 
@@ -33,7 +33,7 @@ Inspection method:
 
 Coverage caveat:
 
-This is a local-source meta-analysis, not a live external market survey. It deliberately studies the open-source projects cloned in this directory and extracts design pressure from their concrete interfaces, schemas, flows, and failure modes.
+This is a local-source meta-analysis, not a live external market survey. It deliberately studies the open-source projects cloned in the parent research-corpus directory and extracts design pressure from their concrete interfaces, schemas, flows, and failure modes.
 
 Academic concepts used as the lens:
 

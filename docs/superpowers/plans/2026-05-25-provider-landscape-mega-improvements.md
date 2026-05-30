@@ -40,7 +40,7 @@ Goncho sources inspected:
 - `README.md`
 - `TODO.md`
 - `docs/comparison.md`
-- `docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md`
+- `docs/opensource-memory-systems/analysis/METAANALYSIS-MEMORY-SYSTEMS.md`
 - `docs/benchmarks/ROADMAP.md`
 - `docs-site/src/content/docs/start/current-capabilities.md`
 - `docs-site/src/content/docs/roadmap/architecture-direction.md`

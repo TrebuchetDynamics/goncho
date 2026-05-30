@@ -4,7 +4,7 @@ Date: 2026-05-19
 
 ## Background
 
-`docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md` frames Goncho as a trust-preserving context architecture, not a vector database or passive note store. The first durable layer should preserve scoped, timestamped evidence before Goncho derives claims, beliefs, orientation packs, graph edges, or negative memories from that evidence.
+`docs/opensource-memory-systems/analysis/METAANALYSIS-MEMORY-SYSTEMS.md` frames Goncho as a trust-preserving context architecture, not a vector database or passive note store. The first durable layer should preserve scoped, timestamped evidence before Goncho derives claims, beliefs, orientation packs, graph edges, or negative memories from that evidence.
 
 Agentmemory is useful background for hook-native capture and audit discipline, but this design stays embedded in Goncho: no Node sidecar, iii engine, REST daemon, MCP expansion, or external vector dependency.
 

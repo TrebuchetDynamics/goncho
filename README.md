@@ -819,7 +819,7 @@ Start here:
 
 Research:
 
-- [Memory Systems Metaanalysis](docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md)
+- [Memory Systems Metaanalysis](docs/opensource-memory-systems/analysis/METAANALYSIS-MEMORY-SYSTEMS.md)
 - [Agentmemory Reference](docs/opensource-memory-systems/agentmemory/README.md)
 
 Docs site:

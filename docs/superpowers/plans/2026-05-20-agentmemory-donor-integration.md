@@ -18,7 +18,7 @@ Reference tree inspected:
 - `docs/opensource-memory-systems/agentmemory/src/types.ts`
 - `docs/opensource-memory-systems/agentmemory/src/index.ts`
 - `docs/opensource-memory-systems/agentmemory/src/mcp/tools-registry.ts`
-- `docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md`
+- `docs/opensource-memory-systems/analysis/METAANALYSIS-MEMORY-SYSTEMS.md`
 
 Relevant Goncho files inspected:
 
@@ -132,7 +132,7 @@ Task 8: Export/snapshot
 Documentation status updates after each public surface change:
 
 - Modify: `README.md`
-- Modify: `docs/opensource-memory-systems/METAANALYSIS-MEMORY-SYSTEMS.md` only if the feature matrix/status narrative needs updating.
+- Modify: `docs/opensource-memory-systems/analysis/METAANALYSIS-MEMORY-SYSTEMS.md` only if the feature matrix/status narrative needs updating.
 
 ---
 
