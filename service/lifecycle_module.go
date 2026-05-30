@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 )
 
 type lifecycleModule struct {
@@ -147,14 +147,5 @@ func createMessagesLockRetryDelay(attempt int) time.Duration {
 }
 
 func isTransientSQLiteLockError(err error) bool {
-	if err == nil {
-		return false
-	}
-	return textutil.ContainsAnySubstringFold(err.Error(), []string{
-		"database is locked",
-		"database table is locked",
-		"database is busy",
-		"sqlite_busy",
-		"sqlite_locked",
-	})
+	return sqlutil.IsSQLiteTransientLockError(err)
 }

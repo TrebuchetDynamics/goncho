@@ -10,6 +10,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 )
 
 // ViewerSnapshot is the read-only JSON model for Goncho's local viewer API.
@@ -319,7 +320,7 @@ func databasePath(ctx context.Context, db *sql.DB) string {
 func countScalar(ctx context.Context, db *sql.DB, query string, args ...any) (int, error) {
 	var count int
 	if err := db.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "no such table") {
+		if sqlutil.IsSQLiteNoSuchTableError(err) {
 			return 0, nil
 		}
 		return 0, err
@@ -337,7 +338,7 @@ func latestViewerConclusions(ctx context.Context, db *sql.DB, workspaceID, obser
 		LIMIT ?
 	`, workspaceID, observer, limit)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "no such table") {
+		if sqlutil.IsSQLiteNoSuchTableError(err) {
 			return []ViewerConclusion{}, nil
 		}
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 // LifecycleSQL is the minimal interface satisfied by both *sql.DB and *sql.Tx.
@@ -87,4 +88,30 @@ func ContainsFold(slice []string, value string) bool {
 	return sliceutil.ContainsFunc(slice, func(item string) bool {
 		return strings.EqualFold(strings.TrimSpace(item), value)
 	})
+}
+
+// IsSQLiteNoSuchTableError reports whether err is SQLite's missing-table error.
+func IsSQLiteNoSuchTableError(err error) bool {
+	return errorContainsFold(err, []string{"no such table"})
+}
+
+// IsSQLiteDuplicateColumnError reports whether err is SQLite's duplicate-column migration error.
+func IsSQLiteDuplicateColumnError(err error) bool {
+	return errorContainsFold(err, []string{"duplicate column name"})
+}
+
+// IsSQLiteTransientLockError reports whether err is a retryable SQLite lock/busy error.
+func IsSQLiteTransientLockError(err error) bool {
+	return errorContainsFold(err, []string{
+		"database is locked",
+		"database table is locked",
+		"database is busy",
+		"database table is busy",
+		"sqlite_busy",
+		"sqlite_locked",
+	})
+}
+
+func errorContainsFold(err error, markers []string) bool {
+	return err != nil && textutil.ContainsAnySubstringFold(err.Error(), markers)
 }

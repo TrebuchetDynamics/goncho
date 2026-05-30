@@ -209,7 +209,7 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 	}
 	truncated := false
 	if len([]byte(content)) > params.MaxPreviewBytes {
-		content = truncateFilesystemWatcherUTF8(content, params.MaxPreviewBytes)
+		content = textutil.TruncateUTF8Bytes(content, params.MaxPreviewBytes)
 		truncated = true
 	}
 	return FilesystemWatcherCandidate{Path: absPath, RelativePath: rel, ChangeKind: params.ChangeKind, SizeBytes: info.Size(), Checksum: checksum, Content: content, Truncated: truncated}, FilesystemWatcherSkipped{}, nil
@@ -262,10 +262,6 @@ func looksBinary(raw []byte) bool {
 func filesystemWatcherObservationID(params FilesystemWatcherImportParams, candidate FilesystemWatcherCandidate) string {
 	seed := strings.Join([]string{params.WorkspaceID, params.ProfileID, params.PeerID, params.SessionKey, candidate.RelativePath, candidate.Checksum}, "\x00")
 	return "fswatch_" + hashutil.SHA256HexStringPrefix(seed, 16)
-}
-
-func truncateFilesystemWatcherUTF8(value string, limit int) string {
-	return textutil.TruncateUTF8Bytes(value, limit)
 }
 
 func filesystemWatcherBoolPtr(v bool) *bool { return &v }

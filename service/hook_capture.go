@@ -282,14 +282,10 @@ func filterHostHookString(value string, state hostHookFilterResult) (string, hos
 		}
 	}
 	if len([]byte(value)) > hostHookPayloadMaxBytes {
-		value = truncateHostHookUTF8(value, hostHookPayloadMaxBytes)
+		value = textutil.TruncateUTF8Bytes(value, hostHookPayloadMaxBytes)
 		state.Truncated = true
 	}
 	return value, state
-}
-
-func truncateHostHookUTF8(value string, limit int) string {
-	return textutil.TruncateUTF8Bytes(value, limit)
 }
 
 func hostHookSensitiveKey(key string) bool {

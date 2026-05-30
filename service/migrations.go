@@ -3,11 +3,11 @@ package goncho
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/internal/observationlog"
 	"github.com/TrebuchetDynamics/goncho/internal/reviewlog"
 	"github.com/TrebuchetDynamics/goncho/internal/skillproposals"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 )
 
 const GonchoSQLiteSchemaVersion = "goncho-sqlite-v1"
@@ -50,7 +50,7 @@ type gonchoMigrationExecer interface {
 
 func applyGonchoMigrationStmt(exec gonchoMigrationExecer, stmt string) error {
 	_, err := exec.Exec(stmt)
-	if err != nil && strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+	if sqlutil.IsSQLiteDuplicateColumnError(err) {
 		return nil
 	}
 	return err
