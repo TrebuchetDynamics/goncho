@@ -88,7 +88,7 @@ func (s *Service) ExtractMemoryProposals(ctx context.Context, params ExtractMemo
 		return ExtractMemoryProposalsResult{}, fmt.Errorf("goncho: nil service")
 	}
 	workspaceID := serviceObservationWorkspace(s.workspaceID, params.WorkspaceID)
-	if strings.TrimSpace(workspaceID) == "" {
+	if textutil.IsBlank(workspaceID) {
 		workspaceID = s.workspaceID
 	}
 	peer := strings.TrimSpace(params.Peer)
@@ -246,7 +246,7 @@ func proposalSubject(content string) string {
 }
 
 func (s *Service) findContradictoryMemory(ctx context.Context, peer, sessionKey, subject, content string) ([]string, bool) {
-	if strings.TrimSpace(subject) == "" {
+	if textutil.IsBlank(subject) {
 		return nil, false
 	}
 	found, err := s.Search(ctx, SearchParams{Peer: peer, Query: subject, Limit: 5})
@@ -279,8 +279,7 @@ func filterProposalMessagesByPeer(messages []MessageRecord, peer string) []Messa
 }
 
 func proposalIsLowConfidence(content string) bool {
-	lower := strings.ToLower(content)
-	return strings.Contains(lower, "maybe ") || strings.Contains(lower, " might ") || strings.Contains(lower, "not sure") || strings.Contains(lower, "i think")
+	return textutil.ContainsAnySubstringFold(content, []string{"maybe ", " might ", "not sure", "i think"})
 }
 
 func proposalIsPrivacySensitive(content string) bool {

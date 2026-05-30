@@ -2,10 +2,10 @@ package goncho
 
 import (
 	"context"
-	"strings"
 	"sync"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type mockMemoryToolStore struct {
@@ -75,7 +75,5 @@ func containsTag(tags []string, query string) bool {
 }
 
 func containsMemoryContent(content string, query string) bool {
-	content = strings.ToLower(content)
-	query = strings.ToLower(query)
-	return strings.Contains(content, query) || strings.Contains(query, content)
+	return textutil.ContainsEitherSubstringFold(content, query)
 }

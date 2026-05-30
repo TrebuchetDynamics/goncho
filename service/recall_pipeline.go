@@ -477,10 +477,10 @@ func recallTemporalAdjustment(candidate ScoredRecallCandidate, query string) flo
 			continue
 		}
 		note := textutil.LowerTrimmed(evidence.Note)
-		if strings.Contains(note, "superseded_by=") || strings.Contains(note, "superseded") {
+		if textutil.ContainsAnySubstring(note, []string{"superseded_by=", "superseded"}) {
 			return -recallTemporalSupersededPenalty
 		}
-		if strings.Contains(note, "current_fact") || strings.Contains(note, "valid_now") {
+		if textutil.ContainsAnySubstring(note, []string{"current_fact", "valid_now"}) {
 			return recallTemporalCurrentBonus
 		}
 	}
@@ -488,8 +488,7 @@ func recallTemporalAdjustment(candidate ScoredRecallCandidate, query string) flo
 }
 
 func recallQueryAsksCurrentTruth(query string) bool {
-	query = strings.ToLower(query)
-	return textutil.ContainsAnySubstring(query, []string{" now", "current", "currently", "latest", "today"})
+	return textutil.ContainsAnySubstringFold(query, []string{" now", "current", "currently", "latest", "today"})
 }
 
 func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {
@@ -499,7 +498,7 @@ func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {
 				continue
 			}
 			note := textutil.LowerTrimmed(evidence.Note)
-			if strings.Contains(note, "superseded_by=") || strings.Contains(note, "superseded") {
+			if textutil.ContainsAnySubstring(note, []string{"superseded_by=", "superseded"}) {
 				return true
 			}
 		}

@@ -2,6 +2,16 @@ package textutil
 
 import "strings"
 
+// IsBlank reports whether value is empty after trimming Unicode whitespace.
+func IsBlank(value string) bool {
+	return strings.TrimSpace(value) == ""
+}
+
+// NonBlank reports whether value has non-whitespace content.
+func NonBlank(value string) bool {
+	return !IsBlank(value)
+}
+
 // TrimSentenceBoundary removes the sentence punctuation policy used by recall
 // fact classifiers, then trims surrounding whitespace. It intentionally keeps
 // punctuation inside the value unchanged.

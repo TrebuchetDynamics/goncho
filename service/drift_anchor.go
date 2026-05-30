@@ -85,8 +85,7 @@ func isNegativeDriftAnchor(entry MemoryToolEntry) bool {
 			return true
 		}
 	}
-	content := strings.ToLower(entry.Content)
-	return strings.Contains(content, "dead end") || strings.Contains(content, "known failure") || strings.Contains(content, "failed path")
+	return textutil.ContainsAnySubstringFold(entry.Content, []string{"dead end", "known failure", "failed path"})
 }
 
 var driftAnchorTokenPattern = regexp.MustCompile(`[a-z0-9]+`)

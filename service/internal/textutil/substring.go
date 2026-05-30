@@ -18,6 +18,17 @@ func ContainsAnySubstringFold(value string, markers []string) bool {
 	return ContainsAnySubstring(strings.ToLower(value), lowerStrings(markers))
 }
 
+// ContainsEitherSubstring reports whether either value contains the other.
+func ContainsEitherSubstring(a, b string) bool {
+	return strings.Contains(a, b) || strings.Contains(b, a)
+}
+
+// ContainsEitherSubstringFold reports whether either value contains the other
+// after applying the same simple case-fold policy used by Goncho text filters.
+func ContainsEitherSubstringFold(a, b string) bool {
+	return ContainsEitherSubstring(strings.ToLower(a), strings.ToLower(b))
+}
+
 // ContainsAllSubstringsFold reports whether value contains every non-blank
 // marker after trimming markers and applying the same simple case-fold policy
 // used by Goncho text filters. Blank markers are ignored.

@@ -2,14 +2,13 @@ package searchrank
 
 import (
 	"math"
-	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 func GenericAssistantAnswer(content string) bool {
-	content = strings.ToLower(content)
-	return strings.Contains(content, "as an ai language model") || strings.Contains(content, "i cannot provide") || strings.Contains(content, "i don't have personal experience")
+	return textutil.ContainsAnySubstringFold(content, []string{"as an ai language model", "i cannot provide", "i don't have personal experience"})
 }
 
 func PersonalSignalCount(content string) int {

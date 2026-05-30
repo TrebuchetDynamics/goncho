@@ -3,6 +3,8 @@ package goncho
 import (
 	"strings"
 	"unicode"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type MemoryContradiction struct {
@@ -31,7 +33,7 @@ func DetectMemoryContradiction(existing, incoming MemoryToolEntry) (MemoryContra
 	if oldFact.object == newFact.object {
 		return MemoryContradiction{}, false
 	}
-	if strings.Contains(newFact.object, oldFact.object) || strings.Contains(oldFact.object, newFact.object) {
+	if textutil.ContainsEitherSubstring(newFact.object, oldFact.object) {
 		return MemoryContradiction{}, false
 	}
 	return MemoryContradiction{

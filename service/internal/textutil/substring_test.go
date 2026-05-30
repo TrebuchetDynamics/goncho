@@ -43,6 +43,36 @@ func TestContainsAnySubstringFold(t *testing.T) {
 	}
 }
 
+func TestContainsEitherSubstring(t *testing.T) {
+	tests := []struct {
+		name string
+		a    string
+		b    string
+		want bool
+	}{
+		{name: "first contains second", a: "vault auth service", b: "auth", want: true},
+		{name: "second contains first", a: "auth", b: "vault auth service", want: true},
+		{name: "case sensitive by default", a: "Auth", b: "auth", want: false},
+		{name: "no overlap", a: "billing", b: "auth", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ContainsEitherSubstring(tt.a, tt.b); got != tt.want {
+				t.Fatalf("ContainsEitherSubstring(%q, %q) = %v, want %v", tt.a, tt.b, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContainsEitherSubstringFold(t *testing.T) {
+	if !ContainsEitherSubstringFold("Deployment Owner", "owner") {
+		t.Fatal("expected case-folded either-direction substring match")
+	}
+	if ContainsEitherSubstringFold("billing", "auth") {
+		t.Fatal("unexpected case-folded either-direction substring match")
+	}
+}
+
 func TestContainsAllSubstringsFold(t *testing.T) {
 	tests := []struct {
 		name    string

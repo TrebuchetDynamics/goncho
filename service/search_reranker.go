@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 // SearchReranker is an optional host-owned reranking seam. Implementations may
@@ -31,13 +32,13 @@ type SearchRerankScore struct {
 }
 
 func applySearchReranker(ctx context.Context, reranker SearchReranker, query string, hits []SearchHit) []SearchHit {
-	if reranker == nil || strings.TrimSpace(query) == "" || len(hits) < 2 {
+	if reranker == nil || textutil.IsBlank(query) || len(hits) < 2 {
 		return hits
 	}
 	candidates := make([]SearchRerankCandidate, 0, len(hits))
 	for _, hit := range hits {
 		id := searchHitRerankID(hit)
-		if id == "" || strings.TrimSpace(hit.Content) == "" {
+		if id == "" || textutil.IsBlank(hit.Content) {
 			continue
 		}
 		candidates = append(candidates, SearchRerankCandidate{ID: id, Source: hit.Source, Content: hit.Content})
@@ -78,7 +79,7 @@ func searchHitRerankID(hit SearchHit) string {
 		return strconv.FormatInt(hit.ID, 10)
 	}
 	for _, evidence := range hit.Provenance {
-		if strings.TrimSpace(evidence.ID) != "" {
+		if textutil.NonBlank(evidence.ID) {
 			return strings.TrimSpace(evidence.ID)
 		}
 	}

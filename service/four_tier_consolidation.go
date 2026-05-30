@@ -145,7 +145,7 @@ func consolidationEvidence(tier MemoryConsolidationTier, sessionKey, source stri
 
 func firstConclusionContent(conclusions []conclusionEntry) string {
 	for _, conclusion := range conclusions {
-		if strings.TrimSpace(conclusion.Conclusion) != "" {
+		if textutil.NonBlank(conclusion.Conclusion) {
 			return conclusion.Conclusion
 		}
 	}
@@ -159,7 +159,7 @@ func extractProceduralMemory(text string) string {
 		if strings.HasPrefix(lower, "procedure:") {
 			return strings.TrimSpace(trimmed[len("Procedure:"):])
 		}
-		if strings.Contains(lower, "before ") || strings.Contains(lower, "always ") || strings.Contains(lower, "must ") {
+		if textutil.ContainsAnySubstring(lower, []string{"before ", "always ", "must "}) {
 			return trimmed
 		}
 	}
@@ -168,7 +168,7 @@ func extractProceduralMemory(text string) string {
 
 func lastNonBlank(values []string) string {
 	for i := len(values) - 1; i >= 0; i-- {
-		if strings.TrimSpace(values[i]) != "" {
+		if textutil.NonBlank(values[i]) {
 			return strings.TrimSpace(values[i])
 		}
 	}

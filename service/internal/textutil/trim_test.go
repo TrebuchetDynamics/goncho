@@ -2,6 +2,21 @@ package textutil
 
 import "testing"
 
+func TestBlankPredicates(t *testing.T) {
+	if !IsBlank(" \t\n") {
+		t.Fatal("expected whitespace-only value to be blank")
+	}
+	if IsBlank(" memory ") {
+		t.Fatal("expected non-whitespace value to be non-blank")
+	}
+	if NonBlank(" \t\n") {
+		t.Fatal("expected whitespace-only value not to be non-blank")
+	}
+	if !NonBlank(" memory ") {
+		t.Fatal("expected non-whitespace value to be non-blank")
+	}
+}
+
 func TestTrimSentenceBoundary(t *testing.T) {
 	tests := []struct {
 		name  string
