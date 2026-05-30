@@ -8,6 +8,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/annotationgraph"
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const (
@@ -720,16 +721,14 @@ func recallCandidateHasEvidence(candidate RecallCandidate, kind, id string) bool
 }
 
 func annotationGraphOwnerQuery(query string) bool {
-	query = strings.ToLower(query)
-	if !(strings.Contains(query, "owner") || strings.Contains(query, "owns") || strings.Contains(query, "responsible") || strings.Contains(query, "accountable")) {
+	if !textutil.ContainsAnySubstringFold(query, []string{"owner", "owns", "responsible", "accountable"}) {
 		return false
 	}
-	return strings.Contains(query, "who") || strings.Contains(query, "which") || strings.Contains(query, "what")
+	return textutil.ContainsAnySubstringFold(query, []string{"who", "which", "what"})
 }
 
 func annotationGraphVersionQuery(query string) bool {
-	query = strings.ToLower(query)
-	return strings.Contains(query, "version") && (strings.Contains(query, "what") || strings.Contains(query, "which"))
+	return textutil.ContainsAnySubstringFold(query, []string{"version"}) && textutil.ContainsAnySubstringFold(query, []string{"what", "which"})
 }
 
 func annotationGraphTimelineQuery(query string) bool { return annotationgraph.TimelineQuery(query) }

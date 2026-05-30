@@ -11,6 +11,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 var evalFeedbackDDL = []string{
@@ -345,15 +346,15 @@ func buildEvalCandidate(workspaceID, benchmark, runID string, failure EvalFailur
 }
 
 func evalCandidateKindForFailure(f EvalFailure) EvalCandidateKind {
-	bucket := strings.ToLower(strings.TrimSpace(f.FailureBucket + " " + f.Category))
+	bucket := strings.TrimSpace(f.FailureBucket + " " + f.Category)
 	switch {
-	case strings.Contains(bucket, "branch") || strings.Contains(bucket, "scope"):
+	case textutil.ContainsAnySubstringFold(bucket, []string{"branch", "scope"}):
 		return EvalCandidateScopeBug
-	case strings.Contains(bucket, "multi_hop") || strings.Contains(bucket, "multi-hop"):
+	case textutil.ContainsAnySubstringFold(bucket, []string{"multi_hop", "multi-hop"}):
 		return EvalCandidateGraphEdgeCandidate
-	case strings.Contains(bucket, "stale") || strings.Contains(bucket, "contradict"):
+	case textutil.ContainsAnySubstringFold(bucket, []string{"stale", "contradict"}):
 		return EvalCandidateStaleContradictoryMemory
-	case strings.Contains(bucket, "missing") || strings.Contains(bucket, "extraction"):
+	case textutil.ContainsAnySubstringFold(bucket, []string{"missing", "extraction"}):
 		return EvalCandidateExtractionGap
 	default:
 		return EvalCandidateQueryExpansionHint

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type GraphExpansionIndex struct {
@@ -77,11 +78,5 @@ func graphRelationIsAccepted(relation GraphRelation) bool {
 }
 
 func graphRelationMatchesQuery(query string, terms []string) bool {
-	query = strings.ToLower(query)
-	for _, term := range terms {
-		if !strings.Contains(query, strings.ToLower(strings.TrimSpace(term))) {
-			return false
-		}
-	}
-	return true
+	return textutil.ContainsAllSubstringsFold(query, terms)
 }
