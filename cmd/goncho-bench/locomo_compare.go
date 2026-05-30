@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	benchlocomo "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/locomo"
 )
 
-const locomoNotFoundRank = 999999
+const locomoNotFoundRank = benchlocomo.NotFoundRank
 
 type locomoComparisonRow struct {
 	QuestionID     string   `json:"question_id"`
@@ -113,23 +115,11 @@ func compareLocomoSystems(report locomoReport, aName, bName string) ([]locomoCom
 }
 
 func normalizedRank(rank int) int {
-	if rank <= 0 {
-		return locomoNotFoundRank
-	}
-	return rank
+	return benchlocomo.NormalizedRank(rank)
 }
 
 func compareWinner(aRank, bRank int) string {
-	if aRank == locomoNotFoundRank && bRank == locomoNotFoundRank {
-		return "both_miss"
-	}
-	if aRank < bRank {
-		return "a"
-	}
-	if bRank < aRank {
-		return "b"
-	}
-	return "tie"
+	return benchlocomo.CompareWinner(aRank, bRank)
 }
 
 func topN(ids []string, n int) []string {
@@ -140,57 +130,22 @@ func topN(ids []string, n int) []string {
 }
 
 func classifyLocomoDeltaBucket(row locomoComparisonRow) string {
-	switch row.Winner {
-	case "a":
-		if row.BGoldBestRank == locomoNotFoundRank {
-			return "a_only_hit"
-		}
-		return "a_rank_better"
-	case "b":
-		if row.AGoldBestRank == locomoNotFoundRank {
-			return "b_only_hit"
-		}
-		return "b_rank_better"
-	case "tie":
-		return "same_rank"
-	case "both_miss":
-		return "both_miss"
-	default:
-		return "unknown"
-	}
+	return benchlocomo.ClassifyDeltaBucket(toBenchLocomoComparisonRow(row))
 }
 
 func classifyLocomoComparison(row locomoComparisonRow) string {
-	q := strings.ToLower(row.Question)
-	if len(row.GoldMemoryIDs) > 1 {
-		return "gold_ambiguity"
+	return benchlocomo.ClassifyComparison(toBenchLocomoComparisonRow(row))
+}
+
+func toBenchLocomoComparisonRow(row locomoComparisonRow) benchlocomo.ComparisonRow {
+	return benchlocomo.ComparisonRow{
+		Question:      row.Question,
+		GoldMemoryIDs: append([]string(nil), row.GoldMemoryIDs...),
+		AGoldBestRank: row.AGoldBestRank,
+		BGoldBestRank: row.BGoldBestRank,
+		Winner:        row.Winner,
+		DeltaBucket:   row.DeltaBucket,
 	}
-	switch row.DeltaBucket {
-	case "a_only_hit":
-		return "b_candidate_missing"
-	case "a_rank_better":
-		return "b_rank_regression"
-	case "b_only_hit":
-		return "b_candidate_improvement"
-	case "b_rank_better":
-		return "b_rank_improvement"
-	}
-	if containsAny(q, []string{"who ", "said", "told", "mentioned", "according to"}) {
-		return "speaker_attribution"
-	}
-	if containsAny(q, []string{"now", "current", "currently", "latest", "recent", "before", "after", "when", "how long"}) {
-		return "temporal_evolution"
-	}
-	if containsAny(q, []string{"replace", "changed", "migrated", "used to", "formerly", "instead"}) {
-		return "contradiction_handling"
-	}
-	if containsAny(q, []string{"which", "what", "where", "when", "how many", "how much"}) {
-		return "entity_exactness"
-	}
-	if row.Winner == "both_miss" {
-		return "unknown"
-	}
-	return "lexical_grounding"
 }
 
 func summarizeLocomoComparison(aName, bName string, rows []locomoComparisonRow) locomoComparisonSummary {

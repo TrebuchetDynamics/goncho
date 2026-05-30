@@ -1,4 +1,4 @@
-package main
+package classify
 
 import (
 	"bufio"
@@ -24,6 +24,22 @@ const (
 
 var benchmarkIDNumericSuffixPattern = regexp.MustCompile(`_[0-9]+$`)
 
+type Report struct {
+	System        string           `json:"system"`
+	Dataset       string           `json:"dataset"`
+	RecallAnyAt10 float64          `json:"recall_any_at_10"`
+	MRR           float64          `json:"mrr"`
+	Questions     []QuestionReport `json:"questions"`
+}
+
+type QuestionReport struct {
+	ID           string   `json:"id"`
+	Query        string   `json:"query"`
+	RelevantIDs  []string `json:"relevant_ids"`
+	RetrievedIDs []string `json:"retrieved_ids"`
+	Rank         int      `json:"rank"`
+}
+
 type failureCategoryRow struct {
 	ID           string   `json:"id"`
 	Query        string   `json:"query"`
@@ -35,7 +51,7 @@ type failureCategoryRow struct {
 	RetrievedIDs []string `json:"retrieved_ids"`
 }
 
-func generateFailureCategoryReports(reportPath, failurePath, jsonlOut, mdOut string) error {
+func GenerateFailureCategoryReports(reportPath, failurePath, jsonlOut, mdOut string) error {
 	report, err := loadBenchmarkReport(reportPath)
 	if err != nil {
 		return err
@@ -49,14 +65,14 @@ func generateFailureCategoryReports(reportPath, failurePath, jsonlOut, mdOut str
 	return writeFailureCategoryReports(jsonlOut, mdOut, report, cases)
 }
 
-func loadBenchmarkReport(path string) (BenchmarkReport, error) {
+func loadBenchmarkReport(path string) (Report, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return BenchmarkReport{}, fmt.Errorf("goncho-bench: read benchmark report: %w", err)
+		return Report{}, fmt.Errorf("goncho-bench: read benchmark report: %w", err)
 	}
-	var report BenchmarkReport
+	var report Report
 	if err := json.Unmarshal(raw, &report); err != nil {
-		return BenchmarkReport{}, fmt.Errorf("goncho-bench: decode benchmark report: %w", err)
+		return Report{}, fmt.Errorf("goncho-bench: decode benchmark report: %w", err)
 	}
 	return report, nil
 }
@@ -75,7 +91,7 @@ func loadFailureAuditIDs(path string) (map[string]struct{}, error) {
 		if line == "" {
 			continue
 		}
-		var row BenchmarkQuestionReport
+		var row QuestionReport
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
 			return nil, fmt.Errorf("goncho-bench: decode failure audit row: %w", err)
 		}
@@ -87,7 +103,7 @@ func loadFailureAuditIDs(path string) (map[string]struct{}, error) {
 	return ids, nil
 }
 
-func classifyFailureCases(report BenchmarkReport) []failureCategoryRow {
+func classifyFailureCases(report Report) []failureCategoryRow {
 	rows := []failureCategoryRow{}
 	for _, q := range report.Questions {
 		if !isHardFailureCase(q) {
@@ -120,11 +136,11 @@ func classifyFailureCases(report BenchmarkReport) []failureCategoryRow {
 	return rows
 }
 
-func isHardFailureCase(q BenchmarkQuestionReport) bool {
+func isHardFailureCase(q QuestionReport) bool {
 	return q.Rank == 0 || q.Rank == 2 || q.Rank == 3
 }
 
-func classifyFailureCase(q BenchmarkQuestionReport) (string, string) {
+func classifyFailureCase(q QuestionReport) (string, string) {
 	query := strings.ToLower(q.Query)
 	if hasSameBaseIDBeforeGold(q) {
 		return categoryDuplicateNearDuplicate, "a retrieved ID before the first strict gold hit shares a normalized base ID with a relevant ID"
@@ -153,7 +169,7 @@ func classifyFailureCase(q BenchmarkQuestionReport) (string, string) {
 	return categoryDirectAnswerMismatch, "relevant evidence is retrieved but not at the top rank"
 }
 
-func hasSameBaseIDBeforeGold(q BenchmarkQuestionReport) bool {
+func hasSameBaseIDBeforeGold(q QuestionReport) bool {
 	gold := map[string]struct{}{}
 	for _, id := range q.RelevantIDs {
 		gold[normalizeBenchmarkIDBase(id)] = struct{}{}
@@ -170,7 +186,7 @@ func hasSameBaseIDBeforeGold(q BenchmarkQuestionReport) bool {
 	return false
 }
 
-func hasAnswerVariantMismatchBeforeGold(q BenchmarkQuestionReport) bool {
+func hasAnswerVariantMismatchBeforeGold(q QuestionReport) bool {
 	limit := len(q.RetrievedIDs)
 	if q.Rank > 0 && q.Rank-1 < limit {
 		limit = q.Rank - 1
@@ -196,7 +212,7 @@ func hasAnswerVariantMismatchBeforeGold(q BenchmarkQuestionReport) bool {
 	return false
 }
 
-func looksBenchmarkAmbiguous(q BenchmarkQuestionReport) bool {
+func looksBenchmarkAmbiguous(q QuestionReport) bool {
 	if len(q.RelevantIDs) > 1 {
 		return true
 	}
@@ -252,7 +268,7 @@ func rankBucket(rank int) string {
 	}
 }
 
-func writeFailureCategoryReports(jsonlOut, mdOut string, report BenchmarkReport, cases []failureCategoryRow) error {
+func writeFailureCategoryReports(jsonlOut, mdOut string, report Report, cases []failureCategoryRow) error {
 	if strings.TrimSpace(jsonlOut) != "" {
 		if err := os.MkdirAll(filepath.Dir(jsonlOut), 0o755); err != nil {
 			return fmt.Errorf("goncho-bench: create category jsonl dir: %w", err)
@@ -283,7 +299,7 @@ func writeFailureCategoryReports(jsonlOut, mdOut string, report BenchmarkReport,
 	return nil
 }
 
-func renderFailureCategoryMarkdown(report BenchmarkReport, cases []failureCategoryRow) string {
+func renderFailureCategoryMarkdown(report Report, cases []failureCategoryRow) string {
 	byCategory := map[string]int{}
 	byBucket := map[string]int{}
 	for _, row := range cases {

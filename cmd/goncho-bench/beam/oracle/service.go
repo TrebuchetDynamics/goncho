@@ -1,4 +1,4 @@
-package main
+package oracle
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -141,29 +142,29 @@ type beamServiceRecallProvenance struct {
 	SelectedMemoryIDs  []string           `json:"selected_memory_ids,omitempty"`
 }
 
-func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cfg config, runStartedAt time.Time) error {
-	configID := normalizeBeamServiceConfigID(cfg.BeamServiceConfigID)
-	if path := strings.TrimSpace(cfg.BeamServiceResultsOut); path != "" {
-		if err := writeBeamServiceResults(path, report, configID, runStartedAt, cfg.BeamConversionDiagnostics, cfg.BeamServiceLeakageChecks, cfg.BeamServiceJudgments); err != nil {
+func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cfg ServiceConfig, runStartedAt time.Time) error {
+	configID := normalizeBeamServiceConfigID(cfg.ServiceConfigID)
+	if path := strings.TrimSpace(cfg.ServiceResultsOut); path != "" {
+		if err := writeBeamServiceResults(path, report, configID, runStartedAt, cfg.conversionDiagnostics, cfg.leakageChecks, cfg.judgments); err != nil {
 			return err
 		}
 	}
-	if path := strings.TrimSpace(cfg.BeamServiceSummaryOut); path != "" {
-		if err := writeBeamServiceSummary(path, report, configID, runStartedAt, cfg.BeamServiceJudgments); err != nil {
+	if path := strings.TrimSpace(cfg.ServiceSummaryOut); path != "" {
+		if err := writeBeamServiceSummary(path, report, configID, runStartedAt, cfg.judgments); err != nil {
 			return err
 		}
 	}
-	if path := strings.TrimSpace(cfg.BeamServicePairedOut); path != "" {
-		if err := appendBeamServicePairedOutcomes(path, report, configID, runStartedAt, cfg.BeamServiceJudgments); err != nil {
+	if path := strings.TrimSpace(cfg.ServicePairedOut); path != "" {
+		if err := appendBeamServicePairedOutcomes(path, report, configID, runStartedAt, cfg.judgments); err != nil {
 			return err
 		}
 	}
-	if path := strings.TrimSpace(cfg.BeamServiceFailuresOut); path != "" {
+	if path := strings.TrimSpace(cfg.ServiceFailuresOut); path != "" {
 		if err := writeBeamServiceFailureAudit(path, report, configID, runStartedAt); err != nil {
 			return err
 		}
 	}
-	if path := strings.TrimSpace(cfg.BeamServiceJudgeRequestsOut); path != "" {
+	if path := strings.TrimSpace(cfg.ServiceJudgeRequestsOut); path != "" {
 		if err := writeBeamServiceJudgeRequests(path, report, configID, runStartedAt); err != nil {
 			return err
 		}
@@ -229,7 +230,7 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 		answerTimeMS := 0.0
 		judgeTimeMS := 0.0
 		if hasJudgment {
-			score = roundMetric(judgment.Score)
+			score = shared.RoundMetric(judgment.Score)
 			aiAnswer = strings.TrimSpace(judgment.AIAnswer)
 			nuggets = append([]string(nil), judgment.Nuggets...)
 			assessment = strings.TrimSpace(judgment.Assessment)
@@ -408,10 +409,10 @@ func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID strin
 	for scale, acc := range stats {
 		byAbility := map[string]beamAbilityStats{}
 		for ability, count := range acc.abilityCounts {
-			byAbility[ability] = beamAbilityStats{AvgScore: roundMetric(acc.abilityTotals[ability] / float64(count)), Count: count}
+			byAbility[ability] = beamAbilityStats{AvgScore: shared.RoundMetric(acc.abilityTotals[ability] / float64(count)), Count: count}
 		}
 		if acc.overallCount > 0 {
-			byAbility["OVERALL"] = beamAbilityStats{AvgScore: roundMetric(acc.overallTotal / float64(acc.overallCount)), Count: acc.overallCount}
+			byAbility["OVERALL"] = beamAbilityStats{AvgScore: shared.RoundMetric(acc.overallTotal / float64(acc.overallCount)), Count: acc.overallCount}
 		}
 		abilitySummary[scale] = byAbility
 	}
@@ -512,7 +513,7 @@ func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, confi
 			ExpectedNoAnswer:      c.ExpectedNoAnswer,
 			CandidateMemoryIDs:    append([]string(nil), c.CandidateMemoryIDs...),
 			SelectedMemoryIDs:     append([]string(nil), c.SelectedMemoryIDs...),
-			RetrievedTop10:        topN(c.CandidateMemoryIDs, 10),
+			RetrievedTop10:        shared.TopN(c.CandidateMemoryIDs, 10),
 			SelectedEvidenceKinds: append([]string(nil), c.SelectedEvidenceKinds...),
 			TopEvidenceKinds:      append([]string(nil), c.TopEvidenceKinds...),
 			RecallAt5:             c.RecallAt5,
@@ -592,7 +593,7 @@ func beamServiceCaseConversationID(c goncho.RecallBenchmarkCaseReport) string {
 
 func beamServiceArtifactScore(c goncho.RecallBenchmarkCaseReport, judgments *beamServiceJudgmentSet) float64 {
 	if row, ok := judgments.find(c); ok {
-		return roundMetric(row.Score)
+		return shared.RoundMetric(row.Score)
 	}
 	return beamServiceCaseScore(c)
 }
@@ -618,5 +619,5 @@ func beamServiceCaseScore(c goncho.RecallBenchmarkCaseReport) float64 {
 	if len(c.RequiredEvidenceKinds) > 0 && !c.ProvenanceSatisfied {
 		return 0
 	}
-	return roundMetric(c.RecallAt5)
+	return shared.RoundMetric(c.RecallAt5)
 }

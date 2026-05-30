@@ -1,4 +1,4 @@
-package main
+package oracle
 
 import (
 	"bufio"
@@ -75,7 +75,7 @@ type beamConversionDiagnostic struct {
 	Message        string `json:"message,omitempty"`
 }
 
-func convertBeamHuggingFaceJSONL(inputPath, outputPath, fallbackScale string) error {
+func ConvertHuggingFaceJSONL(inputPath, outputPath, fallbackScale string) error {
 	inputPath = strings.TrimSpace(inputPath)
 	if inputPath == "" {
 		return fmt.Errorf("goncho-bench: --beam-convert-in is required")

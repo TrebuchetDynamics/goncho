@@ -28,6 +28,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Agent local state
+.pi/
+
 # SQLite databases (test artifacts)
 *.db
 *.db-journal

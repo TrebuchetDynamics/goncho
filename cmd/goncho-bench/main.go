@@ -11,8 +11,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/classify"
 	"github.com/TrebuchetDynamics/goncho/memory"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
@@ -69,9 +70,6 @@ type config struct {
 	BeamPairedCompareMarkdownOut      string
 	BeamPairedCompareBootstrapSamples int
 	BeamPairedCompareEffectSizeFloor  float64
-	BeamConversionDiagnostics         *beamConversionDiagnostics
-	BeamServiceLeakageChecks          *beamServiceLeakageChecks
-	BeamServiceJudgments              *beamServiceJudgmentSet
 }
 
 type dataset struct {
@@ -200,19 +198,19 @@ func main() {
 
 func run(ctx context.Context, cfg config) error {
 	if strings.TrimSpace(cfg.BeamPairedComparePath) != "" {
-		return runBeamPairedComparison(cfg)
+		return beam.RunPairedComparison(beamPairedConfig(cfg))
 	}
 	if strings.TrimSpace(cfg.BeamPairedResultsIn) != "" {
-		return appendBeamPairedOutcomesFromResults(cfg)
+		return beam.AppendPairedOutcomesFromResults(beamPairedConfig(cfg))
 	}
 	if strings.TrimSpace(cfg.BeamConvertIn) != "" {
-		if beamServiceArtifactRequested(cfg) {
-			return runBeamHuggingFaceServiceBenchmark(ctx, cfg)
+		if beam.ArtifactRequested(beamServiceConfig(cfg)) {
+			return beam.RunHuggingFaceServiceBenchmark(ctx, beamServiceConfig(cfg))
 		}
-		return convertBeamHuggingFaceJSONL(cfg.BeamConvertIn, cfg.BeamConvertOut, cfg.BeamConvertScale)
+		return beam.ConvertHuggingFaceJSONL(cfg.BeamConvertIn, cfg.BeamConvertOut, cfg.BeamConvertScale)
 	}
-	if strings.TrimSpace(cfg.BeamJSONLPath) != "" || beamServiceArtifactRequested(cfg) {
-		return runBeamServiceBenchmark(ctx, cfg)
+	if strings.TrimSpace(cfg.BeamJSONLPath) != "" || beam.ArtifactRequested(beamServiceConfig(cfg)) {
+		return beam.RunServiceBenchmark(ctx, beamServiceConfig(cfg))
 	}
 	if strings.TrimSpace(cfg.LocomoCompareReport) != "" {
 		return generateLocomoComparison(cfg.LocomoCompareReport, cfg.LocomoCompareJSONL, cfg.LocomoCompareMD, cfg.LocomoCompareA, cfg.LocomoCompareB)
@@ -221,7 +219,7 @@ func run(ctx context.Context, cfg config) error {
 		return runLocomoBackendComparison(ctx, cfg)
 	}
 	if strings.TrimSpace(cfg.ClassifyReportPath) != "" {
-		return generateFailureCategoryReports(cfg.ClassifyReportPath, cfg.ClassifyFailurePath, cfg.ClassifyJSONLOut, cfg.ClassifyMarkdownOut)
+		return classify.GenerateFailureCategoryReports(cfg.ClassifyReportPath, cfg.ClassifyFailurePath, cfg.ClassifyJSONLOut, cfg.ClassifyMarkdownOut)
 	}
 	if strings.TrimSpace(cfg.LocomoMemoriesPath) != "" || strings.TrimSpace(cfg.LocomoQuestionsPath) != "" {
 		return runLocomoBenchmark(ctx, cfg)
@@ -283,98 +281,39 @@ func run(ctx context.Context, cfg config) error {
 	return nil
 }
 
-func beamServiceArtifactRequested(cfg config) bool {
-	return strings.TrimSpace(cfg.BeamServiceOut) != "" || strings.TrimSpace(cfg.BeamServiceResultsOut) != "" || strings.TrimSpace(cfg.BeamServiceSummaryOut) != "" || strings.TrimSpace(cfg.BeamServicePairedOut) != "" || strings.TrimSpace(cfg.BeamServiceFailuresOut) != "" || strings.TrimSpace(cfg.BeamServiceJudgeRequestsOut) != ""
+func beamPairedConfig(cfg config) beam.PairedConfig {
+	return beam.PairedConfig{
+		ComparePath:             cfg.BeamPairedComparePath,
+		BaselineConfigID:        cfg.BeamPairedBaselineConfigID,
+		CandidateConfigID:       cfg.BeamPairedCandidateConfigID,
+		CompareJSONOut:          cfg.BeamPairedCompareJSONOut,
+		CompareMarkdownOut:      cfg.BeamPairedCompareMarkdownOut,
+		CompareBootstrapSamples: cfg.BeamPairedCompareBootstrapSamples,
+		CompareEffectSizeFloor:  cfg.BeamPairedCompareEffectSizeFloor,
+		ResultsIn:               cfg.BeamPairedResultsIn,
+		ResultsOut:              cfg.BeamPairedResultsOut,
+		ResultsConfigID:         cfg.BeamPairedResultsConfigID,
+	}
 }
 
-func runBeamServiceBenchmark(ctx context.Context, cfg config) error {
-	cases := goncho.DefaultRecallBenchmarkServiceCases()
-	if datasetPath := strings.TrimSpace(cfg.BeamJSONLPath); datasetPath != "" {
-		loaded, err := loadBeamServiceJSONLCases(datasetPath)
-		if err != nil {
-			return err
-		}
-		cases = loaded
+func beamServiceConfig(cfg config) beam.ServiceConfig {
+	return beam.ServiceConfig{
+		DatabasePath:                 cfg.DatabasePath,
+		FailOnLeakage:                cfg.FailOnLeakage,
+		ConvertIn:                    cfg.BeamConvertIn,
+		ConvertOut:                   cfg.BeamConvertOut,
+		ConvertScale:                 cfg.BeamConvertScale,
+		JSONLPath:                    cfg.BeamJSONLPath,
+		ServiceOut:                   cfg.BeamServiceOut,
+		ServiceResultsOut:            cfg.BeamServiceResultsOut,
+		ServiceSummaryOut:            cfg.BeamServiceSummaryOut,
+		ServicePairedOut:             cfg.BeamServicePairedOut,
+		ServiceFailuresOut:           cfg.BeamServiceFailuresOut,
+		ServiceJudgeRequestsOut:      cfg.BeamServiceJudgeRequestsOut,
+		ServiceJudgmentsIn:           cfg.BeamServiceJudgmentsIn,
+		ServiceAllowPartialJudgments: cfg.BeamServiceAllowPartialJudgments,
+		ServiceConfigID:              cfg.BeamServiceConfigID,
 	}
-	return runBeamServiceBenchmarkCases(ctx, cfg, cases)
-}
-
-func runBeamHuggingFaceServiceBenchmark(ctx context.Context, cfg config) error {
-	if strings.TrimSpace(cfg.BeamJSONLPath) != "" {
-		return fmt.Errorf("goncho-bench: --beam-convert-in direct service run cannot be combined with --beam-jsonl")
-	}
-	records, diagnostics, err := loadBeamHuggingFaceRecordsWithDiagnostics(cfg.BeamConvertIn, cfg.BeamConvertScale)
-	if err != nil {
-		return err
-	}
-	cfg.BeamConversionDiagnostics = &diagnostics
-	cases, err := beamServiceCasesFromJSONLRecords(records)
-	if err != nil {
-		return err
-	}
-	return runBeamServiceBenchmarkCases(ctx, cfg, cases)
-}
-
-func runBeamServiceBenchmarkCases(ctx context.Context, cfg config, cases []goncho.RecallBenchmarkServiceCase) error {
-	runStartedAt := time.Now().UTC()
-	leakageChecks := checkBeamServiceLeakage(cases)
-	cfg.BeamServiceLeakageChecks = &leakageChecks
-	if cfg.FailOnLeakage && beamServiceHasBlockingLeakage(leakageChecks) {
-		return fmt.Errorf("goncho-bench: BEAM leakage check failed: question_text_in_memory=%d relevant_id_in_memory=%d rubric_text_in_memory=%d", leakageChecks.QuestionTextInMemory, leakageChecks.RelevantIDInMemory, leakageChecks.RubricTextInMemory)
-	}
-	if path := strings.TrimSpace(cfg.BeamServiceJudgmentsIn); path != "" {
-		judgments, err := loadBeamServiceJudgments(path)
-		if err != nil {
-			return err
-		}
-		cfg.BeamServiceJudgments = judgments
-	}
-	databasePath := strings.TrimSpace(cfg.DatabasePath)
-	if databasePath == "" {
-		dir, err := os.MkdirTemp("", "goncho-beam-service-*")
-		if err != nil {
-			return fmt.Errorf("goncho-bench: create BEAM service temp db dir: %w", err)
-		}
-		databasePath = filepath.Join(dir, "beam-service.db")
-	}
-	store, err := memory.OpenSqlite(databasePath, 0, nil)
-	if err != nil {
-		return fmt.Errorf("goncho-bench: open BEAM service sqlite: %w", err)
-	}
-	defer store.Close(ctx)
-	if err := goncho.RunMigrations(store.DB()); err != nil {
-		return fmt.Errorf("goncho-bench: run BEAM service migrations: %w", err)
-	}
-	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "goncho-beam-service", ObserverPeerID: "goncho-bench", RecentMessages: 0}, nil)
-	report, err := goncho.EvaluateServiceRecallBenchmark(ctx, svc, cases)
-	if err != nil {
-		return fmt.Errorf("goncho-bench: evaluate BEAM service oracle: %w", err)
-	}
-	if cfg.BeamServiceJudgments != nil && !cfg.BeamServiceAllowPartialJudgments {
-		if err := requireCompleteBeamServiceJudgments(*cfg.BeamServiceJudgments, report); err != nil {
-			return err
-		}
-	}
-	if outPath := strings.TrimSpace(cfg.BeamServiceOut); outPath != "" {
-		raw, err := json.MarshalIndent(report, "", "  ")
-		if err != nil {
-			return fmt.Errorf("goncho-bench: encode BEAM service report: %w", err)
-		}
-		raw = append(raw, '\n')
-		if outPath == "-" {
-			if _, err := os.Stdout.Write(raw); err != nil {
-				return err
-			}
-		} else {
-			if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-				return fmt.Errorf("goncho-bench: create BEAM service report dir: %w", err)
-			}
-			if err := os.WriteFile(outPath, raw, 0o644); err != nil {
-				return fmt.Errorf("goncho-bench: write BEAM service report: %w", err)
-			}
-		}
-	}
-	return writeBeamServiceComparisonArtifacts(report, cfg, runStartedAt)
 }
 
 func evaluateOnce(ctx context.Context, data dataset, cfg config) (BenchmarkReport, error) {

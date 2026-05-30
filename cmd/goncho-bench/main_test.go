@@ -14,6 +14,20 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
+type testBeamJSONLRecord struct {
+	Type                  string   `json:"type"`
+	Scale                 string   `json:"scale,omitempty"`
+	ID                    string   `json:"id,omitempty"`
+	ConversationID        string   `json:"conversation_id,omitempty"`
+	Peer                  string   `json:"peer,omitempty"`
+	SessionKey            string   `json:"session_key,omitempty"`
+	Content               string   `json:"content,omitempty"`
+	Ability               string   `json:"ability,omitempty"`
+	RelevantIDs           []string `json:"relevant_ids,omitempty"`
+	RequiredEvidenceKinds []string `json:"required_evidence_kinds,omitempty"`
+	ExpectedNoAnswer      bool     `json:"expected_no_answer,omitempty"`
+}
+
 func TestRunBeamServiceRecallOracleWritesAbilityReport(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "beam-service-report.json")
 	if err := run(context.Background(), config{
@@ -70,16 +84,16 @@ func TestConvertBeamHuggingFaceJSONLWritesStableIDDataset(t *testing.T) {
 	if len(lines) != 5 {
 		t.Fatalf("converted lines = %d, want meta + two memories + two questions: %s", len(lines), rawConverted)
 	}
-	var memory beamJSONLRecord
+	var memory testBeamJSONLRecord
 	if err := json.Unmarshal([]byte(lines[2]), &memory); err != nil {
 		t.Fatalf("decode converted memory: %v", err)
 	}
 	if memory.Type != "memory" || memory.ID != "conv-ledger-mem-000002" || memory.ConversationID != "conv-ledger" || memory.Peer != "beam" || memory.SessionKey != "conv-ledger" || !strings.Contains(memory.Content, "Owner of LedgerDB is Mira") {
 		t.Fatalf("converted memory = %+v, want stable second message memory", memory)
 	}
-	var question, abstention beamJSONLRecord
+	var question, abstention testBeamJSONLRecord
 	for _, line := range lines[3:] {
-		var record beamJSONLRecord
+		var record testBeamJSONLRecord
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
 			t.Fatalf("decode converted question: %v", err)
 		}

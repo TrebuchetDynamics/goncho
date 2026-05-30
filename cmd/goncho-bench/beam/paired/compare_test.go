@@ -1,8 +1,7 @@
-package main
+package paired
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -38,10 +37,10 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 		t.Fatalf("write nested Mnemosyne BEAM results: %v", err)
 	}
 	pairedPath := filepath.Join(dir, "paired_outcomes.jsonl")
-	if err := run(context.Background(), config{
-		BeamPairedResultsIn:       resultsPath,
-		BeamPairedResultsOut:      pairedPath,
-		BeamPairedResultsConfigID: "mnemosyne-v3",
+	if err := AppendPairedOutcomesFromResults(Config{
+		ResultsIn:       resultsPath,
+		ResultsOut:      pairedPath,
+		ResultsConfigID: "mnemosyne-v3",
 	}); err != nil {
 		t.Fatalf("import nested Mnemosyne BEAM results as paired outcomes: %v", err)
 	}
@@ -56,7 +55,7 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 	if err := json.Unmarshal(bytes.TrimSpace(pairedRaw), &importedRow); err != nil {
 		t.Fatalf("decode imported paired outcome row: %v", err)
 	}
-	if importedRow.SourcePath != resultsPath || importedRow.SourceSHA256 != testSHA256Hex([]byte(nestedResults)) {
+	if importedRow.SourcePath != resultsPath || importedRow.SourceSHA256 != checksumBytesSHA256([]byte(nestedResults)) {
 		t.Fatalf("imported paired outcome source = %+v, want nested result path and checksum", importedRow)
 	}
 	candidateRow := `{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-beam-real","qid":"q-source-beam-id","ability":"IE","question":"Who owns LedgerDB?","score":1,"correct":true}` + "\n"
@@ -72,12 +71,12 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 		t.Fatalf("close paired outcomes: %v", err)
 	}
 	jsonOut := filepath.Join(dir, "beam-paired-real-qids.json")
-	if err := run(context.Background(), config{
-		BeamPairedComparePath:             pairedPath,
-		BeamPairedBaselineConfigID:        "mnemosyne-v3",
-		BeamPairedCandidateConfigID:       "goncho-current",
-		BeamPairedCompareJSONOut:          jsonOut,
-		BeamPairedCompareBootstrapSamples: 200,
+	if err := RunPairedComparison(Config{
+		ComparePath:             pairedPath,
+		BaselineConfigID:        "mnemosyne-v3",
+		CandidateConfigID:       "goncho-current",
+		CompareJSONOut:          jsonOut,
+		CompareBootstrapSamples: 200,
 	}); err != nil {
 		t.Fatalf("compare question-key paired BEAM outcomes: %v", err)
 	}
@@ -103,7 +102,7 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 	if row.MatchKey != "question" || row.Question != "Who owns LedgerDB?" || row.BaselineQID != "conv-beam-real:q0" || row.CandidateQID != "q-source-beam-id" || row.QID != "q-source-beam-id" {
 		t.Fatalf("question-key paired row = %+v, want visible qid mismatch matched by question", row)
 	}
-	if row.BaselineSourcePath != resultsPath || row.BaselineSourceSHA256 != testSHA256Hex([]byte(nestedResults)) {
+	if row.BaselineSourcePath != resultsPath || row.BaselineSourceSHA256 != checksumBytesSHA256([]byte(nestedResults)) {
 		t.Fatalf("question-key paired source = %+v, want baseline nested result provenance", row)
 	}
 }
@@ -119,12 +118,12 @@ func TestRunBeamPairedComparisonRejectsAmbiguousQuestionFallback(t *testing.T) {
 	if err := os.WriteFile(pairedPath, []byte(pairedRows), 0o644); err != nil {
 		t.Fatalf("write ambiguous paired outcomes: %v", err)
 	}
-	err := run(context.Background(), config{
-		BeamPairedComparePath:             pairedPath,
-		BeamPairedBaselineConfigID:        "mnemosyne-v3",
-		BeamPairedCandidateConfigID:       "goncho-current",
-		BeamPairedCompareJSONOut:          filepath.Join(dir, "beam-paired-ambiguous.json"),
-		BeamPairedCompareBootstrapSamples: 200,
+	err := RunPairedComparison(Config{
+		ComparePath:             pairedPath,
+		BaselineConfigID:        "mnemosyne-v3",
+		CandidateConfigID:       "goncho-current",
+		CompareJSONOut:          filepath.Join(dir, "beam-paired-ambiguous.json"),
+		CompareBootstrapSamples: 200,
 	})
 	if err == nil || !strings.Contains(err.Error(), "ambiguous BEAM paired question-key fallback") {
 		t.Fatalf("ambiguous question fallback error = %v, want fail-closed pairing diagnostic", err)
@@ -147,13 +146,13 @@ func TestRunBeamPairedComparisonReportsSuperiorityVerdict(t *testing.T) {
 	}
 	jsonOut := filepath.Join(dir, "beam-paired-verdict.json")
 	mdOut := filepath.Join(dir, "beam-paired-verdict.md")
-	if err := run(context.Background(), config{
-		BeamPairedComparePath:             pairedPath,
-		BeamPairedBaselineConfigID:        "mnemosyne-v3",
-		BeamPairedCandidateConfigID:       "goncho-current",
-		BeamPairedCompareJSONOut:          jsonOut,
-		BeamPairedCompareMarkdownOut:      mdOut,
-		BeamPairedCompareBootstrapSamples: 200,
+	if err := RunPairedComparison(Config{
+		ComparePath:             pairedPath,
+		BaselineConfigID:        "mnemosyne-v3",
+		CandidateConfigID:       "goncho-current",
+		CompareJSONOut:          jsonOut,
+		CompareMarkdownOut:      mdOut,
+		CompareBootstrapSamples: 200,
 	}); err != nil {
 		t.Fatalf("run BEAM paired verdict comparison: %v", err)
 	}
@@ -209,13 +208,13 @@ func TestRunBeamPairedComparisonWritesBootstrapReport(t *testing.T) {
 	jsonOut := filepath.Join(dir, "beam-paired-comparison.json")
 	mdOut := filepath.Join(dir, "beam-paired-comparison.md")
 
-	if err := run(context.Background(), config{
-		BeamPairedComparePath:             pairedPath,
-		BeamPairedBaselineConfigID:        "mnemosyne-v3",
-		BeamPairedCandidateConfigID:       "goncho-current",
-		BeamPairedCompareJSONOut:          jsonOut,
-		BeamPairedCompareMarkdownOut:      mdOut,
-		BeamPairedCompareBootstrapSamples: 200,
+	if err := RunPairedComparison(Config{
+		ComparePath:             pairedPath,
+		BaselineConfigID:        "mnemosyne-v3",
+		CandidateConfigID:       "goncho-current",
+		CompareJSONOut:          jsonOut,
+		CompareMarkdownOut:      mdOut,
+		CompareBootstrapSamples: 200,
 	}); err != nil {
 		t.Fatalf("run BEAM paired comparison: %v", err)
 	}

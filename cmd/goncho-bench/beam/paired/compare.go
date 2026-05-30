@@ -1,4 +1,4 @@
-package main
+package paired
 
 import (
 	"bufio"
@@ -89,26 +89,26 @@ type beamPairedComparisonQuestionKey struct {
 }
 
 type beamPairedMatchedOutcome struct {
-	baseline  beamServicePairedOutcome
-	candidate beamServicePairedOutcome
+	baseline  servicePairedOutcome
+	candidate servicePairedOutcome
 	matchKey  string
 }
 
-func runBeamPairedComparison(cfg config) error {
+func RunPairedComparison(cfg Config) error {
 	report, err := buildBeamPairedComparison(cfg)
 	if err != nil {
 		return err
 	}
-	if err := writeBeamPairedComparisonJSON(cfg.BeamPairedCompareJSONOut, cfg.BeamPairedCompareMarkdownOut, report); err != nil {
+	if err := writeBeamPairedComparisonJSON(cfg.CompareJSONOut, cfg.CompareMarkdownOut, report); err != nil {
 		return err
 	}
-	return writeBeamPairedComparisonMarkdown(cfg.BeamPairedCompareMarkdownOut, cfg.BeamPairedCompareJSONOut, report)
+	return writeBeamPairedComparisonMarkdown(cfg.CompareMarkdownOut, cfg.CompareJSONOut, report)
 }
 
-func buildBeamPairedComparison(cfg config) (beamPairedComparisonReport, error) {
-	path := strings.TrimSpace(cfg.BeamPairedComparePath)
-	baselineID := strings.TrimSpace(cfg.BeamPairedBaselineConfigID)
-	candidateID := strings.TrimSpace(cfg.BeamPairedCandidateConfigID)
+func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
+	path := strings.TrimSpace(cfg.ComparePath)
+	baselineID := strings.TrimSpace(cfg.BaselineConfigID)
+	candidateID := strings.TrimSpace(cfg.CandidateConfigID)
 	if path == "" {
 		return beamPairedComparisonReport{}, fmt.Errorf("goncho-bench: --beam-paired-compare is required")
 	}
@@ -122,7 +122,7 @@ func buildBeamPairedComparison(cfg config) (beamPairedComparisonReport, error) {
 	if err != nil {
 		return beamPairedComparisonReport{}, err
 	}
-	baselineRows, candidateRows := []beamServicePairedOutcome{}, []beamServicePairedOutcome{}
+	baselineRows, candidateRows := []servicePairedOutcome{}, []servicePairedOutcome{}
 	for _, row := range rows {
 		if strings.TrimSpace(row.QID) == "" {
 			continue
@@ -186,11 +186,11 @@ func buildBeamPairedComparison(cfg config) (beamPairedComparisonReport, error) {
 			Winner:                beamPairedComparisonWinner(base.Score, cand.Score),
 		})
 	}
-	bootstrapSamples := cfg.BeamPairedCompareBootstrapSamples
+	bootstrapSamples := cfg.CompareBootstrapSamples
 	if bootstrapSamples <= 0 {
 		bootstrapSamples = 5000
 	}
-	effectSizeFloor := cfg.BeamPairedCompareEffectSizeFloor
+	effectSizeFloor := cfg.CompareEffectSizeFloor
 	if effectSizeFloor <= 0 {
 		effectSizeFloor = 0.02
 	}
@@ -203,13 +203,13 @@ func buildBeamPairedComparison(cfg config) (beamPairedComparisonReport, error) {
 	return report, nil
 }
 
-func loadBeamPairedOutcomes(path string) ([]beamServicePairedOutcome, error) {
+func loadBeamPairedOutcomes(path string) ([]servicePairedOutcome, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("goncho-bench: read BEAM paired outcomes: %w", err)
 	}
 	defer file.Close()
-	rows := []beamServicePairedOutcome{}
+	rows := []servicePairedOutcome{}
 	scanner := bufio.NewScanner(file)
 	lineNumber := 0
 	for scanner.Scan() {
@@ -218,7 +218,7 @@ func loadBeamPairedOutcomes(path string) ([]beamServicePairedOutcome, error) {
 		if line == "" {
 			continue
 		}
-		var row beamServicePairedOutcome
+		var row servicePairedOutcome
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
 			return nil, fmt.Errorf("goncho-bench: decode BEAM paired outcome line %d: %w", lineNumber, err)
 		}
@@ -230,7 +230,7 @@ func loadBeamPairedOutcomes(path string) ([]beamServicePairedOutcome, error) {
 	return rows, nil
 }
 
-func beamPairedOutcomeKey(row beamServicePairedOutcome) beamPairedComparisonKey {
+func beamPairedOutcomeKey(row servicePairedOutcome) beamPairedComparisonKey {
 	return beamPairedComparisonKey{
 		scale:          strings.TrimSpace(row.Scale),
 		conversationID: strings.TrimSpace(row.ConversationID),
@@ -238,7 +238,7 @@ func beamPairedOutcomeKey(row beamServicePairedOutcome) beamPairedComparisonKey 
 	}
 }
 
-func beamPairedOutcomeQuestionKey(row beamServicePairedOutcome) beamPairedComparisonQuestionKey {
+func beamPairedOutcomeQuestionKey(row servicePairedOutcome) beamPairedComparisonQuestionKey {
 	question := strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(row.Question))), " ")
 	if question == "" {
 		return beamPairedComparisonQuestionKey{}
@@ -251,9 +251,9 @@ func beamPairedOutcomeQuestionKey(row beamServicePairedOutcome) beamPairedCompar
 	}
 }
 
-func matchBeamPairedOutcomes(baselineRows, candidateRows []beamServicePairedOutcome) ([]beamPairedMatchedOutcome, int, error) {
-	sort.Slice(baselineRows, func(i, j int) bool { return beamServicePairedOutcomeLess(baselineRows[i], baselineRows[j]) })
-	sort.Slice(candidateRows, func(i, j int) bool { return beamServicePairedOutcomeLess(candidateRows[i], candidateRows[j]) })
+func matchBeamPairedOutcomes(baselineRows, candidateRows []servicePairedOutcome) ([]beamPairedMatchedOutcome, int, error) {
+	sort.Slice(baselineRows, func(i, j int) bool { return servicePairedOutcomeLess(baselineRows[i], baselineRows[j]) })
+	sort.Slice(candidateRows, func(i, j int) bool { return servicePairedOutcomeLess(candidateRows[i], candidateRows[j]) })
 	candidateByQID := map[beamPairedComparisonKey]int{}
 	candidateByQuestion := map[beamPairedComparisonQuestionKey]int{}
 	candidateQuestionCounts := map[beamPairedComparisonQuestionKey]int{}
@@ -307,7 +307,7 @@ func matchBeamPairedOutcomes(baselineRows, candidateRows []beamServicePairedOutc
 	return matched, dropped, nil
 }
 
-func beamServicePairedOutcomeLess(a, b beamServicePairedOutcome) bool {
+func servicePairedOutcomeLess(a, b servicePairedOutcome) bool {
 	ak, bk := beamPairedOutcomeKey(a), beamPairedOutcomeKey(b)
 	if !beamPairedComparisonKeyEqual(ak, bk) {
 		return beamPairedComparisonKeyLess(ak, bk)

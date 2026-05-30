@@ -1,54 +1,15 @@
 package goncho
 
-import "strings"
+import (
+	"strings"
 
-type expandedQuery struct {
-	Original string
-	Expanded string
-	Terms    []string
-}
+	"github.com/TrebuchetDynamics/goncho/service/internal/queryexpand"
+)
 
-var queryExpansionSynonyms = map[string][]string{
-	"auth":     {"authentication", "login", "credentials", "oauth"},
-	"login":    {"auth", "authentication", "credentials", "signin"},
-	"signin":   {"login", "authentication", "credentials"},
-	"db":       {"database", "postgres", "postgresql", "sqlite"},
-	"database": {"db", "postgres", "postgresql", "sqlite"},
-	"err":      {"error", "failure", "exception"},
-	"error":    {"failure", "exception", "err"},
-	"failure":  {"error", "exception", "failed"},
-	"owner":    {"owns", "owned", "responsible"},
-	"pref":     {"preference", "prefers", "prefer"},
-}
+type expandedQuery = queryexpand.Expanded
 
 func expandSearchQuery(query string) expandedQuery {
-	original := strings.TrimSpace(query)
-	if original == "" {
-		return expandedQuery{}
-	}
-	seen := map[string]struct{}{}
-	terms := []string{}
-	for _, token := range searchRankTokens(original) {
-		for _, synonym := range queryExpansionSynonyms[token] {
-			synonym = strings.TrimSpace(strings.ToLower(synonym))
-			if synonym == "" {
-				continue
-			}
-			if _, ok := seen[synonym]; ok {
-				continue
-			}
-			seen[synonym] = struct{}{}
-			terms = append(terms, synonym)
-		}
-	}
-	if len(terms) == 0 {
-		return expandedQuery{Original: original, Expanded: original}
-	}
-	return expandedQuery{Original: original, Expanded: original + " " + strings.Join(terms, " "), Terms: terms}
-}
-
-func (e expandedQuery) Applied() bool {
-	return len(e.Terms) > 0 && strings.TrimSpace(e.Expanded) != strings.TrimSpace(e.Original)
+	return queryexpand.Expand(query)
 }
 
 func evidenceListHas(items []EvidenceItem, kind, id string) bool {

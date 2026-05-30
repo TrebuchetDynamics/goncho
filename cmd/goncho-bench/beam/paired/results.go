@@ -1,4 +1,4 @@
-package main
+package paired
 
 import (
 	"encoding/json"
@@ -29,9 +29,9 @@ type beamPairedResultsFile struct {
 	} `json:"results"`
 }
 
-func appendBeamPairedOutcomesFromResults(cfg config) error {
-	inputPath := strings.TrimSpace(cfg.BeamPairedResultsIn)
-	outPath := strings.TrimSpace(cfg.BeamPairedResultsOut)
+func AppendPairedOutcomesFromResults(cfg Config) error {
+	inputPath := strings.TrimSpace(cfg.ResultsIn)
+	outPath := strings.TrimSpace(cfg.ResultsOut)
 	if inputPath == "" {
 		return fmt.Errorf("goncho-bench: --beam-paired-results-in is required")
 	}
@@ -46,7 +46,7 @@ func appendBeamPairedOutcomesFromResults(cfg config) error {
 	if err := json.Unmarshal(raw, &results); err != nil {
 		return fmt.Errorf("goncho-bench: decode BEAM paired results: %w", err)
 	}
-	rows, err := beamPairedOutcomesFromResults(results, cfg.BeamPairedResultsConfigID, inputPath, checksumBytesSHA256(raw))
+	rows, err := beamPairedOutcomesFromResults(results, cfg.ResultsConfigID, inputPath, checksumBytesSHA256(raw))
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func appendBeamPairedOutcomesFromResults(cfg config) error {
 	return nil
 }
 
-func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfigID, sourcePath, sourceSHA256 string) ([]beamServicePairedOutcome, error) {
+func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfigID, sourcePath, sourceSHA256 string) ([]servicePairedOutcome, error) {
 	configID := strings.TrimSpace(overrideConfigID)
 	if configID == "" {
 		configID = strings.TrimSpace(results.Metadata.ConfigID)
@@ -83,9 +83,9 @@ func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfig
 		runStartedAt = strings.TrimSpace(results.Metadata.Date)
 	}
 	if runStartedAt == "" {
-		runStartedAt = time.Now().UTC().Format(beamServicePairedDateTimeFormat)
+		runStartedAt = time.Now().UTC().Format(time.RFC3339)
 	}
-	out := []beamServicePairedOutcome{}
+	out := []servicePairedOutcome{}
 	for conversationIndex, conv := range results.Results {
 		conversationID := strings.TrimSpace(conv.ConversationID)
 		scale := strings.TrimSpace(conv.Scale)
@@ -95,7 +95,7 @@ func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfig
 				return nil, fmt.Errorf("goncho-bench: BEAM paired result conversation %d result %d missing qid", conversationIndex+1, resultIndex+1)
 			}
 			score := roundMetric(result.Score)
-			out = append(out, beamServicePairedOutcome{
+			out = append(out, servicePairedOutcome{
 				ConfigID:       configID,
 				RunStartedAt:   runStartedAt,
 				Scale:          scale,

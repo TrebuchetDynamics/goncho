@@ -1,4 +1,4 @@
-package main
+package classify
 
 import (
 	"encoding/json"
@@ -9,11 +9,11 @@ import (
 )
 
 func TestClassifyFailureCasesSelectsHardRanksAndCategories(t *testing.T) {
-	report := BenchmarkReport{System: "goncho", Dataset: "fixture", Questions: []BenchmarkQuestionReport{
-		{ID: "rank1", Query: "easy", RelevantIDs: []string{"answer_a"}, RetrievedIDs: []string{"answer_a"}, Rank: 1, MRR: 1},
-		{ID: "temporal", Query: "Which trip happened first?", RelevantIDs: []string{"answer_trip_abs_1"}, RetrievedIDs: []string{"other_trip", "answer_trip_abs_1"}, Rank: 2, MRR: 0.5},
-		{ID: "numeric", Query: "How many plants did I buy?", RelevantIDs: []string{"answer_plants_1"}, RetrievedIDs: []string{"wrong_plants", "other", "answer_plants_1"}, Rank: 3, MRR: 0.3333},
-		{ID: "miss", Query: "What obscure synonym should match?", RelevantIDs: []string{"answer_synonym"}, RetrievedIDs: []string{"d1", "d2", "d3"}, Rank: 0, MRR: 0},
+	report := Report{System: "goncho", Dataset: "fixture", Questions: []QuestionReport{
+		{ID: "rank1", Query: "easy", RelevantIDs: []string{"answer_a"}, RetrievedIDs: []string{"answer_a"}, Rank: 1},
+		{ID: "temporal", Query: "Which trip happened first?", RelevantIDs: []string{"answer_trip_abs_1"}, RetrievedIDs: []string{"other_trip", "answer_trip_abs_1"}, Rank: 2},
+		{ID: "numeric", Query: "How many plants did I buy?", RelevantIDs: []string{"answer_plants_1"}, RetrievedIDs: []string{"wrong_plants", "other", "answer_plants_1"}, Rank: 3},
+		{ID: "miss", Query: "What obscure synonym should match?", RelevantIDs: []string{"answer_synonym"}, RetrievedIDs: []string{"d1", "d2", "d3"}, Rank: 0},
 	}}
 	cases := classifyFailureCases(report)
 	if len(cases) != 3 {
@@ -38,9 +38,9 @@ func TestWriteFailureCategoryReportsEmitsJSONLAndMarkdown(t *testing.T) {
 	dir := t.TempDir()
 	jsonl := filepath.Join(dir, "categories.jsonl")
 	md := filepath.Join(dir, "summary.md")
-	report := BenchmarkReport{System: "goncho", Dataset: "fixture", MRR: 0.91, RecallAnyAt10: 0.98, Questions: []BenchmarkQuestionReport{
-		{ID: "duplicate", Query: "What did dad gave me?", RelevantIDs: []string{"answer_gift"}, RetrievedIDs: []string{"gift", "answer_gift"}, Rank: 2, MRR: 0.5},
-		{ID: "miss", Query: "Can you recommend recent publications?", RelevantIDs: []string{"answer_pubs"}, RetrievedIDs: []string{"a", "b"}, Rank: 0, MRR: 0},
+	report := Report{System: "goncho", Dataset: "fixture", MRR: 0.91, RecallAnyAt10: 0.98, Questions: []QuestionReport{
+		{ID: "duplicate", Query: "What did dad gave me?", RelevantIDs: []string{"answer_gift"}, RetrievedIDs: []string{"gift", "answer_gift"}, Rank: 2},
+		{ID: "miss", Query: "Can you recommend recent publications?", RelevantIDs: []string{"answer_pubs"}, RetrievedIDs: []string{"a", "b"}, Rank: 0},
 	}}
 	cases := classifyFailureCases(report)
 	if err := writeFailureCategoryReports(jsonl, md, report, cases); err != nil {
