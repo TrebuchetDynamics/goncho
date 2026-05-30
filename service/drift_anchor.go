@@ -80,7 +80,7 @@ func (d *DriftAnchorDetector) Check(ctx context.Context, params DriftAnchorCheck
 
 func isNegativeDriftAnchor(entry MemoryToolEntry) bool {
 	for _, tag := range entry.Tags {
-		tag = strings.ToLower(strings.TrimSpace(tag))
+		tag = textutil.LowerTrimmed(tag)
 		if tag == "negative" || tag == "dead-end" || tag == "drift-anchor" {
 			return true
 		}

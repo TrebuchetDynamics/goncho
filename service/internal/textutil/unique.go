@@ -103,6 +103,11 @@ func SortedSetValues(values map[string]struct{}, normalize func(string) string) 
 	return out
 }
 
-func lowerTrimmed(value string) string {
+// LowerTrimmed trims surrounding whitespace and applies simple lower-casing.
+func LowerTrimmed(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func lowerTrimmed(value string) string {
+	return LowerTrimmed(value)
 }

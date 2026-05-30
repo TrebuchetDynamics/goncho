@@ -476,7 +476,7 @@ func recallTemporalAdjustment(candidate ScoredRecallCandidate, query string) flo
 		if evidence.Kind != "temporal" {
 			continue
 		}
-		note := strings.ToLower(strings.TrimSpace(evidence.Note))
+		note := textutil.LowerTrimmed(evidence.Note)
 		if strings.Contains(note, "superseded_by=") || strings.Contains(note, "superseded") {
 			return -recallTemporalSupersededPenalty
 		}
@@ -498,7 +498,7 @@ func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {
 			if evidence.Kind != "temporal" {
 				continue
 			}
-			note := strings.ToLower(strings.TrimSpace(evidence.Note))
+			note := textutil.LowerTrimmed(evidence.Note)
 			if strings.Contains(note, "superseded_by=") || strings.Contains(note, "superseded") {
 				return true
 			}
@@ -508,7 +508,7 @@ func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {
 }
 
 func recallSpeakerAdjustment(candidate ScoredRecallCandidate, query string) float64 {
-	query = strings.ToLower(strings.TrimSpace(query))
+	query = textutil.LowerTrimmed(query)
 	if query == "" {
 		return 0
 	}
@@ -536,9 +536,9 @@ func recallCandidateSpeaker(candidate RecallCandidate) string {
 		if evidence.Kind != "speaker" {
 			continue
 		}
-		speaker := strings.ToLower(strings.TrimSpace(evidence.Source))
+		speaker := textutil.LowerTrimmed(evidence.Source)
 		if speaker == "" {
-			note := strings.ToLower(strings.TrimSpace(evidence.Note))
+			note := textutil.LowerTrimmed(evidence.Note)
 			if strings.HasPrefix(note, "speaker=") {
 				speaker = strings.TrimSpace(strings.TrimPrefix(note, "speaker="))
 			}
@@ -547,7 +547,7 @@ func recallCandidateSpeaker(candidate RecallCandidate) string {
 			return speaker
 		}
 	}
-	return strings.ToLower(strings.TrimSpace(candidate.AgentID))
+	return textutil.LowerTrimmed(candidate.AgentID)
 }
 
 func recallQuerySpeakerTargets(query string) []string {
@@ -617,7 +617,7 @@ func recallDiversityPenalty(candidate ScoredRecallCandidate, selected []ScoredRe
 }
 
 func recallDiversityValue(candidate RecallCandidate, key string) string {
-	switch strings.ToLower(strings.TrimSpace(key)) {
+	switch textutil.LowerTrimmed(key) {
 	case "session_id":
 		return candidate.SessionID
 	case "source_type":

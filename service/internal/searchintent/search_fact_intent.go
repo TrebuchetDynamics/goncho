@@ -66,7 +66,7 @@ func searchSpeakerFactIntentScore(query, content string) float64 {
 	if !searchSpeakerAttributionQuestion(query) {
 		return 0
 	}
-	content = strings.TrimSpace(strings.Trim(content, ".!?"))
+	content = textutil.TrimSentenceBoundary(content)
 	lower := strings.ToLower(content)
 	if !strings.HasPrefix(lower, "speaker ") {
 		return 0
@@ -179,7 +179,7 @@ func searchLocationFactIntentScore(query, content string) float64 {
 }
 
 func searchLocationQuestionObject(query string) (string, bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?! ."))
+	query = textutil.TrimQuestionPhraseBoundary(query)
 	tail, ok := textutil.CutAnyPrefixFold(query, []string{"where is ", "where are ", "where's "})
 	if !ok {
 		return "", false
@@ -189,7 +189,7 @@ func searchLocationQuestionObject(query string) (string, bool) {
 }
 
 func searchLocationAnswerParts(sentence string) (object, location string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	before, after, ok := textutil.CutAroundAnySubstringFold(sentence, []string{" is located at ", " is located in ", " is in ", " lives in "})
 	if !ok || before == "" {
 		return "", "", false
@@ -224,7 +224,7 @@ func searchTimelineFactIntentScore(query, content string) float64 {
 }
 
 func searchTimelineQuestionEvent(query string) (string, bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	query = textutil.TrimQuestionPunctuation(query)
 	tail, ok := textutil.CutAnyPrefixFold(query, []string{"when is ", "when are "})
 	if !ok {
 		return "", false
@@ -234,7 +234,7 @@ func searchTimelineQuestionEvent(query string) (string, bool) {
 }
 
 func searchTimelineAnswerParts(sentence string) (event, date string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	before, after, ok := textutil.CutAroundAnySubstringFold(sentence, []string{" occurs on ", " is scheduled for ", " deadline is ", " is on "})
 	if !ok || before == "" {
 		return "", "", false
@@ -275,7 +275,7 @@ func searchMetricFactIntentScore(query, content string) float64 {
 }
 
 func searchMetricQuestionKey(query string) (string, bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?! ."))
+	query = textutil.TrimQuestionPhraseBoundary(query)
 	tail, ok := textutil.CutAnyPrefixFold(query, []string{"what is ", "what was ", "what are ", "what were ", "how fast is ", "how many ", "how much "})
 	if !ok {
 		return "", false
@@ -285,7 +285,7 @@ func searchMetricQuestionKey(query string) (string, bool) {
 }
 
 func searchMetricAnswerParts(sentence string) (key, value string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	match := searchMetricAnswerPattern.FindStringSubmatch(sentence)
 	if len(match) != 3 {
 		return "", "", false
@@ -326,7 +326,7 @@ func searchVersionFactIntentScore(query, content string) float64 {
 }
 
 func searchVersionQuestionSubject(query string) (string, bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?! ."))
+	query = textutil.TrimQuestionPhraseBoundary(query)
 	if tail, ok := textutil.CutAnyPrefixFold(query, []string{"what version is ", "which version is ", "what version does ", "which version does "}); ok {
 		subject := cleanFactObject(tail)
 		return subject, subject != ""
@@ -348,7 +348,7 @@ func searchVersionQuestionSubject(query string) (string, bool) {
 }
 
 func searchVersionAnswerParts(sentence string) (subject, version string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	for _, pattern := range []*regexp.Regexp{searchVersionIsPattern, searchVersionShortPattern} {
 		match := pattern.FindStringSubmatch(sentence)
 		if len(match) != 3 {
@@ -392,7 +392,7 @@ func searchSequenceFactIntentScore(query, content string) float64 {
 }
 
 func searchSequenceQuestionSubject(query string) (string, bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	query = textutil.TrimQuestionPunctuation(query)
 	tail, ok := textutil.CutAnyPrefixFold(query, []string{"walk me through the ", "walk me through ", "list the order of the ", "list the order of ", "what is the order of the ", "what is the order of ", "what was the order of the ", "what was the order of ", "in what order did "})
 	if !ok {
 		return "", false
@@ -402,7 +402,7 @@ func searchSequenceQuestionSubject(query string) (string, bool) {
 }
 
 func searchSequenceAnswerParts(sentence string) (subject, steps string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	if sentence == "" || strings.Contains(sentence, "?") {
 		return "", "", false
 	}
@@ -501,7 +501,7 @@ func searchNegationFactIntentScore(query, content string) float64 {
 }
 
 func searchNegationQuestionObject(query string) (string, bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	query = textutil.TrimQuestionPunctuation(query)
 	tail, ok := textutil.CutAnyPrefixFold(query, []string{"have i ever ", "have i ", "did i ever ", "did i ", "have we ever ", "have we ", "did we ever ", "did we ", "has this ", "am i "})
 	if !ok {
 		return "", false
@@ -511,7 +511,7 @@ func searchNegationQuestionObject(query string) (string, bool) {
 }
 
 func searchNegationAnswerParts(sentence string) (object string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	match := searchNegationPattern.FindStringSubmatch(sentence)
 	if len(match) != 2 {
 		return "", false
@@ -551,7 +551,7 @@ func searchDecisionFactIntentScore(query, content string) float64 {
 }
 
 func searchDecisionQuestionTopic(query string) (string, bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	query = textutil.TrimQuestionPunctuation(query)
 	tail, ok := textutil.CutAnyPrefixFold(query, []string{"what decision did i make about ", "which decision did i make about ", "what decision did we make about ", "which decision did we make about ", "what did i decide about ", "what did we decide about "})
 	if !ok {
 		return "", false
@@ -561,7 +561,7 @@ func searchDecisionQuestionTopic(query string) (string, bool) {
 }
 
 func searchDecisionAnswerParts(sentence string) (decision string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	match := searchDecisionPattern.FindStringSubmatch(sentence)
 	if len(match) != 2 {
 		return "", false
@@ -599,7 +599,7 @@ func searchInstructionFactIntentScore(query, content string) float64 {
 }
 
 func searchInstructionQuestion(query string) (subject, topic string, ok bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	query = textutil.TrimQuestionPunctuation(query)
 	rest, ok := textutil.CutAnyPrefixFold(query, []string{"what instruction did ", "what rule did "})
 	if !ok {
 		return "", "", false
@@ -625,7 +625,7 @@ func searchInstructionQuestion(query string) (subject, topic string, ok bool) {
 }
 
 func searchInstructionAnswerParts(sentence string) (subject, instruction string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	before, after, ok := textutil.CutAroundAnySubstringFold(sentence, []string{" instructed "})
 	if !ok || before == "" {
 		return "", "", false
@@ -648,7 +648,7 @@ func searchOwnerQuestionObject(query string) (string, bool) {
 }
 
 func searchPreferenceQuestion(query string) (subject, attribute string, ok bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?!."))
+	query = textutil.TrimQuestionPunctuation(query)
 	lower := strings.ToLower(query)
 	if strings.HasPrefix(lower, "what does ") {
 		rest := query[len("what does "):]
@@ -688,7 +688,7 @@ func searchPreferenceQuestion(query string) (subject, attribute string, ok bool)
 }
 
 func searchPreferenceAnswerParts(sentence string) (subject, value, attribute string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	lower := strings.ToLower(sentence)
 	idx := strings.Index(lower, " prefers ")
 	verbLen := len(" prefers ")

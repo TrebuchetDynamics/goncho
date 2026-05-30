@@ -130,7 +130,7 @@ func ExplainCrossChatRecall(metas []SessionMetadata, filter SearchFilter) CrossC
 		if metaUserID != evidence.UserID {
 			continue
 		}
-		if len(allowedSources) > 0 && !slices.Contains(allowedSources, strings.ToLower(strings.TrimSpace(meta.Source))) {
+		if len(allowedSources) > 0 && !slices.Contains(allowedSources, textutil.LowerTrimmed(meta.Source)) {
 			continue
 		}
 		if len(allowedSessions) > 0 && !slices.Contains(allowedSessions, strings.TrimSpace(meta.SessionID)) {
@@ -266,7 +266,7 @@ func selectMetadata(metas []SessionMetadata, filter SearchFilter) ([]SessionMeta
 		if metaUserID != userID {
 			continue
 		}
-		if len(allowedSources) > 0 && !slices.Contains(allowedSources, strings.ToLower(strings.TrimSpace(meta.Source))) {
+		if len(allowedSources) > 0 && !slices.Contains(allowedSources, textutil.LowerTrimmed(meta.Source)) {
 			continue
 		}
 		if len(allowedSessions) > 0 && !slices.Contains(allowedSessions, strings.TrimSpace(meta.SessionID)) {

@@ -111,13 +111,13 @@ func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeI
 		})
 	}
 	if expansion.Applied() && expandedKeywordScore > keywordScore {
-		if !evidenceListHas(provenance, "query_expansion", strings.ToLower(strings.TrimSpace(expansion.Original))) {
+		if !evidenceListHas(provenance, "query_expansion", textutil.LowerTrimmed(expansion.Original)) {
 			provenance = append(provenance, queryExpansionEvidence(expansion))
 		}
 		provenance = append(provenance, EvidenceItem{
 			Kind:   "keyword",
 			Source: "goncho_query_expansion",
-			ID:     "expanded:" + strings.ToLower(strings.TrimSpace(expansion.Original)),
+			ID:     "expanded:" + textutil.LowerTrimmed(expansion.Original),
 			Score:  expandedKeywordScore,
 			Note:   "matched expanded query terms",
 			Metadata: map[string]string{

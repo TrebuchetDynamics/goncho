@@ -63,7 +63,7 @@ func SessionKeyMatchesSources(sessionKey string, sources []string) bool {
 	if !ok {
 		return false
 	}
-	return ContainsFold(sources, strings.ToLower(strings.TrimSpace(source)))
+	return ContainsFold(sources, textutil.LowerTrimmed(source))
 }
 
 // OriginSourceFromChatKey extracts the source prefix from a "source:chatID" chat key.

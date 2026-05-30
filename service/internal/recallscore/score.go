@@ -9,7 +9,7 @@ import (
 )
 
 func Keyword(content, query string) float64 {
-	query = strings.ToLower(strings.TrimSpace(query))
+	query = textutil.LowerTrimmed(query)
 	if query == "" {
 		return 0
 	}

@@ -227,7 +227,7 @@ func splitMemoryProposalMarker(content string) (string, string, bool) {
 	if !ok {
 		return "", "", false
 	}
-	prefix = strings.ToLower(strings.TrimSpace(prefix))
+	prefix = textutil.LowerTrimmed(prefix)
 	switch prefix {
 	case "remember", "update", "supersede", "forget", "delete", "preference", "procedure", "lesson":
 		return prefix, strings.TrimSpace(body), true

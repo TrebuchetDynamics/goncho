@@ -20,6 +20,9 @@ func TestUniqueLowerTrimmedCanSort(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("UniqueLowerTrimmed() = %#v, want %#v", got, want)
 	}
+	if got := LowerTrimmed(" Beta "); got != "beta" {
+		t.Fatalf("LowerTrimmed() = %q, want beta", got)
+	}
 }
 
 func TestNormalizeUniqueUsesCustomNormalizer(t *testing.T) {

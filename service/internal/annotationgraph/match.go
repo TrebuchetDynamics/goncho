@@ -98,7 +98,7 @@ func EntityMentionedInFact(entity, factKey string) bool {
 }
 
 func OwnerFactParts(fact string) (owner, entity string, ok bool) {
-	fact = strings.TrimSpace(strings.Trim(fact, ".!?"))
+	fact = textutil.TrimSentenceBoundary(fact)
 	lower := strings.ToLower(fact)
 	idx := strings.Index(lower, " owns ")
 	if idx <= 0 {
@@ -110,7 +110,7 @@ func OwnerFactParts(fact string) (owner, entity string, ok bool) {
 }
 
 func KGRelationAnswerParts(sentence string) (subject, relation, object string, ok bool) {
-	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
+	sentence = textutil.TrimSentenceBoundary(sentence)
 	if sentence == "" || strings.Contains(sentence, "?") {
 		return "", "", "", false
 	}
