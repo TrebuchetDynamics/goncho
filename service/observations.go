@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/internal/observationlog"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 var (
@@ -52,7 +53,7 @@ func (s *Service) Observe(ctx context.Context, p ObservationParams) (Observation
 	if s == nil {
 		return ObservationResult{}, fmt.Errorf("%w: nil service", ErrObservationInvalid)
 	}
-	if strings.TrimSpace(p.WorkspaceID) == "*" {
+	if textutil.EqualTrimmed(p.WorkspaceID, "*") {
 		return ObservationResult{}, fmt.Errorf("%w: wildcard workspace is not valid for observe", ErrObservationInvalid)
 	}
 	if strings.TrimSpace(p.WorkspaceID) == "" {

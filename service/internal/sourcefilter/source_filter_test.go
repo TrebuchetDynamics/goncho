@@ -2,29 +2,29 @@ package sourcefilter
 
 import "testing"
 
-func TestAllowsEmptyAndWildcardPermitAll(t *testing.T) {
-	if !Allows(nil, "conclusion", false) {
-		t.Fatalf("empty source list should permit all")
-	}
-	if !Allows([]string{" memory ", " * "}, "conclusion", false) {
-		t.Fatalf("wildcard source list should permit all")
-	}
-}
-
-func TestAllowsMatchesCaseInsensitiveTrimmedSource(t *testing.T) {
-	if !Allows([]string{" conclusion "}, "CONCLUSION", false) {
-		t.Fatalf("trimmed case-insensitive source should match")
-	}
-	if Allows([]string{"message"}, "conclusion", false) {
-		t.Fatalf("unlisted source should not match")
+func TestAllowsEmptyAndWildcardSources(t *testing.T) {
+	for _, sources := range [][]string{nil, []string{}, []string{" * "}, []string{" "}} {
+		if !Allows(sources, "memory", false) {
+			t.Fatalf("Allows(%#v) should permit every source", sources)
+		}
 	}
 }
 
-func TestAllowsEmptySourcePolicy(t *testing.T) {
-	if !Allows([]string{"conclusion"}, " ", true) {
-		t.Fatalf("empty source should match when legacy policy allows it")
+func TestAllowsEmptySourceOnlyWhenLegacyAllowed(t *testing.T) {
+	sources := []string{"memory"}
+	if !Allows(sources, " ", true) {
+		t.Fatalf("Allows should permit blank source when legacy empty-source match is enabled")
 	}
-	if Allows([]string{"conclusion"}, " ", false) {
-		t.Fatalf("empty source should not match when legacy policy denies it")
+	if Allows(sources, " ", false) {
+		t.Fatalf("Allows should reject blank source when legacy empty-source match is disabled")
+	}
+}
+
+func TestAllowsMatchesSourcesCaseInsensitively(t *testing.T) {
+	if !Allows([]string{" Memory "}, "memory", false) {
+		t.Fatalf("Allows should compare source names case-insensitively after trimming")
+	}
+	if Allows([]string{"memory"}, "search", false) {
+		t.Fatalf("Allows should reject a source not in the allow-list")
 	}
 }

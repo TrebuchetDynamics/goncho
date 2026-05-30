@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -78,16 +77,12 @@ func OriginSourceFromChatKey(chatKey string) string {
 
 // HasWildcard reports whether values contains "*".
 func HasWildcard(values []string) bool {
-	return sliceutil.ContainsFunc(values, func(value string) bool {
-		return strings.TrimSpace(value) == "*"
-	})
+	return textutil.ContainsTrimmed(values, "*")
 }
 
 // ContainsFold reports whether slice contains value (case-insensitive comparison).
 func ContainsFold(slice []string, value string) bool {
-	return sliceutil.ContainsFunc(slice, func(item string) bool {
-		return textutil.EqualFoldTrimmed(item, value)
-	})
+	return textutil.ContainsEqualFoldTrimmed(slice, value)
 }
 
 // IsSQLiteNoSuchTableError reports whether err is SQLite's missing-table error.
