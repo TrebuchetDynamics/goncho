@@ -1,10 +1,6 @@
 package sensitive
 
-import (
-	"strings"
-
-	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
-)
+import "github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 
 var contentSecretNeedles = []string{"password", "api token", "secret", "private key", "sk-live", "bearer "}
 
@@ -14,16 +10,12 @@ var metadataKeySecretNeedles = []string{"secret", "token", "password", "api_key"
 // stable secret/privacy needles Goncho uses to prevent proposed active memory
 // from storing credentials or similarly sensitive values.
 func ContainsSecretLikeContent(value string) bool {
-	return containsAnyLower(value, contentSecretNeedles)
+	return textutil.ContainsAnySubstringFold(value, contentSecretNeedles)
 }
 
 // MetadataKeySecretLike reports whether a metadata key conventionally names a
 // secret-bearing value and should be redacted even if the value itself has no
 // recognisable secret shape.
 func MetadataKeySecretLike(key string) bool {
-	return containsAnyLower(strings.TrimSpace(key), metadataKeySecretNeedles)
-}
-
-func containsAnyLower(value string, needles []string) bool {
-	return textutil.ContainsAnySubstringFold(value, needles)
+	return textutil.ContainsAnySubstringFold(key, metadataKeySecretNeedles)
 }

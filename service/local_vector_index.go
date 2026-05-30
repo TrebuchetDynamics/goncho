@@ -111,7 +111,7 @@ func (i *LocalVectorIndex) Upsert(ctx context.Context, memory LocalVectorMemory)
 	if err := validateLocalVector(vector); err != nil {
 		return err
 	}
-	entry := localVectorEntry{LocalVectorMemory: memory, Vector: sliceutil.Clone(vector), ContentChecksum: localVectorContentChecksum(memory.Content), IndexedAt: time.Now().UTC()}
+	entry := localVectorEntry{LocalVectorMemory: memory, Vector: sliceutil.Clone(vector), ContentChecksum: contentChecksum(memory.Content), IndexedAt: time.Now().UTC()}
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if i.dimensions == 0 {
@@ -212,7 +212,7 @@ func (i *LocalVectorIndex) Diagnostics(ctx context.Context) (LocalVectorIndexDia
 	defer i.mu.RUnlock()
 	diag := LocalVectorIndexDiagnostics{Path: i.path, Dimensions: i.dimensions, Count: len(i.entries), Checksum: localVectorIndexChecksum(i.dimensions, i.entries)}
 	for _, entry := range i.entries {
-		if len(entry.Vector) != i.dimensions || entry.ContentChecksum != localVectorContentChecksum(entry.Content) {
+		if len(entry.Vector) != i.dimensions || entry.ContentChecksum != contentChecksum(entry.Content) {
 			diag.StaleRows++
 		}
 		if entry.IndexedAt.After(diag.LastIndexedAt) {
@@ -327,10 +327,6 @@ func cosineSimilarity(a, b []float64) float64 {
 		return 0
 	}
 	return dot / (math.Sqrt(normA) * math.Sqrt(normB))
-}
-
-func localVectorContentChecksum(content string) string {
-	return hashutil.SHA256HexString(content)
 }
 
 func localVectorIndexChecksum(dimensions int, entries []localVectorEntry) string {
