@@ -434,9 +434,7 @@ func normalizeRecallBenchmarkEvidenceKinds(kinds []string) []string {
 func recallBenchmarkEvidenceKinds(items []ScoredRecallCandidate) []string {
 	kinds := []string{}
 	for _, item := range items {
-		for _, evidence := range item.Candidate.Provenance {
-			kinds = append(kinds, evidence.Kind)
-		}
+		kinds = append(kinds, evidenceListKinds(item.Candidate.Provenance)...)
 	}
 	return normalizeRecallBenchmarkEvidenceKinds(kinds)
 }
@@ -445,11 +443,7 @@ func recallBenchmarkTopEvidenceKinds(items []ScoredRecallCandidate) []string {
 	if len(items) == 0 {
 		return nil
 	}
-	kinds := make([]string, 0, len(items[0].Candidate.Provenance))
-	for _, evidence := range items[0].Candidate.Provenance {
-		kinds = append(kinds, evidence.Kind)
-	}
-	return normalizeRecallBenchmarkEvidenceKinds(kinds)
+	return normalizeRecallBenchmarkEvidenceKinds(evidenceListKinds(items[0].Candidate.Provenance))
 }
 
 func recallBenchmarkProvenanceSatisfied(trace RecallTrace, relevantIDs, requiredKinds []string) bool {
@@ -464,11 +458,7 @@ func recallBenchmarkProvenanceSatisfied(trace RecallTrace, relevantIDs, required
 				continue
 			}
 		}
-		kinds := make([]string, 0, len(item.Candidate.Provenance))
-		for _, evidence := range item.Candidate.Provenance {
-			kinds = append(kinds, evidence.Kind)
-		}
-		seen := textutil.LowerTrimmedSet(kinds)
+		seen := textutil.LowerTrimmedSet(evidenceListKinds(item.Candidate.Provenance))
 		matchedAll := true
 		for kind := range required {
 			if _, ok := seen[kind]; !ok {

@@ -3,7 +3,6 @@ package goncho
 import (
 	"context"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 )
@@ -110,13 +109,5 @@ func TestRecallCandidatesIncludeDurableFactAnnotationProvenance(t *testing.T) {
 }
 
 func recallCandidateFactEvidence(candidate RecallCandidate, fact string) (EvidenceItem, bool) {
-	for _, item := range candidate.Provenance {
-		if item.Kind != "fact" || item.Source != "goncho_memory_annotations" || item.Score != 1 {
-			continue
-		}
-		if strings.Contains(item.Note, "fact="+fact) {
-			return item, true
-		}
-	}
-	return EvidenceItem{}, false
+	return evidenceListFindKindSourceScoreNoteContains(candidate.Provenance, "fact", "goncho_memory_annotations", 1, "fact="+fact)
 }

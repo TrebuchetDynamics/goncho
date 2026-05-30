@@ -32,7 +32,7 @@ func TestGonchoGoalPromptInjectionImportIsQuarantinedE2E(t *testing.T) {
 	if got.Messages[0].MemorySyncStatus != "skipped" || got.Messages[0].MemorySyncReason != "quarantined_prompt_injection" {
 		t.Fatalf("message sync = %q/%q, want skipped/quarantined_prompt_injection", got.Messages[0].MemorySyncStatus, got.Messages[0].MemorySyncReason)
 	}
-	if !unavailableHasCapability(got.Unavailable, "prompt_injection_quarantine") {
+	if !contextUnavailableHasCapability(got.Unavailable, "prompt_injection_quarantine") {
 		t.Fatalf("Unavailable = %+v, want prompt_injection_quarantine evidence", got.Unavailable)
 	}
 
@@ -45,7 +45,7 @@ func TestGonchoGoalPromptInjectionImportIsQuarantinedE2E(t *testing.T) {
 			t.Fatalf("context surfaced quarantined content: %+v", contextResult.RecentMessages)
 		}
 	}
-	if !unavailableHasCapability(contextResult.Unavailable, "prompt_injection_quarantine") {
+	if !contextUnavailableHasCapability(contextResult.Unavailable, "prompt_injection_quarantine") {
 		t.Fatalf("context unavailable = %+v, want prompt_injection_quarantine evidence", contextResult.Unavailable)
 	}
 
@@ -56,8 +56,4 @@ func TestGonchoGoalPromptInjectionImportIsQuarantinedE2E(t *testing.T) {
 	if len(searchResult.Results) != 0 {
 		t.Fatalf("search results = %+v, want no trusted hits for quarantined import", searchResult.Results)
 	}
-}
-
-func unavailableHasCapability(values []ContextUnavailableEvidence, capability string) bool {
-	return contextUnavailableHasCapability(values, capability)
 }

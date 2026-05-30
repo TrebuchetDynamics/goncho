@@ -50,7 +50,7 @@ func TestGonchoDreamContextReportsDisabledAndUnavailableEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !contextHasCapability(got.Unavailable, "dream_disabled") {
+	if !contextUnavailableHasCapability(got.Unavailable, "dream_disabled") {
 		t.Fatalf("Context unavailable = %+v, want dream_disabled evidence", got.Unavailable)
 	}
 
@@ -61,7 +61,7 @@ func TestGonchoDreamContextReportsDisabledAndUnavailableEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !contextHasCapability(got.Unavailable, "dream_unavailable") {
+	if !contextUnavailableHasCapability(got.Unavailable, "dream_unavailable") {
 		t.Fatalf("Context unavailable = %+v, want dream_unavailable evidence", got.Unavailable)
 	}
 }
@@ -130,8 +130,4 @@ func dropDreamTable(t *testing.T, db *sql.DB) {
 	if _, err := db.Exec(`DROP TABLE goncho_dreams`); err != nil {
 		t.Fatalf("drop goncho_dreams: %v", err)
 	}
-}
-
-func contextHasCapability(items []ContextUnavailableEvidence, capability string) bool {
-	return contextUnavailableHasCapability(items, capability)
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 // LifecycleSQL is the minimal interface satisfied by both *sql.DB and *sql.Tx.
@@ -75,20 +77,14 @@ func OriginSourceFromChatKey(chatKey string) string {
 
 // HasWildcard reports whether values contains "*".
 func HasWildcard(values []string) bool {
-	for _, v := range values {
-		if strings.TrimSpace(v) == "*" {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(values, func(value string) bool {
+		return strings.TrimSpace(value) == "*"
+	})
 }
 
 // ContainsFold reports whether slice contains value (case-insensitive comparison).
 func ContainsFold(slice []string, value string) bool {
-	for _, s := range slice {
-		if strings.EqualFold(strings.TrimSpace(s), value) {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(slice, func(item string) bool {
+		return strings.EqualFold(strings.TrimSpace(item), value)
+	})
 }

@@ -55,7 +55,7 @@ func TestGonchoGoalStaleCodeClaimRequiresLiveVerificationE2E(t *testing.T) {
 	if len(got.StaleClaims) != 1 || got.StaleClaims[0].Path != "src/auth.ts" {
 		t.Fatalf("stale claims = %+v, want stale src/auth.ts", got.StaleClaims)
 	}
-	if !unavailableHasCapability(got.Unavailable, "stale_code_claim") {
+	if !contextUnavailableHasCapability(got.Unavailable, "stale_code_claim") {
 		t.Fatalf("unavailable = %+v, want stale_code_claim evidence", got.Unavailable)
 	}
 }
