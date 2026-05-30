@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	memory "github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestLocalMarkdownMemoryPublicFacadePersistsThroughMemoryTools(t *testing.T) {
@@ -64,12 +65,7 @@ func TestLocalMarkdownMemoryPublicFacadePersistsThroughMemoryTools(t *testing.T)
 }
 
 func stringSliceContains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return sliceutil.Contains(values, want)
 }
 
 func assertLocalMarkdownFileContains(t *testing.T, path, want string) {

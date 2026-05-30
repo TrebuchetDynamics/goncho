@@ -11,6 +11,7 @@ import (
 	"time"
 
 	memory "github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestGonchoProofMatrixFullLocalReportFixture(t *testing.T) {
@@ -449,12 +450,7 @@ func assertGonchoProofMatrixReportFixture(t *testing.T, report gonchoProofMatrix
 }
 
 func gonchoProofContains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return sliceutil.Contains(values, want)
 }
 
 func TestGonchoProofMatrix_StorageRetrievalTraceAndOperatorEvidence(t *testing.T) {
@@ -630,10 +626,7 @@ func TestGonchoProofMatrix_StorageRetrievalTraceAndOperatorEvidence(t *testing.T
 }
 
 func recallReplayHasWarning(replay RecallReplay, code string) bool {
-	for _, event := range replay.Events {
-		if event.WarningCode == code {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(replay.Events, func(event RecallReplayEvent) bool {
+		return event.WarningCode == code
+	})
 }

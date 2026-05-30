@@ -605,10 +605,8 @@ func recallBenchmarkContextSatisfied(trace RecallTrace, relevantIDs []string, co
 	}
 	selected := recallBenchmarkSelectedIDs(trace.Selected)
 	for _, id := range relevantIDs {
-		for _, selectedID := range selected {
-			if id == selectedID {
-				return true
-			}
+		if sliceutil.Contains(selected, id) {
+			return true
 		}
 	}
 	return false

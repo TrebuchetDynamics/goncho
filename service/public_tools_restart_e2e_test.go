@@ -4,6 +4,8 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestGonchoGoalPublicToolsSurviveSQLiteRestartE2E(t *testing.T) {
@@ -46,10 +48,5 @@ func TestGonchoGoalPublicToolsSurviveSQLiteRestartE2E(t *testing.T) {
 }
 
 func containsPublicRestartValue(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return sliceutil.Contains(values, want)
 }

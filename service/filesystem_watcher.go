@@ -13,6 +13,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/pathutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -255,12 +256,7 @@ func matchWatcherGlob(rel, pattern string) bool {
 }
 
 func looksBinary(raw []byte) bool {
-	for _, b := range raw {
-		if b == 0 {
-			return true
-		}
-	}
-	return !utf8.Valid(raw)
+	return sliceutil.Contains(raw, byte(0)) || !utf8.Valid(raw)
 }
 
 func filesystemWatcherObservationID(params FilesystemWatcherImportParams, candidate FilesystemWatcherCandidate) string {

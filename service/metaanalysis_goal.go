@@ -1,6 +1,10 @@
 package goncho
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+)
 
 const gonchoMetaanalysisCoverageVersion = "goncho-metaanalysis-goal-v1"
 
@@ -142,19 +146,9 @@ func BuildGonchoMetaanalysisCoverageReport(input GonchoMetaanalysisCoverageInput
 }
 
 func proofMatrixHasAPIContract(report gonchoProofMatrixReport, contract string) bool {
-	for _, got := range report.APIContractsVerified {
-		if got == contract {
-			return true
-		}
-	}
-	return false
+	return sliceutil.Contains(report.APIContractsVerified, contract)
 }
 
 func proofMatrixHasWarning(report gonchoProofMatrixReport, code string) bool {
-	for _, got := range report.WarningCodesSeen {
-		if got == code {
-			return true
-		}
-	}
-	return false
+	return sliceutil.Contains(report.WarningCodesSeen, code)
 }

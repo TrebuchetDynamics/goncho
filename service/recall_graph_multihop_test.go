@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestRecallProjectorContextIncludesGraphRelationPathCitation(t *testing.T) {
@@ -295,12 +297,9 @@ func TestGraphRecallConnectsOwnerThroughServiceRelation(t *testing.T) {
 }
 
 func traceHasCandidate(trace RecallTrace, memoryID string) bool {
-	for _, item := range trace.Candidates {
-		if item.Candidate.MemoryID == memoryID {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(trace.Candidates, func(item ScoredRecallCandidate) bool {
+		return item.Candidate.MemoryID == memoryID
+	})
 }
 
 func recallCandidateIDs(trace RecallTrace) []string {
@@ -321,19 +320,13 @@ func selectedRecallCandidate(trace RecallTrace, memoryID string) (RecallCandidat
 }
 
 func candidateHasGraphProvenance(candidate RecallCandidate, evidenceID string) bool {
-	for _, item := range candidate.Provenance {
-		if item.Kind == "graph" && item.ID == evidenceID {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(candidate.Provenance, func(item EvidenceItem) bool {
+		return item.Kind == "graph" && item.ID == evidenceID
+	})
 }
 
 func candidateHasGraphNote(candidate RecallCandidate, note string) bool {
-	for _, item := range candidate.Provenance {
-		if item.Kind == "graph" && item.Note == note {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(candidate.Provenance, func(item EvidenceItem) bool {
+		return item.Kind == "graph" && item.Note == note
+	})
 }

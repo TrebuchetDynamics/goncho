@@ -5,6 +5,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence(t *testing.T) {
@@ -116,10 +118,7 @@ func TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch(t *testing.T) {
 }
 
 func candidateIDSeen(items []ScoredRecallCandidate, memoryID string) bool {
-	for _, item := range items {
-		if item.Candidate.MemoryID == memoryID {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(items, func(item ScoredRecallCandidate) bool {
+		return item.Candidate.MemoryID == memoryID
+	})
 }

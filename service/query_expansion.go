@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/queryexpand"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type expandedQuery = queryexpand.Expanded
@@ -13,12 +14,9 @@ func expandSearchQuery(query string) expandedQuery {
 }
 
 func evidenceListHas(items []EvidenceItem, kind, id string) bool {
-	for _, item := range items {
-		if item.Kind == kind && item.ID == id {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(items, func(item EvidenceItem) bool {
+		return item.Kind == kind && item.ID == id
+	})
 }
 
 func queryExpansionEvidence(expansion expandedQuery) EvidenceItem {

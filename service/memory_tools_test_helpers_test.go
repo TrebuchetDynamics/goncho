@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"sync"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type mockMemoryToolStore struct {
@@ -69,12 +71,7 @@ func (m *mockMemoryToolStore) Forget(ctx context.Context, id string) error {
 }
 
 func containsTag(tags []string, query string) bool {
-	for _, tag := range tags {
-		if tag == query {
-			return true
-		}
-	}
-	return false
+	return sliceutil.Contains(tags, query)
 }
 
 func containsMemoryContent(content string, query string) bool {

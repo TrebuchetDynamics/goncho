@@ -716,12 +716,7 @@ func appendAnnotationGraphCandidate(out []RecallCandidate, indexByID map[string]
 }
 
 func recallCandidateHasEvidence(candidate RecallCandidate, kind, id string) bool {
-	for _, item := range candidate.Provenance {
-		if item.Kind == kind && item.ID == id {
-			return true
-		}
-	}
-	return false
+	return evidenceListHas(candidate.Provenance, kind, id)
 }
 
 func annotationGraphOwnerQuery(query string) bool {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestMemoryFacadeAddSearchUpdateDeleteHistoryWithStableIDs(t *testing.T) {
@@ -106,10 +107,7 @@ func historyActions(events []MemoryHistoryEvent) []string {
 }
 
 func historyContainsContent(events []MemoryHistoryEvent, want string) bool {
-	for _, event := range events {
-		if event.PreviousContent == want || event.NewContent == want {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(events, func(event MemoryHistoryEvent) bool {
+		return event.PreviousContent == want || event.NewContent == want
+	})
 }

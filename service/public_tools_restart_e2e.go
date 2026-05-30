@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type GonchoPublicToolsRestartE2EConfig struct {
@@ -188,10 +189,7 @@ func publicToolString(values map[string]any, key string) string {
 }
 
 func contextUnavailableHasPublicCapability(values []ContextUnavailableEvidence, capability string) bool {
-	for _, value := range values {
-		if value.Capability == capability {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(values, func(value ContextUnavailableEvidence) bool {
+		return value.Capability == capability
+	})
 }

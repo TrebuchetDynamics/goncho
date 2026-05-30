@@ -5,6 +5,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestRecallPipelineWarningsAndTokenBudget(t *testing.T) {
@@ -237,12 +239,9 @@ func TestRecallPipelineCopiesScoringConfig(t *testing.T) {
 }
 
 func traceHasWarning(trace RecallTrace, code string) bool {
-	for _, warning := range trace.Warnings {
-		if warning.Code == code {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(trace.Warnings, func(warning RecallWarning) bool {
+		return warning.Code == code
+	})
 }
 
 type staticRecallGenerator struct {

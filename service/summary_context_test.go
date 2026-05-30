@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestContractContextParamsSummaryOptionsJSONShape(t *testing.T) {
@@ -287,10 +289,7 @@ func assertNoSummarySlot(t *testing.T, ctx context.Context, svc *Service, sessio
 }
 
 func hasUnavailableField(got ContextResult, field string) bool {
-	for _, item := range got.Unavailable {
-		if item.Field == field {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(got.Unavailable, func(item ContextUnavailableEvidence) bool {
+		return item.Field == field
+	})
 }

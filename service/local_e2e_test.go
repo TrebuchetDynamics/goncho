@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestLocalE2E_ServiceLifecycleBuildsContextFromPublicAPIs(t *testing.T) {
@@ -128,30 +129,19 @@ func TestLocalE2E_ServiceLifecycleBuildsContextFromPublicAPIs(t *testing.T) {
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return sliceutil.Contains(values, want)
 }
 
 func messageSlicesContain(messages []MessageSlice, content string) bool {
-	for _, message := range messages {
-		if message.Content == content {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(messages, func(message MessageSlice) bool {
+		return message.Content == content
+	})
 }
 
 func searchHitsContainSourceContent(hits []SearchHit, source, content string) bool {
-	for _, hit := range hits {
-		if hit.Source == source && hit.Content == content {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(hits, func(hit SearchHit) bool {
+		return hit.Source == source && hit.Content == content
+	})
 }
 
 func mustRoundTripJSON(t *testing.T, value any) {

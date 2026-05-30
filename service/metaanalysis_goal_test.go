@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitecture(t *testing.T) {
@@ -188,19 +190,11 @@ func runGonchoMetaanalysisMemoryToolLoop(t *testing.T) bool {
 }
 
 func contextUnavailableHasCapability(values []ContextUnavailableEvidence, capability string) bool {
-	for _, value := range values {
-		if value.Capability == capability {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(values, func(value ContextUnavailableEvidence) bool {
+		return value.Capability == capability
+	})
 }
 
 func containsMetaanalysisValue(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return sliceutil.Contains(values, want)
 }

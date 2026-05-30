@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestProviderCircuitBreakerOpensThenHalfOpenClosesOnSuccess(t *testing.T) {
@@ -139,10 +141,7 @@ func (c *countingVectorStore) Search(context.Context, VectorSearchQuery) ([]Vect
 }
 
 func recallWarningsContain(warnings []RecallWarning, code string) bool {
-	for _, warning := range warnings {
-		if warning.Code == code {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(warnings, func(warning RecallWarning) bool {
+		return warning.Code == code
+	})
 }
