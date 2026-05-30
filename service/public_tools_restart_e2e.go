@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/memory"
-	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type GonchoPublicToolsRestartE2EConfig struct {
@@ -131,8 +130,8 @@ func RunGonchoPublicToolsRestartE2E(ctx context.Context, cfg GonchoPublicToolsRe
 		SearchCountAfterRestart:           publicToolInt(afterSearch, "count"),
 		RecallSelectedAfterRestart:        publicToolInt(afterRecall, "selected_count"),
 		ContextRepresentationAfterRestart: publicToolString(afterContextMap, "representation"),
-		ReviewWarningBeforeResolve:        contextUnavailableHasPublicCapability(beforeContext.Unavailable, "review_required"),
-		ReviewWarningAfterResolve:         contextUnavailableHasPublicCapability(afterContext.Unavailable, "review_required"),
+		ReviewWarningBeforeResolve:        contextUnavailableHasCapability(beforeContext.Unavailable, "review_required"),
+		ReviewWarningAfterResolve:         contextUnavailableHasCapability(afterContext.Unavailable, "review_required"),
 		HandoffCountAfterRestart:          publicToolInt(handoff, "count"),
 		CompletionCondition:               "go test ./...",
 	}, nil
@@ -186,10 +185,4 @@ func publicToolInt(values map[string]any, key string) int {
 func publicToolString(values map[string]any, key string) string {
 	value, _ := values[key].(string)
 	return value
-}
-
-func contextUnavailableHasPublicCapability(values []ContextUnavailableEvidence, capability string) bool {
-	return sliceutil.ContainsFunc(values, func(value ContextUnavailableEvidence) bool {
-		return value.Capability == capability
-	})
 }

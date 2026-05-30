@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -134,7 +133,5 @@ func dropDreamTable(t *testing.T, db *sql.DB) {
 }
 
 func contextHasCapability(items []ContextUnavailableEvidence, capability string) bool {
-	return slices.ContainsFunc(items, func(item ContextUnavailableEvidence) bool {
-		return item.Capability == capability
-	})
+	return contextUnavailableHasCapability(items, capability)
 }

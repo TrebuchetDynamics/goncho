@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestGonchoGoalPromptInjectionImportIsQuarantinedE2E(t *testing.T) {
@@ -61,7 +59,5 @@ func TestGonchoGoalPromptInjectionImportIsQuarantinedE2E(t *testing.T) {
 }
 
 func unavailableHasCapability(values []ContextUnavailableEvidence, capability string) bool {
-	return sliceutil.ContainsFunc(values, func(value ContextUnavailableEvidence) bool {
-		return value.Capability == capability
-	})
+	return contextUnavailableHasCapability(values, capability)
 }

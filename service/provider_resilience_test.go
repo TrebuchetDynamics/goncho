@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestProviderCircuitBreakerOpensThenHalfOpenClosesOnSuccess(t *testing.T) {
@@ -70,7 +68,7 @@ func TestRecallFallsBackToLexicalWhenVectorProviderFails(t *testing.T) {
 	if len(trace.Selected) == 0 || !strings.Contains(trace.Selected[0].Candidate.Content, "Lexical fallback owner is Mira") {
 		t.Fatalf("selected = %+v, want lexical fallback conclusion", trace.Selected)
 	}
-	if !recallWarningsContain(trace.Warnings, RecallWarningSemanticUnavailable) {
+	if !recallWarningListHasCode(trace.Warnings, RecallWarningSemanticUnavailable) {
 		t.Fatalf("warnings = %+v, want semantic_unavailable", trace.Warnings)
 	}
 	providers := svc.ProviderHealthDiagnostics()
@@ -100,7 +98,7 @@ func TestRecallSkipsVectorProviderWhenPayloadExceedsConfiguredLimit(t *testing.T
 	if vector.calls != 0 {
 		t.Fatalf("vector calls = %d, want payload guard to skip provider", vector.calls)
 	}
-	if !recallWarningsContain(trace.Warnings, RecallWarningSemanticUnavailable) {
+	if !recallWarningListHasCode(trace.Warnings, RecallWarningSemanticUnavailable) {
 		t.Fatalf("warnings = %+v, want semantic_unavailable payload warning", trace.Warnings)
 	}
 }
@@ -138,10 +136,4 @@ type countingVectorStore struct{ calls int }
 func (c *countingVectorStore) Search(context.Context, VectorSearchQuery) ([]VectorSearchHit, error) {
 	c.calls++
 	return nil, nil
-}
-
-func recallWarningsContain(warnings []RecallWarning, code string) bool {
-	return sliceutil.ContainsFunc(warnings, func(warning RecallWarning) bool {
-		return warning.Code == code
-	})
 }

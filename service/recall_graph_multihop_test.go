@@ -320,13 +320,9 @@ func selectedRecallCandidate(trace RecallTrace, memoryID string) (RecallCandidat
 }
 
 func candidateHasGraphProvenance(candidate RecallCandidate, evidenceID string) bool {
-	return sliceutil.ContainsFunc(candidate.Provenance, func(item EvidenceItem) bool {
-		return item.Kind == "graph" && item.ID == evidenceID
-	})
+	return evidenceListHas(candidate.Provenance, "graph", evidenceID)
 }
 
 func candidateHasGraphNote(candidate RecallCandidate, note string) bool {
-	return sliceutil.ContainsFunc(candidate.Provenance, func(item EvidenceItem) bool {
-		return item.Kind == "graph" && item.Note == note
-	})
+	return evidenceListHasKindNote(candidate.Provenance, "graph", note)
 }

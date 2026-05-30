@@ -626,7 +626,5 @@ func TestGonchoProofMatrix_StorageRetrievalTraceAndOperatorEvidence(t *testing.T
 }
 
 func recallReplayHasWarning(replay RecallReplay, code string) bool {
-	return sliceutil.ContainsFunc(replay.Events, func(event RecallReplayEvent) bool {
-		return event.WarningCode == code
-	})
+	return recallReplayEventsHaveWarning(replay.Events, code)
 }

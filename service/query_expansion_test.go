@@ -5,8 +5,6 @@ import (
 	"errors"
 	"strconv"
 	"testing"
-
-	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestSearchUsesOptionalVectorStoreForSemanticLane(t *testing.T) {
@@ -182,7 +180,5 @@ func (f fakeSearchReranker) RerankSearch(_ context.Context, _ string, candidates
 }
 
 func searchHitHasEvidence(hit SearchHit, kind string) bool {
-	return sliceutil.ContainsFunc(hit.Provenance, func(evidence EvidenceItem) bool {
-		return evidence.Kind == kind
-	})
+	return evidenceListHasKind(hit.Provenance, kind)
 }

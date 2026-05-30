@@ -189,12 +189,6 @@ func runGonchoMetaanalysisMemoryToolLoop(t *testing.T) bool {
 	return intField(t, afterForget, "count") == 0
 }
 
-func contextUnavailableHasCapability(values []ContextUnavailableEvidence, capability string) bool {
-	return sliceutil.ContainsFunc(values, func(value ContextUnavailableEvidence) bool {
-		return value.Capability == capability
-	})
-}
-
 func containsMetaanalysisValue(values []string, want string) bool {
 	return sliceutil.Contains(values, want)
 }
