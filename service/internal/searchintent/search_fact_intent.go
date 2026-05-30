@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const searchMetricUnitPattern = `ms|sec|seconds?|minutes?|hours?|days?|weeks?|months?|%|kb|mb|gb|tb|rows?|columns?|roles?|features?|bugs?|commits?|cards?|users?|items?|tests?|apis?|endpoints?|tickets?`
@@ -178,30 +179,24 @@ func searchLocationFactIntentScore(query, content string) float64 {
 }
 
 func searchLocationQuestionObject(query string) (string, bool) {
-	query = strings.TrimSpace(strings.Trim(query, "?!."))
-	lower := strings.ToLower(query)
-	for _, prefix := range []string{"where is ", "where are ", "where's "} {
-		if strings.HasPrefix(lower, prefix) {
-			object := cleanFactObject(query[len(prefix):])
-			return object, object != ""
-		}
+	query = strings.TrimSpace(strings.Trim(query, "?! ."))
+	tail, ok := textutil.CutAnyPrefixFold(query, []string{"where is ", "where are ", "where's "})
+	if !ok {
+		return "", false
 	}
-	return "", false
+	object := cleanFactObject(tail)
+	return object, object != ""
 }
 
 func searchLocationAnswerParts(sentence string) (object, location string, ok bool) {
 	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
-	lower := strings.ToLower(sentence)
-	for _, marker := range []string{" is located at ", " is located in ", " is in ", " lives in "} {
-		idx := strings.Index(lower, marker)
-		if idx <= 0 {
-			continue
-		}
-		object = cleanFactObject(sentence[:idx])
-		location = cleanFactValue(sentence[idx+len(marker):])
-		return object, location, searchFactObjectLooksAssertive(object) && location != ""
+	before, after, ok := textutil.CutAroundAnySubstringFold(sentence, []string{" is located at ", " is located in ", " is in ", " lives in "})
+	if !ok || before == "" {
+		return "", "", false
 	}
-	return "", "", false
+	object = cleanFactObject(before)
+	location = cleanFactValue(after)
+	return object, location, searchFactObjectLooksAssertive(object) && location != ""
 }
 
 func searchTimelineFactIntentScore(query, content string) float64 {
@@ -230,29 +225,23 @@ func searchTimelineFactIntentScore(query, content string) float64 {
 
 func searchTimelineQuestionEvent(query string) (string, bool) {
 	query = strings.TrimSpace(strings.Trim(query, "?!."))
-	lower := strings.ToLower(query)
-	for _, prefix := range []string{"when is ", "when are "} {
-		if strings.HasPrefix(lower, prefix) {
-			event := cleanFactObject(query[len(prefix):])
-			return event, event != ""
-		}
+	tail, ok := textutil.CutAnyPrefixFold(query, []string{"when is ", "when are "})
+	if !ok {
+		return "", false
 	}
-	return "", false
+	event := cleanFactObject(tail)
+	return event, event != ""
 }
 
 func searchTimelineAnswerParts(sentence string) (event, date string, ok bool) {
 	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
-	lower := strings.ToLower(sentence)
-	for _, marker := range []string{" occurs on ", " is scheduled for ", " deadline is ", " is on "} {
-		idx := strings.Index(lower, marker)
-		if idx <= 0 {
-			continue
-		}
-		event = cleanFactObject(sentence[:idx])
-		date = cleanFactValue(sentence[idx+len(marker):])
-		return event, date, searchFactObjectLooksAssertive(event) && date != ""
+	before, after, ok := textutil.CutAroundAnySubstringFold(sentence, []string{" occurs on ", " is scheduled for ", " deadline is ", " is on "})
+	if !ok || before == "" {
+		return "", "", false
 	}
-	return "", "", false
+	event = cleanFactObject(before)
+	date = cleanFactValue(after)
+	return event, date, searchFactObjectLooksAssertive(event) && date != ""
 }
 
 func searchMetricFactIntentScore(query, content string) float64 {
@@ -287,14 +276,12 @@ func searchMetricFactIntentScore(query, content string) float64 {
 
 func searchMetricQuestionKey(query string) (string, bool) {
 	query = strings.TrimSpace(strings.Trim(query, "?! ."))
-	lower := strings.ToLower(query)
-	for _, prefix := range []string{"what is ", "what was ", "what are ", "what were ", "how fast is ", "how many ", "how much "} {
-		if strings.HasPrefix(lower, prefix) {
-			key := cleanFactObject(query[len(prefix):])
-			return key, key != ""
-		}
+	tail, ok := textutil.CutAnyPrefixFold(query, []string{"what is ", "what was ", "what are ", "what were ", "how fast is ", "how many ", "how much "})
+	if !ok {
+		return "", false
 	}
-	return "", false
+	key := cleanFactObject(tail)
+	return key, key != ""
 }
 
 func searchMetricAnswerParts(sentence string) (key, value string, ok bool) {
@@ -340,13 +327,11 @@ func searchVersionFactIntentScore(query, content string) float64 {
 
 func searchVersionQuestionSubject(query string) (string, bool) {
 	query = strings.TrimSpace(strings.Trim(query, "?! ."))
-	lower := strings.ToLower(query)
-	for _, prefix := range []string{"what version is ", "which version is ", "what version does ", "which version does "} {
-		if strings.HasPrefix(lower, prefix) {
-			subject := cleanFactObject(query[len(prefix):])
-			return subject, subject != ""
-		}
+	if tail, ok := textutil.CutAnyPrefixFold(query, []string{"what version is ", "which version is ", "what version does ", "which version does "}); ok {
+		subject := cleanFactObject(tail)
+		return subject, subject != ""
 	}
+	lower := strings.ToLower(query)
 	for _, prefix := range []string{"what ", "which "} {
 		if strings.HasPrefix(lower, prefix) && strings.HasSuffix(lower, " version") {
 			subject := cleanFactObject(query[len(prefix) : len(query)-len(" version")])
@@ -408,18 +393,12 @@ func searchSequenceFactIntentScore(query, content string) float64 {
 
 func searchSequenceQuestionSubject(query string) (string, bool) {
 	query = strings.TrimSpace(strings.Trim(query, "?!."))
-	lower := strings.ToLower(query)
-	for _, prefix := range []string{"walk me through the ", "walk me through ", "list the order of the ", "list the order of ", "what is the order of the ", "what is the order of ", "what was the order of the ", "what was the order of "} {
-		if strings.HasPrefix(lower, prefix) {
-			subject := cleanFactObject(query[len(prefix):])
-			return subject, subject != ""
-		}
+	tail, ok := textutil.CutAnyPrefixFold(query, []string{"walk me through the ", "walk me through ", "list the order of the ", "list the order of ", "what is the order of the ", "what is the order of ", "what was the order of the ", "what was the order of ", "in what order did "})
+	if !ok {
+		return "", false
 	}
-	if strings.HasPrefix(lower, "in what order did ") {
-		subject := cleanFactObject(query[len("in what order did "):])
-		return subject, subject != ""
-	}
-	return "", false
+	subject := cleanFactObject(tail)
+	return subject, subject != ""
 }
 
 func searchSequenceAnswerParts(sentence string) (subject, steps string, ok bool) {
@@ -436,17 +415,13 @@ func searchSequenceAnswerParts(sentence string) (subject, steps string, ok bool)
 	if subject != "" && searchSequenceValueLooksAssertive(steps) {
 		return subject, steps, true
 	}
-	lower := strings.ToLower(sentence)
-	for _, marker := range []string{" sequence is ", " order is "} {
-		idx := strings.Index(lower, marker)
-		if idx <= 0 {
-			continue
-		}
-		subject = cleanFactObject(sentence[:idx] + strings.TrimSpace(marker))
-		steps = cleanSequenceValue(sentence[idx+len(marker):])
-		return subject, steps, searchFactObjectLooksAssertive(subject) && searchSequenceValueLooksAssertive(steps)
+	before, marker, after, ok := textutil.CutAroundAnySubstringFoldMatch(sentence, []string{" sequence is ", " order is "})
+	if !ok || before == "" {
+		return "", "", false
 	}
-	return "", "", false
+	subject = cleanFactObject(before + strings.TrimSpace(marker))
+	steps = cleanSequenceValue(after)
+	return subject, steps, searchFactObjectLooksAssertive(subject) && searchSequenceValueLooksAssertive(steps)
 }
 
 func sequenceSubjectBeforeMarker(prefix string) string {
@@ -527,14 +502,12 @@ func searchNegationFactIntentScore(query, content string) float64 {
 
 func searchNegationQuestionObject(query string) (string, bool) {
 	query = strings.TrimSpace(strings.Trim(query, "?!."))
-	lower := strings.ToLower(query)
-	for _, prefix := range []string{"have i ever ", "have i ", "did i ever ", "did i ", "have we ever ", "have we ", "did we ever ", "did we ", "has this ", "am i "} {
-		if strings.HasPrefix(lower, prefix) {
-			object := cleanFactObject(query[len(prefix):])
-			return object, object != ""
-		}
+	tail, ok := textutil.CutAnyPrefixFold(query, []string{"have i ever ", "have i ", "did i ever ", "did i ", "have we ever ", "have we ", "did we ever ", "did we ", "has this ", "am i "})
+	if !ok {
+		return "", false
 	}
-	return "", false
+	object := cleanFactObject(tail)
+	return object, object != ""
 }
 
 func searchNegationAnswerParts(sentence string) (object string, ok bool) {
@@ -579,14 +552,12 @@ func searchDecisionFactIntentScore(query, content string) float64 {
 
 func searchDecisionQuestionTopic(query string) (string, bool) {
 	query = strings.TrimSpace(strings.Trim(query, "?!."))
-	lower := strings.ToLower(query)
-	for _, prefix := range []string{"what decision did i make about ", "which decision did i make about ", "what decision did we make about ", "which decision did we make about ", "what did i decide about ", "what did we decide about "} {
-		if strings.HasPrefix(lower, prefix) {
-			topic := cleanFactObject(query[len(prefix):])
-			return topic, topic != ""
-		}
+	tail, ok := textutil.CutAnyPrefixFold(query, []string{"what decision did i make about ", "which decision did i make about ", "what decision did we make about ", "which decision did we make about ", "what did i decide about ", "what did we decide about "})
+	if !ok {
+		return "", false
 	}
-	return "", false
+	topic := cleanFactObject(tail)
+	return topic, topic != ""
 }
 
 func searchDecisionAnswerParts(sentence string) (decision string, ok bool) {
@@ -629,43 +600,38 @@ func searchInstructionFactIntentScore(query, content string) float64 {
 
 func searchInstructionQuestion(query string) (subject, topic string, ok bool) {
 	query = strings.TrimSpace(strings.Trim(query, "?!."))
-	lower := strings.ToLower(query)
-	for _, prefix := range []string{"what instruction did ", "what rule did "} {
-		if !strings.HasPrefix(lower, prefix) {
-			continue
-		}
-		rest := query[len(prefix):]
-		restLower := strings.ToLower(rest)
-		giveIdx := strings.Index(restLower, " give")
-		if giveIdx <= 0 {
-			return "", "", false
-		}
-		subject = cleanFactValue(rest[:giveIdx])
-		afterGive := strings.TrimSpace(rest[giveIdx+len(" give"):])
-		afterLower := strings.ToLower(afterGive)
-		aboutIdx := strings.LastIndex(afterLower, " about ")
-		if aboutIdx >= 0 {
-			topic = cleanFactObject(afterGive[aboutIdx+len(" about "):])
-			return subject, topic, subject != "" && topic != ""
-		}
-		if strings.HasPrefix(afterLower, "about ") {
-			topic = cleanFactObject(afterGive[len("about "):])
-			return subject, topic, subject != "" && topic != ""
-		}
+	rest, ok := textutil.CutAnyPrefixFold(query, []string{"what instruction did ", "what rule did "})
+	if !ok {
 		return "", "", false
+	}
+	restLower := strings.ToLower(rest)
+	giveIdx := strings.Index(restLower, " give")
+	if giveIdx <= 0 {
+		return "", "", false
+	}
+	subject = cleanFactValue(rest[:giveIdx])
+	afterGive := strings.TrimSpace(rest[giveIdx+len(" give"):])
+	afterLower := strings.ToLower(afterGive)
+	aboutIdx := strings.LastIndex(afterLower, " about ")
+	if aboutIdx >= 0 {
+		topic = cleanFactObject(afterGive[aboutIdx+len(" about "):])
+		return subject, topic, subject != "" && topic != ""
+	}
+	if tail, ok := textutil.CutAnyPrefixFold(afterGive, []string{"about "}); ok {
+		topic = cleanFactObject(tail)
+		return subject, topic, subject != "" && topic != ""
 	}
 	return "", "", false
 }
 
 func searchInstructionAnswerParts(sentence string) (subject, instruction string, ok bool) {
 	sentence = strings.TrimSpace(strings.Trim(sentence, ".!?"))
-	lower := strings.ToLower(sentence)
-	idx := strings.Index(lower, " instructed ")
-	if idx <= 0 {
+	before, after, ok := textutil.CutAroundAnySubstringFold(sentence, []string{" instructed "})
+	if !ok || before == "" {
 		return "", "", false
 	}
-	subject = cleanFactValue(sentence[:idx])
-	instruction = cleanFactValue(sentence[idx+len(" instructed "):])
+	subject = cleanFactValue(before)
+	instruction = cleanFactValue(after)
 	if !searchFactSubjectLooksAssertive(subject) || !searchFactObjectLooksAssertive(instruction) {
 		return "", "", false
 	}
