@@ -82,11 +82,11 @@ func TestRecallExpandsOwnerThroughDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want owner candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, ownerFactID)
-	if !candidateHasGraphProvenance(ownerCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(ownerCandidate, evidenceID) {
 		t.Fatalf("owner provenance = %+v, want graph evidence %s", ownerCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> LedgerDB -> owned_by -> %d", uses.ID, owner.ID)
-	if !candidateHasGraphNote(ownerCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(ownerCandidate, wantNote) {
 		t.Fatalf("owner provenance = %+v, want relation path %q", ownerCandidate.Provenance, wantNote)
 	}
 }
@@ -173,11 +173,11 @@ func TestRecallExpandsVersionThroughMultiHopDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want version candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d->annotation:%d", usesFactID, runsFactID, versionFactID)
-	if !candidateHasGraphProvenance(versionCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(versionCandidate, evidenceID) {
 		t.Fatalf("version provenance = %+v, want graph evidence %s", versionCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> LedgerDB -> runs on -> PostgreSQL -> version -> %d", uses.ID, version.ID)
-	if !candidateHasGraphNote(versionCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(versionCandidate, wantNote) {
 		t.Fatalf("version provenance = %+v, want relation path %q", versionCandidate.Provenance, wantNote)
 	}
 }
@@ -255,11 +255,11 @@ func TestRecallExpandsTimelineThroughOwnerRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want timeline candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", ownerFactID, timelineFactID)
-	if !candidateHasGraphProvenance(timelineCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(timelineCandidate, evidenceID) {
 		t.Fatalf("timeline provenance = %+v, want graph evidence %s", timelineCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> owned_entity -> Orion -> timeline -> %d", owner.ID, timeline.ID)
-	if !candidateHasGraphNote(timelineCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(timelineCandidate, wantNote) {
 		t.Fatalf("timeline provenance = %+v, want relation path %q", timelineCandidate.Provenance, wantNote)
 	}
 }
@@ -337,11 +337,11 @@ func TestRecallExpandsMetricThroughDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want metric candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, metricFactID)
-	if !candidateHasGraphProvenance(metricCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(metricCandidate, evidenceID) {
 		t.Fatalf("metric provenance = %+v, want graph evidence %s", metricCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> VectorDB -> metric -> %d", uses.ID, metric.ID)
-	if !candidateHasGraphNote(metricCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(metricCandidate, wantNote) {
 		t.Fatalf("metric provenance = %+v, want relation path %q", metricCandidate.Provenance, wantNote)
 	}
 }
@@ -419,11 +419,11 @@ func TestRecallExpandsLocationThroughDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want location candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, locationFactID)
-	if !candidateHasGraphProvenance(locationCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(locationCandidate, evidenceID) {
 		t.Fatalf("location provenance = %+v, want graph evidence %s", locationCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> VectorDB -> location -> %d", uses.ID, location.ID)
-	if !candidateHasGraphNote(locationCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(locationCandidate, wantNote) {
 		t.Fatalf("location provenance = %+v, want relation path %q", locationCandidate.Provenance, wantNote)
 	}
 }
@@ -501,11 +501,11 @@ func TestRecallExpandsPreferenceThroughDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want preference candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, preferenceFactID)
-	if !candidateHasGraphProvenance(preferenceCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(preferenceCandidate, evidenceID) {
 		t.Fatalf("preference provenance = %+v, want graph evidence %s", preferenceCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> VectorDB -> preference -> %d", uses.ID, preference.ID)
-	if !candidateHasGraphNote(preferenceCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(preferenceCandidate, wantNote) {
 		t.Fatalf("preference provenance = %+v, want relation path %q", preferenceCandidate.Provenance, wantNote)
 	}
 }
@@ -583,11 +583,11 @@ func TestRecallExpandsInstructionThroughDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want instruction candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, instructionFactID)
-	if !candidateHasGraphProvenance(instructionCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(instructionCandidate, evidenceID) {
 		t.Fatalf("instruction provenance = %+v, want graph evidence %s", instructionCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> Exporter -> instruction -> %d", uses.ID, instruction.ID)
-	if !candidateHasGraphNote(instructionCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(instructionCandidate, wantNote) {
 		t.Fatalf("instruction provenance = %+v, want relation path %q", instructionCandidate.Provenance, wantNote)
 	}
 }
@@ -665,11 +665,11 @@ func TestRecallExpandsSequenceThroughDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want sequence candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, sequenceFactID)
-	if !candidateHasGraphProvenance(sequenceCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(sequenceCandidate, evidenceID) {
 		t.Fatalf("sequence provenance = %+v, want graph evidence %s", sequenceCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> VectorDB migration -> sequence -> %d", uses.ID, sequence.ID)
-	if !candidateHasGraphNote(sequenceCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(sequenceCandidate, wantNote) {
 		t.Fatalf("sequence provenance = %+v, want relation path %q", sequenceCandidate.Provenance, wantNote)
 	}
 }
@@ -747,11 +747,11 @@ func TestRecallExpandsDecisionThroughDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want decision candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, decisionFactID)
-	if !candidateHasGraphProvenance(decisionCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(decisionCandidate, evidenceID) {
 		t.Fatalf("decision provenance = %+v, want graph evidence %s", decisionCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> VectorDB snapshots -> decision -> %d", uses.ID, decision.ID)
-	if !candidateHasGraphNote(decisionCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(decisionCandidate, wantNote) {
 		t.Fatalf("decision provenance = %+v, want relation path %q", decisionCandidate.Provenance, wantNote)
 	}
 }
@@ -829,11 +829,11 @@ func TestRecallExpandsNegationThroughDurableKGRelation(t *testing.T) {
 		t.Fatalf("selected = %+v, want negation candidate", trace.Selected)
 	}
 	evidenceID := fmt.Sprintf("annotation:%d->annotation:%d", usesFactID, negationFactID)
-	if !candidateHasGraphProvenance(negationCandidate, evidenceID) {
+	if !recallCandidateHasGraphProvenance(negationCandidate, evidenceID) {
 		t.Fatalf("negation provenance = %+v, want graph evidence %s", negationCandidate.Provenance, evidenceID)
 	}
 	wantNote := fmt.Sprintf("%d -> uses -> VectorDB snapshots -> negation -> %d", uses.ID, negation.ID)
-	if !candidateHasGraphNote(negationCandidate, wantNote) {
+	if !recallCandidateHasGraphNote(negationCandidate, wantNote) {
 		t.Fatalf("negation provenance = %+v, want relation path %q", negationCandidate.Provenance, wantNote)
 	}
 }

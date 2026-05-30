@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	memory "github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
@@ -37,7 +38,7 @@ func TestMemoryToolsPublicFacadeExposeOperationSpecs(t *testing.T) {
 		if spec.AuditKind != "memory" || !spec.PromptSafe {
 			t.Fatalf("%s spec = %+v, want prompt-safe memory audit spec", tc.tool.Name(), spec)
 		}
-		if !stringSliceContains(spec.TrustClass, "operator") || !stringSliceContains(spec.TrustClass, "system") {
+		if !sliceutil.Contains(spec.TrustClass, "operator") || !sliceutil.Contains(spec.TrustClass, "system") {
 			t.Fatalf("%s trust class = %#v, want operator and system", tc.tool.Name(), spec.TrustClass)
 		}
 		if spec.Mutating != tc.mutating || spec.Idempotent != tc.idempotent {

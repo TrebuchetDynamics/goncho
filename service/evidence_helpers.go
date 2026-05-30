@@ -50,3 +50,21 @@ func evidenceListFindKindSourceScoreNoteContains(items []EvidenceItem, kind, sou
 	}
 	return EvidenceItem{}, false
 }
+
+func searchHitHasEvidenceKind(hit SearchHit, kind string) bool {
+	return evidenceListHasKind(hit.Provenance, kind)
+}
+
+func recallTraceHasCandidate(trace RecallTrace, memoryID string) bool {
+	return sliceutil.ContainsFunc(trace.Candidates, func(item ScoredRecallCandidate) bool {
+		return item.Candidate.MemoryID == memoryID
+	})
+}
+
+func recallCandidateHasGraphProvenance(candidate RecallCandidate, evidenceID string) bool {
+	return evidenceListHas(candidate.Provenance, "graph", evidenceID)
+}
+
+func recallCandidateHasGraphNote(candidate RecallCandidate, note string) bool {
+	return evidenceListHasKindNote(candidate.Provenance, "graph", note)
+}

@@ -23,7 +23,7 @@ func TestGonchoProofMatrixFullLocalReportFixture(t *testing.T) {
 		t.Fatalf("report storage/api proof = %+v", report)
 	}
 	for _, contract := range []string{"observe", "list_observations", "filesystem_watcher_import"} {
-		if !gonchoProofContains(report.APIContractsVerified, contract) {
+		if !sliceutil.Contains(report.APIContractsVerified, contract) {
 			t.Fatalf("api contracts = %v, missing full local E2E contract %s", report.APIContractsVerified, contract)
 		}
 	}
@@ -38,12 +38,12 @@ func TestGonchoProofMatrixFullLocalReportFixture(t *testing.T) {
 		RecallWarningScopeExcludedAllCandidates,
 		RecallWarningTokenBudgetTruncated,
 	} {
-		if !gonchoProofContains(report.WarningCodesSeen, code) {
+		if !sliceutil.Contains(report.WarningCodesSeen, code) {
 			t.Fatalf("warning codes = %v, missing %s", report.WarningCodesSeen, code)
 		}
 	}
 	for _, control := range []string{"workspace:other", "tombstone:deleted-conclusion", "scope:other-memory"} {
-		if !gonchoProofContains(report.NegativeControlsRejected, control) {
+		if !sliceutil.Contains(report.NegativeControlsRejected, control) {
 			t.Fatalf("negative controls = %v, missing %s", report.NegativeControlsRejected, control)
 		}
 	}
@@ -404,7 +404,7 @@ func runGonchoProofRecallTraces(t *testing.T) (RecallTrace, RecallTrace, RecallT
 	if err != nil {
 		t.Fatalf("budget trace: %v", err)
 	}
-	if !traceHasWarning(scopeTrace, RecallWarningScopeExcludedAllCandidates) || !traceHasWarning(budgetTrace, RecallWarningTokenBudgetTruncated) {
+	if !recallTraceHasWarning(scopeTrace, RecallWarningScopeExcludedAllCandidates) || !recallTraceHasWarning(budgetTrace, RecallWarningTokenBudgetTruncated) {
 		t.Fatalf("trace warnings missing: scope=%+v budget=%+v", scopeTrace.Warnings, budgetTrace.Warnings)
 	}
 	return selectedTrace, scopeTrace, budgetTrace
@@ -447,10 +447,6 @@ func assertGonchoProofMatrixReportFixture(t *testing.T, report gonchoProofMatrix
 		}
 		t.Fatalf("goncho_proof_report_mismatch: %v", err)
 	}
-}
-
-func gonchoProofContains(values []string, want string) bool {
-	return sliceutil.Contains(values, want)
 }
 
 func TestGonchoProofMatrix_StorageRetrievalTraceAndOperatorEvidence(t *testing.T) {
@@ -594,7 +590,7 @@ func TestGonchoProofMatrix_StorageRetrievalTraceAndOperatorEvidence(t *testing.T
 		if trace.TraceID == "" || trace.ScoringConfig.Version != "proof-v1" || len(trace.Selected) != 1 {
 			t.Fatalf("trace = %+v, want stable id, scoring config, and selected candidate", trace)
 		}
-		if !traceHasWarning(trace, RecallWarningSemanticUnavailable) {
+		if !recallTraceHasWarning(trace, RecallWarningSemanticUnavailable) {
 			t.Fatalf("trace warnings = %+v, want semantic_unavailable", trace.Warnings)
 		}
 		raw1, err := trace.StableJSON()
@@ -623,8 +619,4 @@ func TestGonchoProofMatrix_StorageRetrievalTraceAndOperatorEvidence(t *testing.T
 			t.Fatalf("projected search = %+v, want trace-derived search result", projected)
 		}
 	})
-}
-
-func recallReplayHasWarning(replay RecallReplay, code string) bool {
-	return recallReplayEventsHaveWarning(replay.Events, code)
 }

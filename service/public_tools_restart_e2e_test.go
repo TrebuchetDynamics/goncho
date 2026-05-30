@@ -20,7 +20,7 @@ func TestGonchoGoalPublicToolsSurviveSQLiteRestartE2E(t *testing.T) {
 	}
 
 	for _, tool := range []string{"goncho_context", "goncho_search", "goncho_recall", "goncho_remember", "goncho_review", "goncho_handoff"} {
-		if !containsPublicRestartValue(report.ToolNames, tool) {
+		if !sliceutil.Contains(report.ToolNames, tool) {
 			t.Fatalf("tool names = %#v, missing %s", report.ToolNames, tool)
 		}
 	}
@@ -45,8 +45,4 @@ func TestGonchoGoalPublicToolsSurviveSQLiteRestartE2E(t *testing.T) {
 	if report.CompletionCondition != "go test ./..." {
 		t.Fatalf("completion condition = %q", report.CompletionCondition)
 	}
-}
-
-func containsPublicRestartValue(values []string, want string) bool {
-	return sliceutil.Contains(values, want)
 }

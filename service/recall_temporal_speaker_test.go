@@ -60,7 +60,7 @@ func TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence(t *
 	if !slices.Equal(selectedRecallIDs(trace), []string{"mem-owner-current"}) {
 		t.Fatalf("selected IDs = %v, want current owner", selectedRecallIDs(trace))
 	}
-	if !traceHasWarning(trace, RecallWarningSupersededEvidenceObserved) {
+	if !recallTraceHasWarning(trace, RecallWarningSupersededEvidenceObserved) {
 		t.Fatalf("warnings = %+v, want superseded-evidence warning", trace.Warnings)
 	}
 	if !candidateIDSeen(trace.Candidates, "mem-owner-old") {

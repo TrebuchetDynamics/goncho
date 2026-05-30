@@ -13,3 +13,11 @@ func recallReplayEventsHaveWarning(events []RecallReplayEvent, code string) bool
 		return event.WarningCode == code
 	})
 }
+
+func recallTraceHasWarning(trace RecallTrace, code string) bool {
+	return recallWarningListHasCode(trace.Warnings, code)
+}
+
+func recallReplayHasWarning(replay RecallReplay, code string) bool {
+	return recallReplayEventsHaveWarning(replay.Events, code)
+}

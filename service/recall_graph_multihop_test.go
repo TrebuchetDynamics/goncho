@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestRecallProjectorContextIncludesGraphRelationPathCitation(t *testing.T) {
@@ -109,10 +107,10 @@ func TestRelationCandidatesRemainPendingBeforeReview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !traceHasCandidate(trace, "mem-auth-owner-accepted") {
+	if !recallTraceHasCandidate(trace, "mem-auth-owner-accepted") {
 		t.Fatalf("candidate IDs = %v, want accepted relation to expand", recallCandidateIDs(trace))
 	}
-	if traceHasCandidate(trace, "mem-auth-owner-pending") {
+	if recallTraceHasCandidate(trace, "mem-auth-owner-pending") {
 		t.Fatalf("candidate IDs = %v, want pending relation candidate withheld before review", recallCandidateIDs(trace))
 	}
 }
@@ -204,10 +202,10 @@ func TestCognitiveMapSuppressesLowActivationGraphBranches(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !traceHasCandidate(trace, "mem-auth-owner") {
+	if !recallTraceHasCandidate(trace, "mem-auth-owner") {
 		t.Fatalf("candidate IDs = %v, want activated auth graph owner", recallCandidateIDs(trace))
 	}
-	if traceHasCandidate(trace, "mem-billing-owner") {
+	if recallTraceHasCandidate(trace, "mem-billing-owner") {
 		t.Fatalf("candidate IDs = %v, want low-activation billing graph branch suppressed", recallCandidateIDs(trace))
 	}
 	if slices.Contains(selectedRecallIDs(trace), "mem-billing-owner") {
@@ -288,18 +286,12 @@ func TestGraphRecallConnectsOwnerThroughServiceRelation(t *testing.T) {
 	if !ok {
 		t.Fatalf("selected = %+v, want mem-auth-owner", trace.Selected)
 	}
-	if !candidateHasGraphProvenance(owner, "edge-auth-owned-by-mira") {
+	if !recallCandidateHasGraphProvenance(owner, "edge-auth-owned-by-mira") {
 		t.Fatalf("owner provenance = %+v, want graph relation path provenance", owner.Provenance)
 	}
-	if !candidateHasGraphNote(owner, "mem-auth-service -> owned_by -> mem-auth-owner") {
+	if !recallCandidateHasGraphNote(owner, "mem-auth-service -> owned_by -> mem-auth-owner") {
 		t.Fatalf("owner provenance = %+v, want relation path provenance", owner.Provenance)
 	}
-}
-
-func traceHasCandidate(trace RecallTrace, memoryID string) bool {
-	return sliceutil.ContainsFunc(trace.Candidates, func(item ScoredRecallCandidate) bool {
-		return item.Candidate.MemoryID == memoryID
-	})
 }
 
 func recallCandidateIDs(trace RecallTrace) []string {
@@ -317,12 +309,4 @@ func selectedRecallCandidate(trace RecallTrace, memoryID string) (RecallCandidat
 		}
 	}
 	return RecallCandidate{}, false
-}
-
-func candidateHasGraphProvenance(candidate RecallCandidate, evidenceID string) bool {
-	return evidenceListHas(candidate.Provenance, "graph", evidenceID)
-}
-
-func candidateHasGraphNote(candidate RecallCandidate, note string) bool {
-	return evidenceListHasKindNote(candidate.Provenance, "graph", note)
 }

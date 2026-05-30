@@ -72,7 +72,7 @@ func TestRecallPipelineWarningsAndTokenBudget(t *testing.T) {
 		RecallWarningFTSUnavailable,
 		RecallWarningTokenBudgetTruncated,
 	} {
-		if !traceHasWarning(trace, code) {
+		if !recallTraceHasWarning(trace, code) {
 			t.Fatalf("warnings = %+v, missing %s", trace.Warnings, code)
 		}
 	}
@@ -116,7 +116,7 @@ func TestRecallPipelineScopeWarningWhenAllCandidatesExcluded(t *testing.T) {
 	if len(trace.Selected) != 0 {
 		t.Fatalf("selected = %+v, want no cross-scope candidates", trace.Selected)
 	}
-	if !traceHasWarning(trace, RecallWarningScopeExcludedAllCandidates) {
+	if !recallTraceHasWarning(trace, RecallWarningScopeExcludedAllCandidates) {
 		t.Fatalf("warnings = %+v, missing scope exclusion warning", trace.Warnings)
 	}
 	if len(trace.Rejected) != 1 || trace.Rejected[0].Reason != RecallRejectScopeMismatch {
@@ -234,10 +234,6 @@ func TestRecallPipelineCopiesScoringConfig(t *testing.T) {
 	if again.ScoringConfig.Weights["keyword"] != 1 || !slices.Equal(again.ScoringConfig.DiversityKeys, []string{"session_id"}) {
 		t.Fatalf("next trace scoring config = %+v, want fresh copy", again.ScoringConfig)
 	}
-}
-
-func traceHasWarning(trace RecallTrace, code string) bool {
-	return recallWarningListHasCode(trace.Warnings, code)
 }
 
 type staticRecallGenerator struct {

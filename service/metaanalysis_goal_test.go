@@ -63,12 +63,12 @@ func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitect
 		"small_agent_surface",
 		"trust_is_the_moat",
 	} {
-		if !containsMetaanalysisValue(report.PrinciplesCovered, principle) {
+		if !sliceutil.Contains(report.PrinciplesCovered, principle) {
 			t.Fatalf("principles = %#v, missing %s", report.PrinciplesCovered, principle)
 		}
 	}
 	for _, tool := range []string{"goncho_context", "goncho_search", "goncho_recall", "goncho_remember", "goncho_review", "goncho_handoff"} {
-		if !containsMetaanalysisValue(report.PublicToolsVerified, tool) {
+		if !sliceutil.Contains(report.PublicToolsVerified, tool) {
 			t.Fatalf("public tools = %#v, missing %s", report.PublicToolsVerified, tool)
 		}
 	}
@@ -86,7 +86,7 @@ func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitect
 		"negative_memory_tool_recall",
 		"small_public_tool_surface",
 	} {
-		if !containsMetaanalysisValue(report.LocalFeaturesVerified, feature) {
+		if !sliceutil.Contains(report.LocalFeaturesVerified, feature) {
 			t.Fatalf("features = %#v, missing %s", report.LocalFeaturesVerified, feature)
 		}
 	}
@@ -103,12 +103,12 @@ func TestGonchoGoalMetaanalysisComplexSuiteCoversTrustPreservingContextArchitect
 		"prompt_injection_persistence",
 		"drift_prevention",
 	} {
-		if !containsMetaanalysisValue(report.CoreEvaluationsCovered, evaluation) {
+		if !sliceutil.Contains(report.CoreEvaluationsCovered, evaluation) {
 			t.Fatalf("core evaluations = %#v, missing %s", report.CoreEvaluationsCovered, evaluation)
 		}
 	}
 	for _, deferred := range []string{"full_cognitive_map_ui", "postgres_team_adapter", "cloud_embeddings_required", "dashboard_visualization"} {
-		if !containsMetaanalysisValue(report.DeferredFeatures, deferred) {
+		if !sliceutil.Contains(report.DeferredFeatures, deferred) {
 			t.Fatalf("deferred = %#v, missing %s", report.DeferredFeatures, deferred)
 		}
 	}
@@ -187,8 +187,4 @@ func runGonchoMetaanalysisMemoryToolLoop(t *testing.T) bool {
 	}
 	afterForget := executeMemoryTool(t, ctx, retrieveTool, `{"query":"dead-end","limit":5}`)
 	return intField(t, afterForget, "count") == 0
-}
-
-func containsMetaanalysisValue(values []string, want string) bool {
-	return sliceutil.Contains(values, want)
 }

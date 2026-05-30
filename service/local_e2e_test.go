@@ -81,10 +81,10 @@ func TestLocalE2E_ServiceLifecycleBuildsContextFromPublicAPIs(t *testing.T) {
 	if contextResult.WorkspaceID != "local-e2e-workspace" || contextResult.Peer != peer || contextResult.ObserverPeerID != "assistant" || contextResult.SessionKey != sessionKey {
 		t.Fatalf("context identity = %+v", contextResult)
 	}
-	if !containsString(contextResult.PeerCard, profileFact) {
+	if !sliceutil.Contains(contextResult.PeerCard, profileFact) {
 		t.Fatalf("context peer card = %#v, want %q", contextResult.PeerCard, profileFact)
 	}
-	if !containsString(contextResult.Conclusions, conclusion) {
+	if !sliceutil.Contains(contextResult.Conclusions, conclusion) {
 		t.Fatalf("context conclusions = %#v, want %q", contextResult.Conclusions, conclusion)
 	}
 	if !messageSlicesContain(contextResult.RecentMessages, userMessage) {
@@ -126,10 +126,6 @@ func TestLocalE2E_ServiceLifecycleBuildsContextFromPublicAPIs(t *testing.T) {
 
 	mustRoundTripJSON(t, contextResult)
 	mustRoundTripJSON(t, chatResult)
-}
-
-func containsString(values []string, want string) bool {
-	return sliceutil.Contains(values, want)
 }
 
 func messageSlicesContain(messages []MessageSlice, content string) bool {

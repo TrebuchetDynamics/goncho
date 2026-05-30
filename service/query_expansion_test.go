@@ -20,7 +20,7 @@ func TestSearchUsesOptionalVectorStoreForSemanticLane(t *testing.T) {
 	if len(got.Results) != 1 || got.Results[0].Content != "Mira stores the rare orchid archive in the blue vault." {
 		t.Fatalf("semantic Search results = %+v", got.Results)
 	}
-	if !searchHitHasEvidence(got.Results[0], "semantic") {
+	if !searchHitHasEvidenceKind(got.Results[0], "semantic") {
 		t.Fatalf("semantic Search provenance = %+v, want semantic evidence", got.Results[0].Provenance)
 	}
 }
@@ -138,7 +138,7 @@ func TestSearchAndRecallUseQueryExpansionWithProvenance(t *testing.T) {
 	if len(search.Results) == 0 {
 		t.Fatal("search returned no results; want synonym-expanded signin -> login/authentication hit")
 	}
-	if !searchHitHasEvidence(search.Results[0], "query_expansion") {
+	if !searchHitHasEvidenceKind(search.Results[0], "query_expansion") {
 		t.Fatalf("search provenance = %+v, want query_expansion evidence", search.Results[0].Provenance)
 	}
 
@@ -177,8 +177,4 @@ func (f fakeSearchReranker) RerankSearch(_ context.Context, _ string, candidates
 		out = append(out, SearchRerankScore{ID: candidate.ID, Score: f.scores[candidate.ID]})
 	}
 	return out, nil
-}
-
-func searchHitHasEvidence(hit SearchHit, kind string) bool {
-	return evidenceListHasKind(hit.Provenance, kind)
 }

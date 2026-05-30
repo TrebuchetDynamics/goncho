@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestExecuteFourTierConsolidationWritesTieredMemoriesWithProvenance(t *testing.T) {
@@ -43,7 +45,7 @@ func TestExecuteFourTierConsolidationWritesTieredMemoriesWithProvenance(t *testi
 			t.Fatalf("provenance = %+v, want consolidation session provenance", item.Provenance)
 		}
 	}
-	if result.Items[3].Tier != ConsolidationTierProcedural || !containsSubstring(result.Items[3].Content, "before deploy") {
+	if result.Items[3].Tier != ConsolidationTierProcedural || !strings.Contains(result.Items[3].Content, "before deploy") {
 		t.Fatalf("procedural item = %+v, want extracted procedure", result.Items[3])
 	}
 
@@ -64,15 +66,8 @@ func consolidationTiers(items []ConsolidatedMemory) []MemoryConsolidationTier {
 	return out
 }
 
-func containsSubstring(value, needle string) bool {
-	return strings.Contains(value, needle)
-}
-
 func searchContains(results []SearchHit, needle string) bool {
-	for _, result := range results {
-		if strings.Contains(result.Content, needle) {
-			return true
-		}
-	}
-	return false
+	return sliceutil.ContainsFunc(results, func(result SearchHit) bool {
+		return strings.Contains(result.Content, needle)
+	})
 }
