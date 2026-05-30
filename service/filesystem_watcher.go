@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/pathutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -173,10 +174,10 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: rawPath, Reason: "invalid_path"}, nil
 	}
 	rel, err := filepath.Rel(params.RootDir, absPath)
-	if err != nil || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
+	if err != nil || pathutil.IsUnsafeRelative(rel) {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, Reason: "outside_root"}, nil
 	}
-	rel = filepath.ToSlash(filepath.Clean(rel))
+	rel = pathutil.CleanSlashPath(rel)
 	if rel == "." || rel == "" {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "not_file"}, nil
 	}
@@ -214,10 +215,7 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 }
 
 func normalizeWatcherGlobs(values []string) []string {
-	return textutil.NormalizeUnique(values, func(value string) string {
-		value = filepath.ToSlash(strings.TrimSpace(value))
-		return strings.TrimPrefix(value, "./")
-	}, false)
+	return textutil.NormalizeUnique(values, pathutil.NormalizeSlashPattern, false)
 }
 
 func matchesAnyWatcherGlob(rel string, patterns []string) bool {
@@ -230,9 +228,9 @@ func matchesAnyWatcherGlob(rel string, patterns []string) bool {
 }
 
 func matchWatcherGlob(rel, pattern string) bool {
-	rel = filepath.ToSlash(strings.TrimPrefix(rel, "./"))
-	pattern = filepath.ToSlash(strings.TrimPrefix(pattern, "./"))
-	base := pathBase(rel)
+	rel = pathutil.NormalizeSlashPattern(rel)
+	pattern = pathutil.NormalizeSlashPattern(pattern)
+	base := pathutil.SlashBase(rel)
 	if pattern == rel || pattern == base || pattern == "**" || pattern == "*" {
 		return true
 	}
@@ -254,14 +252,6 @@ func matchWatcherGlob(rel, pattern string) bool {
 		return true
 	}
 	return false
-}
-
-func pathBase(rel string) string {
-	idx := strings.LastIndex(rel, "/")
-	if idx < 0 {
-		return rel
-	}
-	return rel[idx+1:]
 }
 
 func looksBinary(raw []byte) bool {

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/pathutil"
 )
 
 var pathPattern = regexp.MustCompile(`\b[[:alnum:]_./-]+\.(?:go|ts|tsx|js|jsx|py|rs|cs|java|cpp|c|h|hpp)\b`)
@@ -14,8 +16,8 @@ func ExtractPaths(content string) []string {
 }
 
 func PathExists(repoRoot, rel string) bool {
-	rel = filepath.Clean(strings.TrimSpace(rel))
-	if rel == "." || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
+	rel, ok := pathutil.CleanRelative(rel)
+	if !ok {
 		return false
 	}
 	info, err := os.Stat(filepath.Join(repoRoot, rel))
