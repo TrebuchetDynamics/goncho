@@ -455,36 +455,22 @@ func recallBenchmarkTopEvidenceKinds(items []ScoredRecallCandidate) []string {
 }
 
 func recallBenchmarkProvenanceSatisfied(trace RecallTrace, relevantIDs, requiredKinds []string) bool {
-	required := map[string]struct{}{}
-	for _, kind := range requiredKinds {
-		kind = strings.ToLower(strings.TrimSpace(kind))
-		if kind != "" {
-			required[kind] = struct{}{}
-		}
-	}
+	required := textutil.LowerTrimmedSet(requiredKinds)
 	if len(required) == 0 {
 		return false
 	}
-	relevant := map[string]struct{}{}
-	for _, id := range relevantIDs {
-		id = strings.TrimSpace(id)
-		if id != "" {
-			relevant[id] = struct{}{}
-		}
-	}
+	relevant := textutil.TrimmedSet(relevantIDs)
 	for _, item := range trace.Selected {
 		if len(relevant) > 0 {
 			if _, ok := relevant[item.Candidate.MemoryID]; !ok {
 				continue
 			}
 		}
-		seen := map[string]struct{}{}
+		kinds := make([]string, 0, len(item.Candidate.Provenance))
 		for _, evidence := range item.Candidate.Provenance {
-			kind := strings.ToLower(strings.TrimSpace(evidence.Kind))
-			if kind != "" {
-				seen[kind] = struct{}{}
-			}
+			kinds = append(kinds, evidence.Kind)
 		}
+		seen := textutil.LowerTrimmedSet(kinds)
 		matchedAll := true
 		for kind := range required {
 			if _, ok := seen[kind]; !ok {
@@ -529,12 +515,7 @@ func recallAtK(candidateIDs, relevantIDs []string, k int) float64 {
 	if len(relevantIDs) == 0 || k <= 0 {
 		return 0
 	}
-	relevant := make(map[string]struct{}, len(relevantIDs))
-	for _, id := range relevantIDs {
-		if strings.TrimSpace(id) != "" {
-			relevant[id] = struct{}{}
-		}
-	}
+	relevant := textutil.TrimmedSet(relevantIDs)
 	if len(relevant) == 0 {
 		return 0
 	}
@@ -542,7 +523,7 @@ func recallAtK(candidateIDs, relevantIDs []string, k int) float64 {
 	if len(candidateIDs) < limit {
 		limit = len(candidateIDs)
 	}
-	found := map[string]struct{}{}
+	found := make(map[string]struct{}, len(relevant))
 	for _, id := range candidateIDs[:limit] {
 		if _, ok := relevant[id]; ok {
 			found[id] = struct{}{}
@@ -594,23 +575,17 @@ func recallBenchmarkRubricTokens(text string) []string {
 	stop := map[string]struct{}{
 		"about": {}, "answer": {}, "contain": {}, "contains": {}, "correct": {}, "correctly": {}, "from": {}, "identify": {}, "identifies": {}, "include": {}, "includes": {}, "mention": {}, "mentions": {}, "name": {}, "names": {}, "note": {}, "project": {}, "say": {}, "says": {}, "state": {}, "states": {}, "that": {}, "the": {}, "with": {},
 	}
-	seen := map[string]struct{}{}
-	out := []string{}
-	for _, token := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) }) {
+	tokens := strings.FieldsFunc(strings.ToLower(text), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
+	return textutil.NormalizeUnique(tokens, func(token string) string {
 		token = strings.TrimSpace(token)
 		if len(token) < 2 {
-			continue
+			return ""
 		}
 		if _, skip := stop[token]; skip {
-			continue
+			return ""
 		}
-		if _, ok := seen[token]; ok {
-			continue
-		}
-		seen[token] = struct{}{}
-		out = append(out, token)
-	}
-	return out
+		return token
+	}, false)
 }
 
 func recallBenchmarkSelectedContext(trace RecallTrace) string {

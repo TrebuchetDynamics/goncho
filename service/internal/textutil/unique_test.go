@@ -32,3 +32,22 @@ func TestNormalizeUniqueUsesCustomNormalizer(t *testing.T) {
 		t.Fatalf("NormalizeUnique() = %#v, want %#v", got, want)
 	}
 }
+
+func TestStringSetsNormalizeAndDropEmpty(t *testing.T) {
+	got := LowerTrimmedSet([]string{" Alpha ", "alpha", "", " BETA"})
+	want := map[string]struct{}{"alpha": {}, "beta": {}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("LowerTrimmedSet() = %#v, want %#v", got, want)
+	}
+	if got := TrimmedSet([]string{" ", ""}); got != nil {
+		t.Fatalf("TrimmedSet(empty) = %#v, want nil", got)
+	}
+}
+
+func TestSortedSetValuesNormalizesAndSorts(t *testing.T) {
+	got := SortedSetValues(map[string]struct{}{" beta ": {}, "alpha": {}, "": {}}, strings.TrimSpace)
+	want := []string{"alpha", "beta"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("SortedSetValues() = %#v, want %#v", got, want)
+	}
+}

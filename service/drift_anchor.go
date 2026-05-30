@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type DriftAnchorDetector struct {
@@ -113,14 +115,12 @@ func driftAnchorSimilarity(prompt, memory string) float64 {
 }
 
 func driftAnchorTokenSet(value string) map[string]struct{} {
-	out := map[string]struct{}{}
-	for _, token := range driftAnchorTokenPattern.FindAllString(strings.ToLower(value), -1) {
+	return textutil.Set(driftAnchorTokenPattern.FindAllString(strings.ToLower(value), -1), func(token string) string {
 		if len(token) < 4 || driftAnchorStopword(token) {
-			continue
+			return ""
 		}
-		out[token] = struct{}{}
-	}
-	return out
+		return token
+	})
 }
 
 func driftAnchorStopword(token string) bool {

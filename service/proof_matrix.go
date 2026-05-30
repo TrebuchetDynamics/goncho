@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -141,12 +140,5 @@ func sortedGonchoProofStrings(values []string) []string {
 }
 
 func sortedGonchoProofStringSet(values map[string]struct{}) []string {
-	out := make([]string, 0, len(values))
-	for value := range values {
-		if strings.TrimSpace(value) != "" {
-			out = append(out, value)
-		}
-	}
-	sort.Strings(out)
-	return out
+	return textutil.SortedSetValues(values, strings.TrimSpace)
 }
