@@ -77,7 +77,7 @@ func toImportanceEntry(entry MemoryToolEntry) importance.Entry {
 	return importance.Entry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       append([]string(nil), entry.Tags...),
+		Tags:       cloneStrings(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
@@ -90,7 +90,7 @@ func fromImportanceEntry(entry importance.Entry) MemoryToolEntry {
 	return MemoryToolEntry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       append([]string(nil), entry.Tags...),
+		Tags:       cloneStrings(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,

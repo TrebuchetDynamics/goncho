@@ -294,17 +294,6 @@ func execDeleteCount(ctx context.Context, db lifecycleSQL, query string, args ..
 	return count, nil
 }
 
-func copyMetadata(in map[string]any) map[string]any {
-	if len(in) == 0 {
-		return map[string]any{}
-	}
-	out := make(map[string]any, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
-	return out
-}
-
 func upsertPeerCard(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, card []string) error {
 	raw, err := json.Marshal(card)
 	if err != nil {

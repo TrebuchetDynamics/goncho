@@ -232,7 +232,7 @@ func (h *HonchoSDKCompatibilityHarness) ContextPreview(ctx context.Context, req 
 		WorkspaceID:    result.WorkspaceID,
 		PeerID:         result.Peer,
 		SessionID:      result.SessionKey,
-		PeerCard:       append([]string(nil), result.PeerCard...),
+		PeerCard:       cloneStrings(result.PeerCard),
 		Representation: result.Representation,
 		Summary:        mapHonchoSDKSummary(result.Summary),
 		SearchResults:  mapHonchoSDKSearchHits(result.SearchResults),
@@ -242,7 +242,7 @@ func (h *HonchoSDKCompatibilityHarness) ContextPreview(ctx context.Context, req 
 }
 
 func UnsupportedHonchoSDKFlow(method, endpoint string, fields ...string) HonchoSDKUnsupportedFlow {
-	copiedFields := append([]string(nil), fields...)
+	copiedFields := cloneStrings(fields)
 	if copiedFields == nil {
 		copiedFields = []string{}
 	}

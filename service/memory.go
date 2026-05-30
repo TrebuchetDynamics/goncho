@@ -325,7 +325,7 @@ func (idx searchLineageIndex) contextFor(sessionID string) SearchLineage {
 	if !ok {
 		return SearchLineage{Status: SearchLineageStatusUnavailable}
 	}
-	children := append([]string(nil), idx.children[sessionID]...)
+	children := textutil.CloneStrings(idx.children[sessionID])
 	return SearchLineage{
 		ParentSessionID: meta.ParentSessionID,
 		LineageKind:     searchLineageKind(meta),

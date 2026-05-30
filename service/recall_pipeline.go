@@ -277,7 +277,7 @@ func cloneRecallScoringConfig(config RecallScoringConfig) RecallScoringConfig {
 		config.Weights = weights
 	}
 	if config.DiversityKeys != nil {
-		config.DiversityKeys = append([]string(nil), config.DiversityKeys...)
+		config.DiversityKeys = cloneStrings(config.DiversityKeys)
 	}
 	return config
 }

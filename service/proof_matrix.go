@@ -104,7 +104,7 @@ func buildGonchoProofMatrixReport(input gonchoProofMatrixReportInput) (gonchoPro
 		ScopeIsolationVerified:     input.ScopeIsolationVerified,
 		TombstoneExclusionVerified: input.TombstoneExclusionVerified,
 		TraceProjectionInvariant:   projectionInvariant,
-		StableTraceIDs:             append([]string(nil), stableTraceIDs...),
+		StableTraceIDs:             cloneStrings(stableTraceIDs),
 		WarningCodesSeen:           sortedGonchoProofStringSet(warningCodes),
 		NegativeControlsRejected:   sortedGonchoProofStrings(input.NegativeControlsRejected),
 		BenchmarkSummary: gonchoProofBenchmarkSummary{

@@ -68,7 +68,7 @@ func toLocalMarkdownEntry(entry MemoryToolEntry) localmarkdown.Entry {
 	return localmarkdown.Entry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       append([]string(nil), entry.Tags...),
+		Tags:       cloneStrings(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
@@ -81,22 +81,11 @@ func fromLocalMarkdownEntry(entry localmarkdown.Entry) MemoryToolEntry {
 	return MemoryToolEntry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       append([]string(nil), entry.Tags...),
+		Tags:       cloneStrings(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
 		UpdatedAt:  entry.UpdatedAt,
 		Metadata:   cloneStringMap(entry.Metadata),
 	}
-}
-
-func cloneStringMap(in map[string]string) map[string]string {
-	if in == nil {
-		return nil
-	}
-	out := make(map[string]string, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
-	return out
 }

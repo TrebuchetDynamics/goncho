@@ -65,7 +65,7 @@ func HostHookEventSchemas() []HostHookEventSchema {
 		out = append(out, HostHookEventSchema{
 			Event:          spec.event,
 			Description:    spec.description,
-			RequiredFields: append([]string(nil), spec.required...),
+			RequiredFields: cloneStrings(spec.required),
 			JSONSchema:     hostHookJSONSchema(spec.event, spec.required),
 		})
 	}
@@ -75,7 +75,7 @@ func HostHookEventSchemas() []HostHookEventSchema {
 func hostHookJSONSchema(event HostHookEventName, required []string) map[string]any {
 	return map[string]any{
 		"type":     "object",
-		"required": append([]string(nil), required...),
+		"required": cloneStrings(required),
 		"properties": map[string]any{
 			"event":        map[string]any{"type": "string", "const": string(event)},
 			"host":         map[string]any{"type": "string"},
@@ -389,17 +389,6 @@ func hostHookMetadata(event HostHookEvent) map[string]string {
 	}
 	if event.Event == HostHookSubagentStart || event.Event == HostHookSubagentStop {
 		out["custom_kind"] = string(event.Event)
-	}
-	return out
-}
-
-func stringMapToAny(in map[string]string) map[string]any {
-	if len(in) == 0 {
-		return nil
-	}
-	out := make(map[string]any, len(in))
-	for key, value := range in {
-		out[key] = value
 	}
 	return out
 }

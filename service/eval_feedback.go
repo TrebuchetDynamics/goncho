@@ -344,7 +344,7 @@ func buildEvalCandidate(workspaceID, benchmark, runID string, failure EvalFailur
 		rationale += "; top_hit=" + strings.TrimSpace(failure.TopHitPreview)
 	}
 	createdAt := time.Now().UTC()
-	candidate := EvalImprovementCandidate{WorkspaceID: workspaceID, BenchmarkName: benchmark, RunID: runID, QuestionID: strings.TrimSpace(failure.QuestionID), Kind: kind, Status: EvalCandidateOpen, Query: strings.TrimSpace(failure.Query), FailureBucket: strings.TrimSpace(failure.FailureBucket), Rationale: rationale, EvidenceIDs: []string{evidenceID}, ExpectedMemoryIDs: append([]string(nil), failure.ExpectedMemoryIDs...), RetrievedMemoryIDs: append([]string(nil), failure.RetrievedMemoryIDs...), CreatedAt: createdAt}
+	candidate := EvalImprovementCandidate{WorkspaceID: workspaceID, BenchmarkName: benchmark, RunID: runID, QuestionID: strings.TrimSpace(failure.QuestionID), Kind: kind, Status: EvalCandidateOpen, Query: strings.TrimSpace(failure.Query), FailureBucket: strings.TrimSpace(failure.FailureBucket), Rationale: rationale, EvidenceIDs: []string{evidenceID}, ExpectedMemoryIDs: cloneStrings(failure.ExpectedMemoryIDs), RetrievedMemoryIDs: cloneStrings(failure.RetrievedMemoryIDs), CreatedAt: createdAt}
 	candidate.ID = evalCandidateID(candidate)
 	return candidate
 }

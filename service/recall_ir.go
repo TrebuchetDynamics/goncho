@@ -115,16 +115,16 @@ type RecallVoiceDiagnostic struct {
 }
 
 type RecallTrace struct {
-	TraceID         string                    `json:"trace_id"`
-	PipelineVersion string                    `json:"pipeline_version"`
-	CreatedAt       time.Time                 `json:"created_at"`
-	Query           RecallQuery               `json:"query"`
-	ScoringConfig   RecallScoringConfig       `json:"scoring_config"`
-	VoiceDiagnostics []RecallVoiceDiagnostic  `json:"voice_diagnostics,omitempty"`
-	Candidates      []ScoredRecallCandidate   `json:"candidates"`
-	Selected        []ScoredRecallCandidate   `json:"selected"`
-	Rejected        []RejectedRecallCandidate `json:"rejected"`
-	Warnings        []RecallWarning           `json:"warnings"`
+	TraceID          string                    `json:"trace_id"`
+	PipelineVersion  string                    `json:"pipeline_version"`
+	CreatedAt        time.Time                 `json:"created_at"`
+	Query            RecallQuery               `json:"query"`
+	ScoringConfig    RecallScoringConfig       `json:"scoring_config"`
+	VoiceDiagnostics []RecallVoiceDiagnostic   `json:"voice_diagnostics,omitempty"`
+	Candidates       []ScoredRecallCandidate   `json:"candidates"`
+	Selected         []ScoredRecallCandidate   `json:"selected"`
+	Rejected         []RejectedRecallCandidate `json:"rejected"`
+	Warnings         []RecallWarning           `json:"warnings"`
 }
 
 func (t RecallTrace) StableJSON() ([]byte, error) {

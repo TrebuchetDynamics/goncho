@@ -133,7 +133,7 @@ func toMemoryToolsEntry(entry MemoryToolEntry) memorytools.Entry {
 	return memorytools.Entry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       append([]string(nil), entry.Tags...),
+		Tags:       cloneStrings(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
@@ -146,7 +146,7 @@ func fromMemoryToolsEntry(entry memorytools.Entry) MemoryToolEntry {
 	return MemoryToolEntry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       append([]string(nil), entry.Tags...),
+		Tags:       cloneStrings(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,

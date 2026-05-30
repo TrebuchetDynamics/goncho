@@ -52,7 +52,7 @@ func vectorSearchQueryFromRecall(q RecallQuery, workspaceID, profileID, peer, sc
 		Query:       q.Query,
 		SessionKey:  q.SessionKey,
 		ScopeID:     scopeID,
-		Sources:     append([]string(nil), q.Sources...),
+		Sources:     cloneStrings(q.Sources),
 		Limit:       recallCandidateSearchLimit(q.Limit),
 	}
 }

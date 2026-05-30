@@ -225,7 +225,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 		Query:       params.Query,
 		SessionKey:  params.SessionKey,
 		ScopeID:     scopeID,
-		Sources:     append([]string(nil), params.Sources...),
+		Sources:     cloneStrings(params.Sources),
 		Limit:       recallCandidateSearchLimit(limit),
 	}
 	if maxPayload := r.providers.MaxPayloadBytes(string(ProviderKindEmbedding)); maxPayload > 0 && len(query.Query) > maxPayload {

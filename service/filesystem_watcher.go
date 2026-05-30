@@ -78,7 +78,7 @@ func (s *Service) PreviewFilesystemWatcherImport(ctx context.Context, params Fil
 	if err != nil {
 		return FilesystemWatcherPreview{}, err
 	}
-	preview := FilesystemWatcherPreview{Mutates: false, RootDir: norm.RootDir, IncludeGlobs: append([]string(nil), norm.IncludeGlobs...), ExcludeGlobs: append([]string(nil), norm.ExcludeGlobs...), Candidates: []FilesystemWatcherCandidate{}, Skipped: []FilesystemWatcherSkipped{}}
+	preview := FilesystemWatcherPreview{Mutates: false, RootDir: norm.RootDir, IncludeGlobs: cloneStrings(norm.IncludeGlobs), ExcludeGlobs: cloneStrings(norm.ExcludeGlobs), Candidates: []FilesystemWatcherCandidate{}, Skipped: []FilesystemWatcherSkipped{}}
 	for _, rawPath := range norm.Paths {
 		candidate, skipped, err := filesystemWatcherCandidate(rawPath, norm)
 		if err != nil {
@@ -164,7 +164,7 @@ func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImpor
 	if maxPreview <= 0 {
 		maxPreview = defaultFilesystemWatcherPreviewBytes
 	}
-	return FilesystemWatcherImportParams{WorkspaceID: workspaceID, ProfileID: strings.TrimSpace(params.ProfileID), PeerID: peer, SessionKey: session, RootDir: root, Paths: append([]string(nil), params.Paths...), IncludeGlobs: include, ExcludeGlobs: normalizeWatcherGlobs(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
+	return FilesystemWatcherImportParams{WorkspaceID: workspaceID, ProfileID: strings.TrimSpace(params.ProfileID), PeerID: peer, SessionKey: session, RootDir: root, Paths: cloneStrings(params.Paths), IncludeGlobs: include, ExcludeGlobs: normalizeWatcherGlobs(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
 }
 
 func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportParams) (FilesystemWatcherCandidate, FilesystemWatcherSkipped, error) {
