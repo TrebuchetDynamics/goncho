@@ -14,6 +14,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 )
 
 const PortableExportSchemaVersion = "goncho-portable-v1"
@@ -621,7 +622,7 @@ func (s *Service) importPortableRecord(ctx context.Context, record PortableExpor
 		if err := json.Unmarshal(record.Data, &c); err != nil {
 			return err
 		}
-		_, err := s.db.ExecContext(ctx, `INSERT INTO goncho_conclusions(id, workspace_id, profile_id, observer_peer_id, peer_id, session_key, content, kind, status, source, idempotency_key, evidence_json, created_at, updated_at, scope) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, c.ID, c.WorkspaceID, c.ProfileID, c.Observer, c.Peer, nullIfBlank(c.SessionKey), c.Content, c.Kind, c.Status, c.Source, c.Idempotency, c.EvidenceJSON, c.CreatedAt, c.UpdatedAt, c.Scope)
+		_, err := s.db.ExecContext(ctx, `INSERT INTO goncho_conclusions(id, workspace_id, profile_id, observer_peer_id, peer_id, session_key, content, kind, status, source, idempotency_key, evidence_json, created_at, updated_at, scope) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, c.ID, c.WorkspaceID, c.ProfileID, c.Observer, c.Peer, sqlutil.NullIfBlank(c.SessionKey), c.Content, c.Kind, c.Status, c.Source, c.Idempotency, c.EvidenceJSON, c.CreatedAt, c.UpdatedAt, c.Scope)
 		return err
 	case "review_item":
 		var item ReviewItem

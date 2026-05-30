@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"gopkg.in/yaml.v3"
 )
@@ -385,16 +386,16 @@ func buildTurnSearchQuery(rawQuery string, sessionIDs, chatKeys, roles []string,
 	}
 
 	b.WriteString(` AND (`)
-	appendInClause(&b, "t.session_id", sessionIDs, &args)
+	sqlutil.AppendInClause(&b, "t.session_id", sessionIDs, &args)
 	if len(chatKeys) > 0 {
 		b.WriteString(` OR `)
-		appendInClause(&b, "t.chat_id", chatKeys, &args)
+		sqlutil.AppendInClause(&b, "t.chat_id", chatKeys, &args)
 	}
 	b.WriteString(`)`)
 	b.WriteString(` AND t.memory_sync_status = 'ready'`)
 	if normalizedRoles := normalizeRoles(roles); len(normalizedRoles) > 0 {
 		b.WriteString(` AND `)
-		appendInClause(&b, "t.role", normalizedRoles, &args)
+		sqlutil.AppendInClause(&b, "t.role", normalizedRoles, &args)
 	}
 
 	if sessionsOnly {

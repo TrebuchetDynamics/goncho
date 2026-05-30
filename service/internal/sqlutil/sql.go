@@ -1,0 +1,94 @@
+package sqlutil
+
+import (
+	"context"
+	"database/sql"
+	"strings"
+)
+
+// LifecycleSQL is the minimal interface satisfied by both *sql.DB and *sql.Tx.
+type LifecycleSQL interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+// NullIfBlank returns nil for blank/whitespace values or the original string
+// for non-blank values. Use when a blank string should be stored as SQL NULL.
+func NullIfBlank(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
+}
+
+// AppendInClause appends "column IN (?,?,...)" to a strings.Builder and adds
+// the values to the args slice. It does not handle the leading AND/OR.
+func AppendInClause(b *strings.Builder, column string, values []string, args *[]any) {
+	b.WriteString(column)
+	b.WriteString(` IN (`)
+	for i, value := range values {
+		if i > 0 {
+			b.WriteString(`,`)
+		}
+		b.WriteString(`?`)
+		*args = append(*args, value)
+	}
+	b.WriteString(`)`)
+}
+
+// ExecDeleteCount executes a DELETE query and returns the number of rows affected.
+func ExecDeleteCount(ctx context.Context, db LifecycleSQL, query string, args ...any) (int64, error) {
+	res, err := db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// SessionKeyMatchesSources checks whether a sessionKey's source prefix matches
+// one of the given sources. If sources is empty or contains a wildcard, returns true.
+func SessionKeyMatchesSources(sessionKey string, sources []string) bool {
+	if len(sources) == 0 || HasWildcard(sources) {
+		return true
+	}
+	source, _, ok := strings.Cut(strings.TrimSpace(sessionKey), ":")
+	if !ok {
+		return false
+	}
+	return ContainsFold(sources, strings.ToLower(strings.TrimSpace(source)))
+}
+
+// OriginSourceFromChatKey extracts the source prefix from a "source:chatID" chat key.
+func OriginSourceFromChatKey(chatKey string) string {
+	chatKey = strings.TrimSpace(chatKey)
+	idx := strings.Index(chatKey, ":")
+	if idx <= 0 {
+		return ""
+	}
+	return chatKey[:idx]
+}
+
+// HasWildcard reports whether values contains "*".
+func HasWildcard(values []string) bool {
+	for _, v := range values {
+		if strings.TrimSpace(v) == "*" {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainsFold reports whether slice contains value (case-insensitive comparison).
+func ContainsFold(slice []string, value string) bool {
+	for _, s := range slice {
+		if strings.EqualFold(strings.TrimSpace(s), value) {
+			return true
+		}
+	}
+	return false
+}

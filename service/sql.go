@@ -5,16 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
-)
 
-type lifecycleSQL interface {
-	ExecContext(context.Context, string, ...any) (sql.Result, error)
-	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
-	QueryRowContext(context.Context, string, ...any) *sql.Row
-}
+	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
+)
 
 type conclusionRow struct {
 	WorkspaceID    string
@@ -52,7 +47,7 @@ type lifecycleTurnMeta struct {
 	Goncho lifecycleMessageMeta `json:"goncho"`
 }
 
-func createLifecycleMessages(ctx context.Context, db lifecycleSQL, workspaceID, sessionKey string, maxMessageSize int, inputs []CreateMessage) ([]MessageRecord, error) {
+func createLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, workspaceID, sessionKey string, maxMessageSize int, inputs []CreateMessage) ([]MessageRecord, error) {
 	workspaceID = strings.TrimSpace(workspaceID)
 	sessionKey = strings.TrimSpace(sessionKey)
 	if workspaceID == "" {
@@ -129,7 +124,7 @@ func createLifecycleMessages(ctx context.Context, db lifecycleSQL, workspaceID, 
 	return out, nil
 }
 
-func lastLifecycleMessageSequence(ctx context.Context, db lifecycleSQL, workspaceID, sessionKey string) (int, error) {
+func lastLifecycleMessageSequence(ctx context.Context, db sqlutil.LifecycleSQL, workspaceID, sessionKey string) (int, error) {
 	var seq int
 	err := db.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(CAST(
@@ -154,7 +149,7 @@ func lastLifecycleMessageSequence(ctx context.Context, db lifecycleSQL, workspac
 	return seq, nil
 }
 
-func listLifecycleMessages(ctx context.Context, db lifecycleSQL, workspaceID, sessionKey string) ([]MessageRecord, error) {
+func listLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, workspaceID, sessionKey string) ([]MessageRecord, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, session_id, role, content, ts_unix, COALESCE(chat_id, ''), COALESCE(meta_json, '')
 		FROM turns
@@ -197,8 +192,8 @@ func listLifecycleMessages(ctx context.Context, db lifecycleSQL, workspaceID, se
 	return out, nil
 }
 
-func deleteLifecycleSession(ctx context.Context, db lifecycleSQL, workspaceID, sessionKey string) (SessionDeletionResult, error) {
-	messagesDeleted, err := execDeleteCount(ctx, db, `
+func deleteLifecycleSession(ctx context.Context, db sqlutil.LifecycleSQL, workspaceID, sessionKey string) (SessionDeletionResult, error) {
+	messagesDeleted, err := sqlutil.ExecDeleteCount(ctx, db, `
 		DELETE FROM turns
 		WHERE session_id = ?
 		  AND CASE
@@ -210,14 +205,14 @@ func deleteLifecycleSession(ctx context.Context, db lifecycleSQL, workspaceID, s
 	if err != nil {
 		return SessionDeletionResult{}, fmt.Errorf("goncho: delete session messages: %w", err)
 	}
-	conclusionsDeleted, err := execDeleteCount(ctx, db, `
+	conclusionsDeleted, err := sqlutil.ExecDeleteCount(ctx, db, `
 		DELETE FROM goncho_conclusions
 		WHERE workspace_id = ? AND session_key = ?
 	`, workspaceID, sessionKey)
 	if err != nil {
 		return SessionDeletionResult{}, fmt.Errorf("goncho: delete session conclusions: %w", err)
 	}
-	summariesDeleted, err := execDeleteCount(ctx, db, `
+	summariesDeleted, err := sqlutil.ExecDeleteCount(ctx, db, `
 		DELETE FROM goncho_session_summaries
 		WHERE workspace_id = ? AND session_key = ?
 	`, workspaceID, sessionKey)
@@ -233,8 +228,8 @@ func deleteLifecycleSession(ctx context.Context, db lifecycleSQL, workspaceID, s
 	}, nil
 }
 
-func deleteLifecycleWorkspace(ctx context.Context, db lifecycleSQL, workspaceID string) (WorkspaceDeletionResult, error) {
-	messagesDeleted, err := execDeleteCount(ctx, db, `
+func deleteLifecycleWorkspace(ctx context.Context, db sqlutil.LifecycleSQL, workspaceID string) (WorkspaceDeletionResult, error) {
+	messagesDeleted, err := sqlutil.ExecDeleteCount(ctx, db, `
 		DELETE FROM turns
 		WHERE CASE
 			WHEN json_valid(COALESCE(meta_json, ''))
@@ -245,19 +240,19 @@ func deleteLifecycleWorkspace(ctx context.Context, db lifecycleSQL, workspaceID 
 	if err != nil {
 		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: delete workspace messages: %w", err)
 	}
-	peerCardsDeleted, err := execDeleteCount(ctx, db, `DELETE FROM goncho_peer_cards WHERE workspace_id = ?`, workspaceID)
+	peerCardsDeleted, err := sqlutil.ExecDeleteCount(ctx, db, `DELETE FROM goncho_peer_cards WHERE workspace_id = ?`, workspaceID)
 	if err != nil {
 		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: delete workspace peer cards: %w", err)
 	}
-	conclusionsDeleted, err := execDeleteCount(ctx, db, `DELETE FROM goncho_conclusions WHERE workspace_id = ?`, workspaceID)
+	conclusionsDeleted, err := sqlutil.ExecDeleteCount(ctx, db, `DELETE FROM goncho_conclusions WHERE workspace_id = ?`, workspaceID)
 	if err != nil {
 		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: delete workspace conclusions: %w", err)
 	}
-	summariesDeleted, err := execDeleteCount(ctx, db, `DELETE FROM goncho_session_summaries WHERE workspace_id = ?`, workspaceID)
+	summariesDeleted, err := sqlutil.ExecDeleteCount(ctx, db, `DELETE FROM goncho_session_summaries WHERE workspace_id = ?`, workspaceID)
 	if err != nil {
 		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: delete workspace summaries: %w", err)
 	}
-	dreamsDeleted, err := execDeleteCount(ctx, db, `DELETE FROM goncho_dreams WHERE workspace_id = ?`, workspaceID)
+	dreamsDeleted, err := sqlutil.ExecDeleteCount(ctx, db, `DELETE FROM goncho_dreams WHERE workspace_id = ?`, workspaceID)
 	if err != nil {
 		return WorkspaceDeletionResult{}, fmt.Errorf("goncho: delete workspace dreams: %w", err)
 	}
@@ -280,18 +275,6 @@ func decodeLifecycleMeta(raw string) (lifecycleTurnMeta, error) {
 		return meta, fmt.Errorf("goncho: decode lifecycle metadata: %w", err)
 	}
 	return meta, nil
-}
-
-func execDeleteCount(ctx context.Context, db lifecycleSQL, query string, args ...any) (int64, error) {
-	res, err := db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return 0, err
-	}
-	count, err := res.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
 }
 
 func upsertPeerCard(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer string, card []string) error {
@@ -442,7 +425,7 @@ func upsertConclusion(ctx context.Context, db *sql.DB, row conclusionRow) (int64
 		row.ProfileID,
 		row.ObserverPeerID,
 		row.PeerID,
-		nullIfBlank(row.SessionKey),
+		sqlutil.NullIfBlank(row.SessionKey),
 		row.Content,
 		row.Kind,
 		row.Status,
@@ -515,7 +498,7 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 	if len(filter.SessionIDs) > 0 && !filterHasWildcard(filter.SessionIDs) {
 		base += ` AND `
 		var b strings.Builder
-		appendInClause(&b, "session_key", filter.SessionIDs, &args)
+		sqlutil.AppendInClause(&b, "session_key", filter.SessionIDs, &args)
 		base += b.String()
 	}
 	trimmedQuery := strings.TrimSpace(query)
@@ -570,7 +553,7 @@ func insertAssistantChatTurn(ctx context.Context, db *sql.DB, sessionID, peer, c
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO turns(session_id, role, content, ts_unix, chat_id, meta_json, memory_sync_status)
 		VALUES(?, 'assistant', ?, ?, ?, ?, 'ready')
-	`, sessionID, content, time.Now().Unix(), peer, nullIfBlank(metaJSON))
+	`, sessionID, content, time.Now().Unix(), peer, sqlutil.NullIfBlank(metaJSON))
 	if err != nil {
 		return fmt.Errorf("goncho: insert assistant chat turn: %w", err)
 	}
@@ -581,7 +564,7 @@ func findTurns(ctx context.Context, db *sql.DB, query, sessionKey string, filter
 	if strings.TrimSpace(sessionKey) == "" {
 		return nil, nil
 	}
-	if !sessionKeyMatchesSources(sessionKey, filter.Sources) {
+	if !sqlutil.SessionKeyMatchesSources(sessionKey, filter.Sources) {
 		return nil, nil
 	}
 
@@ -595,7 +578,7 @@ func findTurns(ctx context.Context, db *sql.DB, query, sessionKey string, filter
 	if len(filter.SessionIDs) > 0 && !filterHasWildcard(filter.SessionIDs) {
 		base += ` AND `
 		var b strings.Builder
-		appendInClause(&b, "session_id", filter.SessionIDs, &args)
+		sqlutil.AppendInClause(&b, "session_id", filter.SessionIDs, &args)
 		base += b.String()
 	}
 	if trimmed := strings.TrimSpace(query); trimmed != "" {
@@ -619,7 +602,7 @@ func findTurns(ctx context.Context, db *sql.DB, query, sessionKey string, filter
 		}
 		hits = append(hits, SearchHit{
 			Source:       "turn",
-			OriginSource: originSourceFromChatKey(firstNonBlank(chatID, sessionKey)),
+			OriginSource: sqlutil.OriginSourceFromChatKey(firstNonBlank(chatID, sessionKey)),
 			Content:      content,
 			SessionKey:   firstNonBlank(rowSessionID, sessionKey),
 		})
@@ -628,15 +611,6 @@ func findTurns(ctx context.Context, db *sql.DB, query, sessionKey string, filter
 		return nil, fmt.Errorf("goncho: iterate turns: %w", err)
 	}
 	return hits, nil
-}
-
-func originSourceFromChatKey(chatKey string) string {
-	chatKey = strings.TrimSpace(chatKey)
-	idx := strings.Index(chatKey, ":")
-	if idx <= 0 {
-		return ""
-	}
-	return chatKey[:idx]
 }
 
 func recentTurns(ctx context.Context, db *sql.DB, sessionKey string, limit int) ([]MessageSlice, error) {
@@ -752,35 +726,4 @@ func readySessionTurnIDAtPosition(ctx context.Context, db *sql.DB, sessionKey st
 		return 0, fmt.Errorf("goncho: find ready session turn position: %w", err)
 	}
 	return id, nil
-}
-
-func nullIfBlank(value string) any {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	return value
-}
-
-func appendInClause(b *strings.Builder, column string, values []string, args *[]any) {
-	b.WriteString(column)
-	b.WriteString(` IN (`)
-	for i, value := range values {
-		if i > 0 {
-			b.WriteString(`,`)
-		}
-		b.WriteString(`?`)
-		*args = append(*args, value)
-	}
-	b.WriteString(`)`)
-}
-
-func sessionKeyMatchesSources(sessionKey string, sources []string) bool {
-	if len(sources) == 0 || filterHasWildcard(sources) {
-		return true
-	}
-	source, _, ok := strings.Cut(strings.TrimSpace(sessionKey), ":")
-	if !ok {
-		return false
-	}
-	return slices.Contains(sources, strings.ToLower(strings.TrimSpace(source)))
 }
