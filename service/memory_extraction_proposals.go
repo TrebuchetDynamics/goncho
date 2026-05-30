@@ -6,6 +6,8 @@ import (
 	"hash/fnv"
 	"regexp"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sensitive"
 )
 
 type MemoryProposalOperation string
@@ -281,13 +283,7 @@ func proposalIsLowConfidence(content string) bool {
 }
 
 func proposalIsPrivacySensitive(content string) bool {
-	lower := strings.ToLower(content)
-	for _, needle := range []string{"password", "api token", "secret", "private key", "sk-live", "bearer "} {
-		if strings.Contains(lower, needle) {
-			return true
-		}
-	}
-	return false
+	return sensitive.ContainsSecretLikeContent(content)
 }
 
 func memoryProposalID(operation MemoryProposalOperation, kind MemoryProposalKind, content string, evidence []string) string {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/sensitive"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -292,8 +293,7 @@ func truncateHostHookUTF8(value string, limit int) string {
 }
 
 func hostHookSensitiveKey(key string) bool {
-	key = strings.ToLower(strings.TrimSpace(key))
-	return strings.Contains(key, "secret") || strings.Contains(key, "token") || strings.Contains(key, "password") || strings.Contains(key, "api_key") || strings.Contains(key, "private_key") || strings.Contains(key, "authorization")
+	return sensitive.MetadataKeySecretLike(key)
 }
 
 func observationKindForHostHook(event HostHookEvent) (ObservationKind, error) {
