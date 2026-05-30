@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 var ErrMemoryNotFound = errors.New("goncho: memory not found")
@@ -364,17 +365,15 @@ func memoryFacadeEnvelopeMatches(env memoryFacadeEnvelope, p MemorySearchParams)
 }
 
 func memoryFacadeQueryMatches(content, query string) bool {
-	query = strings.TrimSpace(strings.ToLower(query))
+	query = strings.TrimSpace(query)
 	if query == "" {
 		return true
 	}
-	content = strings.ToLower(content)
-	for _, token := range strings.Fields(query) {
-		if !strings.Contains(content, strings.Trim(token, ".,;:!?()[]{}\"'")) {
-			return false
-		}
+	tokens := strings.Fields(query)
+	for i := range tokens {
+		tokens[i] = strings.Trim(tokens[i], ".,;:!?()[]{}\"'")
 	}
-	return true
+	return textutil.ContainsAllSubstringsFold(content, tokens)
 }
 
 func memoryFacadeMetadataFromObservation(metadata map[string]string) map[string]string {

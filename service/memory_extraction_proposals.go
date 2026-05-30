@@ -261,7 +261,7 @@ func (s *Service) findContradictoryMemory(ctx context.Context, peer, sessionKey,
 		if textutil.EqualFoldTrimmed(hit.Content, content) {
 			continue
 		}
-		if strings.Contains(strings.ToLower(hit.Content), strings.ToLower(subject)) {
+		if textutil.ContainsAllSubstringsFold(hit.Content, []string{subject}) {
 			related = append(related, fmt.Sprintf("%s:%d", hit.Source, hit.ID))
 		}
 	}

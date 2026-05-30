@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"gopkg.in/yaml.v3"
@@ -130,10 +131,10 @@ func ExplainCrossChatRecall(metas []SessionMetadata, filter SearchFilter) CrossC
 		if metaUserID != evidence.UserID {
 			continue
 		}
-		if len(allowedSources) > 0 && !slices.Contains(allowedSources, textutil.LowerTrimmed(meta.Source)) {
+		if len(allowedSources) > 0 && !sliceutil.Contains(allowedSources, textutil.LowerTrimmed(meta.Source)) {
 			continue
 		}
-		if len(allowedSessions) > 0 && !slices.Contains(allowedSessions, strings.TrimSpace(meta.SessionID)) {
+		if len(allowedSessions) > 0 && !sliceutil.Contains(allowedSessions, strings.TrimSpace(meta.SessionID)) {
 			continue
 		}
 		item := crossChatSessionEvidence(meta, metadataMatchesCurrent(meta, evidence.CurrentSessionID, evidence.CurrentChatKey))
@@ -218,7 +219,7 @@ func normalizeSources(sources []string) []string {
 
 func normalizeSessionIDs(sessionIDs []string) []string {
 	out := textutil.UniqueTrimmed(sessionIDs, false)
-	if slices.Contains(out, "*") {
+	if sliceutil.Contains(out, "*") {
 		return nil
 	}
 	return out
@@ -266,10 +267,10 @@ func selectMetadata(metas []SessionMetadata, filter SearchFilter) ([]SessionMeta
 		if metaUserID != userID {
 			continue
 		}
-		if len(allowedSources) > 0 && !slices.Contains(allowedSources, textutil.LowerTrimmed(meta.Source)) {
+		if len(allowedSources) > 0 && !sliceutil.Contains(allowedSources, textutil.LowerTrimmed(meta.Source)) {
 			continue
 		}
-		if len(allowedSessions) > 0 && !slices.Contains(allowedSessions, strings.TrimSpace(meta.SessionID)) {
+		if len(allowedSessions) > 0 && !sliceutil.Contains(allowedSessions, strings.TrimSpace(meta.SessionID)) {
 			continue
 		}
 		selected = append(selected, meta)
@@ -302,7 +303,7 @@ func buildSearchLineageIndex(metas []SessionMetadata) searchLineageIndex {
 			continue
 		}
 		childIDs := idx.children[meta.ParentSessionID]
-		if !slices.Contains(childIDs, meta.SessionID) {
+		if !sliceutil.Contains(childIDs, meta.SessionID) {
 			idx.children[meta.ParentSessionID] = append(childIDs, meta.SessionID)
 		}
 	}

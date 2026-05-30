@@ -2,10 +2,10 @@ package searchintent
 
 import (
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -742,7 +742,7 @@ func searchFactSubjectLooksAssertive(subject string) bool {
 		return false
 	}
 	for _, token := range tokens {
-		if slices.Contains([]string{"who", "what", "which", "ask", "checklist", "question", "answer", "own"}, token) {
+		if sliceutil.Contains([]string{"who", "what", "which", "ask", "checklist", "question", "answer", "own"}, token) {
 			return false
 		}
 	}
@@ -767,7 +767,7 @@ func searchFactObjectLooksAssertive(object string) bool {
 		return false
 	}
 	for _, token := range tokens {
-		if slices.Contains([]string{"own", "ask", "question", "answer", "checklist"}, token) {
+		if sliceutil.Contains([]string{"own", "ask", "question", "answer", "checklist"}, token) {
 			return false
 		}
 	}
