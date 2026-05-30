@@ -1,17 +1,12 @@
 package docs_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
 
 func TestServerModeThreatModelDocumentsRequiredControls(t *testing.T) {
-	raw, err := os.ReadFile("server-mode-threat-model.md")
-	if err != nil {
-		t.Fatalf("read threat model: %v", err)
-	}
-	doc := strings.ToLower(string(raw))
+	doc := strings.ToLower(mustReadGuardFile(t, "../server-mode-threat-model.md"))
 	for _, want := range []string{"auth", "profiles", "workspaces", "audit", "backup", "retention", "admin operations", "postgresql adapter", "sqlite remains the reference", "no p2p mesh"} {
 		if !strings.Contains(doc, want) {
 			t.Fatalf("threat model missing %q", want)

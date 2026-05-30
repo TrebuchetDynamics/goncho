@@ -1,7 +1,6 @@
 package docs_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
@@ -17,11 +16,7 @@ import (
 // Follows the same principle as agentmemory's consistency.test.ts:
 // doc claims are checked against actual code state.
 func TestTodoCurrentStateDoesNotContradictDeliveredChecklist(t *testing.T) {
-	raw, err := os.ReadFile("../TODO.md")
-	if err != nil {
-		t.Fatalf("read TODO.md: %v", err)
-	}
-	todo := string(raw)
+	todo := mustReadGuardFile(t, "../../TODO.md")
 
 	// Scan for the "still lacks" marker. Everything between it and the next
 	// ##-level section heading is the current "still lacks" block.

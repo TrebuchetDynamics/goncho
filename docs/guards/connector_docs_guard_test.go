@@ -1,7 +1,6 @@
 package docs_test
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,12 +19,8 @@ func TestConnectorDocsCoverSupportedAndDeferredIntegrations(t *testing.T) {
 		"opencode.md":           "deferred",
 	}
 	for file, status := range want {
-		path := filepath.Join("integrations", file)
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("read %s: %v", path, err)
-		}
-		doc := strings.ToLower(string(raw))
+		path := filepath.Join("..", "integrations", file)
+		doc := strings.ToLower(mustReadGuardFile(t, path))
 		for _, marker := range []string{"status: " + status, "local-first", "preview", "goncho-server"} {
 			if !strings.Contains(doc, marker) {
 				t.Fatalf("%s missing marker %q", path, marker)
