@@ -1,13 +1,16 @@
-package shared
+package textnorm
 
-import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/textnorm"
+import "bytes"
+
+var jsonNullLiteral = []byte("null")
 
 // TrimJSONRaw returns raw JSON bytes after whitespace trimming.
 func TrimJSONRaw(raw []byte) []byte {
-	return textnorm.TrimJSONRaw(raw)
+	return bytes.TrimSpace(raw)
 }
 
 // JSONRawIsEmptyOrNull reports whether a raw JSON value is absent or the JSON null literal.
 func JSONRawIsEmptyOrNull(raw []byte) bool {
-	return textnorm.JSONRawIsEmptyOrNull(raw)
+	trimmed := TrimJSONRaw(raw)
+	return len(trimmed) == 0 || bytes.Equal(trimmed, jsonNullLiteral)
 }

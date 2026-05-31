@@ -1,11 +1,11 @@
 package shared
 
-import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
+import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 
 func RoundMetric(v float64) float64 {
-	return metrics.Round(v)
+	return score.RoundMetric(v)
 }
 
 func RoundSignedMetric(v float64) float64 {
-	return metrics.RoundSigned(v)
+	return score.RoundSignedMetric(v)
 }
