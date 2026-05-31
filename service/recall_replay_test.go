@@ -117,6 +117,23 @@ func TestRecallReplayBuildsDeterministicTimelineFromTrace(t *testing.T) {
 	}
 }
 
+func TestFormatRecallReplayIncludesZeroFinalScoresForCandidates(t *testing.T) {
+	trace := RecallTrace{
+		TraceID:         "trace-zero-score",
+		PipelineVersion: "test-pipeline",
+		Query:           RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "unmatched query"},
+		Candidates: []ScoredRecallCandidate{{
+			Candidate: RecallCandidate{MemoryID: "mem-zero", SourceType: "turn", Content: "Candidate with no score evidence yet."},
+			Score:     RecallScore{FinalScore: 0},
+		}},
+	}
+
+	text := FormatRecallReplay(BuildRecallReplay(trace))
+	if !strings.Contains(text, "candidate_scored memory_id=mem-zero final=0.000000") {
+		t.Fatalf("formatted replay dropped explicit zero final score:\n%s", text)
+	}
+}
+
 func assertRecallReplayEvent(t *testing.T, event RecallReplayEvent, stage string, kind string, memoryID string) {
 	t.Helper()
 	if event.Stage != stage || event.Kind != kind || event.MemoryID != memoryID {

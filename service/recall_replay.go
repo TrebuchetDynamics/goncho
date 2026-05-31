@@ -159,7 +159,7 @@ func recallReplayEventFields(event RecallReplayEvent) []string {
 	if event.WarningCode != "" {
 		fields = append(fields, "code="+event.WarningCode)
 	}
-	if event.FinalScore != 0 {
+	if recallReplayEventHasFinalScore(event) {
 		fields = append(fields, fmt.Sprintf("final=%.6f", event.FinalScore))
 	}
 	if event.SourceType != "" {
@@ -179,6 +179,15 @@ func recallReplayEventFields(event RecallReplayEvent) []string {
 	}
 	fields = append(fields, event.Details...)
 	return fields
+}
+
+func recallReplayEventHasFinalScore(event RecallReplayEvent) bool {
+	switch event.Kind {
+	case RecallReplayKindCandidate, RecallReplayKindSelected, RecallReplayKindRejected:
+		return true
+	default:
+		return false
+	}
 }
 
 func recallReplayCandidateEvent(stage string, kind string, item ScoredRecallCandidate) RecallReplayEvent {
