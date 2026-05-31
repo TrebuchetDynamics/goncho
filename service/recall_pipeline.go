@@ -497,16 +497,18 @@ func recallRecencyScore(createdAt, now time.Time) float64 {
 }
 
 func scopeRecallScore(q RecallQuery, candidate RecallCandidate) float64 {
-	if q.ScopeID == "" {
-		if candidate.ScopeID == "" {
+	queryScope := recallScopeIdentity(q.ScopeID)
+	candidateScope := recallScopeIdentity(candidate.ScopeID)
+	if queryScope == "" {
+		if candidateScope == "" {
 			return 0.5
 		}
 		return 1
 	}
 	switch {
-	case candidate.ScopeID == q.ScopeID:
+	case candidateScope == queryScope:
 		return 1
-	case candidate.ScopeID == "":
+	case candidateScope == "":
 		return 0.5
 	default:
 		return 0
@@ -514,7 +516,13 @@ func scopeRecallScore(q RecallQuery, candidate RecallCandidate) float64 {
 }
 
 func recallScopeMismatch(q RecallQuery, candidate RecallCandidate) bool {
-	return q.ScopeID != "" && candidate.ScopeID != "" && candidate.ScopeID != q.ScopeID
+	queryScope := recallScopeIdentity(q.ScopeID)
+	candidateScope := recallScopeIdentity(candidate.ScopeID)
+	return queryScope != "" && candidateScope != "" && candidateScope != queryScope
+}
+
+func recallScopeIdentity(scopeID string) string {
+	return strings.TrimSpace(scopeID)
 }
 
 func recallWhySelectedWithFinalScore(reasons []string, finalScore float64) []string {

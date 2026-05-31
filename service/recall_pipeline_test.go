@@ -44,6 +44,40 @@ func TestRecallScoreSignalsAreSingleSourceForWeightedAndDiagnosticVoices(t *test
 	}
 }
 
+func TestRecallPipelineTrimsScopeIDsForSelection(t *testing.T) {
+	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-auth-team",
+			SourceType: "turn",
+			Content:    "auth team runbook",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 1}},
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "scope-trim-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:   "scope-trim-test-v1",
+			Weights:   map[string]float64{"keyword": 1, "scope": 1},
+			RRFK:      60,
+			MMRLambda: 1,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "auth", ScopeID: " team ", Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := selectedRecallIDs(trace); !slices.Equal(got, []string{"mem-auth-team"}) {
+		t.Fatalf("selected IDs = %v, want trim-equivalent scope to remain eligible; rejected=%+v", got, trace.Rejected)
+	}
+	if got := trace.Selected[0].Score.ScopeScore; got != 1 {
+		t.Fatalf("scope score = %.6f, want exact score for trim-equivalent scope", got)
+	}
+}
+
 func TestRecallPipelineWarningsAndTokenBudget(t *testing.T) {
 	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	config := RecallScoringConfig{

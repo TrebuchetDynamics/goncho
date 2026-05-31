@@ -164,7 +164,7 @@ func TestRecallQueryDecompositionDeduplicatesStableMemoryIDs(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{
 		"authentication owner incident": {
-			{MemoryID: "mem-auth-owner", Content: "Mira owns authentication.", ScopeID: "team", CreatedAt: now, Importance: 0.80, Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.90}}},
+			{MemoryID: " mem-auth-owner ", Content: "Mira owns authentication.", ScopeID: "team", CreatedAt: now, Importance: 0.80, Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.90}}},
 		},
 		"authentication owner": {
 			{MemoryID: "mem-auth-owner", Content: "Mira owns authentication.", ScopeID: "team", CreatedAt: now, Importance: 0.80, Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.90}}},
@@ -184,8 +184,8 @@ func TestRecallQueryDecompositionDeduplicatesStableMemoryIDs(t *testing.T) {
 	for _, item := range items {
 		ids = append(ids, item.MemoryID)
 	}
-	if !slices.Equal(ids, []string{"mem-auth-owner", "mem-auth-incident"}) {
-		t.Fatalf("merged IDs = %v, want stable memory_id deduplication", ids)
+	if !slices.Equal(ids, []string{" mem-auth-owner ", "mem-auth-incident"}) {
+		t.Fatalf("merged IDs = %v, want stable memory_id deduplication using trimmed identity", ids)
 	}
 }
 
