@@ -9,18 +9,18 @@ exits zero so non-container developer machines can still run the normal suite.
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
 import tempfile
 import textwrap
-import time
 from pathlib import Path
 
 try:
-    from shared.http_json import read_json_url
+    from smoke.shared.health import wait_for_json_status_ok
 except ModuleNotFoundError:  # pragma: no cover - package import path
-    from scripts.shared.http_json import read_json_url
+    from scripts.smoke.shared.health import wait_for_json_status_ok
 
 
 def run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -41,17 +41,12 @@ def docker_compose_available() -> bool:
 
 
 def wait_for_health(url: str, timeout_seconds: float = 60.0) -> dict:
-    deadline = time.time() + timeout_seconds
-    last_error: Exception | None = None
-    while time.time() < deadline:
-        try:
-            payload = read_json_url(url, timeout=2.0)
-            if payload.get("status") == "ok":
-                return payload
-        except Exception as exc:  # pragma: no cover - diagnostic path
-            last_error = exc
-        time.sleep(1.0)
-    raise RuntimeError(f"health check {url} did not become ok: {last_error}")
+    return wait_for_json_status_ok(
+        url,
+        timeout_seconds=timeout_seconds,
+        request_timeout=2.0,
+        interval_seconds=1.0,
+    )
 
 
 def transient_build_environment_failure(output: str) -> bool:
