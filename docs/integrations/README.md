@@ -24,7 +24,8 @@ Planned connectors:
 
 Deferred connectors:
 
-- [Claude Code Connector](deferred/claude-code.md)
-- [Cursor Connector](deferred/cursor.md)
-- [Hermes Connector](deferred/hermes.md)
-- [OpenCode Connector](deferred/opencode.md)
+- [Deferred Connector Readiness Contract](deferred/contracts/deferred-readiness.md)
+- [Claude Code Connector](deferred/agent-hosts/claude-code.md) ([compatibility path](deferred/claude-code.md))
+- [Cursor Connector](deferred/agent-hosts/cursor.md) ([compatibility path](deferred/cursor.md))
+- [Hermes Connector](deferred/first-party/hermes.md) ([compatibility path](deferred/hermes.md))
+- [OpenCode Connector](deferred/agent-hosts/opencode.md) ([compatibility path](deferred/opencode.md))
