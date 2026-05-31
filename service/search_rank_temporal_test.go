@@ -51,6 +51,19 @@ func TestRankConclusionHitsAddsExpansionProvenanceOnlyWhenExpansionImprovesHit(t
 	}
 }
 
+func TestRankConclusionHitsFiltersSingleUnrelatedHitLikeMultiHitRanking(t *testing.T) {
+	unrelated := SearchHit{Content: "Mira stores aquarium filters in the blue cabinet."}
+	got := rankConclusionHitsByLexicalOverlap("rare orchid retrieval marker", []SearchHit{unrelated})
+	if len(got) != 0 {
+		t.Fatalf("single unrelated hit survived ranking: %+v", got)
+	}
+
+	withDistractor := rankConclusionHitsByLexicalOverlap("rare orchid retrieval marker", []SearchHit{unrelated, {Content: "Recent dashboard notes without matching terms."}})
+	if len(withDistractor) != 0 {
+		t.Fatalf("multi-hit unrelated candidates survived ranking: %+v", withDistractor)
+	}
+}
+
 func TestRankConclusionHitsTemporalDoesNotPenalizePersonalMemoryWithGenericAside(t *testing.T) {
 	hits := []SearchHit{
 		{Content: "user: What shampoo should I buy? assistant: I don't have personal experience, but here is a generic list of shampoo brands."},

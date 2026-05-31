@@ -25,10 +25,7 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 	if len(queryTokens) == 0 {
 		return hits
 	}
-	if len(hits) < 2 {
-		if len(hits) == 1 && searchHitExpansionImproves(expansion, hits[0]) {
-			hits[0].Provenance = append(hits[0].Provenance, queryExpansionEvidence(expansion))
-		}
+	if len(hits) == 0 {
 		return hits
 	}
 	docs := make([]map[string]int, len(hits))
