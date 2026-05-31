@@ -43,11 +43,38 @@ func TemporalMarkers(query string) []string {
 	q := normalizeTemporalQuery(query)
 	markers := []string{}
 	for _, candidate := range temporalMarkerCandidates() {
-		if strings.Contains(q, candidate) {
+		if containsTemporalMarker(q, candidate) {
 			markers = append(markers, candidate)
 		}
 	}
 	return markers
+}
+
+func containsTemporalMarker(query, marker string) bool {
+	if marker == "" {
+		return false
+	}
+	for offset := 0; offset <= len(query); {
+		idx := strings.Index(query[offset:], marker)
+		if idx < 0 {
+			return false
+		}
+		start := offset + idx
+		end := start + len(marker)
+		if temporalMarkerBoundary(query, start-1) && temporalMarkerBoundary(query, end) {
+			return true
+		}
+		offset = start + 1
+	}
+	return false
+}
+
+func temporalMarkerBoundary(value string, index int) bool {
+	if index < 0 || index >= len(value) {
+		return true
+	}
+	ch := value[index]
+	return !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9'))
 }
 
 func normalizeTemporalQuery(query string) string {
