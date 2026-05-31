@@ -109,4 +109,4 @@ func main() {
 
 The example ends with `Context` because the core payoff is orientation, not just storage.
 
-See [Retrieval Benchmarks](/reference/retrieval-benchmarks/) for benchmark methodology.
+See [Retrieval Benchmarks](/reference/benchmarks/retrieval-benchmarks/) for benchmark methodology.

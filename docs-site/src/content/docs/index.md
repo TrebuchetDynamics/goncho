@@ -44,4 +44,4 @@ Benchmark methodology, the external adapter contract, and current agentmemory PR
 - Start with [Operator Runbook](/operators/runbook/) if you need deployment, backup, health, and troubleshooting guidance.
 - Start with [Gormes Agent Integration](/integrations/gormes-agent/) if you want to plug Goncho into a Gormes-style agent host.
 
-See [Retrieval Benchmarks](/reference/retrieval-benchmarks/) for benchmark methodology.
+See [Retrieval Benchmarks](/reference/benchmarks/retrieval-benchmarks/) for benchmark methodology.

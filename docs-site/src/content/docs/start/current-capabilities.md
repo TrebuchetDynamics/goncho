@@ -43,4 +43,4 @@ The service package is a library package, not a CLI binary and not a root `go in
 This site documents both the shipped library and the architecture direction. Pages call out conceptual examples when they describe constraints Goncho has not exposed as stable API.
 :::
 
-See [Retrieval Benchmarks](/reference/retrieval-benchmarks/) for benchmark methodology.
+See [Retrieval Benchmarks](/reference/benchmarks/retrieval-benchmarks/) for benchmark methodology.
