@@ -185,6 +185,16 @@ func TestMergeRecallCandidateEvidenceKeepsMetadataWhenScoreImproves(t *testing.T
 	}
 }
 
+func TestMergeRecallCandidateEvidenceKeepsStrongestImportance(t *testing.T) {
+	merged := mergeRecallCandidateEvidence(
+		RecallCandidate{MemoryID: "mem-auth-owner", Importance: 0.20, Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.90, Note: "original query"}}},
+		RecallCandidate{MemoryID: "mem-auth-owner", Importance: 0.95, Provenance: []EvidenceItem{{Kind: "fact", Score: 1.00, Note: "decomposed owner fact"}}},
+	)
+	if got := merged.Importance; got != 0.95 {
+		t.Fatalf("merged importance = %v, want strongest duplicate candidate importance", got)
+	}
+}
+
 func TestRecallQueryDecompositionMergesProvenanceForDuplicateMemoryIDs(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{

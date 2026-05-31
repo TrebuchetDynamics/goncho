@@ -156,6 +156,24 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 }
 
 func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCandidate {
+	existing = mergeRecallCandidateFields(existing, incoming)
+	indexByEvidence := make(map[string]int, len(existing.Provenance)+len(incoming.Provenance))
+	for i, evidence := range existing.Provenance {
+		indexByEvidence[recallCandidateEvidenceKey(evidence)] = i
+	}
+	for _, evidence := range incoming.Provenance {
+		key := recallCandidateEvidenceKey(evidence)
+		if idx, ok := indexByEvidence[key]; ok {
+			existing.Provenance[idx] = mergeRecallEvidenceItem(existing.Provenance[idx], evidence)
+			continue
+		}
+		indexByEvidence[key] = len(existing.Provenance)
+		existing.Provenance = append(existing.Provenance, evidence)
+	}
+	return existing
+}
+
+func mergeRecallCandidateFields(existing, incoming RecallCandidate) RecallCandidate {
 	if existing.Content == "" {
 		existing.Content = incoming.Content
 	}
@@ -174,21 +192,8 @@ func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCand
 	if existing.CreatedAt.IsZero() {
 		existing.CreatedAt = incoming.CreatedAt
 	}
-	if existing.Importance == 0 {
+	if incoming.Importance > existing.Importance {
 		existing.Importance = incoming.Importance
-	}
-	indexByEvidence := make(map[string]int, len(existing.Provenance)+len(incoming.Provenance))
-	for i, evidence := range existing.Provenance {
-		indexByEvidence[recallCandidateEvidenceKey(evidence)] = i
-	}
-	for _, evidence := range incoming.Provenance {
-		key := recallCandidateEvidenceKey(evidence)
-		if idx, ok := indexByEvidence[key]; ok {
-			existing.Provenance[idx] = mergeRecallEvidenceItem(existing.Provenance[idx], evidence)
-			continue
-		}
-		indexByEvidence[key] = len(existing.Provenance)
-		existing.Provenance = append(existing.Provenance, evidence)
 	}
 	return existing
 }
