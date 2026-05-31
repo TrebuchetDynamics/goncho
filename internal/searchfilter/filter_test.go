@@ -191,8 +191,12 @@ func TestCompilerTreatsBlankEqualityFiltersAsDenyAll(t *testing.T) {
 	}{
 		{name: "blank session", filter: map[string]any{"session_id": "   "}},
 		{name: "blank source", filter: map[string]any{"source": "\t"}},
+		{name: "nil session", filter: map[string]any{"session_id": nil}},
+		{name: "nil source", filter: map[string]any{"source": nil}},
 		{name: "blank-only session in list", filter: map[string]any{"session_id": map[string]any{"in": []any{" ", ""}}}},
+		{name: "blank-and-nil-only session in list", filter: map[string]any{"session_id": map[string]any{"in": []any{" ", nil, ""}}}},
 		{name: "blank-only source in list", filter: map[string]any{"source": map[string]any{"in": []any{" ", ""}}}},
+		{name: "blank-and-nil-only source in list", filter: map[string]any{"source": map[string]any{"in": []any{" ", nil, ""}}}},
 	}
 
 	for _, tt := range tests {

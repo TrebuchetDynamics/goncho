@@ -46,6 +46,13 @@ func listElements(value any) ([]any, bool) {
 	}
 }
 
+// filterScalar converts a filter scalar into the string domain used by the
+// current storage indexes. JSON null / Go nil is not a literal ID or source;
+// treat it like a blank value so equality filters fail closed instead of
+// searching for fmt's "<nil>" sentinel text.
 func filterScalar(value any) string {
+	if value == nil {
+		return ""
+	}
 	return strings.TrimSpace(fmt.Sprint(value))
 }
