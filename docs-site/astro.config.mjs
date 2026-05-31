@@ -32,11 +32,25 @@ export default defineConfig({
         {
           label: 'Reference',
           items: [
-            { label: 'Core API', slug: 'reference/core-api' },
-            { label: 'Local Markdown Memory', slug: 'reference/local-markdown-memory' },
-            { label: 'Memory Tools', slug: 'reference/memory-tools' },
-            { label: 'Retrieval Benchmarks', slug: 'reference/retrieval-benchmarks' },
-            { label: 'Honcho Compatibility', slug: 'reference/honcho-compatibility' },
+            {
+              label: 'API',
+              items: [{ label: 'Core API', slug: 'reference/api/core-api' }],
+            },
+            {
+              label: 'Memory',
+              items: [
+                { label: 'Local Markdown Memory', slug: 'reference/memory/local-markdown-memory' },
+                { label: 'Memory Tools', slug: 'reference/memory/memory-tools' },
+              ],
+            },
+            {
+              label: 'Benchmarks',
+              items: [{ label: 'Retrieval Benchmarks', slug: 'reference/benchmarks/retrieval-benchmarks' }],
+            },
+            {
+              label: 'Compatibility',
+              items: [{ label: 'Honcho Compatibility', slug: 'reference/compatibility/honcho-compatibility' }],
+            },
           ],
         },
         {
