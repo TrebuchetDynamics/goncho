@@ -511,29 +511,31 @@ func recallWhySelectedWithFinalScore(reasons []string, finalScore float64) []str
 	return append([]string{updated}, out...)
 }
 
+type recallScoreSignal struct {
+	Name  string
+	Score func(RecallScore) float64
+}
+
+var recallScoreSignals = []recallScoreSignal{
+	{"keyword", func(s RecallScore) float64 { return s.KeywordScore }},
+	{"semantic", func(s RecallScore) float64 { return s.SemanticScore }},
+	{"graph", func(s RecallScore) float64 { return s.GraphScore }},
+	{"fact", func(s RecallScore) float64 { return s.FactScore }},
+	{"recency", func(s RecallScore) float64 { return s.RecencyScore }},
+	{"importance", func(s RecallScore) float64 { return s.ImportanceScore }},
+	{"scope", func(s RecallScore) float64 { return s.ScopeScore }},
+}
+
 func buildRecallVoiceDiagnostics(scored, selected []ScoredRecallCandidate, config RecallScoringConfig) []RecallVoiceDiagnostic {
-	type voiceAccessor struct {
-		name  string
-		score func(RecallScore) float64
-	}
-	voices := []voiceAccessor{
-		{"keyword", func(s RecallScore) float64 { return s.KeywordScore }},
-		{"semantic", func(s RecallScore) float64 { return s.SemanticScore }},
-		{"graph", func(s RecallScore) float64 { return s.GraphScore }},
-		{"fact", func(s RecallScore) float64 { return s.FactScore }},
-		{"recency", func(s RecallScore) float64 { return s.RecencyScore }},
-		{"importance", func(s RecallScore) float64 { return s.ImportanceScore }},
-		{"scope", func(s RecallScore) float64 { return s.ScopeScore }},
-	}
-	diags := make([]RecallVoiceDiagnostic, 0, len(voices))
-	for _, v := range voices {
-		weight := config.Weights[v.name]
+	diags := make([]RecallVoiceDiagnostic, 0, len(recallScoreSignals))
+	for _, signal := range recallScoreSignals {
+		weight := config.Weights[signal.Name]
 		enabled := weight > 0
 		var candWith int
 		var maxScore, minScore, sumScore float64
 		minScore = -1 // sentinel: first non-zero will set it
 		for _, c := range scored {
-			s := v.score(c.Score)
+			s := signal.Score(c.Score)
 			if s > 0 {
 				candWith++
 			}
@@ -554,12 +556,12 @@ func buildRecallVoiceDiagnostics(scored, selected []ScoredRecallCandidate, confi
 		}
 		selectedCount := 0
 		for _, s := range selected {
-			if v.score(s.Score) > 0 {
+			if signal.Score(s.Score) > 0 {
 				selectedCount++
 			}
 		}
 		diags = append(diags, RecallVoiceDiagnostic{
-			Name:           v.name,
+			Name:           signal.Name,
 			Enabled:        enabled,
 			Weight:         weight,
 			CandidatesWith: candWith,
@@ -573,39 +575,23 @@ func buildRecallVoiceDiagnostics(scored, selected []ScoredRecallCandidate, confi
 }
 
 func weightedRecallScore(score RecallScore, weights map[string]float64) float64 {
-	return clampRecall(
-		weights["keyword"]*score.KeywordScore +
-			weights["semantic"]*score.SemanticScore +
-			weights["graph"]*score.GraphScore +
-			weights["fact"]*score.FactScore +
-			weights["recency"]*score.RecencyScore +
-			weights["importance"]*score.ImportanceScore +
-			weights["scope"]*score.ScopeScore,
-	)
+	var total float64
+	for _, signal := range recallScoreSignals {
+		total += weights[signal.Name] * signal.Score(score)
+	}
+	return clampRecall(total)
 }
 
 func addRecallRRF(items []ScoredRecallCandidate, config RecallScoringConfig) {
 	if len(items) == 0 {
 		return
 	}
-	signals := []struct {
-		name  string
-		score func(RecallScore) float64
-	}{
-		{"keyword", func(s RecallScore) float64 { return s.KeywordScore }},
-		{"semantic", func(s RecallScore) float64 { return s.SemanticScore }},
-		{"graph", func(s RecallScore) float64 { return s.GraphScore }},
-		{"fact", func(s RecallScore) float64 { return s.FactScore }},
-		{"recency", func(s RecallScore) float64 { return s.RecencyScore }},
-		{"importance", func(s RecallScore) float64 { return s.ImportanceScore }},
-		{"scope", func(s RecallScore) float64 { return s.ScopeScore }},
-	}
-	for _, signal := range signals {
-		weight := config.Weights[signal.name]
+	for _, signal := range recallScoreSignals {
+		weight := config.Weights[signal.Name]
 		if weight == 0 {
 			continue
 		}
-		indexes := rankedRecallSignalIndexes(items, signal.score)
+		indexes := rankedRecallSignalIndexes(items, signal.Score)
 		for rank, idx := range indexes {
 			items[idx].Score.RRFScore += weight / float64(config.RRFK+rank+1)
 		}

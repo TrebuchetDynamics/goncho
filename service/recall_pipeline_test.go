@@ -9,6 +9,41 @@ import (
 	"time"
 )
 
+func TestRecallScoreSignalsAreSingleSourceForWeightedAndDiagnosticVoices(t *testing.T) {
+	gotNames := make([]string, 0, len(recallScoreSignals))
+	seen := map[string]struct{}{}
+	for _, signal := range recallScoreSignals {
+		if signal.Name == "" {
+			t.Fatalf("recall score signal has empty name: %+v", signal)
+		}
+		if _, ok := seen[signal.Name]; ok {
+			t.Fatalf("duplicate recall score signal %q", signal.Name)
+		}
+		seen[signal.Name] = struct{}{}
+		gotNames = append(gotNames, signal.Name)
+	}
+	wantNames := []string{"keyword", "semantic", "graph", "fact", "recency", "importance", "scope"}
+	if !slices.Equal(gotNames, wantNames) {
+		t.Fatalf("recall score signal names = %v, want %v", gotNames, wantNames)
+	}
+	for name := range defaultRecallWeights {
+		if _, ok := seen[name]; !ok {
+			t.Fatalf("default recall weight %q has no shared signal accessor", name)
+		}
+	}
+
+	score := RecallScore{KeywordScore: 0.11, SemanticScore: 0.12, GraphScore: 0.13, FactScore: 0.14, RecencyScore: 0.15, ImportanceScore: 0.16, ScopeScore: 0.17}
+	weights := map[string]float64{"keyword": 1, "semantic": 1, "graph": 1, "fact": 1, "recency": 1, "importance": 1, "scope": 1}
+	if got, want := roundRecallFloat(weightedRecallScore(score, weights)), 0.98; got != want {
+		t.Fatalf("weighted recall score = %.6f, want %.6f from every shared signal", got, want)
+	}
+
+	diagnostics := buildRecallVoiceDiagnostics([]ScoredRecallCandidate{{Score: score}}, nil, RecallScoringConfig{Weights: weights})
+	if got := recallVoiceDiagnosticNames(diagnostics); !slices.Equal(got, wantNames) {
+		t.Fatalf("diagnostic voice names = %v, want %v", got, wantNames)
+	}
+}
+
 func TestRecallPipelineWarningsAndTokenBudget(t *testing.T) {
 	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	config := RecallScoringConfig{
@@ -883,6 +918,14 @@ func rejectedRecallCandidateIDs(candidates []RejectedRecallCandidate) []string {
 	out := make([]string, 0, len(candidates))
 	for _, item := range candidates {
 		out = append(out, item.Candidate.MemoryID)
+	}
+	return out
+}
+
+func recallVoiceDiagnosticNames(diagnostics []RecallVoiceDiagnostic) []string {
+	out := make([]string, 0, len(diagnostics))
+	for _, diagnostic := range diagnostics {
+		out = append(out, diagnostic.Name)
 	}
 	return out
 }
