@@ -2,10 +2,12 @@
 """Compatibility wrapper for scripts.datasets.longmemeval_s."""
 from __future__ import annotations
 
-import sys
-from pathlib import Path
+try:
+    from shared.compat import add_scripts_root
+except ModuleNotFoundError:  # pragma: no cover - package import path
+    from scripts.shared.compat import add_scripts_root
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+add_scripts_root(__file__)
 from datasets.longmemeval_s import *  # noqa: F401,F403,E402
 from datasets.longmemeval_s import main  # noqa: E402
 
