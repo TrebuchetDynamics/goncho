@@ -1,11 +1,11 @@
 package pluginruntime
 
 import (
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/evidence"
+	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/session"
+	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/writefrequency"
 )
 
 const (
@@ -22,79 +22,29 @@ const (
 	GonchoAsyncClosed      = "goncho_async_closed"
 )
 
-type WriteFrequencyMode string
+type WriteFrequencyMode = writefrequency.Mode
 
 const (
-	WriteFrequencyInvalid WriteFrequencyMode = "invalid"
-	WriteFrequencyAsync   WriteFrequencyMode = "async"
-	WriteFrequencyTurn    WriteFrequencyMode = "turn"
-	WriteFrequencySession WriteFrequencyMode = "session"
-	WriteFrequencyEvery   WriteFrequencyMode = "every"
+	WriteFrequencyInvalid WriteFrequencyMode = writefrequency.Invalid
+	WriteFrequencyAsync   WriteFrequencyMode = writefrequency.Async
+	WriteFrequencyTurn    WriteFrequencyMode = writefrequency.Turn
+	WriteFrequencySession WriteFrequencyMode = writefrequency.Session
+	WriteFrequencyEvery   WriteFrequencyMode = writefrequency.Every
 )
 
-type PluginWriteFrequency struct {
-	Mode  WriteFrequencyMode
-	Every int
-	Raw   string
-}
+type PluginWriteFrequency = writefrequency.Frequency
 
 func ParsePluginWriteFrequency(raw any) PluginWriteFrequency {
-	switch v := raw.(type) {
-	case nil:
-		return PluginWriteFrequency{Mode: WriteFrequencyAsync, Raw: "async"}
-	case int:
-		if v > 0 {
-			return PluginWriteFrequency{Mode: WriteFrequencyEvery, Every: v, Raw: intToString(v)}
-		}
-	case int64:
-		if v > 0 {
-			return PluginWriteFrequency{Mode: WriteFrequencyEvery, Every: int(v), Raw: intToString(int(v))}
-		}
-	case float64:
-		if v == float64(int(v)) && v > 0 {
-			return PluginWriteFrequency{Mode: WriteFrequencyEvery, Every: int(v), Raw: intToString(int(v))}
-		}
-	case string:
-		trimmed := stringsLowerTrim(v)
-		switch trimmed {
-		case "", "async":
-			return PluginWriteFrequency{Mode: WriteFrequencyAsync, Raw: "async"}
-		case "turn":
-			return PluginWriteFrequency{Mode: WriteFrequencyTurn, Raw: "turn"}
-		case "session":
-			return PluginWriteFrequency{Mode: WriteFrequencySession, Raw: "session"}
-		default:
-			if n, ok := parsePositiveInt(trimmed); ok {
-				return PluginWriteFrequency{Mode: WriteFrequencyEvery, Every: n, Raw: trimmed}
-			}
-		}
-	}
-	return PluginWriteFrequency{Mode: WriteFrequencyInvalid, Raw: ""}
+	return writefrequency.Parse(raw)
 }
 
-type PluginMemoryMessage struct {
-	Role    string
-	Content string
-	Synced  bool
-}
+type PluginMemoryMessage = session.Message
 
-type PluginMemorySession struct {
-	Key             string
-	UserPeerID      string
-	AssistantPeerID string
-	HonchoSessionID string
-	Messages        []PluginMemoryMessage
-}
+type PluginMemorySession = session.MemorySession
 
-type PluginSessionFlusher interface {
-	FlushPluginSession(PluginMemorySession) error
-}
+type PluginSessionFlusher = session.Flusher
 
-type PluginSessionFlusherFunc func(PluginMemorySession) error
-
-func (f PluginSessionFlusherFunc) FlushPluginSession(session PluginMemorySession) error {
-	return f(session)
-}
+type PluginSessionFlusherFunc = session.FlusherFunc
 
 type PluginWriteRouterConfig struct {
 	Frequency   PluginWriteFrequency
@@ -278,19 +228,3 @@ func (w *PluginAsyncWriter) flushWithRetry(session PluginMemorySession, result *
 type errPluginAsyncNoFlusher struct{}
 
 func (errPluginAsyncNoFlusher) Error() string { return "goncho async writer: no flusher configured" }
-
-func stringsLowerTrim(value string) string {
-	return strings.ToLower(strings.TrimSpace(value))
-}
-
-func parsePositiveInt(value string) (int, bool) {
-	n, err := strconv.Atoi(value)
-	if err != nil || n <= 0 {
-		return 0, false
-	}
-	return n, true
-}
-
-func intToString(n int) string {
-	return strconv.Itoa(n)
-}
