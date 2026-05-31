@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -65,10 +66,7 @@ func NewService(db *sql.DB, cfg Config, log *slog.Logger) *Service {
 	if observer == "" {
 		observer = DefaultObserverPeerID
 	}
-	recentLimit := cfg.RecentMessages
-	if recentLimit <= 0 {
-		recentLimit = DefaultRecentMessages
-	}
+	recentLimit := limitutil.Default(cfg.RecentMessages, DefaultRecentMessages)
 	return &Service{
 		db:               db,
 		workspaceID:      workspaceID,
@@ -640,7 +638,7 @@ func limitHitsByTokens(hits []SearchHit, maxTokens int) []SearchHit {
 	used := 0
 	out := make([]SearchHit, 0, len(hits))
 	for _, hit := range hits {
-		cost := approxTokens(hit.Content)
+		cost := textutil.ApproxTokens(hit.Content)
 		if used+cost > maxTokens && len(out) > 0 {
 			break
 		}
@@ -648,15 +646,4 @@ func limitHitsByTokens(hits []SearchHit, maxTokens int) []SearchHit {
 		used += cost
 	}
 	return out
-}
-
-func approxTokens(text string) int {
-	text = strings.TrimSpace(text)
-	if text == "" {
-		return 1
-	}
-	if n := textutil.WordCount(text); n > 0 {
-		return n
-	}
-	return 1
 }

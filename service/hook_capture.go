@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hookcapture"
+	"github.com/TrebuchetDynamics/goncho/service/internal/ptrutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -203,7 +204,7 @@ func (s *Service) CaptureHostHook(ctx context.Context, event HostHookEvent) (Hoo
 			Content:     strings.TrimSpace(event.Summary),
 			SummaryType: "short",
 			CreatedAt:   hostHookUnix(event.ObservedAt),
-			TokenCount:  approxTokens(event.Summary),
+			TokenCount:  textutil.ApproxTokens(event.Summary),
 		}
 		if err := upsertSessionSummary(ctx, s.db, sessionSummaryRow{
 			WorkspaceID: serviceObservationWorkspace(s.workspaceID, event.WorkspaceID),
@@ -319,8 +320,7 @@ func hostHookSuccess(event HostHookEvent) *bool {
 	}
 	switch event.Event {
 	case HostHookPreToolUse, HostHookPostToolUse, HostHookToolFailure, HostHookFailure:
-		value := !hostHookFailed(event)
-		return &value
+		return ptrutil.Bool(!hostHookFailed(event))
 	default:
 		return nil
 	}

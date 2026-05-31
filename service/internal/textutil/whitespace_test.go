@@ -47,3 +47,12 @@ func TestWordCountCountsWhitespaceDelimitedWords(t *testing.T) {
 		t.Fatalf("WordCount blank = %d, want 0", got)
 	}
 }
+
+func TestApproxTokensCountsWordsAndNeverReturnsZero(t *testing.T) {
+	if got := ApproxTokens(" alpha\n\tbeta  gamma "); got != 3 {
+		t.Fatalf("ApproxTokens = %d, want 3", got)
+	}
+	if got := ApproxTokens(" \n\t "); got != 1 {
+		t.Fatalf("ApproxTokens blank = %d, want 1", got)
+	}
+}

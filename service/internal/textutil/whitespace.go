@@ -29,6 +29,20 @@ func WordCount(content string) int {
 	return len(strings.Fields(content))
 }
 
+// ApproxTokens returns Goncho's stable, low-cost token estimate for budgeting.
+// Blank content is treated as one token so callers never undercount an empty
+// but present field.
+func ApproxTokens(content string) int {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return 1
+	}
+	if n := WordCount(content); n > 0 {
+		return n
+	}
+	return 1
+}
+
 // CompactWhitespace collapses whitespace and limits the result to limit bytes,
 // trimming a partial trailing word/space boundary the same way existing preview
 // callers historically did.

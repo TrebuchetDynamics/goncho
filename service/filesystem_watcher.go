@@ -11,7 +11,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/pathutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/ptrutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -117,7 +119,7 @@ func (s *Service) ImportFilesystemWatcherChanges(ctx context.Context, params Fil
 			PeerID:      norm.PeerID,
 			SessionKey:  norm.SessionKey,
 			Input:       candidate.Content,
-			Success:     filesystemWatcherBoolPtr(true),
+			Success:     ptrutil.Bool(true),
 			Metadata: map[string]string{
 				"custom_kind":    "filesystem_watcher",
 				"connector":      "filesystem_watcher",
@@ -162,10 +164,7 @@ func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImpor
 	if changeKind == "" {
 		changeKind = "file_change"
 	}
-	maxPreview := params.MaxPreviewBytes
-	if maxPreview <= 0 {
-		maxPreview = defaultFilesystemWatcherPreviewBytes
-	}
+	maxPreview := limitutil.Default(params.MaxPreviewBytes, defaultFilesystemWatcherPreviewBytes)
 	return FilesystemWatcherImportParams{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, PeerID: scope.Peer, SessionKey: session, RootDir: root, Paths: cloneStrings(params.Paths), IncludeGlobs: include, ExcludeGlobs: normalizeWatcherGlobs(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
 }
 
@@ -263,5 +262,3 @@ func filesystemWatcherObservationID(params FilesystemWatcherImportParams, candid
 	seed := strings.Join([]string{params.WorkspaceID, params.ProfileID, params.PeerID, params.SessionKey, candidate.RelativePath, candidate.Checksum}, "\x00")
 	return "fswatch_" + hashutil.SHA256HexStringPrefix(seed, 16)
 }
-
-func filesystemWatcherBoolPtr(v bool) *bool { return &v }

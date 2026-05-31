@@ -28,7 +28,7 @@ func (s *Service) OnSessionEnd(ctx context.Context, sessionKey string, messages 
 			SessionKey:  sessionKey,
 			SummaryType: "structured",
 			Content:     string(data),
-			TokenCount:  approxTokens(string(data)),
+			TokenCount:  textutil.ApproxTokens(string(data)),
 		}); err != nil {
 			s.log.Warn("structured summary upsert failed", "err", err)
 		}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type conclusionRow struct {
@@ -675,7 +676,7 @@ func recentTurnsByTokenBudget(ctx context.Context, db *sql.DB, sessionKey string
 		if err := rows.Scan(&msg.Role, &msg.Content); err != nil {
 			return nil, fmt.Errorf("goncho: scan recent turn by token budget: %w", err)
 		}
-		cost := approxTokens(msg.Content)
+		cost := textutil.ApproxTokens(msg.Content)
 		if used+cost > tokenBudget {
 			break
 		}

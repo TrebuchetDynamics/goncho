@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/memproposal"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -103,10 +104,7 @@ func (s *Service) ExtractMemoryProposals(ctx context.Context, params ExtractMemo
 	}
 	messages = filterProposalMessagesByPeer(messages, peer)
 	total := len(messages)
-	window := params.Window
-	if window <= 0 {
-		window = 20
-	}
+	window := limitutil.Default(params.Window, 20)
 	truncated := false
 	if total > window {
 		messages = messages[total-window:]

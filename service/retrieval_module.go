@@ -568,7 +568,7 @@ func (r retrievalModule) refreshSessionSummarySlot(ctx context.Context, sessionK
 		SummaryType: summaryType,
 		Content:     content,
 		MessageID:   messageID,
-		TokenCount:  approxTokens(content),
+		TokenCount:  textutil.ApproxTokens(content),
 	})
 }
 
