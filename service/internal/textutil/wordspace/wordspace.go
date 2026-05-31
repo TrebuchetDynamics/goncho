@@ -6,17 +6,22 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 )
 
+// Words applies Goncho's whitespace-tokenization policy.
+func Words(value string) []string {
+	return strings.Fields(value)
+}
+
 // Collapse trims leading/trailing whitespace and converts any run of Unicode
 // whitespace to a single ASCII space.
 func Collapse(value string) string {
-	return strings.Join(strings.Fields(value), " ")
+	return strings.Join(Words(value), " ")
 }
 
 // FirstWords returns the first n whitespace-delimited words from content. When
 // content has n or fewer words, it preserves the caller-visible trimmed text
 // instead of rebuilding spacing between words.
 func FirstWords(content string, n int) string {
-	words := strings.Fields(content)
+	words := Words(content)
 	if n <= 0 {
 		return ""
 	}
@@ -28,7 +33,7 @@ func FirstWords(content string, n int) string {
 
 // WordCount returns the number of whitespace-delimited words in content.
 func WordCount(content string) int {
-	return len(strings.Fields(content))
+	return len(Words(content))
 }
 
 // ApproxTokens returns Goncho's stable, low-cost token estimate for budgeting.

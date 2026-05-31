@@ -3,6 +3,10 @@ package wordspace
 import "testing"
 
 func TestCollapseFirstWordsAndCompactContracts(t *testing.T) {
+	words := Words("  alpha\n\tbeta   gamma  ")
+	if len(words) != 3 || words[0] != "alpha" || words[1] != "beta" || words[2] != "gamma" {
+		t.Fatalf("Words = %#v", words)
+	}
 	if got := Collapse("  alpha\n\tbeta   gamma  "); got != "alpha beta gamma" {
 		t.Fatalf("Collapse = %q", got)
 	}

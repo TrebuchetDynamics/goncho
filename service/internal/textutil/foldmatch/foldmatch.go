@@ -1,9 +1,8 @@
 package foldmatch
 
 import (
-	"strings"
-
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/foldcase"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 )
 
 // AnySubstring reports whether value contains at least one marker using simple
@@ -24,11 +23,11 @@ func AnySubstring(value string, markers []string) bool {
 func AllSubstrings(value string, markers []string) bool {
 	value = foldcase.Lower(value)
 	for _, marker := range markers {
-		marker = foldcase.Lower(strings.TrimSpace(marker))
+		marker = trimmed.Space(marker)
 		if marker == "" {
 			continue
 		}
-		if !strings.Contains(value, marker) {
+		if !foldcase.ContainsFolded(value, marker) {
 			return false
 		}
 	}

@@ -19,7 +19,7 @@ func UniqueTrimmed(values []string, sortOutput bool) []string {
 // UniqueLowerTrimmed returns distinct non-empty strings after trimming and
 // lower-casing.
 func UniqueLowerTrimmed(values []string, sortOutput bool) []string {
-	return NormalizeUnique(values, lowerTrimmed, sortOutput)
+	return NormalizeUnique(values, trimmed.Lower, sortOutput)
 }
 
 // Set returns normalized non-empty strings as a set. It preserves nil for empty
@@ -36,7 +36,7 @@ func TrimmedSet(values []string) map[string]struct{} {
 // LowerTrimmedSet returns distinct non-empty strings after trimming and
 // lower-casing.
 func LowerTrimmedSet(values []string) map[string]struct{} {
-	return Set(values, lowerTrimmed)
+	return Set(values, trimmed.Lower)
 }
 
 // SortedSetValues returns the sorted non-empty keys in values after optional
@@ -48,8 +48,4 @@ func SortedSetValues(values map[string]struct{}, normalize func(string) string) 
 // LowerTrimmed trims surrounding whitespace and applies simple lower-casing.
 func LowerTrimmed(value string) string {
 	return trimmed.Lower(value)
-}
-
-func lowerTrimmed(value string) string {
-	return LowerTrimmed(value)
 }
