@@ -77,6 +77,7 @@ func TestACLQueryReadScopeTierBased(t *testing.T) {
 	seedMemory(t, db, "mem2", "parent", "ws1", "global", "global fact")
 	seedMemory(t, db, "mem3", "child1", "ws1", "workspace", "child scratch")
 	seedMemory(t, db, "mem4", "parent", "ws2", "project", "other workspace")
+	seedMemory(t, db, "mem5", "child1", "ws2", "workspace", "child scratch in another workspace")
 	q := ACLQuery{AgentID: "child1", IsParent: false, ReadTiers: []Tier{TierGlobal, TierProject, TierTask}, WorkspaceID: "ws1"}
 	clause, args := q.ReadScopeSQL()
 	query := `SELECT m.memory_id, m.content FROM goncho_memory_items m WHERE m.active = 1 AND ` + clause + ` ORDER BY m.memory_id`
@@ -105,7 +106,10 @@ func TestACLQueryReadScopeTierBased(t *testing.T) {
 		t.Error("child should see its own workspace memory")
 	}
 	if seen["mem4"] {
-		t.Error("child should NOT see memory in other workspace")
+		t.Error("child should NOT see project memory in other workspace")
+	}
+	if seen["mem5"] {
+		t.Error("child should NOT see its own workspace memory from another workspace")
 	}
 }
 
@@ -122,6 +126,21 @@ func TestACLQueryExplicitGrant(t *testing.T) {
 	}
 	if !ok {
 		t.Error("child2 should read mem-decision via explicit ACL grant")
+	}
+}
+
+func TestAgentCanAccessMemoryOwnWorkspaceTierIsWorkspaceScoped(t *testing.T) {
+	db := setupACLTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	seedMemory(t, db, "mem-own-other-workspace", "child1", "ws2", "workspace", "scratch outside current workspace")
+
+	ok, err := AgentCanAccessMemory(ctx, db, "mem-own-other-workspace", "child1", "ws1", []Tier{TierGlobal, TierProject, TierTask})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Error("child should not access its own workspace-tier memory from another workspace")
 	}
 }
 

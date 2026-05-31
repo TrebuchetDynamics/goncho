@@ -124,8 +124,8 @@ func (q ACLQuery) ReadScopeSQL() (string, []any) {
 	}
 	parts = append(parts, fmt.Sprintf(`(m.workspace_id = ? AND m.tier IN (%s))`, strings.Join(placeholders, ",")))
 
-	parts = append(parts, `(m.agent_id = ? AND m.tier = 'workspace')`)
-	args = append(args, q.AgentID)
+	parts = append(parts, `(m.workspace_id = ? AND m.agent_id = ? AND m.tier = 'workspace')`)
+	args = append(args, q.WorkspaceID, q.AgentID)
 	return "(" + strings.Join(parts, " OR ") + ")", args
 }
 
@@ -162,16 +162,25 @@ func RevokeACL(ctx context.Context, db *sql.DB, memoryID, agentID, permission st
 // AgentCanAccessMemory checks explicit ACL grants, workspace tier visibility,
 // and the agent's own workspace scratch memory allowance.
 func AgentCanAccessMemory(ctx context.Context, db *sql.DB, memoryID, agentID, workspaceID string, readableTiers []Tier) (bool, error) {
-	tierPlaceholders := make([]string, len(readableTiers))
-	tierArgs := make([]any, len(readableTiers))
-	for i, tier := range readableTiers {
-		tierPlaceholders[i] = "?"
-		tierArgs[i] = string(tier)
-	}
-	allArgs := append([]any{memoryID, agentID}, tierArgs...)
-	allArgs = append(allArgs, workspaceID, agentID, agentID)
-	query := fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM goncho_memory_items m WHERE m.memory_id = ?1 AND m.active = 1 AND (EXISTS(SELECT 1 FROM memory_acl acl WHERE acl.memory_id = m.memory_id AND acl.agent_id = ?2 AND acl.permission = 'read') OR (m.workspace_id = ?%d AND m.tier IN (%s)) OR (m.agent_id = ?%d AND m.tier = 'workspace')))`, 2+len(tierArgs)+1, strings.Join(tierPlaceholders, ","), 2+len(tierArgs)+2)
+	tierSQL, tierArgs := readableTierSQL(readableTiers)
+	allArgs := []any{memoryID, agentID, workspaceID}
+	allArgs = append(allArgs, tierArgs...)
+	allArgs = append(allArgs, workspaceID, agentID)
+	query := fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM goncho_memory_items m WHERE m.memory_id = ? AND m.active = 1 AND (EXISTS(SELECT 1 FROM memory_acl acl WHERE acl.memory_id = m.memory_id AND acl.agent_id = ? AND acl.permission = 'read') OR (m.workspace_id = ? AND %s) OR (m.workspace_id = ? AND m.agent_id = ? AND m.tier = 'workspace')))`, tierSQL)
 	var exists bool
 	err := db.QueryRowContext(ctx, query, allArgs...).Scan(&exists)
 	return exists, err
+}
+
+func readableTierSQL(readableTiers []Tier) (string, []any) {
+	if len(readableTiers) == 0 {
+		return "1 = 0", nil
+	}
+	placeholders := make([]string, len(readableTiers))
+	args := make([]any, len(readableTiers))
+	for i, tier := range readableTiers {
+		placeholders[i] = "?"
+		args[i] = string(tier)
+	}
+	return "m.tier IN (" + strings.Join(placeholders, ",") + ")", args
 }
