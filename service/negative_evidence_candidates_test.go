@@ -59,6 +59,25 @@ func TestNegativeEvidenceCandidatesDoNotCollapseDelimiterBearingDimensions(t *te
 	}
 }
 
+func TestNegativeEvidenceFailureCapableKindMatchesScanContract(t *testing.T) {
+	for _, kind := range negativeEvidenceFailureCapableKinds() {
+		if !negativeEvidenceFailureCapableKind(kind) {
+			t.Fatalf("scan kind %q is not classified as failure-capable", kind)
+		}
+		if !negativeEvidenceResolutionCapableKind(kind) {
+			t.Fatalf("scan kind %q is not classified as resolution-capable", kind)
+		}
+	}
+	for _, kind := range []ObservationKind{ObservationKindUserPrompt, ObservationKindAssistantResponse} {
+		if negativeEvidenceFailureCapableKind(kind) {
+			t.Fatalf("non-failure scan kind %q classified as failure-capable", kind)
+		}
+		if negativeEvidenceResolutionCapableKind(kind) {
+			t.Fatalf("non-failure scan kind %q classified as resolution-capable", kind)
+		}
+	}
+}
+
 func TestNegativeEvidenceCandidatesBuildFailureSignalFromCustomKindFallback(t *testing.T) {
 	failed := false
 	observedAt := time.Unix(10, 0).UTC()

@@ -23,6 +23,13 @@ const (
 	negativeEvidenceObservationScanLimit = 5000
 )
 
+var negativeEvidenceFailureCapableObservationKinds = []ObservationKind{
+	ObservationKindToolError,
+	ObservationKindToolResult,
+	ObservationKindCustom,
+	ObservationKindToolCall,
+}
+
 func negativeEvidenceObservationScanOrderSQL() string {
 	return " ORDER BY observed_at DESC, id DESC LIMIT ?"
 }
@@ -143,12 +150,7 @@ func negativeEvidenceObservationLimit(limit int) int {
 }
 
 func negativeEvidenceFailureCapableKinds() []ObservationKind {
-	return []ObservationKind{
-		ObservationKindToolError,
-		ObservationKindToolResult,
-		ObservationKindCustom,
-		ObservationKindToolCall,
-	}
+	return append([]ObservationKind(nil), negativeEvidenceFailureCapableObservationKinds...)
 }
 
 func negativeEvidenceResolutionCapableKind(kind ObservationKind) bool {
@@ -421,12 +423,12 @@ func negativeEvidenceFailureObservation(obs Observation) bool {
 }
 
 func negativeEvidenceFailureCapableKind(kind ObservationKind) bool {
-	switch kind {
-	case ObservationKindToolError, ObservationKindToolResult, ObservationKindCustom, ObservationKindToolCall:
-		return true
-	default:
-		return false
+	for _, capableKind := range negativeEvidenceFailureCapableObservationKinds {
+		if kind == capableKind {
+			return true
+		}
 	}
+	return false
 }
 
 func negativeEvidenceRecordObservation(seen map[string]struct{}, rawID string) bool {
