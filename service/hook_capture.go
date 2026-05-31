@@ -180,7 +180,7 @@ func (s *Service) CaptureHostHook(ctx context.Context, event HostHookEvent) (Hoo
 	result.Observations = append(result.Observations, observed.Observation)
 
 	if role := hostHookMessageRole(event.Event); role != "" {
-		content := strings.TrimSpace(firstNonBlank(event.Content, event.Input, event.Output))
+		content := strings.TrimSpace(textutil.FirstNonBlank(event.Content, event.Input, event.Output))
 		if content == "" {
 			return HookCaptureResult{}, fmt.Errorf("goncho: hook %s requires message content", event.Event)
 		}
@@ -295,13 +295,13 @@ func observationKindForHostHook(event HostHookEvent) (ObservationKind, error) {
 func hostHookObservationIO(event HostHookEvent) (string, string) {
 	switch event.Event {
 	case HostHookPrompt, HostHookUserPrompt:
-		return firstNonBlank(event.Content, event.Input), ""
+		return textutil.FirstNonBlank(event.Content, event.Input), ""
 	case HostHookAssistantResponse:
-		return event.Input, firstNonBlank(event.Content, event.Output)
+		return event.Input, textutil.FirstNonBlank(event.Content, event.Output)
 	case HostHookStop, HostHookSessionEnd:
-		return event.Input, firstNonBlank(event.Summary, event.Output, event.Content)
+		return event.Input, textutil.FirstNonBlank(event.Summary, event.Output, event.Content)
 	default:
-		return firstNonBlank(event.Input, event.Content), firstNonBlank(event.Output, event.Error, event.Summary)
+		return textutil.FirstNonBlank(event.Input, event.Content), textutil.FirstNonBlank(event.Output, event.Error, event.Summary)
 	}
 }
 
@@ -333,7 +333,7 @@ func hostHookFailed(event HostHookEvent) bool {
 }
 
 func hostHookMetadata(event HostHookEvent) map[string]string {
-	out := cloneStringMap(event.Metadata)
+	out := maputil.CloneStringString(event.Metadata)
 	if out == nil {
 		out = map[string]string{}
 	}

@@ -83,7 +83,7 @@ func (s *Service) PreviewFilesystemWatcherImport(ctx context.Context, params Fil
 	if err != nil {
 		return FilesystemWatcherPreview{}, err
 	}
-	preview := FilesystemWatcherPreview{Mutates: false, RootDir: norm.RootDir, IncludeGlobs: cloneStrings(norm.IncludeGlobs), ExcludeGlobs: cloneStrings(norm.ExcludeGlobs), Candidates: []FilesystemWatcherCandidate{}, Skipped: []FilesystemWatcherSkipped{}}
+	preview := FilesystemWatcherPreview{Mutates: false, RootDir: norm.RootDir, IncludeGlobs: sliceutil.Clone(norm.IncludeGlobs), ExcludeGlobs: sliceutil.Clone(norm.ExcludeGlobs), Candidates: []FilesystemWatcherCandidate{}, Skipped: []FilesystemWatcherSkipped{}}
 	for _, rawPath := range norm.Paths {
 		candidate, skipped, err := filesystemWatcherCandidate(rawPath, norm)
 		if err != nil {
@@ -165,7 +165,7 @@ func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImpor
 		changeKind = "file_change"
 	}
 	maxPreview := limitutil.Default(params.MaxPreviewBytes, defaultFilesystemWatcherPreviewBytes)
-	return FilesystemWatcherImportParams{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, PeerID: scope.Peer, SessionKey: session, RootDir: root, Paths: cloneStrings(params.Paths), IncludeGlobs: include, ExcludeGlobs: normalizeWatcherGlobs(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
+	return FilesystemWatcherImportParams{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, PeerID: scope.Peer, SessionKey: session, RootDir: root, Paths: sliceutil.Clone(params.Paths), IncludeGlobs: include, ExcludeGlobs: normalizeWatcherGlobs(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
 }
 
 func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportParams) (FilesystemWatcherCandidate, FilesystemWatcherSkipped, error) {

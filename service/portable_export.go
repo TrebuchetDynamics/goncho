@@ -15,6 +15,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
 )
 
@@ -162,7 +163,7 @@ func (s *Service) ExportPortableJSONL(ctx context.Context, params PortableExport
 }
 
 func (s *Service) portableExportRecords(ctx context.Context, params PortableExportParams) ([]PortableExportRecord, PortableExportManifest, error) {
-	workspaceID := firstNonBlank(params.WorkspaceID, s.workspaceID)
+	workspaceID := textutil.FirstNonBlank(params.WorkspaceID, s.workspaceID)
 	profileID := strings.TrimSpace(params.ProfileID)
 	peer := strings.TrimSpace(params.Peer)
 	sessionKey := strings.TrimSpace(params.SessionKey)

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/internal/importance"
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
@@ -66,12 +67,12 @@ func toImportanceEntry(entry MemoryToolEntry) importance.Entry {
 	return importance.Entry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       cloneStrings(entry.Tags),
+		Tags:       sliceutil.Clone(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
 		UpdatedAt:  entry.UpdatedAt,
-		Metadata:   cloneStringMap(entry.Metadata),
+		Metadata:   maputil.CloneStringString(entry.Metadata),
 	}
 }
 
@@ -79,12 +80,12 @@ func fromImportanceEntry(entry importance.Entry) MemoryToolEntry {
 	return MemoryToolEntry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       cloneStrings(entry.Tags),
+		Tags:       sliceutil.Clone(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
 		UpdatedAt:  entry.UpdatedAt,
-		Metadata:   cloneStringMap(entry.Metadata),
+		Metadata:   maputil.CloneStringString(entry.Metadata),
 	}
 }
 

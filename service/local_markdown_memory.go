@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/TrebuchetDynamics/goncho/internal/localmarkdown"
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
@@ -65,12 +66,12 @@ func toLocalMarkdownEntry(entry MemoryToolEntry) localmarkdown.Entry {
 	return localmarkdown.Entry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       cloneStrings(entry.Tags),
+		Tags:       sliceutil.Clone(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
 		UpdatedAt:  entry.UpdatedAt,
-		Metadata:   cloneStringMap(entry.Metadata),
+		Metadata:   maputil.CloneStringString(entry.Metadata),
 	}
 }
 
@@ -78,11 +79,11 @@ func fromLocalMarkdownEntry(entry localmarkdown.Entry) MemoryToolEntry {
 	return MemoryToolEntry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       cloneStrings(entry.Tags),
+		Tags:       sliceutil.Clone(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
 		UpdatedAt:  entry.UpdatedAt,
-		Metadata:   cloneStringMap(entry.Metadata),
+		Metadata:   maputil.CloneStringString(entry.Metadata),
 	}
 }

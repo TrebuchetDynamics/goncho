@@ -10,6 +10,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	toolmeta "github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
@@ -236,5 +237,5 @@ func gonchoPublicToolSpec(name, description string, schema json.RawMessage, muta
 }
 
 func firstPublicNonEmpty(values ...string) string {
-	return firstNonBlank(values...)
+	return textutil.FirstNonBlank(values...)
 }

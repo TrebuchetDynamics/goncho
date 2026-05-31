@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
@@ -234,7 +235,7 @@ func (h *HonchoSDKCompatibilityHarness) ContextPreview(ctx context.Context, req 
 		WorkspaceID:    result.WorkspaceID,
 		PeerID:         result.Peer,
 		SessionID:      result.SessionKey,
-		PeerCard:       cloneStrings(result.PeerCard),
+		PeerCard:       sliceutil.Clone(result.PeerCard),
 		Representation: result.Representation,
 		Summary:        mapHonchoSDKSummary(result.Summary),
 		SearchResults:  mapHonchoSDKSearchHits(result.SearchResults),
@@ -244,7 +245,7 @@ func (h *HonchoSDKCompatibilityHarness) ContextPreview(ctx context.Context, req 
 }
 
 func UnsupportedHonchoSDKFlow(method, endpoint string, fields ...string) HonchoSDKUnsupportedFlow {
-	copiedFields := cloneStrings(fields)
+	copiedFields := sliceutil.Clone(fields)
 	if copiedFields == nil {
 		copiedFields = []string{}
 	}
@@ -274,7 +275,7 @@ func mapHonchoSDKMessages(messages []MessageRecord) []HonchoSDKMessage {
 			Content:     msg.Content,
 			Sequence:    msg.Sequence,
 			CreatedAt:   msg.CreatedAt,
-			Metadata:    copyMetadata(msg.Metadata),
+			Metadata:    maputil.CloneStringAny(msg.Metadata),
 		}
 	})
 }

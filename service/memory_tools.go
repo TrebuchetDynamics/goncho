@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/internal/memorytools"
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
@@ -130,12 +131,12 @@ func toMemoryToolsEntry(entry MemoryToolEntry) memorytools.Entry {
 	return memorytools.Entry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       cloneStrings(entry.Tags),
+		Tags:       sliceutil.Clone(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
 		UpdatedAt:  entry.UpdatedAt,
-		Metadata:   cloneStringMap(entry.Metadata),
+		Metadata:   maputil.CloneStringString(entry.Metadata),
 	}
 }
 
@@ -143,11 +144,11 @@ func fromMemoryToolsEntry(entry memorytools.Entry) MemoryToolEntry {
 	return MemoryToolEntry{
 		ID:         entry.ID,
 		Content:    entry.Content,
-		Tags:       cloneStrings(entry.Tags),
+		Tags:       sliceutil.Clone(entry.Tags),
 		Importance: entry.Importance,
 		SessionID:  entry.SessionID,
 		CreatedAt:  entry.CreatedAt,
 		UpdatedAt:  entry.UpdatedAt,
-		Metadata:   cloneStringMap(entry.Metadata),
+		Metadata:   maputil.CloneStringString(entry.Metadata),
 	}
 }

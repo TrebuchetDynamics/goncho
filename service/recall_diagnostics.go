@@ -195,7 +195,7 @@ func recallDiagnosticsCandidate(item ScoredRecallCandidate) RecallDiagnosticsCan
 		ContentPreview: previewRecallContent(item.Candidate.Content),
 		FinalScore:     item.Score.FinalScore,
 		Scores:         item.Score,
-		WhySelected:    cloneStrings(item.Score.WhySelected),
+		WhySelected:    sliceutil.Clone(item.Score.WhySelected),
 	}
 }
 
@@ -210,7 +210,7 @@ func recallDiagnosticsRejection(item RejectedRecallCandidate) RecallDiagnosticsR
 		Reason:         item.Reason,
 		FinalScore:     item.Score.FinalScore,
 		Scores:         item.Score,
-		WhyRejected:    cloneStrings(item.WhyRejected),
+		WhyRejected:    sliceutil.Clone(item.WhyRejected),
 	}
 }
 

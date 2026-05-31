@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 )
 
@@ -109,7 +110,7 @@ func (s *Service) StoreImageMemory(ctx context.Context, params ImageMemoryParams
 	if err != nil {
 		return ImageMemory{}, fmt.Errorf("goncho: image memory id: %w", err)
 	}
-	return ImageMemory{ID: id, WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, SessionKey: strings.TrimSpace(params.SessionKey), ImageRef: imageRef, Checksum: checksum, AltText: strings.TrimSpace(params.AltText), EmbeddingStatus: ImageEmbeddingDeferred, Metadata: cloneStringMap(params.Metadata), CreatedAt: now, UpdatedAt: now}, nil
+	return ImageMemory{ID: id, WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, SessionKey: strings.TrimSpace(params.SessionKey), ImageRef: imageRef, Checksum: checksum, AltText: strings.TrimSpace(params.AltText), EmbeddingStatus: ImageEmbeddingDeferred, Metadata: maputil.CloneStringString(params.Metadata), CreatedAt: now, UpdatedAt: now}, nil
 }
 
 func (s *Service) SearchImageMemories(ctx context.Context, query ImageMemoryQuery) (ImageMemoryList, error) {

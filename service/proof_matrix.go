@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -103,7 +104,7 @@ func buildGonchoProofMatrixReport(input gonchoProofMatrixReportInput) (gonchoPro
 		ScopeIsolationVerified:     input.ScopeIsolationVerified,
 		TombstoneExclusionVerified: input.TombstoneExclusionVerified,
 		TraceProjectionInvariant:   projectionInvariant,
-		StableTraceIDs:             cloneStrings(stableTraceIDs),
+		StableTraceIDs:             sliceutil.Clone(stableTraceIDs),
 		WarningCodesSeen:           sortedGonchoProofStringSet(warningCodes),
 		NegativeControlsRejected:   sortedGonchoProofStrings(input.NegativeControlsRejected),
 		BenchmarkSummary: gonchoProofBenchmarkSummary{

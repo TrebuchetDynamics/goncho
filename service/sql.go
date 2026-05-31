@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -93,7 +94,7 @@ func createLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, works
 				WorkspaceID: workspaceID,
 				PeerID:      peer,
 				Sequence:    sequence,
-				Metadata:    copyMetadata(input.Metadata),
+				Metadata:    maputil.CloneStringAny(input.Metadata),
 			},
 		}
 		metaJSON, err := json.Marshal(meta)
@@ -120,7 +121,7 @@ func createLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, works
 			Content:     content,
 			Sequence:    sequence,
 			CreatedAt:   createdAt.Unix(),
-			Metadata:    copyMetadata(input.Metadata),
+			Metadata:    maputil.CloneStringAny(input.Metadata),
 		})
 	}
 	return out, nil
@@ -185,7 +186,7 @@ func listLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, workspa
 		if meta.Goncho.PeerID != "" {
 			msg.Peer = meta.Goncho.PeerID
 		}
-		msg.Metadata = copyMetadata(meta.Goncho.Metadata)
+		msg.Metadata = maputil.CloneStringAny(meta.Goncho.Metadata)
 		out = append(out, msg)
 	}
 	if err := rows.Err(); err != nil {
@@ -602,9 +603,9 @@ func findTurns(ctx context.Context, db *sql.DB, query, sessionKey string, filter
 		}
 		hits = append(hits, SearchHit{
 			Source:       "turn",
-			OriginSource: sqlutil.OriginSourceFromChatKey(firstNonBlank(chatID, sessionKey)),
+			OriginSource: sqlutil.OriginSourceFromChatKey(textutil.FirstNonBlank(chatID, sessionKey)),
 			Content:      content,
-			SessionKey:   firstNonBlank(rowSessionID, sessionKey),
+			SessionKey:   textutil.FirstNonBlank(rowSessionID, sessionKey),
 		})
 	}
 	if err := rows.Err(); err != nil {

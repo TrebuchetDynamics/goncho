@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -295,7 +296,7 @@ func (f *MemoryFacade) validate() error {
 }
 
 func (f *MemoryFacade) addEnvelope(p MemoryAddParams) (memoryFacadeEnvelope, MemorySlotParams, error) {
-	env := memoryFacadeEnvelope{ID: strings.TrimSpace(p.ID), UserID: strings.TrimSpace(p.UserID), AgentID: firstNonBlank(p.AgentID, f.svc.observer), RunID: firstNonBlank(p.RunID, p.SessionKey), SessionKey: firstNonBlank(p.SessionKey, p.RunID), Content: strings.TrimSpace(p.Content), Metadata: cloneStringMap(p.Metadata)}
+	env := memoryFacadeEnvelope{ID: strings.TrimSpace(p.ID), UserID: strings.TrimSpace(p.UserID), AgentID: textutil.FirstNonBlank(p.AgentID, f.svc.observer), RunID: textutil.FirstNonBlank(p.RunID, p.SessionKey), SessionKey: textutil.FirstNonBlank(p.SessionKey, p.RunID), Content: strings.TrimSpace(p.Content), Metadata: maputil.CloneStringString(p.Metadata)}
 	if env.ID == "" || env.UserID == "" || env.Content == "" {
 		return memoryFacadeEnvelope{}, MemorySlotParams{}, errors.New("goncho: memory id, user_id, and content are required")
 	}
@@ -307,9 +308,9 @@ func (f *MemoryFacade) addEnvelope(p MemoryAddParams) (memoryFacadeEnvelope, Mem
 }
 
 func (f *MemoryFacade) updateEnvelope(p MemoryUpdateParams, old MemoryItem) (memoryFacadeEnvelope, MemorySlotParams, error) {
-	env := memoryFacadeEnvelope{ID: strings.TrimSpace(p.ID), UserID: strings.TrimSpace(p.UserID), AgentID: firstNonBlank(p.AgentID, old.AgentID, f.svc.observer), RunID: firstNonBlank(p.RunID, p.SessionKey, old.RunID), SessionKey: firstNonBlank(p.SessionKey, p.RunID, old.SessionKey), Content: strings.TrimSpace(p.Content), Metadata: cloneStringMap(p.Metadata)}
+	env := memoryFacadeEnvelope{ID: strings.TrimSpace(p.ID), UserID: strings.TrimSpace(p.UserID), AgentID: textutil.FirstNonBlank(p.AgentID, old.AgentID, f.svc.observer), RunID: textutil.FirstNonBlank(p.RunID, p.SessionKey, old.RunID), SessionKey: textutil.FirstNonBlank(p.SessionKey, p.RunID, old.SessionKey), Content: strings.TrimSpace(p.Content), Metadata: maputil.CloneStringString(p.Metadata)}
 	if env.Metadata == nil {
-		env.Metadata = cloneStringMap(old.Metadata)
+		env.Metadata = maputil.CloneStringString(old.Metadata)
 	}
 	if env.ID == "" || env.UserID == "" || env.Content == "" {
 		return memoryFacadeEnvelope{}, MemorySlotParams{}, errors.New("goncho: memory id, user_id, and content are required")
@@ -322,7 +323,7 @@ func (f *MemoryFacade) updateEnvelope(p MemoryUpdateParams, old MemoryItem) (mem
 }
 
 func memoryItemFromSlot(slot MemorySlot, env memoryFacadeEnvelope) MemoryItem {
-	return MemoryItem{ID: env.ID, UserID: env.UserID, AgentID: env.AgentID, RunID: env.RunID, SessionKey: env.SessionKey, WorkspaceID: slot.WorkspaceID, ProfileID: slot.ProfileID, Content: env.Content, Metadata: cloneStringMap(env.Metadata), Revision: slot.Revision, Deleted: slot.Deleted, CreatedAt: slot.CreatedAt, UpdatedAt: slot.UpdatedAt}
+	return MemoryItem{ID: env.ID, UserID: env.UserID, AgentID: env.AgentID, RunID: env.RunID, SessionKey: env.SessionKey, WorkspaceID: slot.WorkspaceID, ProfileID: slot.ProfileID, Content: env.Content, Metadata: maputil.CloneStringString(env.Metadata), Revision: slot.Revision, Deleted: slot.Deleted, CreatedAt: slot.CreatedAt, UpdatedAt: slot.UpdatedAt}
 }
 
 func (f *MemoryFacade) recordMemoryHistory(ctx context.Context, action string, item MemoryItem, previous, next string, metadata map[string]string) (ObservationResult, error) {
@@ -353,7 +354,7 @@ func memoryFacadeEnvelopeMatches(env memoryFacadeEnvelope, p MemorySearchParams)
 	if strings.TrimSpace(p.AgentID) != "" && env.AgentID != strings.TrimSpace(p.AgentID) {
 		return false
 	}
-	if runID := firstNonBlank(p.RunID, p.SessionKey); runID != "" && env.RunID != runID && env.SessionKey != runID {
+	if runID := textutil.FirstNonBlank(p.RunID, p.SessionKey); runID != "" && env.RunID != runID && env.SessionKey != runID {
 		return false
 	}
 	for key, value := range p.Metadata {

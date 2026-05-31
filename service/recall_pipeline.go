@@ -269,7 +269,7 @@ func cloneRecallScoringConfig(config RecallScoringConfig) RecallScoringConfig {
 		config.Weights = maputil.CloneStringFloat64(config.Weights)
 	}
 	if config.DiversityKeys != nil {
-		config.DiversityKeys = cloneStrings(config.DiversityKeys)
+		config.DiversityKeys = sliceutil.Clone(config.DiversityKeys)
 	}
 	return config
 }

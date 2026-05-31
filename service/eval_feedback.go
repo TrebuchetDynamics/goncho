@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/stableid"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
@@ -268,7 +269,7 @@ func (s *Service) RecordRecallFeedback(ctx context.Context, params RecallFeedbac
 	feedback := RecallFeedback{WorkspaceID: workspaceID, Peer: strings.TrimSpace(params.Peer), SessionKey: strings.TrimSpace(params.SessionKey), TraceID: strings.TrimSpace(params.TraceID), Query: strings.TrimSpace(params.Query), Label: label, MemoryID: strings.TrimSpace(params.MemoryID), Reason: reason, SubmittedBy: strings.TrimSpace(params.SubmittedBy), Status: RecallFeedbackRecorded, CreatedAt: createdAt}
 	feedback.ID = feedbackID(feedback)
 	if labelRequiresReview(label) {
-		item, err := s.CreateReviewItem(ctx, ReviewItemCreateParams{Kind: feedbackReviewKind(label), WorkspaceID: workspaceID, PeerID: feedback.Peer, SessionKey: feedback.SessionKey, SubjectID: firstNonBlank(feedback.MemoryID, "trace:"+feedback.TraceID), Reason: fmt.Sprintf("recall feedback %s: %s", label, reason), EvidenceIDs: feedbackEvidenceIDs(feedback), CreatedAt: createdAt})
+		item, err := s.CreateReviewItem(ctx, ReviewItemCreateParams{Kind: feedbackReviewKind(label), WorkspaceID: workspaceID, PeerID: feedback.Peer, SessionKey: feedback.SessionKey, SubjectID: textutil.FirstNonBlank(feedback.MemoryID, "trace:"+feedback.TraceID), Reason: fmt.Sprintf("recall feedback %s: %s", label, reason), EvidenceIDs: feedbackEvidenceIDs(feedback), CreatedAt: createdAt})
 		if err != nil {
 			return RecallFeedback{}, err
 		}
@@ -341,7 +342,7 @@ func buildEvalCandidate(workspaceID, benchmark, runID string, failure EvalFailur
 		rationale += "; top_hit=" + strings.TrimSpace(failure.TopHitPreview)
 	}
 	createdAt := time.Now().UTC()
-	candidate := EvalImprovementCandidate{WorkspaceID: workspaceID, BenchmarkName: benchmark, RunID: runID, QuestionID: strings.TrimSpace(failure.QuestionID), Kind: kind, Status: EvalCandidateOpen, Query: strings.TrimSpace(failure.Query), FailureBucket: strings.TrimSpace(failure.FailureBucket), Rationale: rationale, EvidenceIDs: []string{evidenceID}, ExpectedMemoryIDs: cloneStrings(failure.ExpectedMemoryIDs), RetrievedMemoryIDs: cloneStrings(failure.RetrievedMemoryIDs), CreatedAt: createdAt}
+	candidate := EvalImprovementCandidate{WorkspaceID: workspaceID, BenchmarkName: benchmark, RunID: runID, QuestionID: strings.TrimSpace(failure.QuestionID), Kind: kind, Status: EvalCandidateOpen, Query: strings.TrimSpace(failure.Query), FailureBucket: strings.TrimSpace(failure.FailureBucket), Rationale: rationale, EvidenceIDs: []string{evidenceID}, ExpectedMemoryIDs: sliceutil.Clone(failure.ExpectedMemoryIDs), RetrievedMemoryIDs: sliceutil.Clone(failure.RetrievedMemoryIDs), CreatedAt: createdAt}
 	candidate.ID = evalCandidateID(candidate)
 	return candidate
 }

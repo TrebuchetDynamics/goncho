@@ -581,7 +581,7 @@ func searchLineageFromMemory(lineage SearchLineage) *SearchLineage {
 	return &SearchLineage{
 		ParentSessionID: strings.TrimSpace(lineage.ParentSessionID),
 		LineageKind:     strings.TrimSpace(lineage.LineageKind),
-		ChildSessionIDs: cloneStrings(lineage.ChildSessionIDs),
+		ChildSessionIDs: sliceutil.Clone(lineage.ChildSessionIDs),
 		Status:          status,
 	}
 }
