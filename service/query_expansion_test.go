@@ -266,6 +266,24 @@ func TestSearchRerankerIgnoresNonFiniteScores(t *testing.T) {
 	}
 }
 
+func TestSearchRerankerIgnoresAmbiguousDuplicateScores(t *testing.T) {
+	hits := []SearchHit{
+		{ID: 1, Source: "turn", Content: "orchid duplicate score"},
+		{ID: 2, Source: "turn", Content: "orchid single score"},
+	}
+	reranker := duplicateScoreReranker{scores: []SearchRerankScore{
+		{ID: "1", Score: 0.1},
+		{ID: "1", Score: 0.9},
+		{ID: "2", Score: 0.5},
+	}}
+
+	got := applySearchReranker(context.Background(), reranker, "orchid", hits)
+
+	if len(got) != 2 || got[0].ID != 2 || got[1].ID != 1 {
+		t.Fatalf("reranked hits = %+v, want duplicate score rows ignored instead of last-write-wins", got)
+	}
+}
+
 func TestSearchFallsBackWhenOptionalRerankerFails(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
@@ -347,6 +365,10 @@ type duplicateContentReranker struct {
 	ids []string
 }
 
+type duplicateScoreReranker struct {
+	scores []SearchRerankScore
+}
+
 func (r *duplicateContentReranker) RerankSearch(_ context.Context, _ string, candidates []SearchRerankCandidate) ([]SearchRerankScore, error) {
 	r.ids = r.ids[:0]
 	out := make([]SearchRerankScore, 0, len(candidates))
@@ -359,6 +381,10 @@ func (r *duplicateContentReranker) RerankSearch(_ context.Context, _ string, can
 		out = append(out, SearchRerankScore{ID: candidate.ID, Score: score})
 	}
 	return out, nil
+}
+
+func (r duplicateScoreReranker) RerankSearch(_ context.Context, _ string, _ []SearchRerankCandidate) ([]SearchRerankScore, error) {
+	return r.scores, nil
 }
 
 func (f fakeSearchReranker) RerankSearch(_ context.Context, _ string, candidates []SearchRerankCandidate) ([]SearchRerankScore, error) {

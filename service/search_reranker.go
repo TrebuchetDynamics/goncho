@@ -90,9 +90,18 @@ func searchRerankScoresByHit(plans []searchRerankCandidatePlan, scored []SearchR
 
 func searchRerankFiniteScoresByID(scored []SearchRerankScore) map[string]float64 {
 	scoresByID := map[string]float64{}
+	seenByID := map[string]int{}
 	for _, score := range scored {
 		id := strings.TrimSpace(score.ID)
-		if id == "" || !searchRerankScoreIsFinite(score.Score) {
+		if id == "" {
+			continue
+		}
+		seenByID[id]++
+		if seenByID[id] > 1 {
+			delete(scoresByID, id)
+			continue
+		}
+		if !searchRerankScoreIsFinite(score.Score) {
 			continue
 		}
 		scoresByID[id] = score.Score
