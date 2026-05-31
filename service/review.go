@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/internal/reviewlog"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type ReviewKind = reviewlog.ReviewKind
@@ -96,13 +97,11 @@ func reviewRequiredUnavailableEvidence(items []ReviewItem, sessionKeys ...string
 	if len(unavailable) == 0 {
 		return nil
 	}
-	out := make([]ContextUnavailableEvidence, 0, len(unavailable))
-	for _, item := range unavailable {
-		out = append(out, ContextUnavailableEvidence{
+	return sliceutil.Map(unavailable, func(item reviewlog.ContextUnavailableEvidence) ContextUnavailableEvidence {
+		return ContextUnavailableEvidence{
 			Field:      item.Field,
 			Capability: item.Capability,
 			Reason:     item.Reason,
-		})
-	}
-	return out
+		}
+	})
 }

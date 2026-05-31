@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	toolmeta "github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
@@ -221,12 +222,9 @@ func (t *GonchoHandoffTool) Execute(ctx context.Context, args json.RawMessage) (
 		if err != nil {
 			return nil, fmt.Errorf("goncho_handoff load: %w", err)
 		}
-		filtered := make([]MemoryToolEntry, 0, len(entries))
-		for _, entry := range entries {
-			if entry.SessionID == in.SessionID {
-				filtered = append(filtered, entry)
-			}
-		}
+		filtered := sliceutil.FilterMap(entries, func(entry MemoryToolEntry) (MemoryToolEntry, bool) {
+			return entry, entry.SessionID == in.SessionID
+		})
 		return json.Marshal(map[string]any{"success": true, "action": "load", "count": len(filtered), "items": filtered})
 	default:
 		return nil, errors.New("goncho_handoff: action must be save or load")

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/memproposal"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -243,13 +244,9 @@ func (s *Service) findContradictoryMemory(ctx context.Context, peer, sessionKey,
 }
 
 func filterProposalMessagesByPeer(messages []MessageRecord, peer string) []MessageRecord {
-	out := make([]MessageRecord, 0, len(messages))
-	for _, msg := range messages {
-		if strings.TrimSpace(msg.Peer) == peer {
-			out = append(out, msg)
-		}
-	}
-	return out
+	return sliceutil.FilterMap(messages, func(msg MessageRecord) (MessageRecord, bool) {
+		return msg, strings.TrimSpace(msg.Peer) == peer
+	})
 }
 
 func memoryProposalID(operation MemoryProposalOperation, kind MemoryProposalKind, content string, evidence []string) string {

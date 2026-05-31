@@ -4,6 +4,7 @@ import (
 	"context"
 
 	fileimport "github.com/TrebuchetDynamics/goncho/internal/fileimport"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 // ImportFileParams is the local Goncho equivalent of Honcho's multipart file
@@ -56,13 +57,11 @@ func convertFileImportUnavailable(items []fileimport.UnavailableEvidence) []Cont
 	if len(items) == 0 {
 		return nil
 	}
-	out := make([]ContextUnavailableEvidence, 0, len(items))
-	for _, item := range items {
-		out = append(out, ContextUnavailableEvidence{
+	return sliceutil.Map(items, func(item fileimport.UnavailableEvidence) ContextUnavailableEvidence {
+		return ContextUnavailableEvidence{
 			Field:      item.Field,
 			Capability: item.Capability,
 			Reason:     item.Reason,
-		})
-	}
-	return out
+		}
+	})
 }

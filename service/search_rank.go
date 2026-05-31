@@ -5,6 +5,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchrank"
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type searchTemporalDirection = searchrank.TemporalDirection
@@ -94,11 +95,9 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 		}
 		return 0
 	})
-	out := make([]SearchHit, 0, len(scored))
-	for _, item := range scored {
-		out = append(out, item.hit)
-	}
-	return out
+	return sliceutil.Map(scored, func(item scoredHit) SearchHit {
+		return item.hit
+	})
 }
 
 func searchTemporalIntent(query string) searchTemporalFeatures {

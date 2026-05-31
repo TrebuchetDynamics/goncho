@@ -12,6 +12,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/internal/importance"
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
 )
@@ -127,17 +128,15 @@ type DiskUsageComponent struct {
 
 func (s *ImportanceScorer) ReviewRetentionCandidates(entries []MemoryToolEntry, policy RetentionPolicy) []RetentionCandidate {
 	candidates := s.module().ReviewRetentionCandidates(toImportanceEntries(entries), importance.RetentionPolicy{Now: policy.Now, MinAge: policy.MinAge, MinEffectiveImportance: policy.MinEffectiveImportance, Limit: policy.Limit})
-	out := make([]RetentionCandidate, 0, len(candidates))
-	for _, candidate := range candidates {
-		out = append(out, RetentionCandidate{
+	return sliceutil.Map(candidates, func(candidate importance.RetentionCandidate) RetentionCandidate {
+		return RetentionCandidate{
 			Entry:               fromImportanceEntry(candidate.Entry),
 			Age:                 candidate.Age,
 			EffectiveImportance: candidate.EffectiveImportance,
 			Action:              RetentionAction(candidate.Action),
 			Reason:              candidate.Reason,
-		})
-	}
-	return out
+		}
+	})
 }
 
 func (s *Service) PreviewRetention(ctx context.Context, policy RetentionPolicy) (RetentionPreview, error) {
