@@ -717,15 +717,35 @@ func recallCandidateSpeaker(candidate RecallCandidate) string {
 
 func recallQuerySpeakerTargets(query string) []string {
 	tokens := recallQueryTokens(query)
-	for i := 0; i+2 < len(tokens); i++ {
-		if tokens[i] == "did" && tokens[i+2] == "say" {
-			return []string{tokens[i+1]}
-		}
-		if tokens[i] == "has" && tokens[i+2] == "said" {
-			return []string{tokens[i+1]}
+	for i, token := range tokens {
+		switch token {
+		case "did":
+			if target, ok := recallSpeakerTargetBetween(tokens, i+1, "say"); ok {
+				return []string{target}
+			}
+		case "has":
+			if target, ok := recallSpeakerTargetBetween(tokens, i+1, "said"); ok {
+				return []string{target}
+			}
 		}
 	}
 	return nil
+}
+
+func recallSpeakerTargetBetween(tokens []string, start int, endToken string) (string, bool) {
+	if start >= len(tokens) {
+		return "", false
+	}
+	for end := start; end < len(tokens); end++ {
+		if tokens[end] != endToken {
+			continue
+		}
+		if end == start {
+			return "", false
+		}
+		return strings.Join(tokens[start:end], " "), true
+	}
+	return "", false
 }
 
 func recallQueryTokens(query string) []string {
