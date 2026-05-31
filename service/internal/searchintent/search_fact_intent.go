@@ -115,11 +115,31 @@ func searchSpeakerFactIntentScore(query, content string) float64 {
 }
 
 func searchSpeakerAttributionQuestion(query string) bool {
+	return searchSpeakerAttributionQuestionSignal(query) != ""
+}
+
+func searchSpeakerAttributionQuestionSignal(query string) string {
 	q := textutil.LowerTrimmed(query)
 	if q == "" {
-		return false
+		return ""
 	}
-	return strings.Contains(q, " who said") || strings.HasPrefix(q, "who said") || strings.Contains(q, " said") || strings.Contains(q, " say") || strings.Contains(q, " told") || strings.Contains(q, " mention") || strings.Contains(q, " according to")
+	if strings.HasPrefix(q, "who said") || strings.Contains(q, " who said") {
+		return "who-said"
+	}
+	if strings.Contains(q, " according to") {
+		return "according-to"
+	}
+	for _, prefix := range []string{"what did ", "what does ", "what has ", "what have ", "what was "} {
+		if strings.HasPrefix(q, prefix) && (strings.Contains(q, " say") || strings.Contains(q, " said") || strings.Contains(q, " tell") || strings.Contains(q, " told") || strings.Contains(q, " mention")) {
+			return "what-speaker-said"
+		}
+	}
+	for _, prefix := range []string{"who told", "who mentioned"} {
+		if strings.HasPrefix(q, prefix) || strings.Contains(q, " "+prefix) {
+			return "who-speaker-verb"
+		}
+	}
+	return ""
 }
 
 func searchOwnerFactIntentScore(query, content string) float64 {

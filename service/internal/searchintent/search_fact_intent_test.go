@@ -2,6 +2,17 @@ package searchintent
 
 import "testing"
 
+func TestSpeakerFactIntentIgnoresNonAttributionSayQuestions(t *testing.T) {
+	for _, query := range []string{
+		"Did Melanie say the sunrise was orange?",
+		"When did Melanie say the sunrise was orange?",
+	} {
+		if score := Score(query, "speaker Melanie"); score != 0 {
+			t.Fatalf("speaker fact score for %q = %v, want 0 for non-attribution question", query, score)
+		}
+	}
+}
+
 func TestOwnerFactIntentIgnoresTemporalAdverbAfterObject(t *testing.T) {
 	if score := Score("Who owns component A-17 now?", "Nadia owns component A-17."); score != 1 {
 		t.Fatalf("owner fact score = %v, want 1 when question has trailing temporal adverb", score)
