@@ -2,7 +2,6 @@ package docs_test
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -20,11 +19,6 @@ func TestConnectorDocsCoverSupportedAndDeferredIntegrations(t *testing.T) {
 	}
 	for file, status := range want {
 		path := filepath.Join("..", "integrations", file)
-		doc := strings.ToLower(mustReadGuardFile(t, path))
-		for _, marker := range []string{"status: " + status, "local-first", "preview", "goncho-server"} {
-			if !strings.Contains(doc, marker) {
-				t.Fatalf("%s missing marker %q", path, marker)
-			}
-		}
+		mustContainAllFold(t, mustReadGuardFile(t, path), path, []string{"status: " + status, "local-first", "preview", "goncho-server"})
 	}
 }
