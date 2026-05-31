@@ -37,6 +37,7 @@ func TestRecallTemporalRoutingDoesNotWarnOnNegatedSupersededMarker(t *testing.T)
 		{name: "underscore", note: "current_fact valid_now not_superseded"},
 		{name: "separate words", note: "current_fact valid_now not superseded"},
 		{name: "spaced assignment", note: "current_fact valid_now not superseded_by = mem-old"},
+		{name: "compact assignment", note: "current_fact valid_now not superseded_by=mem-old"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

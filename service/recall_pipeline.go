@@ -723,11 +723,7 @@ func recallTemporalEvidenceNoteState(note string) recallTemporalEvidenceState {
 	fields := recallTemporalEvidenceNoteFields(note)
 	for i, field := range fields {
 		switch {
-		case recallTemporalSupersededByAssignment(fields, i):
-			return recallTemporalEvidenceSuperseded
-		case recallTemporalSupersededByField(field):
-			return recallTemporalEvidenceSuperseded
-		case recallTemporalSupersededField(fields, i):
+		case recallTemporalFieldMarksSuperseded(fields, i):
 			return recallTemporalEvidenceSuperseded
 		case field == "current_fact" || field == "valid_now":
 			state = recallTemporalEvidenceCurrent
@@ -736,15 +732,22 @@ func recallTemporalEvidenceNoteState(note string) recallTemporalEvidenceState {
 	return state
 }
 
+func recallTemporalFieldMarksSuperseded(fields []string, idx int) bool {
+	if idx < 0 || idx >= len(fields) {
+		return false
+	}
+	if idx > 0 && recallTemporalNegatesNextField(fields[idx-1]) {
+		return false
+	}
+	return recallTemporalSupersededByAssignment(fields, idx) || recallTemporalSupersededByField(fields[idx]) || recallTemporalSupersededField(fields, idx)
+}
+
 func recallTemporalSupersededByField(field string) bool {
 	return strings.HasPrefix(field, "superseded_by=") && strings.TrimSpace(strings.TrimPrefix(field, "superseded_by=")) != ""
 }
 
 func recallTemporalSupersededByAssignment(fields []string, idx int) bool {
 	if idx < 0 || idx >= len(fields) {
-		return false
-	}
-	if idx > 0 && recallTemporalNegatesNextField(fields[idx-1]) {
 		return false
 	}
 	field := fields[idx]
@@ -758,7 +761,7 @@ func recallTemporalSupersededField(fields []string, idx int) bool {
 	if idx < 0 || idx >= len(fields) || fields[idx] != "superseded" {
 		return false
 	}
-	return idx == 0 || !recallTemporalNegatesNextField(fields[idx-1])
+	return true
 }
 
 func recallTemporalNegatesNextField(field string) bool {
