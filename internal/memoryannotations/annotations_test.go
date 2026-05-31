@@ -26,6 +26,23 @@ func TestConclusionFactsExtractsAndDeduplicatesFactKinds(t *testing.T) {
 	}
 }
 
+func TestConclusionFactsPreservesDecimalMetricSentences(t *testing.T) {
+	facts := ConclusionFacts("The cache latency is 1.5 seconds. Runtime uses SQLite.")
+
+	want := []string{
+		"cache latency is 1.5 seconds",
+		"Runtime uses SQLite",
+	}
+	if len(facts) != len(want) {
+		t.Fatalf("facts = %#v, want %#v", facts, want)
+	}
+	for i := range want {
+		if facts[i] != want[i] {
+			t.Fatalf("facts[%d] = %q, want %q (all facts %#v)", i, facts[i], want[i], facts)
+		}
+	}
+}
+
 func TestStoreAndQueryConclusionFactsByMemoryID(t *testing.T) {
 	db := migratedAnnotationTestDB(t)
 	ctx := context.Background()

@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/internal/facttext"
 )
 
 const SourceConclusion = "conclusion"
@@ -29,7 +31,6 @@ var (
 	searchNegationPattern     = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:(?:have|has|had|did)\s+)?(?:never|not)\s+(.+?)\s*$`)
 	searchDecisionPattern     = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:decided to|chose to|opted for|selected|picked|switching to)\s+(.+?)\s*$`)
 	searchSequenceMarkers     = []string{"first", "second", "third", "fourth", "fifth", "finally", "next", "then", "after that"}
-	recallSentencePattern     = regexp.MustCompile(`[^.!?]+[.!?]?`)
 	searchRankTokenPattern    = regexp.MustCompile(`[a-z0-9]+`)
 )
 
@@ -77,7 +78,7 @@ func ConclusionFacts(content string) []string {
 		seen[key] = struct{}{}
 		facts = append(facts, fact)
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range facttext.Sentences(content) {
 		for _, extractor := range []func(string) (string, bool){conclusionOwnerFactAnnotation, conclusionPreferenceFactAnnotation, conclusionLocationFactAnnotation, conclusionInstructionFactAnnotation, conclusionTimelineFactAnnotation, conclusionMetricFactAnnotation, conclusionVersionFactAnnotation, conclusionSequenceFactAnnotation, conclusionNegationFactAnnotation, conclusionDecisionFactAnnotation, conclusionKGRelationFactAnnotation} {
 			addFact(extractor(sentence))
 		}

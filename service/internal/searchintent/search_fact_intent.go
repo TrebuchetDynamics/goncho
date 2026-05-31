@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/internal/facttext"
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -68,32 +69,7 @@ func Score(query, content string) float64 {
 }
 
 func factIntentSentences(content string) []string {
-	content = strings.TrimSpace(content)
-	if content == "" {
-		return nil
-	}
-	out := []string{}
-	start := 0
-	for i := 0; i < len(content); i++ {
-		switch content[i] {
-		case '.', '!', '?':
-			if content[i] == '.' && factIntentByteIsDigit(content, i-1) && factIntentByteIsDigit(content, i+1) {
-				continue
-			}
-			if sentence := strings.TrimSpace(content[start : i+1]); sentence != "" {
-				out = append(out, sentence)
-			}
-			start = i + 1
-		}
-	}
-	if sentence := strings.TrimSpace(content[start:]); sentence != "" {
-		out = append(out, sentence)
-	}
-	return out
-}
-
-func factIntentByteIsDigit(content string, idx int) bool {
-	return idx >= 0 && idx < len(content) && content[idx] >= '0' && content[idx] <= '9'
+	return facttext.Sentences(content)
 }
 
 type factAnswerCandidate struct {
