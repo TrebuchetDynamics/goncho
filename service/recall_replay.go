@@ -2,6 +2,7 @@ package goncho
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/recalldiag"
@@ -239,6 +240,23 @@ func recallReplayWarningDetails(warning RecallWarning) []string {
 	details := []string{"stage=" + warning.Stage}
 	if warning.Message != "" {
 		details = append(details, fmt.Sprintf("message=%q", warning.Message))
+	}
+	details = append(details, recallReplayWarningEvidenceDetails(warning.Evidence)...)
+	return details
+}
+
+func recallReplayWarningEvidenceDetails(evidence map[string]string) []string {
+	if len(evidence) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(evidence))
+	for key := range evidence {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	details := make([]string, 0, len(keys))
+	for _, key := range keys {
+		details = append(details, fmt.Sprintf("evidence.%s=%q", key, evidence[key]))
 	}
 	return details
 }

@@ -137,6 +137,60 @@ func TestFormatRecallReplayIncludesZeroFinalScoresForCandidates(t *testing.T) {
 	}
 }
 
+func TestRecallReplayWarningEventsIncludeStableEvidence(t *testing.T) {
+	trace := RecallTrace{
+		TraceID:         "trace-warning-evidence",
+		PipelineVersion: "test-pipeline",
+		Query:           RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "auth"},
+		Warnings: []RecallWarning{
+			{
+				Code:     RecallWarningSemanticUnavailable,
+				Stage:    RecallStageGenerate,
+				Severity: RecallWarningDegraded,
+				Message:  "semantic generator unavailable",
+				Evidence: map[string]string{"generator": "vector", "error": "timeout"},
+			},
+			{
+				Code:     RecallWarningSemanticUnavailable,
+				Stage:    RecallStageGenerate,
+				Severity: RecallWarningDegraded,
+				Message:  "semantic generator unavailable",
+				Evidence: map[string]string{"generator": "graph", "error": "timeout"},
+			},
+		},
+	}
+
+	replay := BuildRecallReplay(trace)
+	if replay.EventCount != 4 {
+		t.Fatalf("EventCount = %d, want query, two warnings, project", replay.EventCount)
+	}
+	if got := replay.Events[1].Details; !slicesContainsInOrder(got, []string{"stage=generate", "message=\"semantic generator unavailable\"", "evidence.error=\"timeout\"", "evidence.generator=\"vector\""}) {
+		t.Fatalf("first warning details = %+v, want stable evidence fields", got)
+	}
+	if got := replay.Events[2].Details; !slicesContainsInOrder(got, []string{"stage=generate", "message=\"semantic generator unavailable\"", "evidence.error=\"timeout\"", "evidence.generator=\"graph\""}) {
+		t.Fatalf("second warning details = %+v, want distinct stable evidence fields", got)
+	}
+
+	text := FormatRecallReplay(replay)
+	for _, want := range []string{"evidence.generator=\"vector\"", "evidence.generator=\"graph\""} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("formatted replay missing %q:\n%s", want, text)
+		}
+	}
+}
+
+func slicesContainsInOrder(got []string, want []string) bool {
+	if len(got) < len(want) {
+		return false
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func assertRecallReplayEvent(t *testing.T, event RecallReplayEvent, stage string, kind string, memoryID string) {
 	t.Helper()
 	if event.Stage != stage || event.Kind != kind || event.MemoryID != memoryID {
