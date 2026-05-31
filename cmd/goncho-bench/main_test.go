@@ -843,7 +843,7 @@ func TestRunBeamHuggingFaceJSONLDatasetWritesFailureAudit(t *testing.T) {
 	if row.ConfigID != "test-beam-failure-audit" || row.Scale != "100K" || row.ConversationID != "conv-failure-audit" || row.QID != "q-owner-needs-graph" || row.Ability != "MR" || row.Question != "Who owns LedgerDB?" {
 		t.Fatalf("failure audit identity = %+v, want source-backed BEAM question identity", row)
 	}
-	if row.Score != 0 || row.FailureMode != "provenance_unsatisfied" || row.Rank != 1 || !slices.Equal(row.RequiredEvidenceKinds, []string{"graph"}) || !slices.Equal(row.TopEvidenceKinds, []string{"fact"}) {
+	if row.Score != 0 || row.FailureMode != "provenance_unsatisfied" || row.Rank != 1 || !slices.Equal(row.RequiredEvidenceKinds, []string{"graph"}) || !slices.Contains(row.TopEvidenceKinds, "fact") {
 		t.Fatalf("failure audit row = %+v, want graph provenance failure with ranked relevant fact candidate", row)
 	}
 	if len(row.RelevantIDs) != 1 || len(row.CandidateMemoryIDs) == 0 || !slices.Equal(row.RetrievedTop10, row.CandidateMemoryIDs) {

@@ -108,3 +108,5 @@ func main() {
 - `Context` returns an orientation product for prompt construction.
 
 The example ends with `Context` because the core payoff is orientation, not just storage.
+
+See [Retrieval Benchmarks](/reference/retrieval-benchmarks/) for benchmark methodology.

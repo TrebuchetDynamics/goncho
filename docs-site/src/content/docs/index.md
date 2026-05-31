@@ -43,3 +43,5 @@ Benchmark methodology, the external adapter contract, and current agentmemory PR
 - Start with [Trust-Preserving Context](/concepts/trust-preserving-context/) if you want the architecture model first.
 - Start with [Operator Runbook](/operators/runbook/) if you need deployment, backup, health, and troubleshooting guidance.
 - Start with [Gormes Agent Integration](/integrations/gormes-agent/) if you want to plug Goncho into a Gormes-style agent host.
+
+See [Retrieval Benchmarks](/reference/retrieval-benchmarks/) for benchmark methodology.
