@@ -1,8 +1,10 @@
-package docs_test
+package integrations_test
 
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/docs/guards/guardtest"
 )
 
 func TestConnectorDocsCoverSupportedAndDeferredIntegrations(t *testing.T) {
@@ -18,7 +20,7 @@ func TestConnectorDocsCoverSupportedAndDeferredIntegrations(t *testing.T) {
 		"opencode.md":           "deferred",
 	}
 	for file, status := range want {
-		path := filepath.Join("..", "integrations", file)
-		mustContainAllFold(t, mustReadGuardFile(t, path), path, []string{"status: " + status, "local-first", "preview", "goncho-server"})
+		path := filepath.Join("docs", "integrations", file)
+		guardtest.ContainsAllFold(t, guardtest.ReadRepoFile(t, path), path, []string{"status: " + status, "local-first", "preview", "goncho-server"})
 	}
 }

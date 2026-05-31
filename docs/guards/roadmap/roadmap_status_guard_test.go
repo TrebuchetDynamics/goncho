@@ -1,6 +1,7 @@
-package docs_test
+package roadmap_test
 
 import (
+	"github.com/TrebuchetDynamics/goncho/docs/guards/guardtest"
 	"strings"
 	"testing"
 )
@@ -16,7 +17,7 @@ import (
 // Follows the same principle as agentmemory's consistency.test.ts:
 // doc claims are checked against actual code state.
 func TestTodoCurrentStateDoesNotContradictDeliveredChecklist(t *testing.T) {
-	todo := mustReadGuardFile(t, "../../TODO.md")
+	todo := guardtest.ReadRepoFile(t, "TODO.md")
 
 	// Scan for the "still lacks" marker. Everything between it and the next
 	// ##-level section heading is the current "still lacks" block.
