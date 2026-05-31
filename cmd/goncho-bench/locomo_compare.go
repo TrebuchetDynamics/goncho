@@ -105,7 +105,7 @@ func compareLocomoSystems(report locomoReport, aName, bName string) ([]locomoCom
 			GoldMemoryIDs: append([]string(nil), aq.GoldMemoryIDs...),
 			ASystem:       aName, BSystem: bName,
 			AGoldBestRank: ar, BGoldBestRank: br,
-			ATop10: topN(aq.RetrievedIDs, 10), BTop10: topN(bq.RetrievedIDs, 10),
+			ATop10: ranking.TopN(aq.RetrievedIDs, 10), BTop10: ranking.TopN(bq.RetrievedIDs, 10),
 			Winner: compareWinner(ar, br), RankDelta: br - ar,
 		}
 		row.DeltaBucket = classifyLocomoDeltaBucket(row)
@@ -121,10 +121,6 @@ func normalizedRank(rank int) int {
 
 func compareWinner(aRank, bRank int) string {
 	return benchlocomo.CompareWinner(aRank, bRank)
-}
-
-func topN(ids []string, n int) []string {
-	return ranking.TopN(ids, n)
 }
 
 func classifyLocomoDeltaBucket(row locomoComparisonRow) string {

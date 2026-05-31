@@ -1,4 +1,4 @@
-package paired
+package main
 
 import (
 	"testing"
@@ -9,9 +9,4 @@ import (
 func decodeTestJSONFile(t *testing.T, path string, out any) {
 	t.Helper()
 	testutil.DecodeJSONFile(t, path, out)
-}
-
-func assertBenchFileContains(t *testing.T, path, needle string) {
-	t.Helper()
-	testutil.AssertFileContains(t, path, needle)
 }

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/testutil"
 )
 
 func TestLocomoBackendComparisonMarksExternalBackendsNotComparable(t *testing.T) {
@@ -620,29 +622,15 @@ func TestWriteLocomoBackendComparisonFailuresRejectsOutOfConversationRetrievedID
 
 func writeTestFile(t *testing.T, path, content string) {
 	t.Helper()
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write %s: %v", path, err)
-	}
+	testutil.WriteFile(t, path, content)
 }
 
 func assertBenchFileContains(t *testing.T, path, want string) {
 	t.Helper()
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
-	}
-	if !strings.Contains(string(raw), want) {
-		t.Fatalf("%s missing %q\n%s", path, want, raw)
-	}
+	testutil.AssertFileContains(t, path, want)
 }
 
 func assertBenchFileNotContains(t *testing.T, path, unwanted string) {
 	t.Helper()
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
-	}
-	if strings.Contains(string(raw), unwanted) {
-		t.Fatalf("%s unexpectedly contains %q\n%s", path, unwanted, raw)
-	}
+	testutil.AssertFileNotContains(t, path, unwanted)
 }

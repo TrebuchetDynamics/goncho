@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/textmatch"
 )
 
 const (
@@ -233,26 +235,17 @@ func normalizeBenchmarkIDBase(id string) string {
 
 func looksTemporal(query string) bool {
 	needles := []string{"when ", "before", "after", "first", "last", "recent", "currently", "current", "previous", "how long", "how many days", "how many years", "order", "date", "weekend", "today", "yesterday", "month", "year"}
-	return containsAny(query, needles)
+	return textmatch.ContainsAny(query, needles)
 }
 
 func looksNumericEntity(query string) bool {
 	needles := []string{"how many", "how much", "what is the name", "what name", "who ", "which ", "what type", "what kind", "what did", "what was", "where ", "amount", "number"}
-	return containsAny(query, needles)
+	return textmatch.ContainsAny(query, needles)
 }
 
 func looksStaleContradictory(query string) bool {
 	needles := []string{"current", "currently", "now", "previous", "used to", "changed", "replaced", "instead", "latest", "new"}
-	return containsAny(query, needles)
-}
-
-func containsAny(value string, needles []string) bool {
-	for _, needle := range needles {
-		if strings.Contains(value, needle) {
-			return true
-		}
-	}
-	return false
+	return textmatch.ContainsAny(query, needles)
 }
 
 func rankBucket(rank int) string {

@@ -1,6 +1,10 @@
 package locomo
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/textmatch"
+)
 
 const NotFoundRank = 999999
 
@@ -69,29 +73,20 @@ func ClassifyComparison(row ComparisonRow) string {
 	case "b_rank_better":
 		return "b_rank_improvement"
 	}
-	if containsAny(q, []string{"who ", "said", "told", "mentioned", "according to"}) {
+	if textmatch.ContainsAny(q, []string{"who ", "said", "told", "mentioned", "according to"}) {
 		return "speaker_attribution"
 	}
-	if containsAny(q, []string{"now", "current", "currently", "latest", "recent", "before", "after", "when", "how long"}) {
+	if textmatch.ContainsAny(q, []string{"now", "current", "currently", "latest", "recent", "before", "after", "when", "how long"}) {
 		return "temporal_evolution"
 	}
-	if containsAny(q, []string{"replace", "changed", "migrated", "used to", "formerly", "instead"}) {
+	if textmatch.ContainsAny(q, []string{"replace", "changed", "migrated", "used to", "formerly", "instead"}) {
 		return "contradiction_handling"
 	}
-	if containsAny(q, []string{"which", "what", "where", "when", "how many", "how much"}) {
+	if textmatch.ContainsAny(q, []string{"which", "what", "where", "when", "how many", "how much"}) {
 		return "entity_exactness"
 	}
 	if row.Winner == "both_miss" {
 		return "unknown"
 	}
 	return "lexical_grounding"
-}
-
-func containsAny(value string, needles []string) bool {
-	for _, needle := range needles {
-		if strings.Contains(value, needle) {
-			return true
-		}
-	}
-	return false
 }

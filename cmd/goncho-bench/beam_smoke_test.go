@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/testutil"
 )
 
 func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
@@ -66,7 +67,7 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 			} `json:"results"`
 		} `json:"results"`
 	}
-	decodeTestJSONFile(t, resultsPath, &results)
+	testutil.DecodeJSONFile(t, resultsPath, &results)
 	conversion := results.Metadata.Diagnostics.Conversion
 	if conversion.SourceSHA256 == "" || conversion.ConvertedJSONLSHA256 == "" || conversion.QuestionCount != 1 {
 		t.Fatalf("BEAM smoke conversion diagnostics = %+v, want source/converted checksums and one question", conversion)
@@ -88,7 +89,7 @@ func TestRunPinnedBeamSmokeFixtureEmitsEndToEndArtifacts(t *testing.T) {
 			Count    int     `json:"count"`
 		} `json:"ability_summary"`
 	}
-	decodeTestJSONFile(t, summaryPath, &summary)
+	testutil.DecodeJSONFile(t, summaryPath, &summary)
 	if got := summary.AbilitySummary["100K"]["MR"]; got.Count != 1 || got.AvgScore != 1 {
 		t.Fatalf("BEAM smoke summary MR = %+v, want one perfect MR case", got)
 	}
@@ -170,16 +171,5 @@ func copyTestFile(t *testing.T, src, dst string) {
 	}
 	if err := out.Close(); err != nil {
 		t.Fatalf("close %s: %v", dst, err)
-	}
-}
-
-func decodeTestJSONFile(t *testing.T, path string, out any) {
-	t.Helper()
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
-	}
-	if err := json.Unmarshal(raw, out); err != nil {
-		t.Fatalf("decode %s: %v", path, err)
 	}
 }
