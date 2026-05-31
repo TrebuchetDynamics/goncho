@@ -318,7 +318,14 @@ func hostHookMessageRole(event HostHookEventName) string {
 }
 
 func hostHookMessageContent(event HostHookEvent) string {
-	return strings.TrimSpace(textutil.FirstNonBlank(event.Content, event.Input, event.Output))
+	switch event.Event {
+	case HostHookPrompt, HostHookUserPrompt:
+		return strings.TrimSpace(textutil.FirstNonBlank(event.Content, event.Input))
+	case HostHookAssistantResponse:
+		return strings.TrimSpace(textutil.FirstNonBlank(event.Content, event.Output))
+	default:
+		return ""
+	}
 }
 
 func hostHookSuccess(event HostHookEvent) *bool {

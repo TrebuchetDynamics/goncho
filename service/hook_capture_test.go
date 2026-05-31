@@ -83,14 +83,36 @@ func TestServiceCaptureHostHookRejectsBlankConversationalHooksBeforeDurableWrite
 		t.Fatalf("RunMigrations: %v", err)
 	}
 
-	_, err := svc.CaptureHostHook(context.Background(), HostHookEvent{
-		Event:      HostHookPrompt,
-		PeerID:     "user-blank",
-		SessionKey: "sess-blank-hook",
-		Content:    "   ",
-	})
-	if err == nil {
-		t.Fatal("CaptureHostHook unexpectedly succeeded for blank prompt")
+	tests := []struct {
+		name  string
+		event HostHookEvent
+	}{
+		{
+			name: "blank prompt",
+			event: HostHookEvent{
+				Event:      HostHookPrompt,
+				PeerID:     "user-blank",
+				SessionKey: "sess-blank-hook",
+				Content:    "   ",
+			},
+		},
+		{
+			name: "assistant input is not response content",
+			event: HostHookEvent{
+				Event:      HostHookAssistantResponse,
+				PeerID:     "agent-blank",
+				SessionKey: "sess-blank-hook",
+				Input:      "user prompt that caused the response",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := svc.CaptureHostHook(context.Background(), tt.event)
+			if err == nil {
+				t.Fatalf("CaptureHostHook unexpectedly succeeded for %s", tt.event.Event)
+			}
+		})
 	}
 	list, listErr := svc.ListObservations(context.Background(), ObservationQuery{SessionKey: "sess-blank-hook", Limit: 10})
 	if listErr != nil {
