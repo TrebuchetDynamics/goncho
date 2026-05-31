@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import { docsSidebar } from './src/navigation/sidebar';
 
 export default defineConfig({
   site: 'https://trebuchetdynamics.github.io',
@@ -8,67 +9,7 @@ export default defineConfig({
     starlight({
       title: 'Goncho',
       description: 'Trust-preserving context for Go agents.',
-      sidebar: [
-        {
-          label: 'Start',
-          items: [
-            { label: 'Quick Start', slug: 'start/quick-start' },
-            { label: 'Current Capabilities', slug: 'start/current-capabilities' },
-          ],
-        },
-        {
-          label: 'Concepts',
-          items: [
-            { label: 'Trust-Preserving Context', slug: 'concepts/trust-preserving-context' },
-            { label: 'Local-First Memory', slug: 'concepts/local-first-memory' },
-            { label: 'Evidence, Claims, and Beliefs', slug: 'concepts/evidence-claims-beliefs' },
-            { label: 'Session Lifecycle', slug: 'concepts/session-lifecycle' },
-            { label: 'Orientation Packs', slug: 'concepts/orientation-packs' },
-            { label: 'Negative Memory', slug: 'concepts/negative-memory' },
-            { label: 'Design Boundaries', slug: 'concepts/design-boundaries' },
-            { label: 'Glossary', slug: 'concepts/glossary' },
-          ],
-        },
-        {
-          label: 'Reference',
-          items: [
-            {
-              label: 'API',
-              items: [{ label: 'Core API', slug: 'reference/api/core-api' }],
-            },
-            {
-              label: 'Memory',
-              items: [
-                { label: 'Local Markdown Memory', slug: 'reference/memory/local-markdown-memory' },
-                { label: 'Memory Tools', slug: 'reference/memory/memory-tools' },
-              ],
-            },
-            {
-              label: 'Benchmarks',
-              items: [{ label: 'Retrieval Benchmarks', slug: 'reference/benchmarks/retrieval-benchmarks' }],
-            },
-            {
-              label: 'Compatibility',
-              items: [{ label: 'Honcho Compatibility', slug: 'reference/compatibility/honcho-compatibility' }],
-            },
-          ],
-        },
-        {
-          label: 'Operators',
-          items: [{ label: 'Operator Runbook', slug: 'operators/runbook' }],
-        },
-        {
-          label: 'Integrations',
-          items: [{ label: 'Gormes Agent', slug: 'integrations/gormes-agent' }],
-        },
-        {
-          label: 'Roadmap',
-          items: [
-            { label: 'Architecture Direction', slug: 'roadmap/architecture-direction' },
-            { label: 'Benchmark Roadmap', slug: 'roadmap/benchmark-roadmap' },
-          ],
-        },
-      ],
+      sidebar: docsSidebar,
     }),
   ],
 });
