@@ -1,18 +1,12 @@
 package textutil
 
-import "strings"
+import "github.com/TrebuchetDynamics/goncho/service/internal/textutil/foldmatch"
 
 // CutAnyPrefixFold removes the first matching prefix using the same simple
 // case-fold policy as Goncho text classifiers. The returned tail preserves the
 // original casing and spacing from value.
 func CutAnyPrefixFold(value string, prefixes []string) (tail string, ok bool) {
-	lower := strings.ToLower(value)
-	for _, prefix := range prefixes {
-		if strings.HasPrefix(lower, strings.ToLower(prefix)) {
-			return value[len(prefix):], true
-		}
-	}
-	return "", false
+	return foldmatch.CutAnyPrefix(value, prefixes)
 }
 
 // CutAroundAnySubstringFold splits value around the first matching marker using
@@ -26,13 +20,5 @@ func CutAroundAnySubstringFold(value string, markers []string) (before, after st
 // CutAroundAnySubstringFoldMatch is like CutAroundAnySubstringFold and also
 // returns the matching policy marker.
 func CutAroundAnySubstringFoldMatch(value string, markers []string) (before, marker, after string, ok bool) {
-	lower := strings.ToLower(value)
-	for _, candidate := range markers {
-		idx := strings.Index(lower, strings.ToLower(candidate))
-		if idx < 0 {
-			continue
-		}
-		return value[:idx], candidate, value[idx+len(candidate):], true
-	}
-	return "", "", "", false
+	return foldmatch.CutAroundAnySubstringMatch(value, markers)
 }
