@@ -29,8 +29,8 @@ type beamServiceJudgment struct {
 type beamServiceJudgmentSet struct {
 	Source       string
 	SourceSHA256 string
-	Rows         map[string]beamServiceJudgment
-	QuestionRows map[string]beamServiceJudgment
+	Rows         map[shared.OutcomeKey]beamServiceJudgment
+	QuestionRows map[shared.QuestionKey]beamServiceJudgment
 	RowCount     int
 }
 
@@ -51,8 +51,8 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 		return nil, fmt.Errorf("goncho-bench: open BEAM service judgments: %w", err)
 	}
 	sourceSHA256 := shared.ChecksumBytesSHA256(raw)
-	rows := map[string]beamServiceJudgment{}
-	questionRows := map[string]beamServiceJudgment{}
+	rows := map[shared.OutcomeKey]beamServiceJudgment{}
+	questionRows := map[shared.QuestionKey]beamServiceJudgment{}
 	trimmed := bytes.TrimSpace(raw)
 	if len(trimmed) > 0 && trimmed[0] == '{' && bytes.Contains(trimmed, []byte(`"results"`)) {
 		if err := loadNestedBeamServiceJudgments(trimmed, rows, questionRows); err != nil {
@@ -64,7 +64,7 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 	return &beamServiceJudgmentSet{Source: "beam-service-judgments", SourceSHA256: sourceSHA256, Rows: rows, QuestionRows: questionRows, RowCount: len(rows)}, nil
 }
 
-func loadJSONLBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment, questionRows map[string]beamServiceJudgment) error {
+func loadJSONLBeamServiceJudgments(raw []byte, rows map[shared.OutcomeKey]beamServiceJudgment, questionRows map[shared.QuestionKey]beamServiceJudgment) error {
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
 	lineNo := 0
@@ -88,7 +88,7 @@ func loadJSONLBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgme
 	return nil
 }
 
-func loadNestedBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment, questionRows map[string]beamServiceJudgment) error {
+func loadNestedBeamServiceJudgments(raw []byte, rows map[shared.OutcomeKey]beamServiceJudgment, questionRows map[shared.QuestionKey]beamServiceJudgment) error {
 	var file struct {
 		Results []struct {
 			Scale          string                `json:"scale"`
@@ -115,7 +115,7 @@ func loadNestedBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgm
 	return nil
 }
 
-func addBeamServiceJudgment(rows map[string]beamServiceJudgment, questionRows map[string]beamServiceJudgment, row beamServiceJudgment, location string) error {
+func addBeamServiceJudgment(rows map[shared.OutcomeKey]beamServiceJudgment, questionRows map[shared.QuestionKey]beamServiceJudgment, row beamServiceJudgment, location string) error {
 	row.Scale = strings.TrimSpace(row.Scale)
 	row.ConversationID = strings.TrimSpace(row.ConversationID)
 	row.QID = strings.TrimSpace(row.QID)
@@ -124,10 +124,10 @@ func addBeamServiceJudgment(rows map[string]beamServiceJudgment, questionRows ma
 	if row.QID == "" {
 		return fmt.Errorf("goncho-bench: BEAM service judgment %s missing qid", location)
 	}
-	rows[beamServiceJudgmentKey(row.Scale, row.ConversationID, row.QID)] = row
+	rows[shared.NewOutcomeKey(row.Scale, row.ConversationID, row.QID)] = row
 	if row.Question != "" {
-		questionRows[beamServiceJudgmentQuestionKey(row.Scale, row.ConversationID, row.Ability, row.Question)] = row
-		questionRows[beamServiceJudgmentQuestionKey(row.Scale, row.ConversationID, "", row.Question)] = row
+		questionRows[shared.NewQuestionKey(row.Scale, row.ConversationID, row.Ability, row.Question)] = row
+		questionRows[shared.NewQuestionKey(row.Scale, row.ConversationID, "", row.Question)] = row
 	}
 	return nil
 }
@@ -137,11 +137,11 @@ func (s *beamServiceJudgmentSet) find(c goncho.RecallBenchmarkCaseReport) (beamS
 		return beamServiceJudgment{}, false
 	}
 	qid := strings.TrimSpace(c.ID)
-	for _, key := range []string{
-		beamServiceJudgmentKey(beamServiceCaseScale(c), beamServiceCaseConversationID(c), qid),
-		beamServiceJudgmentKey("", beamServiceCaseConversationID(c), qid),
-		beamServiceJudgmentKey(beamServiceCaseScale(c), "", qid),
-		beamServiceJudgmentKey("", "", qid),
+	for _, key := range []shared.OutcomeKey{
+		shared.NewOutcomeKey(beamServiceCaseScale(c), beamServiceCaseConversationID(c), qid),
+		shared.NewOutcomeKey("", beamServiceCaseConversationID(c), qid),
+		shared.NewOutcomeKey(beamServiceCaseScale(c), "", qid),
+		shared.NewOutcomeKey("", "", qid),
 	} {
 		if row, ok := s.Rows[key]; ok {
 			return row, true
@@ -152,15 +152,15 @@ func (s *beamServiceJudgmentSet) find(c goncho.RecallBenchmarkCaseReport) (beamS
 	if question == "" {
 		return beamServiceJudgment{}, false
 	}
-	for _, key := range []string{
-		beamServiceJudgmentQuestionKey(beamServiceCaseScale(c), beamServiceCaseConversationID(c), ability, question),
-		beamServiceJudgmentQuestionKey("", beamServiceCaseConversationID(c), ability, question),
-		beamServiceJudgmentQuestionKey(beamServiceCaseScale(c), "", ability, question),
-		beamServiceJudgmentQuestionKey("", "", ability, question),
-		beamServiceJudgmentQuestionKey(beamServiceCaseScale(c), beamServiceCaseConversationID(c), "", question),
-		beamServiceJudgmentQuestionKey("", beamServiceCaseConversationID(c), "", question),
-		beamServiceJudgmentQuestionKey(beamServiceCaseScale(c), "", "", question),
-		beamServiceJudgmentQuestionKey("", "", "", question),
+	for _, key := range []shared.QuestionKey{
+		shared.NewQuestionKey(beamServiceCaseScale(c), beamServiceCaseConversationID(c), ability, question),
+		shared.NewQuestionKey("", beamServiceCaseConversationID(c), ability, question),
+		shared.NewQuestionKey(beamServiceCaseScale(c), "", ability, question),
+		shared.NewQuestionKey("", "", ability, question),
+		shared.NewQuestionKey(beamServiceCaseScale(c), beamServiceCaseConversationID(c), "", question),
+		shared.NewQuestionKey("", beamServiceCaseConversationID(c), "", question),
+		shared.NewQuestionKey(beamServiceCaseScale(c), "", "", question),
+		shared.NewQuestionKey("", "", "", question),
 	} {
 		if row, ok := s.QuestionRows[key]; ok {
 			return row, true
@@ -171,11 +171,11 @@ func (s *beamServiceJudgmentSet) find(c goncho.RecallBenchmarkCaseReport) (beamS
 
 func (s *beamServiceJudgmentSet) diagnostics(report goncho.RecallBenchmarkReport) beamServiceJudgmentDiagnostics {
 	diag := beamServiceJudgmentDiagnostics{Source: s.Source, SourceSHA256: s.SourceSHA256, RowCount: s.RowCount}
-	matched := map[string]struct{}{}
+	matched := map[shared.OutcomeKey]struct{}{}
 	for _, c := range report.Cases {
 		if row, ok := s.find(c); ok {
 			diag.AppliedCount++
-			matched[beamServiceJudgmentKey(row.Scale, row.ConversationID, row.QID)] = struct{}{}
+			matched[shared.NewOutcomeKey(row.Scale, row.ConversationID, row.QID)] = struct{}{}
 			continue
 		}
 		diag.MissingCount++
@@ -201,12 +201,4 @@ func requireCompleteBeamServiceJudgments(judgments beamServiceJudgmentSet, repor
 		return nil
 	}
 	return fmt.Errorf("goncho-bench: BEAM service judgments incomplete: missing=%d unmatched=%d missing_qids=%s unmatched_qids=%s", diag.MissingCount, diag.UnmatchedCount, strings.Join(diag.MissingQIDs, ","), strings.Join(diag.UnmatchedQIDs, ","))
-}
-
-func beamServiceJudgmentKey(scale, conversationID, qid string) string {
-	return strings.TrimSpace(scale) + "\x00" + strings.TrimSpace(conversationID) + "\x00" + strings.TrimSpace(qid)
-}
-
-func beamServiceJudgmentQuestionKey(scale, conversationID, ability, question string) string {
-	return strings.TrimSpace(scale) + "\x00" + strings.TrimSpace(conversationID) + "\x00" + strings.ToUpper(strings.TrimSpace(ability)) + "\x00" + shared.NormalizeQuestionText(question)
 }

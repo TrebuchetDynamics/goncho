@@ -77,18 +77,9 @@ type beamPairedComparisonRow struct {
 	Winner                string  `json:"winner"`
 }
 
-type beamPairedComparisonKey struct {
-	scale          string
-	conversationID string
-	qid            string
-}
+type beamPairedComparisonKey = shared.OutcomeKey
 
-type beamPairedComparisonQuestionKey struct {
-	scale          string
-	conversationID string
-	ability        string
-	question       string
-}
+type beamPairedComparisonQuestionKey = shared.QuestionKey
 
 type beamPairedMatchedOutcome struct {
 	baseline  servicePairedOutcome
@@ -233,24 +224,15 @@ func loadBeamPairedOutcomes(path string) ([]servicePairedOutcome, error) {
 }
 
 func beamPairedOutcomeKey(row servicePairedOutcome) beamPairedComparisonKey {
-	return beamPairedComparisonKey{
-		scale:          strings.TrimSpace(row.Scale),
-		conversationID: strings.TrimSpace(row.ConversationID),
-		qid:            strings.TrimSpace(row.QID),
-	}
+	return shared.NewOutcomeKey(row.Scale, row.ConversationID, row.QID)
 }
 
 func beamPairedOutcomeQuestionKey(row servicePairedOutcome) beamPairedComparisonQuestionKey {
-	question := shared.NormalizeQuestionText(row.Question)
-	if question == "" {
+	key := shared.NewQuestionKey(row.Scale, row.ConversationID, row.Ability, row.Question)
+	if key.Question == "" {
 		return beamPairedComparisonQuestionKey{}
 	}
-	return beamPairedComparisonQuestionKey{
-		scale:          strings.TrimSpace(row.Scale),
-		conversationID: strings.TrimSpace(row.ConversationID),
-		ability:        strings.ToUpper(strings.TrimSpace(row.Ability)),
-		question:       question,
-	}
+	return key
 }
 
 func matchBeamPairedOutcomes(baselineRows, candidateRows []servicePairedOutcome) ([]beamPairedMatchedOutcome, int, error) {
@@ -260,12 +242,12 @@ func matchBeamPairedOutcomes(baselineRows, candidateRows []servicePairedOutcome)
 	candidateByQuestion := map[beamPairedComparisonQuestionKey]int{}
 	candidateQuestionCounts := map[beamPairedComparisonQuestionKey]int{}
 	for i, row := range candidateRows {
-		if key := beamPairedOutcomeKey(row); key.qid != "" {
+		if key := beamPairedOutcomeKey(row); key.QID != "" {
 			if _, ok := candidateByQID[key]; !ok {
 				candidateByQID[key] = i
 			}
 		}
-		if key := beamPairedOutcomeQuestionKey(row); key.question != "" {
+		if key := beamPairedOutcomeQuestionKey(row); key.Question != "" {
 			candidateQuestionCounts[key]++
 			if _, ok := candidateByQuestion[key]; !ok {
 				candidateByQuestion[key] = i
@@ -274,7 +256,7 @@ func matchBeamPairedOutcomes(baselineRows, candidateRows []servicePairedOutcome)
 	}
 	baselineQuestionCounts := map[beamPairedComparisonQuestionKey]int{}
 	for _, row := range baselineRows {
-		if key := beamPairedOutcomeQuestionKey(row); key.question != "" {
+		if key := beamPairedOutcomeQuestionKey(row); key.Question != "" {
 			baselineQuestionCounts[key]++
 		}
 	}
@@ -289,11 +271,11 @@ func matchBeamPairedOutcomes(baselineRows, candidateRows []servicePairedOutcome)
 				continue
 			}
 		}
-		if questionKey := beamPairedOutcomeQuestionKey(base); questionKey.question != "" {
+		if questionKey := beamPairedOutcomeQuestionKey(base); questionKey.Question != "" {
 			candidateCount := candidateQuestionCounts[questionKey]
 			baselineCount := baselineQuestionCounts[questionKey]
 			if candidateCount > 0 && (baselineCount > 1 || candidateCount > 1) {
-				return nil, 0, fmt.Errorf("goncho-bench: ambiguous BEAM paired question-key fallback for scale=%q conversation_id=%q ability=%q question=%q (baseline_rows=%d candidate_rows=%d)", questionKey.scale, questionKey.conversationID, questionKey.ability, questionKey.question, baselineCount, candidateCount)
+				return nil, 0, fmt.Errorf("goncho-bench: ambiguous BEAM paired question-key fallback for scale=%q conversation_id=%q ability=%q question=%q (baseline_rows=%d candidate_rows=%d)", questionKey.Scale, questionKey.ConversationID, questionKey.Ability, questionKey.Question, baselineCount, candidateCount)
 			}
 			if idx, ok := candidateByQuestion[questionKey]; ok {
 				if _, used := usedCandidates[idx]; !used {
@@ -311,28 +293,14 @@ func matchBeamPairedOutcomes(baselineRows, candidateRows []servicePairedOutcome)
 
 func servicePairedOutcomeLess(a, b servicePairedOutcome) bool {
 	ak, bk := beamPairedOutcomeKey(a), beamPairedOutcomeKey(b)
-	if !beamPairedComparisonKeyEqual(ak, bk) {
-		return beamPairedComparisonKeyLess(ak, bk)
+	if ak != bk {
+		return ak.Less(bk)
 	}
 	aq, bq := beamPairedOutcomeQuestionKey(a), beamPairedOutcomeQuestionKey(b)
-	if aq.question != bq.question {
-		return aq.question < bq.question
+	if aq.Question != bq.Question {
+		return aq.Question < bq.Question
 	}
 	return strings.TrimSpace(a.ConfigID) < strings.TrimSpace(b.ConfigID)
-}
-
-func beamPairedComparisonKeyEqual(a, b beamPairedComparisonKey) bool {
-	return a.scale == b.scale && a.conversationID == b.conversationID && a.qid == b.qid
-}
-
-func beamPairedComparisonKeyLess(a, b beamPairedComparisonKey) bool {
-	if a.scale != b.scale {
-		return a.scale < b.scale
-	}
-	if a.conversationID != b.conversationID {
-		return a.conversationID < b.conversationID
-	}
-	return a.qid < b.qid
 }
 
 func beamPairedComparisonWinner(baseScore, candidateScore float64) string {
