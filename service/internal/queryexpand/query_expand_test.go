@@ -32,6 +32,15 @@ func TestExpandReturnsDeterministicSortedTerms(t *testing.T) {
 	}
 }
 
+func TestExpandUsesTokenNormalizedSynonymKeys(t *testing.T) {
+	got := Expand("credentials")
+	for _, want := range []string{"auth", "login", "signin"} {
+		if !contains(got.Terms, want) {
+			t.Fatalf("Expand(credentials) terms = %+v, want token-normalized synonym %q", got.Terms, want)
+		}
+	}
+}
+
 func contains(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

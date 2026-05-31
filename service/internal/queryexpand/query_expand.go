@@ -32,13 +32,43 @@ var synonyms = reciprocalLexicon(explicitSynonyms)
 func reciprocalLexicon(entries map[string][]string) map[string][]string {
 	out := map[string][]string{}
 	for term, aliases := range entries {
-		out[term] = appendUnique(out[term], aliases...)
+		termKeys := synonymLookupKeys(term)
+		for _, termKey := range termKeys {
+			out[termKey] = appendUnique(out[termKey], aliases...)
+		}
 		for _, alias := range aliases {
-			out[alias] = appendUnique(out[alias], term)
+			for _, aliasKey := range synonymLookupKeys(alias) {
+				out[aliasKey] = appendUnique(out[aliasKey], term)
+			}
 		}
 	}
+	makeLexiconReciprocal(out)
 	sortLexiconAliases(out)
 	return out
+}
+
+func makeLexiconReciprocal(lexicon map[string][]string) {
+	pairs := []struct {
+		term    string
+		aliases []string
+	}{}
+	for term, aliases := range lexicon {
+		pairs = append(pairs, struct {
+			term    string
+			aliases []string
+		}{term: term, aliases: aliases})
+	}
+	for _, pair := range pairs {
+		for _, alias := range pair.aliases {
+			lexicon[alias] = appendUnique(lexicon[alias], pair.term)
+		}
+	}
+}
+
+func synonymLookupKeys(value string) []string {
+	keys := []string{strings.TrimSpace(strings.ToLower(value))}
+	keys = append(keys, searchtokens.Tokens(value)...)
+	return textutil.UniqueLowerTrimmed(keys, false)
 }
 
 func sortLexiconAliases(lexicon map[string][]string) {
