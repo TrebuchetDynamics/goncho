@@ -589,6 +589,29 @@ func TestBenchmarkPlanDocumentsLocomoSharedBenchmarkContract(t *testing.T) {
 	}
 }
 
+func TestBenchmarkPlanDocumentsLocomoRecallValidationContract(t *testing.T) {
+	const path = "docs/superpowers/plans/locomo/recall/contracts/recall-validation.md"
+	wantMarkers := []string{
+		"# LOCOMO recall validation contract",
+		"../shared/benchmark-contract.md",
+		"stable inserted `memory_id`",
+		"Use no answer hints, no LLM judges, no answer-text scoring",
+		"Preserve frozen LOCOMO artifacts",
+		"focused public behavior test named by the plan",
+		"go test ./... -count=1",
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile %s: %v", path, err)
+	}
+	text := string(raw)
+	for _, marker := range wantMarkers {
+		if !strings.Contains(text, marker) {
+			t.Fatalf("%s does not document shared LOCOMO recall validation marker %q", path, marker)
+		}
+	}
+}
+
 func TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation(t *testing.T) {
 	const path = "docs/superpowers/plans/locomo/evaluation/2026-05-22-failure-driven-evaluation.md"
 	wantMarkers := []string{
@@ -1280,6 +1303,7 @@ func TestReleaseMetadataSmokeIncludesLocomoResultDocsGuards(t *testing.T) {
 	for _, want := range []string{
 		"BenchmarkDocsDocumentBackendComparisonFailureBucketSummaries",
 		"BenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout",
+		"BenchmarkPlanDocumentsLocomoRecallValidationContract",
 		"BenchmarkPlanDocumentsLocomoFailureDrivenEvaluation",
 		"BenchmarkRoadmapSurfacesLocomoFailureDrivenEvaluationSlice",
 		"BenchmarkRoadmapSurfacesLocomoSpeakerRoutingSlice",
