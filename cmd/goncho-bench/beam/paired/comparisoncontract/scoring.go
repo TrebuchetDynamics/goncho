@@ -1,47 +1,13 @@
 package comparisoncontract
 
-import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/score"
 
-type ScoreSummary struct {
-	PairedCount       int
-	BaselineAvgScore  float64
-	CandidateAvgScore float64
-	ScoreDelta        float64
-	BaselineWins      int
-	CandidateWins     int
-	Ties              int
-	baselineTally     shared.ScoreTally
-	candidateTally    shared.ScoreTally
-}
+// ScoreSummary preserves the comparisoncontract scoring API while sharing the
+// score.Summary contract with lower-level comparison helpers.
+type ScoreSummary = score.Summary
 
-func (s *ScoreSummary) Add(baselineScore, candidateScore float64, winner string) {
-	s.PairedCount++
-	s.baselineTally.Add(baselineScore)
-	s.candidateTally.Add(candidateScore)
-	s.BaselineAvgScore = s.baselineTally.Average()
-	s.CandidateAvgScore = s.candidateTally.Average()
-	s.ScoreDelta = shared.RoundSignedMetric(s.CandidateAvgScore - s.BaselineAvgScore)
-	s.AddWinner(winner)
-}
-
-func (s *ScoreSummary) AddWinner(winner string) {
-	switch winner {
-	case "candidate":
-		s.CandidateWins++
-	case "baseline":
-		s.BaselineWins++
-	default:
-		s.Ties++
-	}
-}
-
+// Winner preserves the comparisoncontract winner API while delegating to the
+// focused score contract.
 func Winner(baseScore, candidateScore float64) string {
-	switch {
-	case candidateScore > baseScore:
-		return "candidate"
-	case baseScore > candidateScore:
-		return "baseline"
-	default:
-		return "tie"
-	}
+	return score.Winner(baseScore, candidateScore)
 }
