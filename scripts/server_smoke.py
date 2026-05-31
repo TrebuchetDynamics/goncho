@@ -5,13 +5,11 @@ from __future__ import annotations
 import sys
 
 try:
-    from shared.compat import add_scripts_root
+    from shared.legacy import export_module
 except ModuleNotFoundError:  # pragma: no cover - package import path
-    from scripts.shared.compat import add_scripts_root
+    from scripts.shared.legacy import export_module
 
-add_scripts_root(__file__)
-from smoke.server import *  # noqa: F401,F403,E402
-from smoke.server import main  # noqa: E402
+main = export_module("smoke.server", __file__, globals())
 
 if __name__ == "__main__":
     try:

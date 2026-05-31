@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 try:
-    from shared.compat import add_scripts_root
+    from shared.legacy import export_module
 except ModuleNotFoundError:  # pragma: no cover - package import path
-    from scripts.shared.compat import add_scripts_root
+    from scripts.shared.legacy import export_module
 
-add_scripts_root(__file__)
-from benchmarks.mem0_locomo import *  # noqa: F401,F403,E402
-from benchmarks.mem0_locomo import main  # noqa: E402
+main = export_module("benchmarks.mem0_locomo", __file__, globals())
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -9,15 +9,18 @@ exits zero so non-container developer machines can still run the normal suite.
 
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
 import sys
 import tempfile
 import textwrap
 import time
-import urllib.request
 from pathlib import Path
+
+try:
+    from shared.http_json import read_json_url
+except ModuleNotFoundError:  # pragma: no cover - package import path
+    from scripts.shared.http_json import read_json_url
 
 
 def run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -42,10 +45,9 @@ def wait_for_health(url: str, timeout_seconds: float = 60.0) -> dict:
     last_error: Exception | None = None
     while time.time() < deadline:
         try:
-            with urllib.request.urlopen(url, timeout=2.0) as response:  # noqa: S310 local loopback only
-                payload = json.loads(response.read().decode("utf-8"))
-                if payload.get("status") == "ok":
-                    return payload
+            payload = read_json_url(url, timeout=2.0)
+            if payload.get("status") == "ok":
+                return payload
         except Exception as exc:  # pragma: no cover - diagnostic path
             last_error = exc
         time.sleep(1.0)

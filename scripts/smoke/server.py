@@ -13,10 +13,13 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 from pathlib import Path
+
+try:
+    from shared.http_json import post_json_url, read_json_url
+except ModuleNotFoundError:  # pragma: no cover - package import path
+    from scripts.shared.http_json import post_json_url, read_json_url
 
 
 WORKSPACE = "server-smoke-workspace"
@@ -117,19 +120,11 @@ def wait_for_health(base_url: str, proc: subprocess.Popen[str]) -> None:
 
 
 def get_json(url: str, timeout: float = 5) -> dict:
-    with urllib.request.urlopen(url, timeout=timeout) as response:  # noqa: S310 - loopback smoke URL
-        return json.loads(response.read().decode("utf-8"))
+    return read_json_url(url, timeout=timeout)
 
 
 def post_json(url: str, body: dict, timeout: float = 5) -> dict:
-    raw = json.dumps(body).encode("utf-8")
-    request = urllib.request.Request(url, data=raw, headers={"Content-Type": "application/json"}, method="POST")
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 - loopback smoke URL
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"POST {url} failed with {exc.code}: {detail}") from exc
+    return post_json_url(url, body, timeout=timeout)
 
 
 def require(condition: bool, message: str) -> None:
