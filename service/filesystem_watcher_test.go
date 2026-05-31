@@ -116,6 +116,35 @@ func TestFilesystemWatcherRequiresExplicitIncludeRules(t *testing.T) {
 	}
 }
 
+func TestFilesystemWatcherPreviewRejectsSymlinkEscapingRoot(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	root := t.TempDir()
+	outside := t.TempDir()
+	writeWatcherFixture(t, outside, "secret.md", "outside root must not be imported")
+	linkPath := filepath.Join(root, "docs", "secret.md")
+	if err := os.MkdirAll(filepath.Dir(linkPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(outside, "secret.md"), linkPath); err != nil {
+		t.Fatal(err)
+	}
+
+	preview, err := svc.PreviewFilesystemWatcherImport(context.Background(), FilesystemWatcherImportParams{
+		RootDir:      root,
+		Paths:        []string{linkPath},
+		IncludeGlobs: []string{"**/*.md"},
+		PeerID:       "fs-watcher",
+		SessionKey:   "fs-session",
+	})
+	if err != nil {
+		t.Fatalf("PreviewFilesystemWatcherImport: %v", err)
+	}
+	if preview.ImportableCount != 0 || preview.SkippedCount != 1 || preview.Skipped[0].Reason != "outside_root" {
+		t.Fatalf("preview = %+v, want symlink target outside root skipped", preview)
+	}
+}
+
 func writeWatcherFixture(t *testing.T, root, rel, content string) {
 	t.Helper()
 	path := filepath.Join(root, filepath.FromSlash(rel))

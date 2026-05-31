@@ -187,14 +187,21 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 	if !pathutil.MatchesAnySlashGlob(rel, params.IncludeGlobs) {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "not_included"}, nil
 	}
-	info, err := os.Stat(absPath)
+	readPath, escaped, err := filesystemWatcherReadPath(params.RootDir, absPath)
+	if err != nil {
+		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "unreadable"}, nil
+	}
+	if escaped {
+		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "outside_root"}, nil
+	}
+	info, err := os.Stat(readPath)
 	if err != nil {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "unreadable"}, nil
 	}
 	if info.IsDir() {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "not_file"}, nil
 	}
-	raw, err := os.ReadFile(absPath)
+	raw, err := os.ReadFile(readPath)
 	if err != nil {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "unreadable"}, nil
 	}
@@ -212,6 +219,25 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 		truncated = true
 	}
 	return FilesystemWatcherCandidate{Path: absPath, RelativePath: rel, ChangeKind: params.ChangeKind, SizeBytes: info.Size(), Checksum: checksum, Content: content, Truncated: truncated}, FilesystemWatcherSkipped{}, nil
+}
+
+func filesystemWatcherReadPath(rootDir, absPath string) (string, bool, error) {
+	resolvedRoot, err := filepath.EvalSymlinks(rootDir)
+	if err != nil {
+		return "", false, err
+	}
+	resolvedPath, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		return "", false, err
+	}
+	rel, err := filepath.Rel(resolvedRoot, resolvedPath)
+	if err != nil {
+		return "", false, err
+	}
+	if pathutil.IsUnsafeRelative(rel) {
+		return resolvedPath, true, nil
+	}
+	return resolvedPath, false, nil
 }
 
 func looksBinary(raw []byte) bool {
