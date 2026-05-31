@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/actionwhere"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
@@ -254,12 +255,7 @@ func (s *Service) ListActionLeaseAudit(ctx context.Context, query ActionLeaseAud
 		return ActionLeaseAuditResult{}, err
 	}
 	limit := limitutil.DefaultClamped(query.Limit, 100, 100)
-	args := []any{norm.WorkspaceID, norm.ProfileID, norm.Peer}
-	where := `workspace_id = ? AND profile_id = ? AND peer_id = ?`
-	if norm.ActionID != "" {
-		where += ` AND action_id = ?`
-		args = append(args, norm.ActionID)
-	}
+	where, args := actionwhere.ScopedAction(norm.WorkspaceID, norm.ProfileID, norm.Peer, norm.ActionID)
 	args = append(args, limit)
 	rows, err := s.db.QueryContext(ctx, `SELECT id, workspace_id, profile_id, peer_id, action_id, actor, decision, reason, expires_at, created_at FROM goncho_action_lease_audit WHERE `+where+` ORDER BY created_at DESC, id DESC LIMIT ?`, args...)
 	if err != nil {
@@ -363,12 +359,9 @@ func insertActionLeaseAuditTx(ctx context.Context, tx *sql.Tx, lease ActionLease
 }
 
 func listExpiredActionLeasesTx(ctx context.Context, tx *sql.Tx, query ActionLease, now int64) ([]ActionLease, error) {
-	args := []any{query.WorkspaceID, query.ProfileID, query.Peer, now}
-	where := `workspace_id = ? AND profile_id = ? AND peer_id = ? AND expires_at <= ?`
-	if query.ActionID != "" {
-		where += ` AND action_id = ?`
-		args = append(args, query.ActionID)
-	}
+	where, args := actionwhere.ScopedAction(query.WorkspaceID, query.ProfileID, query.Peer, query.ActionID)
+	where += ` AND expires_at <= ?`
+	args = append(args, now)
 	rows, err := tx.QueryContext(ctx, `SELECT workspace_id, profile_id, peer_id, action_id, owner, acquired_at, renewed_at, expires_at FROM goncho_action_leases WHERE `+where+` ORDER BY expires_at ASC, action_id ASC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("goncho: list expired action leases: %w", err)

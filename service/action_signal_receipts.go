@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/actionwhere"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopeauth"
 )
@@ -179,12 +180,7 @@ func (s *Service) ListActionSignalReceiptAudit(ctx context.Context, query Action
 		return ActionSignalReceiptAuditResult{}, err
 	}
 	limit := limitutil.DefaultClamped(query.Limit, 100, 100)
-	args := []any{norm.WorkspaceID, norm.ProfileID, norm.Peer}
-	where := `workspace_id = ? AND profile_id = ? AND peer_id = ?`
-	if norm.ActionID != "" {
-		where += ` AND action_id = ?`
-		args = append(args, norm.ActionID)
-	}
+	where, args := actionwhere.ScopedAction(norm.WorkspaceID, norm.ProfileID, norm.Peer, norm.ActionID)
 	if norm.SignalID != 0 {
 		where += ` AND signal_id = ?`
 		args = append(args, norm.SignalID)
@@ -274,12 +270,7 @@ func listActionSignalReceiptsBySignal(ctx context.Context, db *sql.DB, workspace
 }
 
 func listActionSignalReceiptsFiltered(ctx context.Context, db *sql.DB, query ActionSignalReceipt, limit int) ([]ActionSignalReceipt, error) {
-	args := []any{query.WorkspaceID, query.ProfileID, query.Peer, query.ActionID}
-	where := `workspace_id = ? AND profile_id = ? AND peer_id = ? AND action_id = ?`
-	if query.SignalID != 0 {
-		where += ` AND signal_id = ?`
-		args = append(args, query.SignalID)
-	}
+	where, args := actionwhere.ScopedActionSignal(query.WorkspaceID, query.ProfileID, query.Peer, query.ActionID, query.SignalID)
 	args = append(args, limit)
 	rows, err := db.QueryContext(ctx, `SELECT id, workspace_id, profile_id, peer_id, action_id, signal_id, actor, read_at FROM goncho_action_signal_receipts WHERE `+where+` ORDER BY read_at ASC, id ASC LIMIT ?`, args...)
 	if err != nil {

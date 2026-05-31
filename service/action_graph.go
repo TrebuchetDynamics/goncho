@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/actionwhere"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -282,7 +283,8 @@ func getActionNode(ctx context.Context, db *sql.DB, workspaceID, profileID, peer
 }
 
 func listActionNodes(ctx context.Context, db *sql.DB, workspaceID, profileID, peer string) ([]ActionNode, error) {
-	rows, err := db.QueryContext(ctx, `SELECT workspace_id, profile_id, peer_id, action_id, title, status, created_at, updated_at FROM goncho_actions WHERE workspace_id = ? AND profile_id = ? AND peer_id = ? ORDER BY created_at ASC, action_id ASC`, workspaceID, profileID, peer)
+	where, args := actionwhere.ScopedAction(workspaceID, profileID, peer, "")
+	rows, err := db.QueryContext(ctx, `SELECT workspace_id, profile_id, peer_id, action_id, title, status, created_at, updated_at FROM goncho_actions WHERE `+where+` ORDER BY created_at ASC, action_id ASC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("goncho: list actions: %w", err)
 	}
@@ -320,7 +322,8 @@ func (s *Service) actionNodeWithEdges(ctx context.Context, workspaceID, profileI
 }
 
 func listActionDependencies(ctx context.Context, db *sql.DB, workspaceID, profileID, peer, actionID string) ([]string, error) {
-	rows, err := db.QueryContext(ctx, `SELECT depends_on FROM goncho_action_dependencies WHERE workspace_id = ? AND profile_id = ? AND peer_id = ? AND action_id = ? ORDER BY depends_on ASC`, workspaceID, profileID, peer, actionID)
+	where, args := actionwhere.ScopedAction(workspaceID, profileID, peer, actionID)
+	rows, err := db.QueryContext(ctx, `SELECT depends_on FROM goncho_action_dependencies WHERE `+where+` ORDER BY depends_on ASC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("goncho: list action dependencies: %w", err)
 	}
@@ -337,7 +340,8 @@ func listActionDependencies(ctx context.Context, db *sql.DB, workspaceID, profil
 }
 
 func listActionSignals(ctx context.Context, db *sql.DB, workspaceID, profileID, peer, actionID string) ([]ActionSignal, error) {
-	rows, err := db.QueryContext(ctx, `SELECT id, action_id, signal, message, actor, created_at FROM goncho_action_signals WHERE workspace_id = ? AND profile_id = ? AND peer_id = ? AND action_id = ? ORDER BY created_at ASC, id ASC`, workspaceID, profileID, peer, actionID)
+	where, args := actionwhere.ScopedAction(workspaceID, profileID, peer, actionID)
+	rows, err := db.QueryContext(ctx, `SELECT id, action_id, signal, message, actor, created_at FROM goncho_action_signals WHERE `+where+` ORDER BY created_at ASC, id ASC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("goncho: list action signals: %w", err)
 	}
