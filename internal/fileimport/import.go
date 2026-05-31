@@ -117,16 +117,9 @@ func Import(ctx context.Context, opts Options, params Params) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	maxChars := opts.MaxMessageSize
-	if maxChars <= 0 {
-		maxChars = opts.DefaultMaxMessageSize
-	}
-	if maxChars <= 0 {
-		maxChars = 25_000
-	}
-	chunks := splitImportTextIntoChunks(text, maxChars)
-	if len(chunks) == 0 {
-		return Result{}, errors.New("goncho: file import produced no messages")
+	chunks, err := planImportChunks(text, opts)
+	if err != nil {
+		return Result{}, err
 	}
 
 	fileID, err := newImportFileID()
@@ -295,6 +288,20 @@ func decodeUTF16WithBOM(content []byte) (string, bool) {
 		u16 = append(u16, value)
 	}
 	return string(utf16.Decode(u16)), true
+}
+
+func planImportChunks(text string, opts Options) ([]fileChunk, error) {
+	if strings.TrimSpace(text) == "" {
+		return nil, errors.New("goncho: file import produced no messages")
+	}
+	maxChars := opts.MaxMessageSize
+	if maxChars <= 0 {
+		maxChars = opts.DefaultMaxMessageSize
+	}
+	if maxChars <= 0 {
+		maxChars = 25_000
+	}
+	return splitImportTextIntoChunks(text, maxChars), nil
 }
 
 func splitImportTextIntoChunks(text string, maxChars int) []fileChunk {

@@ -185,6 +185,28 @@ func TestService_ImportFileSupportsTextMarkdownAndJSON(t *testing.T) {
 	}
 }
 
+func TestService_ImportFileRejectsBlankTextBeforeWrites(t *testing.T) {
+	db := newTestFileImportDB(t)
+
+	_, err := fileimport.Import(context.Background(), fileimport.Options{DB: db, WorkspaceID: "default", DefaultMaxMessageSize: testDefaultMaxMessageSize}, fileimport.Params{
+		SessionKey:  "session-import-blank",
+		PeerID:      "telegram:6586915095",
+		Filename:    "blank.txt",
+		ContentType: "text/plain",
+		Content:     []byte(" \n\t "),
+	})
+	if err == nil {
+		t.Fatal("expected blank import error")
+	}
+	if !strings.Contains(err.Error(), "produced no messages") {
+		t.Fatalf("error = %v, want no messages validation", err)
+	}
+	rows := loadImportedTurns(t, db, "session-import-blank")
+	if len(rows) != 0 {
+		t.Fatalf("turn rows = %+v, want no writes for blank upload", rows)
+	}
+}
+
 func TestService_ImportFileRejectsUnsupportedTypesBeforeWrites(t *testing.T) {
 	db := newTestFileImportDB(t)
 
