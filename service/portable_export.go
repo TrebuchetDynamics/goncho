@@ -422,14 +422,11 @@ func (s *Service) exportPortableObservations(ctx context.Context, workspaceID, p
 			return nil, err
 		}
 		o.Kind = ObservationKind(kind)
-		if success.Valid {
-			v := success.Int64 == 1
-			o.Success = &v
-		}
+		o.Success = dbscan.NullInt64BoolPtr(success)
 		_ = json.Unmarshal([]byte(meta), &o.Metadata)
-		o.InputTruncated = inTr == 1
-		o.OutputTruncated = outTr == 1
-		o.Redacted = red == 1
+		o.InputTruncated = dbscan.IntBool(inTr)
+		o.OutputTruncated = dbscan.IntBool(outTr)
+		o.Redacted = dbscan.IntBool(red)
 		o.ObservedAt = timeutil.UnixNanoUTC(observed)
 		out = append(out, o)
 	}

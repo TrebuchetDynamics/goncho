@@ -1,6 +1,7 @@
 package dbscan
 
 import (
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -14,6 +15,18 @@ func BoolInt(value bool) int {
 		return 1
 	}
 	return 0
+}
+
+// IntBool returns true for SQLite's conventional integer true value.
+func IntBool(value int) bool { return value == 1 }
+
+// NullInt64BoolPtr converts a nullable SQLite boolean integer into an optional bool.
+func NullInt64BoolPtr(value sql.NullInt64) *bool {
+	if !value.Valid {
+		return nil
+	}
+	v := value.Int64 == 1
+	return &v
 }
 
 type BoolScanner struct{ target *bool }
