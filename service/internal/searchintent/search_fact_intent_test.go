@@ -2,6 +2,12 @@ package searchintent
 
 import "testing"
 
+func TestOwnerFactIntentIgnoresTemporalAdverbAfterObject(t *testing.T) {
+	if score := Score("Who owns component A-17 now?", "Nadia owns component A-17."); score != 1 {
+		t.Fatalf("owner fact score = %v, want 1 when question has trailing temporal adverb", score)
+	}
+}
+
 func TestSequenceAnswerPartsCountsRepeatedMarkers(t *testing.T) {
 	subject, steps, ok := SequenceAnswerParts("Deployment order is build, then test, then deploy.")
 	if !ok {

@@ -691,8 +691,19 @@ func searchOwnerQuestionObject(query string) (string, bool) {
 	if len(match) != 2 {
 		return "", false
 	}
-	object := strings.TrimSpace(match[1])
+	object := cleanOwnerQuestionObject(match[1])
 	return object, object != ""
+}
+
+func cleanOwnerQuestionObject(value string) string {
+	object := cleanFactObject(value)
+	for _, suffix := range []string{" right now", " currently", " now"} {
+		if strings.HasSuffix(strings.ToLower(object), suffix) {
+			object = strings.TrimSpace(object[:len(object)-len(suffix)])
+			break
+		}
+	}
+	return object
 }
 
 func searchPreferenceQuestion(query string) (subject, attribute string, ok bool) {
