@@ -10,6 +10,28 @@ func TestAllowsEmptyAndWildcardSources(t *testing.T) {
 	}
 }
 
+func TestDecideExposesSourceFilterMatchReason(t *testing.T) {
+	wildcard := Decide([]string{" * "}, "memory", false)
+	if !wildcard.Allowed || !wildcard.Wildcard || wildcard.MatchedSource != "*" {
+		t.Fatalf("wildcard decision = %+v, want explicit wildcard match", wildcard)
+	}
+
+	matched := Decide([]string{" Memory "}, " memory ", false)
+	if !matched.Allowed || matched.Wildcard || matched.MatchedSource != "memory" {
+		t.Fatalf("filtered decision = %+v, want explicit source match", matched)
+	}
+
+	emptyDenied := Decide([]string{"memory"}, " ", false)
+	if emptyDenied.Allowed || emptyDenied.EmptySourceMatched {
+		t.Fatalf("empty-source denied decision = %+v, want denied without legacy match", emptyDenied)
+	}
+
+	emptyAllowed := Decide([]string{"memory"}, " ", true)
+	if !emptyAllowed.Allowed || !emptyAllowed.EmptySourceMatched || emptyAllowed.Wildcard {
+		t.Fatalf("empty-source allowed decision = %+v, want explicit legacy empty-source match", emptyAllowed)
+	}
+}
+
 func TestAllowsEmptySourceOnlyWhenLegacyAllowed(t *testing.T) {
 	sources := []string{"memory"}
 	if !Allows(sources, " ", true) {

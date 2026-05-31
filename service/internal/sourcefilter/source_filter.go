@@ -1,19 +1,41 @@
 package sourcefilter
 
-import "github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+import (
+	"strings"
 
-// Allows reports whether a normalized source allow-list permits sourceType.
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+)
+
+// Decision is the replayable source-filter outcome behind Allows.
+// It makes wildcard and legacy empty-source matches explicit for callers/tests
+// that need to distinguish an intentional all-source browse from a filtered hit.
+type Decision struct {
+	Allowed            bool
+	Wildcard           bool
+	EmptySourceMatched bool
+	MatchedSource      string
+}
+
+// Decide reports the explicit match reason for a normalized source allow-list.
 // Empty allow-lists and wildcard entries permit all sources. When
 // emptySourceAllowed is true, an empty sourceType is treated as a legacy match
 // for callers that historically accepted untyped vector hits.
-func Allows(sources []string, sourceType string, emptySourceAllowed bool) bool {
+func Decide(sources []string, sourceType string, emptySourceAllowed bool) Decision {
 	if len(sources) == 0 || hasWildcard(sources) {
-		return true
+		return Decision{Allowed: true, Wildcard: true, MatchedSource: "*"}
 	}
 	if textutil.EqualTrimmed(sourceType, "") {
-		return emptySourceAllowed
+		return Decision{Allowed: emptySourceAllowed, EmptySourceMatched: emptySourceAllowed}
 	}
-	return textutil.ContainsEqualFoldTrimmed(sources, sourceType)
+	if !textutil.ContainsEqualFoldTrimmed(sources, sourceType) {
+		return Decision{}
+	}
+	return Decision{Allowed: true, MatchedSource: strings.TrimSpace(sourceType)}
+}
+
+// Allows reports whether a normalized source allow-list permits sourceType.
+func Allows(sources []string, sourceType string, emptySourceAllowed bool) bool {
+	return Decide(sources, sourceType, emptySourceAllowed).Allowed
 }
 
 // AllowsKindOrOrigin reports whether a source allow-list permits either a
