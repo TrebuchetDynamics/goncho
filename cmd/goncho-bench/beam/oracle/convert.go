@@ -113,25 +113,19 @@ func loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale string) ([]be
 	out := []beamJSONLRecord{{Type: "meta", Dataset: "beam-huggingface-converted", Scale: fallbackScale}}
 	scanner := bufio.NewScanner(io.TeeReader(file, sourceHasher))
 	scanner.Buffer(make([]byte, 0, 1024*1024), 16*1024*1024)
-	lineNo := 0
-	for scanner.Scan() {
-		lineNo++
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
+	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: read HuggingFace BEAM JSONL", func(lineNo int, line string) error {
 		var record beamHuggingFaceRecord
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
-			return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: decode HuggingFace BEAM line %d: %w", lineNo, err)
+			return fmt.Errorf("goncho-bench: decode HuggingFace BEAM line %d: %w", lineNo, err)
 		}
 		converted, err := convertBeamHuggingFaceRecord(record, lineNo, fallbackScale)
 		if err != nil {
-			return nil, beamConversionDiagnostics{}, err
+			return err
 		}
 		out = append(out, converted...)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: read HuggingFace BEAM JSONL: %w", err)
+		return nil
+	}); err != nil {
+		return nil, beamConversionDiagnostics{}, err
 	}
 	if len(out) == 1 {
 		return nil, beamConversionDiagnostics{}, fmt.Errorf("goncho-bench: HuggingFace BEAM JSONL has no conversation records")

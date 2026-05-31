@@ -67,25 +67,13 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 func loadJSONLBeamServiceJudgments(raw []byte, rows map[shared.OutcomeKey]beamServiceJudgment, questionRows map[shared.QuestionKey]beamServiceJudgment) error {
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
-	lineNo := 0
-	for scanner.Scan() {
-		lineNo++
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
+	return shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: read BEAM service judgments", func(lineNo int, line string) error {
 		var row beamServiceJudgment
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
 			return fmt.Errorf("goncho-bench: decode BEAM service judgment line %d: %w", lineNo, err)
 		}
-		if err := addBeamServiceJudgment(rows, questionRows, row, fmt.Sprintf("line %d", lineNo)); err != nil {
-			return err
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("goncho-bench: read BEAM service judgments: %w", err)
-	}
-	return nil
+		return addBeamServiceJudgment(rows, questionRows, row, fmt.Sprintf("line %d", lineNo))
+	})
 }
 
 func loadNestedBeamServiceJudgments(raw []byte, rows map[shared.OutcomeKey]beamServiceJudgment, questionRows map[shared.QuestionKey]beamServiceJudgment) error {

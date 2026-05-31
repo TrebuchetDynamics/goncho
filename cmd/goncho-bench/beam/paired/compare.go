@@ -203,21 +203,15 @@ func loadBeamPairedOutcomes(path string) ([]servicePairedOutcome, error) {
 	defer file.Close()
 	rows := []servicePairedOutcome{}
 	scanner := bufio.NewScanner(file)
-	lineNumber := 0
-	for scanner.Scan() {
-		lineNumber++
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
+	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: scan BEAM paired outcomes", func(lineNumber int, line string) error {
 		var row servicePairedOutcome
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
-			return nil, fmt.Errorf("goncho-bench: decode BEAM paired outcome line %d: %w", lineNumber, err)
+			return fmt.Errorf("goncho-bench: decode BEAM paired outcome line %d: %w", lineNumber, err)
 		}
 		rows = append(rows, row)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("goncho-bench: scan BEAM paired outcomes: %w", err)
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 	return rows, nil
 }

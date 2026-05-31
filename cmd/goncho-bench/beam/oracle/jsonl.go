@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -58,21 +59,15 @@ func loadBeamServiceJSONLCases(path string) ([]goncho.RecallBenchmarkServiceCase
 
 	records := []beamJSONLRecord{}
 	scanner := bufio.NewScanner(file)
-	lineNo := 0
-	for scanner.Scan() {
-		lineNo++
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
+	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: read BEAM JSONL dataset", func(lineNo int, line string) error {
 		var record beamJSONLRecord
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
-			return nil, fmt.Errorf("goncho-bench: decode BEAM JSONL line %d: %w", lineNo, err)
+			return fmt.Errorf("goncho-bench: decode BEAM JSONL line %d: %w", lineNo, err)
 		}
 		records = append(records, record)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("goncho-bench: read BEAM JSONL dataset: %w", err)
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 	return beamServiceCasesFromJSONLRecords(records)
 }
