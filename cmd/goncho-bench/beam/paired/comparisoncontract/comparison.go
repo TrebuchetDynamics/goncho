@@ -2,11 +2,6 @@ package comparisoncontract
 
 import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 
-type CI struct {
-	Lower float64 `json:"lower"`
-	Upper float64 `json:"upper"`
-}
-
 type Report struct {
 	GeneratedAt          string           `json:"generated_at"`
 	SourcePath           string           `json:"source_path"`

@@ -1,34 +1,32 @@
 package comparisoncontract
 
-const (
-	ConclusionCandidateSuperior = "candidate_superior"
-	ConclusionBaselineSuperior  = "baseline_superior"
-	ConclusionInconclusive      = "inconclusive"
+import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/verdict"
 
-	ReasonCandidateCIAboveEffectFloor = "candidate_ci_above_effect_floor"
-	ReasonBaselineCIBelowEffectFloor  = "baseline_ci_below_negative_effect_floor"
-	ReasonCIOverlapsEffectFloor       = "ci_overlaps_effect_floor"
-	ReasonCandidateDeltaAboveFloor    = "candidate_delta_above_effect_floor"
-	ReasonBaselineDeltaBelowFloor     = "baseline_delta_below_negative_effect_floor"
-	ReasonDeltaWithinEffectFloor      = "delta_within_effect_floor"
+// CI preserves the comparisoncontract confidence-interval API while sharing the
+// verdict.CI value type with lower-level conclusion helpers.
+type CI = verdict.CI
+
+const (
+	ConclusionCandidateSuperior = verdict.ConclusionCandidateSuperior
+	ConclusionBaselineSuperior  = verdict.ConclusionBaselineSuperior
+	ConclusionInconclusive      = verdict.ConclusionInconclusive
+
+	ReasonCandidateCIAboveEffectFloor = verdict.ReasonCandidateCIAboveEffectFloor
+	ReasonBaselineCIBelowEffectFloor  = verdict.ReasonBaselineCIBelowEffectFloor
+	ReasonCIOverlapsEffectFloor       = verdict.ReasonCIOverlapsEffectFloor
+	ReasonCandidateDeltaAboveFloor    = verdict.ReasonCandidateDeltaAboveFloor
+	ReasonBaselineDeltaBelowFloor     = verdict.ReasonBaselineDeltaBelowFloor
+	ReasonDeltaWithinEffectFloor      = verdict.ReasonDeltaWithinEffectFloor
 )
 
+// Conclusion preserves the comparisoncontract verdict API while delegating to
+// the focused verdict contract.
 func Conclusion(ci CI, effectSizeFloor float64) (string, string) {
-	if ci.Lower > effectSizeFloor {
-		return ConclusionCandidateSuperior, ReasonCandidateCIAboveEffectFloor
-	}
-	if ci.Upper < -effectSizeFloor {
-		return ConclusionBaselineSuperior, ReasonBaselineCIBelowEffectFloor
-	}
-	return ConclusionInconclusive, ReasonCIOverlapsEffectFloor
+	return verdict.Conclusion(ci, effectSizeFloor)
 }
 
+// PointConclusion preserves the comparisoncontract point-verdict API while
+// delegating to the focused verdict contract.
 func PointConclusion(delta, effectSizeFloor float64) (string, string) {
-	if delta > effectSizeFloor {
-		return ConclusionCandidateSuperior, ReasonCandidateDeltaAboveFloor
-	}
-	if delta < -effectSizeFloor {
-		return ConclusionBaselineSuperior, ReasonBaselineDeltaBelowFloor
-	}
-	return ConclusionInconclusive, ReasonDeltaWithinEffectFloor
+	return verdict.PointConclusion(delta, effectSizeFloor)
 }
