@@ -247,9 +247,10 @@ func (f *MemoryFacade) Search(ctx context.Context, p MemorySearchParams) (Memory
 		item := memoryItemFromSlot(slot, env)
 		item.EvidenceIDs = []string{memorySlotEvidenceID(item)}
 		items = append(items, item)
-		if len(items) >= limit {
-			break
-		}
+	}
+	sortMemoryItemsByUpdatedAtDesc(items)
+	if len(items) > limit {
+		items = items[:limit]
 	}
 	return MemorySearchResult{Items: items, Count: len(items)}, nil
 }

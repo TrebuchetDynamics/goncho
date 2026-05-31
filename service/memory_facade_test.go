@@ -98,6 +98,38 @@ func TestMemoryFacadeAddSearchUpdateDeleteHistoryWithStableIDs(t *testing.T) {
 	}
 }
 
+func TestMemoryFacadeSearchReturnsNewestMatchingSlotsBeforeApplyingLimit(t *testing.T) {
+	ctx := context.Background()
+	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := NewService(store.DB(), Config{WorkspaceID: "facade-workspace", ObserverPeerID: "agent-alpha"}, nil)
+	facade := NewMemoryFacade(svc)
+
+	if _, err := facade.Add(ctx, MemoryAddParams{ID: "a-old", UserID: "user-1", ProfileID: "mineru", Content: "Maya likes blue archive clues."}); err != nil {
+		t.Fatalf("Add old: %v", err)
+	}
+	if _, err := facade.Add(ctx, MemoryAddParams{ID: "z-new", UserID: "user-1", ProfileID: "mineru", Content: "Maya likes blue archive clues."}); err != nil {
+		t.Fatalf("Add new: %v", err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `UPDATE goncho_memory_slots SET updated_at = CASE name WHEN 'a-old' THEN 10 WHEN 'z-new' THEN 20 ELSE updated_at END WHERE peer_id = ?`, "user-1"); err != nil {
+		t.Fatalf("force updated_at ordering: %v", err)
+	}
+
+	got, err := facade.Search(ctx, MemorySearchParams{UserID: "user-1", ProfileID: "mineru", Query: "blue archive", Limit: 1})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].ID != "z-new" {
+		t.Fatalf("search items = %+v, want newest matching slot before limit", got.Items)
+	}
+}
+
 func TestMemoryFacadeSearchScansPastInitialNonMatchingSlots(t *testing.T) {
 	ctx := context.Background()
 	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
