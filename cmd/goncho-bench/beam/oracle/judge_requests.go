@@ -1,18 +1,18 @@
 package oracle
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/judgeprompt"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
 const (
-	beamAnswerSystemPrompt = "You answer BEAM memory benchmark questions using only the retrieved memory context. If the context is insufficient, say you do not know."
-	beamJudgeSystemPrompt  = "You are an expert evaluator for a memory benchmark. Score the AI answer against each rubric item and return JSON with scores and overall_score."
-	beamAnswerPlaceholder  = "[AI_ANSWER]"
+	beamAnswerSystemPrompt = judgeprompt.AnswerSystemPrompt
+	beamJudgeSystemPrompt  = judgeprompt.JudgeSystemPrompt
+	beamAnswerPlaceholder  = judgeprompt.AnswerPlaceholder
 )
 
 type beamServiceJudgeRequestRow struct {
@@ -33,20 +33,9 @@ type beamServiceJudgeRequestRow struct {
 	RubricContextMatches []string                    `json:"rubric_context_matches,omitempty"`
 }
 
-type beamServicePromptRequest struct {
-	System  string `json:"system"`
-	User    string `json:"user"`
-	Context string `json:"context"`
-}
+type beamServicePromptRequest = judgeprompt.AnswerRequest
 
-type beamServiceJudgePrompt struct {
-	System            string   `json:"system"`
-	User              string   `json:"user"`
-	Question          string   `json:"question"`
-	IdealAnswer       string   `json:"ideal_answer,omitempty"`
-	Rubric            []string `json:"rubric,omitempty"`
-	AnswerPlaceholder string   `json:"answer_placeholder"`
-}
+type beamServiceJudgePrompt = judgeprompt.JudgePrompt
 
 func writeBeamServiceJudgeRequests(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
 	return shared.WriteJSONLFileWithParents(path, "goncho-bench: create BEAM judge request dir", "goncho-bench: create BEAM judge requests", "goncho-bench: write BEAM judge request row", buildBeamServiceJudgeRequestRows(report, configID, runStartedAt))
@@ -80,39 +69,9 @@ func buildBeamServiceJudgeRequestRows(report goncho.RecallBenchmarkReport, confi
 }
 
 func buildBeamServiceAnswerRequest(question, context string) beamServicePromptRequest {
-	if !shared.HasNonEmptyTrimmed(context) {
-		context = "[No memories found]"
-	}
-	return beamServicePromptRequest{
-		System:  beamAnswerSystemPrompt,
-		User:    fmt.Sprintf("RETRIEVED MEMORIES:\n%s\n\nQUESTION: %s\n\nANSWER:", strings.TrimSpace(context), strings.TrimSpace(question)),
-		Context: strings.TrimSpace(context),
-	}
+	return judgeprompt.BuildAnswerRequest(question, context)
 }
 
 func buildBeamServiceJudgePrompt(question, idealAnswer string, rubric []string) beamServiceJudgePrompt {
-	rubricText := ""
-	if len(rubric) > 0 {
-		var b strings.Builder
-		for i, item := range rubric {
-			item = strings.TrimSpace(item)
-			if item == "" {
-				continue
-			}
-			if b.Len() > 0 {
-				b.WriteByte('\n')
-			}
-			fmt.Fprintf(&b, "%d. %s", i+1, item)
-		}
-		rubricText = b.String()
-	}
-	user := fmt.Sprintf("QUESTION: %s\n\nRUBRIC ITEMS:\n%s\n\nAI's ANSWER: %s\n\nFor each rubric item, score how well the AI's answer matches. Return JSON with scores array and overall_score.", strings.TrimSpace(question), rubricText, beamAnswerPlaceholder)
-	return beamServiceJudgePrompt{
-		System:            beamJudgeSystemPrompt,
-		User:              user,
-		Question:          strings.TrimSpace(question),
-		IdealAnswer:       strings.TrimSpace(idealAnswer),
-		Rubric:            append([]string(nil), rubric...),
-		AnswerPlaceholder: beamAnswerPlaceholder,
-	}
+	return judgeprompt.BuildJudgePrompt(question, idealAnswer, rubric)
 }
