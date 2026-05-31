@@ -1,12 +1,14 @@
 package searchops
 
+import "github.com/TrebuchetDynamics/goncho/service/internal/sliceutil/contracts"
+
 // Contains reports whether values includes want.
 func Contains[T comparable](values []T, want T) bool {
 	return ContainsFunc(values, func(value T) bool { return value == want })
 }
 
 // ContainsFunc reports whether any value satisfies match.
-func ContainsFunc[T any](values []T, match func(T) bool) bool {
+func ContainsFunc[T any](values []T, match contracts.Predicate[T]) bool {
 	for _, value := range values {
 		if match(value) {
 			return true

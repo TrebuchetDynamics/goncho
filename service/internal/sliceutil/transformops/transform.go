@@ -1,8 +1,10 @@
 package transformops
 
+import "github.com/TrebuchetDynamics/goncho/service/internal/sliceutil/contracts"
+
 // Map returns a slice containing fn applied to each value while preserving nil
 // input as nil. A nil fn returns the zero value for each input element.
-func Map[T any, U any](values []T, fn func(T) U) []U {
+func Map[T any, U any](values []T, fn contracts.Mapper[T, U]) []U {
 	if values == nil {
 		return nil
 	}
@@ -19,7 +21,7 @@ func Map[T any, U any](values []T, fn func(T) U) []U {
 
 // FilterMap returns mapped values for inputs accepted by fn while preserving nil
 // input as nil. A nil fn rejects every value.
-func FilterMap[T any, U any](values []T, fn func(T) (U, bool)) []U {
+func FilterMap[T any, U any](values []T, fn contracts.FilterMapper[T, U]) []U {
 	if values == nil {
 		return nil
 	}
@@ -37,7 +39,7 @@ func FilterMap[T any, U any](values []T, fn func(T) (U, bool)) []U {
 }
 
 // IndexBy builds an index of the first position for each accepted key in values.
-func IndexBy[T any, K comparable](values []T, key func(T) (K, bool)) map[K]int {
+func IndexBy[T any, K comparable](values []T, key contracts.Keyer[T, K]) map[K]int {
 	out := make(map[K]int, len(values))
 	for i, value := range values {
 		k, ok := key(value)
