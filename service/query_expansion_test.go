@@ -49,6 +49,31 @@ func TestSearchSourceFilterSuppressesConclusionVectorLane(t *testing.T) {
 	}
 }
 
+func TestSearchDeduplicatesVectorHitsByMemoryID(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	vectorStore := &fakeVectorStore{hits: []VectorSearchHit{
+		{MemoryID: "semantic-orchid", SourceType: "conclusion", Content: "lower scoring stale orchid content", Score: 0.41},
+		{MemoryID: "semantic-orchid", SourceType: "conclusion", Content: "higher scoring fresh orchid content", Score: 0.95},
+	}}
+	svc.vectorStore = vectorStore
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+
+	got, err := svc.Search(context.Background(), SearchParams{Peer: "peer-semantic-dedupe", Query: "orchid", Limit: 5})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("Search results len = %d, want one result for duplicate vector memory_id: %+v", len(got.Results), got.Results)
+	}
+	if got.Results[0].Content != "higher scoring fresh orchid content" {
+		t.Fatalf("deduped vector content = %q, want highest-scoring hit retained", got.Results[0].Content)
+	}
+	if !searchHitHasEvidenceKind(got.Results[0], "semantic") {
+		t.Fatalf("deduped vector provenance = %+v, want semantic evidence", got.Results[0].Provenance)
+	}
+}
+
 func TestSearchVectorCandidatesDoNotOverflowLimit(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

@@ -290,7 +290,23 @@ func searchHitVectorMergeKey(hit SearchHit) string {
 	if hit.ID > 0 {
 		return idutil.Prefixed("id:", hit.ID)
 	}
+	if semanticID, ok := searchHitSemanticEvidenceID(hit); ok {
+		return "semantic:" + semanticID
+	}
 	return "content:" + strings.TrimSpace(hit.Content)
+}
+
+func searchHitSemanticEvidenceID(hit SearchHit) (string, bool) {
+	for _, evidence := range hit.Provenance {
+		if evidence.Kind != "semantic" {
+			continue
+		}
+		id := strings.TrimSpace(evidence.ID)
+		if id != "" {
+			return id, true
+		}
+	}
+	return "", false
 }
 
 func (r retrievalModule) searchTurnFallback(ctx context.Context, params SearchParams, compiled compiledSearchFilter, limit int) (turnFallbackResult, error) {
