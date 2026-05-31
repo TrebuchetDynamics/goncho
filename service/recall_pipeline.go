@@ -820,6 +820,49 @@ func recallTraceID(trace RecallTrace) string {
 	return hashutil.JSONSHA256Hex(view)
 }
 
+type recallTraceReplayCandidateView struct {
+	Candidate RecallCandidate `json:"candidate"`
+	Score     RecallScore     `json:"score"`
+}
+
+type recallTraceReplayRejectedView struct {
+	Candidate   RecallCandidate `json:"candidate"`
+	Score       RecallScore     `json:"score"`
+	Reason      string          `json:"reason"`
+	WhyRejected []string        `json:"why_rejected,omitempty"`
+}
+
+func recallTraceReplayFingerprint(trace RecallTrace) string {
+	return hashutil.JSONSHA256Hex(recallTraceReplayFingerprintView(trace))
+}
+
+func recallTraceReplayFingerprintView(trace RecallTrace) any {
+	view := struct {
+		Query           RecallQuery                      `json:"query"`
+		Candidates      []recallTraceReplayCandidateView `json:"candidates"`
+		Selected        []recallTraceReplayCandidateView `json:"selected"`
+		Rejected        []recallTraceReplayRejectedView  `json:"rejected"`
+		Warnings        []RecallWarning                  `json:"warnings"`
+		ScoringConfig   RecallScoringConfig              `json:"scoring_config"`
+		PipelineVersion string                           `json:"pipeline_version"`
+	}{
+		Query:           trace.Query,
+		ScoringConfig:   trace.ScoringConfig,
+		PipelineVersion: trace.PipelineVersion,
+		Warnings:        trace.Warnings,
+	}
+	for _, item := range trace.Candidates {
+		view.Candidates = append(view.Candidates, recallTraceReplayCandidateView{Candidate: item.Candidate, Score: item.Score})
+	}
+	for _, item := range trace.Selected {
+		view.Selected = append(view.Selected, recallTraceReplayCandidateView{Candidate: item.Candidate, Score: item.Score})
+	}
+	for _, item := range trace.Rejected {
+		view.Rejected = append(view.Rejected, recallTraceReplayRejectedView{Candidate: item.Candidate, Score: item.Score, Reason: item.Reason, WhyRejected: item.WhyRejected})
+	}
+	return view
+}
+
 func clampRecall(value float64) float64 {
 	return recallscore.Clamp(value)
 }

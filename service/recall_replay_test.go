@@ -55,6 +55,9 @@ func TestRecallReplayBuildsDeterministicTimelineFromTrace(t *testing.T) {
 	if replay.Service != "goncho" || replay.TraceID != "trace-replay" || replay.PipelineVersion != "test-pipeline" || replay.ScoringConfigVersion != "replay-v1" {
 		t.Fatalf("replay header = %+v", replay)
 	}
+	if replay.ReplayFingerprint == "" {
+		t.Fatal("ReplayFingerprint is empty")
+	}
 	if replay.ProjectionInvariant != "no_projection_without_recall_trace" {
 		t.Fatalf("ProjectionInvariant = %q", replay.ProjectionInvariant)
 	}

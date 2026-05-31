@@ -118,6 +118,39 @@ func TestRecallTraceStableIDAndJSONFixture(t *testing.T) {
 	}
 }
 
+func TestRecallReplayFingerprintChangesWhenInputsChange(t *testing.T) {
+	now := time.Date(2026, 5, 23, 12, 0, 0, 0, time.UTC)
+	base := RecallTrace{
+		TraceID:         "stable-public-trace-id",
+		PipelineVersion: "replay-fingerprint-contract-v1",
+		Query:           RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "auth", Limit: 1},
+		ScoringConfig: RecallScoringConfig{
+			Version:   "replay-fingerprint-contract-v1",
+			Weights:   map[string]float64{"keyword": 1},
+			RRFK:      60,
+			MMRLambda: 1,
+		},
+		Candidates: []ScoredRecallCandidate{{
+			Candidate: RecallCandidate{MemoryID: "mem-auth", Content: "JWT auth uses jose middleware.", CreatedAt: now},
+			Score:     RecallScore{KeywordScore: 1, FinalScore: 1},
+		}},
+	}
+	changed := base
+	changed.Candidates = []ScoredRecallCandidate{{
+		Candidate: RecallCandidate{MemoryID: "mem-auth", Content: "JWT auth now uses oauth middleware.", CreatedAt: now},
+		Score:     RecallScore{KeywordScore: 0.5, FinalScore: 0.5},
+	}}
+
+	baseReplay := BuildRecallReplay(base)
+	changedReplay := BuildRecallReplay(changed)
+	if baseReplay.TraceID != changedReplay.TraceID {
+		t.Fatalf("trace ID changed: %q vs %q", baseReplay.TraceID, changedReplay.TraceID)
+	}
+	if baseReplay.ReplayFingerprint == changedReplay.ReplayFingerprint {
+		t.Fatalf("replay fingerprints matched for same memory IDs but different replay inputs: %s", baseReplay.ReplayFingerprint)
+	}
+}
+
 func TestRecallProjectionIsTraceOnly(t *testing.T) {
 	projectorType := reflect.TypeOf(&RecallProjector{})
 	if projectorType.NumMethod() == 0 {

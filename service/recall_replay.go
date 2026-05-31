@@ -21,6 +21,7 @@ const (
 type RecallReplay struct {
 	Service              string              `json:"service"`
 	TraceID              string              `json:"trace_id"`
+	ReplayFingerprint    string              `json:"replay_fingerprint"`
 	PipelineVersion      string              `json:"pipeline_version"`
 	ScoringConfigVersion string              `json:"scoring_config_version"`
 	Query                RecallQuery         `json:"query"`
@@ -50,6 +51,7 @@ func BuildRecallReplay(trace RecallTrace) RecallReplay {
 	replay := RecallReplay{
 		Service:              "goncho",
 		TraceID:              trace.TraceID,
+		ReplayFingerprint:    recallTraceReplayFingerprint(trace),
 		PipelineVersion:      trace.PipelineVersion,
 		ScoringConfigVersion: trace.ScoringConfig.Version,
 		Query:                trace.Query,
@@ -115,6 +117,7 @@ func FormatRecallReplay(replay RecallReplay) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, "Goncho recall replay")
 	fmt.Fprintf(&b, "trace_id: %s\n", replay.TraceID)
+	fmt.Fprintf(&b, "replay_fingerprint: %s\n", replay.ReplayFingerprint)
 	fmt.Fprintf(&b, "pipeline_version: %s\n", replay.PipelineVersion)
 	fmt.Fprintf(&b, "scoring_config: %s\n", replay.ScoringConfigVersion)
 	fmt.Fprintf(&b, "query: %s\n", replay.Query.Query)
