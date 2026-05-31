@@ -107,6 +107,57 @@ func TestActionLeaseConcurrentAcquireAllowsOnlyOneOwner(t *testing.T) {
 	}
 }
 
+func TestActionLeaseAcquireRejectsOverflowingTTL(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := svc.UpsertAction(ctx, ActionParams{Peer: "peer-overflow", ActionID: "unsafe", Title: "Reject impossible lease TTL"}); err != nil {
+		t.Fatalf("upsert action: %v", err)
+	}
+
+	got, err := svc.AcquireActionLease(ctx, ActionLeaseParams{Peer: "peer-overflow", ActionID: "unsafe", Owner: "agent:a", TTL: time.Duration(1<<63 - 1)})
+	if err == nil {
+		t.Fatalf("AcquireActionLease huge TTL result = %+v, want overflow error", got)
+	}
+	leases, err := svc.ListActionLeaseAudit(ctx, ActionLeaseAuditQuery{Peer: "peer-overflow", ActionID: "unsafe"})
+	if err != nil {
+		t.Fatalf("ListActionLeaseAudit: %v", err)
+	}
+	if len(leases.Events) != 0 {
+		t.Fatalf("audit events = %+v, want no lease/audit row for rejected overflow TTL", leases.Events)
+	}
+}
+
+func TestActionLeaseRenewRejectsOverflowingTTLWithoutShorteningLease(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := svc.UpsertAction(ctx, ActionParams{Peer: "peer-renew-overflow", ActionID: "unsafe", Title: "Keep existing lease safe"}); err != nil {
+		t.Fatalf("upsert action: %v", err)
+	}
+	if _, err := svc.AcquireActionLease(ctx, ActionLeaseParams{Peer: "peer-renew-overflow", ActionID: "unsafe", Owner: "agent:a", TTL: time.Hour}); err != nil {
+		t.Fatalf("AcquireActionLease: %v", err)
+	}
+
+	got, err := svc.RenewActionLease(ctx, ActionLeaseParams{Peer: "peer-renew-overflow", ActionID: "unsafe", Owner: "agent:a", TTL: time.Duration(1<<63 - 1)})
+	if err == nil {
+		t.Fatalf("RenewActionLease huge TTL result = %+v, want overflow error", got)
+	}
+	blocked, err := svc.AcquireActionLease(ctx, ActionLeaseParams{Peer: "peer-renew-overflow", ActionID: "unsafe", Owner: "agent:b", TTL: time.Hour})
+	if err != nil {
+		t.Fatalf("AcquireActionLease competing owner: %v", err)
+	}
+	if blocked.Decision != ActionLeaseDecisionHeldByOther || blocked.Lease.Owner != "agent:a" {
+		t.Fatalf("competing acquire = %+v, want original owner still holding lease after failed renew", blocked)
+	}
+}
+
 func TestActionLeaseExpirationAllowsAnotherOwner(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

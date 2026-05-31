@@ -120,7 +120,10 @@ func (s *Service) AcquireActionLease(ctx context.Context, params ActionLeasePara
 		return ActionLeaseResult{}, err
 	}
 	now := time.Now().UnixNano()
-	expiresAt := now + params.TTL.Nanoseconds()
+	expiresAt, err := actionLeaseExpiresAt(now, params.TTL)
+	if err != nil {
+		return ActionLeaseResult{}, err
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return ActionLeaseResult{}, fmt.Errorf("goncho: begin action lease acquire: %w", err)
@@ -202,8 +205,12 @@ func (s *Service) RenewActionLease(ctx context.Context, params ActionLeaseParams
 		}
 		return ActionLeaseResult{Decision: ActionLeaseDecisionHeldByOther, Lease: existing, Reason: reason, AuditID: auditID}, nil
 	}
+	expiresAt, err := actionLeaseExpiresAt(now, params.TTL)
+	if err != nil {
+		return ActionLeaseResult{}, err
+	}
 	existing.RenewedAt = now
-	existing.ExpiresAt = now + params.TTL.Nanoseconds()
+	existing.ExpiresAt = expiresAt
 	if err := upsertActionLeaseTx(ctx, tx, existing); err != nil {
 		return ActionLeaseResult{}, err
 	}
@@ -291,6 +298,18 @@ func (s *Service) normalizeActionLeaseParams(params ActionLeaseParams) (ActionLe
 		return ActionLease{}, fmt.Errorf("goncho: action lease ttl must be positive")
 	}
 	return ActionLease{WorkspaceID: action.WorkspaceID, ProfileID: action.ProfileID, Peer: action.Peer, ActionID: action.ActionID, Owner: owner}, nil
+}
+
+func actionLeaseExpiresAt(now int64, ttl time.Duration) (int64, error) {
+	ttlNanos := ttl.Nanoseconds()
+	if ttlNanos <= 0 {
+		return 0, fmt.Errorf("goncho: action lease ttl must be positive")
+	}
+	const maxInt64 = int64(^uint64(0) >> 1)
+	if now > maxInt64-ttlNanos {
+		return 0, fmt.Errorf("goncho: action lease ttl overflows expiry timestamp")
+	}
+	return now + ttlNanos, nil
 }
 
 func (s *Service) normalizeActionLeaseExpireParams(params ActionLeaseExpireParams) (ActionLease, error) {
