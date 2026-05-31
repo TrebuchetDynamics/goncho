@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"strings"
+
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/checksum"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/ranking"
@@ -20,4 +22,9 @@ func TopN(values []string, n int) []string {
 
 func ChecksumBytesSHA256(raw []byte) string {
 	return checksum.SHA256Bytes(raw)
+}
+
+// NormalizeQuestionText returns the canonical question text used for BEAM question-key matching.
+func NormalizeQuestionText(question string) string {
+	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(question))), " ")
 }

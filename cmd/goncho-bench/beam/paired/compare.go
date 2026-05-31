@@ -241,7 +241,7 @@ func beamPairedOutcomeKey(row servicePairedOutcome) beamPairedComparisonKey {
 }
 
 func beamPairedOutcomeQuestionKey(row servicePairedOutcome) beamPairedComparisonQuestionKey {
-	question := strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(row.Question))), " ")
+	question := shared.NormalizeQuestionText(row.Question)
 	if question == "" {
 		return beamPairedComparisonQuestionKey{}
 	}

@@ -208,5 +208,5 @@ func beamServiceJudgmentKey(scale, conversationID, qid string) string {
 }
 
 func beamServiceJudgmentQuestionKey(scale, conversationID, ability, question string) string {
-	return strings.TrimSpace(scale) + "\x00" + strings.TrimSpace(conversationID) + "\x00" + strings.ToUpper(strings.TrimSpace(ability)) + "\x00" + strings.Join(strings.Fields(strings.ToLower(question)), " ")
+	return strings.TrimSpace(scale) + "\x00" + strings.TrimSpace(conversationID) + "\x00" + strings.ToUpper(strings.TrimSpace(ability)) + "\x00" + shared.NormalizeQuestionText(question)
 }
