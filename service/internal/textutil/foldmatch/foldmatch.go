@@ -8,7 +8,7 @@ import "strings"
 func AnySubstring(value string, markers []string) bool {
 	value = strings.ToLower(value)
 	for _, marker := range markers {
-		if strings.Contains(value, strings.ToLower(marker)) {
+		if containsFolded(value, marker) {
 			return true
 		}
 	}
@@ -39,7 +39,7 @@ func HasAnyPrefix(value string, prefixes ...string) bool {
 		if prefix == "" {
 			continue
 		}
-		if strings.HasPrefix(value, strings.ToLower(prefix)) {
+		if hasPrefixFolded(value, prefix) {
 			return true
 		}
 	}
@@ -51,7 +51,7 @@ func HasAnyPrefix(value string, prefixes ...string) bool {
 func CutAnyPrefix(value string, prefixes []string) (tail string, ok bool) {
 	lower := strings.ToLower(value)
 	for _, prefix := range prefixes {
-		if strings.HasPrefix(lower, strings.ToLower(prefix)) {
+		if hasPrefixFolded(lower, prefix) {
 			return value[len(prefix):], true
 		}
 	}
@@ -64,7 +64,7 @@ func CutAnyPrefix(value string, prefixes []string) (tail string, ok bool) {
 func CutAroundAnySubstringMatch(value string, markers []string) (before, marker, after string, ok bool) {
 	lower := strings.ToLower(value)
 	for _, candidate := range markers {
-		idx := strings.Index(lower, strings.ToLower(candidate))
+		idx := indexFolded(lower, candidate)
 		if idx < 0 {
 			continue
 		}
@@ -82,7 +82,7 @@ func CutBeforeAnySubstring(value string, markers ...string) (string, bool) {
 		if marker == "" {
 			continue
 		}
-		idx := strings.Index(lower, strings.ToLower(marker))
+		idx := indexFolded(lower, marker)
 		if idx < 0 {
 			continue
 		}
@@ -94,4 +94,16 @@ func CutBeforeAnySubstring(value string, markers ...string) (string, bool) {
 		return value, false
 	}
 	return value[:best], true
+}
+
+func containsFolded(lowerValue, marker string) bool {
+	return strings.Contains(lowerValue, strings.ToLower(marker))
+}
+
+func hasPrefixFolded(lowerValue, prefix string) bool {
+	return strings.HasPrefix(lowerValue, strings.ToLower(prefix))
+}
+
+func indexFolded(lowerValue, marker string) int {
+	return strings.Index(lowerValue, strings.ToLower(marker))
 }
