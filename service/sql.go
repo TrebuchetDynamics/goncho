@@ -476,6 +476,21 @@ func deleteConclusion(ctx context.Context, db *sql.DB, workspaceID, profileID, o
 	return affected > 0, nil
 }
 
+type conclusionCandidateScanPlan struct {
+	TrimmedQuery string
+	Limit        int
+	Bounded      bool
+}
+
+func planConclusionCandidateScan(query string, finalLimit int) conclusionCandidateScanPlan {
+	trimmedQuery := strings.TrimSpace(query)
+	return conclusionCandidateScanPlan{
+		TrimmedQuery: trimmedQuery,
+		Limit:        finalLimit,
+		Bounded:      trimmedQuery == "",
+	}
+}
+
 func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer, query, sessionKey, memoryScope string, filter compiledSearchFilter, limit int) ([]SearchHit, error) {
 	base := `
 		SELECT id, content, COALESCE(session_key, ''), updated_at
@@ -509,17 +524,12 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 		sqlutil.AppendInClause(&b, "session_key", filter.SessionIDs, &args)
 		base += b.String()
 	}
-	trimmedQuery := strings.TrimSpace(query)
-	queryLimit := limit
-	if trimmedQuery != "" && queryLimit < 5000 {
-		// Candidate generation must happen before top-K truncation. LOCOMO-style
-		// conversations can exceed 500 memories; ranking only the most recent
-		// slice drops old but exact lexical matches before BM25-style scoring can
-		// recover them.
-		queryLimit = 5000
+	scan := planConclusionCandidateScan(query, limit)
+	base += ` ORDER BY updated_at DESC`
+	if scan.Bounded {
+		base += ` LIMIT ?`
+		args = append(args, scan.Limit)
 	}
-	base += ` ORDER BY updated_at DESC LIMIT ?`
-	args = append(args, queryLimit)
 
 	rows, err := db.QueryContext(ctx, base, args...)
 	if err != nil {
@@ -547,8 +557,8 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 	if err != nil {
 		return nil, err
 	}
-	if trimmedQuery != "" {
-		hits = rankConclusionHitsByLexicalOverlap(trimmedQuery, hits)
+	if scan.TrimmedQuery != "" {
+		hits = rankConclusionHitsByLexicalOverlap(scan.TrimmedQuery, hits)
 	}
 	hits = sliceutil.Limit(hits, limit)
 	return hits, nil
