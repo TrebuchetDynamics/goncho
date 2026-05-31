@@ -15,6 +15,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
 )
 
 const PortableExportSchemaVersion = "goncho-portable-v1"
@@ -429,7 +430,7 @@ func (s *Service) exportPortableObservations(ctx context.Context, workspaceID, p
 		o.InputTruncated = inTr == 1
 		o.OutputTruncated = outTr == 1
 		o.Redacted = red == 1
-		o.ObservedAt = time.Unix(0, observed).UTC()
+		o.ObservedAt = timeutil.UnixNanoUTC(observed)
 		out = append(out, o)
 	}
 	return out, rows.Err()

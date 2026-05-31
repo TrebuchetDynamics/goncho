@@ -12,6 +12,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
 )
 
 var evalFeedbackDDL = []string{
@@ -381,7 +382,7 @@ func scanEvalCandidate(scanner interface{ Scan(...any) error }) (EvalImprovement
 	_ = json.Unmarshal([]byte(evidence), &c.EvidenceIDs)
 	_ = json.Unmarshal([]byte(expected), &c.ExpectedMemoryIDs)
 	_ = json.Unmarshal([]byte(retrieved), &c.RetrievedMemoryIDs)
-	c.CreatedAt = time.Unix(0, created).UTC()
+	c.CreatedAt = timeutil.UnixNanoUTC(created)
 	return c, nil
 }
 
@@ -399,7 +400,7 @@ func scanRecallFeedback(scanner interface{ Scan(...any) error }) (RecallFeedback
 	}
 	f.Label = RecallFeedbackLabel(label)
 	f.Status = RecallFeedbackRecorded
-	f.CreatedAt = time.Unix(0, created).UTC()
+	f.CreatedAt = timeutil.UnixNanoUTC(created)
 	return f, nil
 }
 
