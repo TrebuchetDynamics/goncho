@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/retrieval"
 	"github.com/TrebuchetDynamics/goncho/memory"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
@@ -860,7 +861,7 @@ func locomoIndexableContent(mem locomoMemoryRow) string {
 func locomoMemoryTokenEstimate(memories []locomoMemoryRow) int {
 	total := 0
 	for _, mem := range memories {
-		total += len(benchTokenPattern.FindAllString(strings.ToLower(mem.Content), -1))
+		total += retrieval.RawTokenCount(mem.Content)
 	}
 	return total
 }
