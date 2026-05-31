@@ -185,6 +185,24 @@ func TestNegativeEvidenceCandidatesNormalizeToolNameCase(t *testing.T) {
 	}
 }
 
+func TestNegativeEvidenceCandidatesNormalizeToolNameWhitespace(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "spaced-tool", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "Retrieval   Planner"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "newline-tool", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": " retrieval\nplanner "}, ObservedAt: time.Unix(20, 0).UTC()},
+		},
+	})
+	if len(candidates) != 1 {
+		t.Fatalf("candidates = %+v, want whitespace-equivalent tool names grouped as one repeated-failure candidate", candidates)
+	}
+	if candidates[0].ToolName != "retrieval planner" || candidates[0].FailureCount != 2 {
+		t.Fatalf("candidate = %+v, want normalized retrieval planner candidate with two failures", candidates[0])
+	}
+}
+
 func TestNegativeEvidenceCandidatesOrderEvidenceByFailureTimeline(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{

@@ -343,11 +343,15 @@ func (scope negativeEvidenceObservationScope) candidate() NegativeEvidenceCandid
 
 func negativeEvidenceToolName(obs Observation) string {
 	for _, key := range []string{"tool_name", "custom_kind"} {
-		if value := strings.TrimSpace(obs.Metadata[key]); value != "" {
-			return strings.ToLower(value)
+		if value := negativeEvidenceNormalizeToolName(obs.Metadata[key]); value != "" {
+			return value
 		}
 	}
 	return string(obs.Kind)
+}
+
+func negativeEvidenceNormalizeToolName(value string) string {
+	return strings.ToLower(strings.Join(strings.Fields(value), " "))
 }
 
 func negativeEvidenceReplayableFailureObservation(obs Observation) (string, bool) {
