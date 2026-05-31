@@ -2,6 +2,7 @@ package goncho
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -94,6 +95,35 @@ func TestNegativeEvidenceReviewSubjectIDEscapesAmbiguousDimensions(t *testing.T)
 	}
 	if strings.Contains(withSpace, " ") {
 		t.Fatalf("subject id exposes raw spaces: %q", withSpace)
+	}
+}
+
+func TestNegativeEvidenceReviewLimitAppliesAfterCandidateGeneration(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	failed := false
+	for _, tool := range []string{"bash", "curl"} {
+		for i := 1; i <= 2; i++ {
+			id := tool + "-limit-fail-" + strconv.Itoa(i)
+			if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, ProfileID: "mineru", PeerID: "peer-review-limit", SessionKey: "sess-review-limit", Success: &failed, Metadata: map[string]string{"tool_name": tool}, ObservedAt: time.Unix(int64(10+i), 0).UTC()}); err != nil {
+				t.Fatalf("Observe %s: %v", id, err)
+			}
+		}
+	}
+
+	created, err := svc.CreateNegativeEvidenceReviewItems(ctx, NegativeEvidenceReviewRequest{PeerID: "peer-review-limit", SessionKey: "sess-review-limit", Limit: 1, CreatedAt: time.Unix(20, 0).UTC()})
+	if err != nil {
+		t.Fatalf("CreateNegativeEvidenceReviewItems: %v", err)
+	}
+	if len(created) != 1 {
+		t.Fatalf("created = %+v, want one limited candidate after scanning enough observations to prove repetition", created)
+	}
+	if got := strings.Join(created[0].EvidenceIDs, ","); !strings.Contains(got, "-limit-fail-1") || !strings.Contains(got, "-limit-fail-2") {
+		t.Fatalf("evidence ids = %q, want complete repeated-failure evidence for the limited candidate", got)
 	}
 }
 

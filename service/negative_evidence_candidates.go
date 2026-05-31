@@ -64,12 +64,12 @@ func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req Neg
 		return nil, ErrObservationInvalid
 	}
 	workspaceID := serviceObservationWorkspace(s.workspaceID, req.WorkspaceID)
-	candidates, err := s.NegativeEvidenceCandidates(ctx, ObservationQuery{WorkspaceID: workspaceID, ProfileID: req.ProfileID, PeerID: req.PeerID, SessionKey: req.SessionKey, Limit: req.Limit})
+	candidates, err := s.NegativeEvidenceCandidates(ctx, negativeEvidenceReviewObservationQuery(workspaceID, req))
 	if err != nil {
 		return nil, err
 	}
 	created := []ReviewItem{}
-	for _, candidate := range candidates {
+	for _, candidate := range limitNegativeEvidenceCandidates(candidates, req.Limit) {
 		subjectID := negativeEvidenceReviewSubjectID(candidate)
 		existing, err := s.ListReviewItems(ctx, ReviewQuery{WorkspaceID: workspaceID, PeerID: candidate.PeerID, SessionKey: candidate.SessionKey, SubjectID: subjectID, Status: ReviewStatusOpen, Limit: 1})
 		if err != nil {
@@ -95,6 +95,15 @@ func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req Neg
 		created = append(created, item)
 	}
 	return created, nil
+}
+
+func negativeEvidenceReviewObservationQuery(workspaceID string, req NegativeEvidenceReviewRequest) ObservationQuery {
+	return ObservationQuery{
+		WorkspaceID: workspaceID,
+		ProfileID:   req.ProfileID,
+		PeerID:      req.PeerID,
+		SessionKey:  req.SessionKey,
+	}
 }
 
 func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []NegativeEvidenceCandidate {
