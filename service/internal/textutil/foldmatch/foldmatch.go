@@ -1,14 +1,18 @@
 package foldmatch
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/foldcase"
+)
 
 // AnySubstring reports whether value contains at least one marker using simple
 // lower-case matching. Markers are compared as provided; empty markers therefore
 // match the same way strings.Contains does.
 func AnySubstring(value string, markers []string) bool {
-	value = strings.ToLower(value)
+	value = foldcase.Lower(value)
 	for _, marker := range markers {
-		if containsFolded(value, marker) {
+		if foldcase.ContainsFolded(value, marker) {
 			return true
 		}
 	}
@@ -18,9 +22,9 @@ func AnySubstring(value string, markers []string) bool {
 // AllSubstrings reports whether value contains every non-blank marker using
 // simple lower-case matching after trimming markers.
 func AllSubstrings(value string, markers []string) bool {
-	value = strings.ToLower(value)
+	value = foldcase.Lower(value)
 	for _, marker := range markers {
-		marker = strings.ToLower(strings.TrimSpace(marker))
+		marker = foldcase.Lower(strings.TrimSpace(marker))
 		if marker == "" {
 			continue
 		}
@@ -34,12 +38,12 @@ func AllSubstrings(value string, markers []string) bool {
 // HasAnyPrefix reports whether value starts with any non-empty prefix using
 // simple lower-case matching.
 func HasAnyPrefix(value string, prefixes ...string) bool {
-	value = strings.ToLower(value)
+	value = foldcase.Lower(value)
 	for _, prefix := range prefixes {
 		if prefix == "" {
 			continue
 		}
-		if hasPrefixFolded(value, prefix) {
+		if foldcase.HasPrefixFolded(value, prefix) {
 			return true
 		}
 	}
@@ -49,9 +53,9 @@ func HasAnyPrefix(value string, prefixes ...string) bool {
 // CutAnyPrefix removes the first matching prefix using simple lower-case
 // matching. The returned tail preserves original casing and spacing from value.
 func CutAnyPrefix(value string, prefixes []string) (tail string, ok bool) {
-	lower := strings.ToLower(value)
+	lower := foldcase.Lower(value)
 	for _, prefix := range prefixes {
-		if hasPrefixFolded(lower, prefix) {
+		if foldcase.HasPrefixFolded(lower, prefix) {
 			return value[len(prefix):], true
 		}
 	}
@@ -62,9 +66,9 @@ func CutAnyPrefix(value string, prefixes []string) (tail string, ok bool) {
 // using simple lower-case matching. Returned parts preserve original casing and
 // spacing from value; marker is the policy marker that matched.
 func CutAroundAnySubstringMatch(value string, markers []string) (before, marker, after string, ok bool) {
-	lower := strings.ToLower(value)
+	lower := foldcase.Lower(value)
 	for _, candidate := range markers {
-		idx := indexFolded(lower, candidate)
+		idx := foldcase.IndexFolded(lower, candidate)
 		if idx < 0 {
 			continue
 		}
@@ -76,13 +80,13 @@ func CutAroundAnySubstringMatch(value string, markers []string) (before, marker,
 // CutBeforeAnySubstring returns value before the earliest matching non-empty
 // marker using simple lower-case matching.
 func CutBeforeAnySubstring(value string, markers ...string) (string, bool) {
-	lower := strings.ToLower(value)
+	lower := foldcase.Lower(value)
 	best := -1
 	for _, marker := range markers {
 		if marker == "" {
 			continue
 		}
-		idx := indexFolded(lower, marker)
+		idx := foldcase.IndexFolded(lower, marker)
 		if idx < 0 {
 			continue
 		}
@@ -99,19 +103,5 @@ func CutBeforeAnySubstring(value string, markers ...string) (string, bool) {
 // EitherSubstring reports whether either value contains the other using simple
 // lower-case matching.
 func EitherSubstring(a, b string) bool {
-	lowerA := strings.ToLower(a)
-	lowerB := strings.ToLower(b)
-	return strings.Contains(lowerA, lowerB) || strings.Contains(lowerB, lowerA)
-}
-
-func containsFolded(lowerValue, marker string) bool {
-	return strings.Contains(lowerValue, strings.ToLower(marker))
-}
-
-func hasPrefixFolded(lowerValue, prefix string) bool {
-	return strings.HasPrefix(lowerValue, strings.ToLower(prefix))
-}
-
-func indexFolded(lowerValue, marker string) int {
-	return strings.Index(lowerValue, strings.ToLower(marker))
+	return foldcase.EitherSubstring(a, b)
 }
