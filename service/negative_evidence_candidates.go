@@ -151,6 +151,10 @@ func negativeEvidenceFailureCapableKinds() []ObservationKind {
 	}
 }
 
+func negativeEvidenceResolutionCapableKind(kind ObservationKind) bool {
+	return negativeEvidenceFailureCapableKind(kind)
+}
+
 func (s *Service) listNegativeEvidenceObservations(ctx context.Context, q ObservationQuery) ([]Observation, error) {
 	query := "SELECT id, kind, workspace_id, profile_id, peer_id, session_key, context_id, input, output, success, metadata_json, input_truncated, output_truncated, input_original_bytes, output_original_bytes, redacted, redaction_count, checksum, observed_at FROM goncho_observations WHERE 1=1"
 	args := []any{}
@@ -311,7 +315,7 @@ func negativeEvidenceLatestSuccessByScope(projection SessionEvidenceProjection, 
 }
 
 func negativeEvidenceSuccessSignalFrom(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceObservationScope, time.Time, bool) {
-	if obs.Success == nil || !*obs.Success || !negativeEvidenceFailureCapableKind(obs.Kind) {
+	if obs.Success == nil || !*obs.Success || !negativeEvidenceResolutionCapableKind(obs.Kind) {
 		return negativeEvidenceObservationScope{}, time.Time{}, false
 	}
 	return negativeEvidenceObservationScopeFrom(projection, obs), obs.ObservedAt, true
@@ -418,7 +422,7 @@ func negativeEvidenceFailureObservation(obs Observation) bool {
 
 func negativeEvidenceFailureCapableKind(kind ObservationKind) bool {
 	switch kind {
-	case ObservationKindToolResult, ObservationKindCustom, ObservationKindToolCall:
+	case ObservationKindToolError, ObservationKindToolResult, ObservationKindCustom, ObservationKindToolCall:
 		return true
 	default:
 		return false

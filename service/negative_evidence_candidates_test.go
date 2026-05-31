@@ -169,6 +169,23 @@ func TestNegativeEvidenceCandidatesDoNotPromoteFailuresResolvedByLaterSuccess(t 
 	}
 }
 
+func TestNegativeEvidenceCandidatesExplicitSuccessfulToolErrorResolvesPriorFailures(t *testing.T) {
+	failed := false
+	succeeded := true
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "fail-before-tool-error-success-1", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "fail-before-tool-error-success-2", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+			{ID: "later-tool-error-success", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &succeeded, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(30, 0).UTC()},
+		},
+	})
+	if len(candidates) != 0 {
+		t.Fatalf("candidates = %+v, want explicit success=true tool_error to resolve prior failures in the same scope", candidates)
+	}
+}
+
 func TestNegativeEvidenceCandidatesDoNotTreatSameTimestampSuccessAsLaterResolution(t *testing.T) {
 	failed := false
 	succeeded := true
