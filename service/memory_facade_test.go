@@ -98,6 +98,34 @@ func TestMemoryFacadeAddSearchUpdateDeleteHistoryWithStableIDs(t *testing.T) {
 	}
 }
 
+func TestMemoryFacadeEvidenceIDsDisambiguateSameCallerIDAcrossUsers(t *testing.T) {
+	ctx := context.Background()
+	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := NewService(store.DB(), Config{WorkspaceID: "facade-workspace", ObserverPeerID: "agent-alpha"}, nil)
+	facade := NewMemoryFacade(svc)
+
+	left, err := facade.Add(ctx, MemoryAddParams{ID: "shared-memory-id", UserID: "user-left", ProfileID: "mineru", Content: "Left user likes blue archive clues."})
+	if err != nil {
+		t.Fatalf("Add left: %v", err)
+	}
+	right, err := facade.Add(ctx, MemoryAddParams{ID: "shared-memory-id", UserID: "user-right", ProfileID: "mineru", Content: "Right user likes green archive clues."})
+	if err != nil {
+		t.Fatalf("Add right: %v", err)
+	}
+	leftSlotEvidence := left.EvidenceIDs[len(left.EvidenceIDs)-1]
+	rightSlotEvidence := right.EvidenceIDs[len(right.EvidenceIDs)-1]
+	if leftSlotEvidence == rightSlotEvidence {
+		t.Fatalf("slot evidence IDs collided: left=%q right=%q; want scoped provenance for same caller memory id", leftSlotEvidence, rightSlotEvidence)
+	}
+}
+
 func TestMemoryFacadeSearchReturnsNewestMatchingSlotsBeforeApplyingLimit(t *testing.T) {
 	ctx := context.Background()
 	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -395,8 +396,32 @@ func memoryFacadeMetadataFromObservation(metadata map[string]string) map[string]
 	return out
 }
 
+type memorySlotEvidenceRef struct {
+	WorkspaceID string
+	ProfileID   string
+	UserID      string
+	MemoryID    string
+	Revision    int
+}
+
+func memorySlotEvidenceRefFromItem(item MemoryItem) memorySlotEvidenceRef {
+	return memorySlotEvidenceRef{WorkspaceID: item.WorkspaceID, ProfileID: item.ProfileID, UserID: item.UserID, MemoryID: item.ID, Revision: item.Revision}
+}
+
+func (ref memorySlotEvidenceRef) ID() string {
+	return fmt.Sprintf("memory_slot:%s:%s:%s:%s:rev:%d", memoryEvidenceToken(ref.WorkspaceID), memoryEvidenceToken(ref.ProfileID), memoryEvidenceToken(ref.UserID), memoryEvidenceToken(ref.MemoryID), ref.Revision)
+}
+
+func memoryEvidenceToken(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "_"
+	}
+	return url.QueryEscape(value)
+}
+
 func memorySlotEvidenceID(item MemoryItem) string {
-	return fmt.Sprintf("memory_slot:%s:rev:%d", item.ID, item.Revision)
+	return memorySlotEvidenceRefFromItem(item).ID()
 }
 
 func sortMemoryItemsByUpdatedAtDesc(items []MemoryItem) {
