@@ -218,7 +218,7 @@ func (s *Service) normalizeActionParams(params ActionParams) (ActionNode, error)
 	if !scope.Complete() || actionID == "" || title == "" {
 		return ActionNode{}, fmt.Errorf("goncho: action workspace_id, peer, action_id, and title are required")
 	}
-	return ActionNode{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: actionID, Title: title, DependsOn: normalizeActionIDs(params.DependsOn)}, nil
+	return ActionNode{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: actionID, Title: title, DependsOn: textutil.UniqueTrimmed(params.DependsOn, true)}, nil
 }
 
 func (s *Service) normalizeActionQuery(query ActionGraphQuery) (ActionNode, error) {
@@ -392,8 +392,4 @@ func actionFrontier(nodes []ActionNode) []ActionNode {
 		return frontier[i].ActionID < frontier[j].ActionID
 	})
 	return frontier
-}
-
-func normalizeActionIDs(values []string) []string {
-	return textutil.UniqueTrimmed(values, true)
 }
