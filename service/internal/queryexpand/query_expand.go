@@ -13,7 +13,7 @@ type Expanded struct {
 	Terms    []string
 }
 
-var synonyms = map[string][]string{
+var explicitSynonyms = map[string][]string{
 	"auth":     {"authentication", "login", "credentials", "oauth"},
 	"login":    {"auth", "authentication", "credentials", "signin"},
 	"signin":   {"login", "authentication", "credentials"},
@@ -24,6 +24,38 @@ var synonyms = map[string][]string{
 	"failure":  {"error", "exception", "failed"},
 	"owner":    {"owns", "owned", "responsible"},
 	"pref":     {"preference", "prefers", "prefer"},
+}
+
+var synonyms = reciprocalLexicon(explicitSynonyms)
+
+func reciprocalLexicon(entries map[string][]string) map[string][]string {
+	out := map[string][]string{}
+	for term, aliases := range entries {
+		out[term] = appendUnique(out[term], aliases...)
+		for _, alias := range aliases {
+			out[alias] = appendUnique(out[alias], term)
+		}
+	}
+	return out
+}
+
+func appendUnique(values []string, candidates ...string) []string {
+	seen := make(map[string]struct{}, len(values)+len(candidates))
+	for _, value := range values {
+		seen[value] = struct{}{}
+	}
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(strings.ToLower(candidate))
+		if candidate == "" {
+			continue
+		}
+		if _, ok := seen[candidate]; ok {
+			continue
+		}
+		seen[candidate] = struct{}{}
+		values = append(values, candidate)
+	}
+	return values
 }
 
 func Expand(query string) Expanded {
