@@ -613,7 +613,7 @@ func recallQuerySpeakerTargets(query string) []string {
 
 func recallQueryTokens(query string) []string {
 	query = strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
 			return r
 		}
 		return ' '

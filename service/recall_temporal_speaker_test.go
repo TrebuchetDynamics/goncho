@@ -101,6 +101,19 @@ func TestRecallSpeakerRoutingDoesNotTreatSpeakerAsSubstring(t *testing.T) {
 	}
 }
 
+func TestRecallSpeakerRoutingMatchesMultiTokenSpeakerTarget(t *testing.T) {
+	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
+		MemoryID:   "mem-claude-code",
+		Content:    "Claude Code summarized the migration risk.",
+		AgentID:    "claude-code",
+		Provenance: []EvidenceItem{{Kind: "speaker", Source: "claude-code", Score: 1, Note: "speaker=claude-code"}},
+	}}
+
+	if got := recallSpeakerAdjustment(candidate, "What did Claude Code say about migration risk?"); got != recallSpeakerMatchBonus {
+		t.Fatalf("recallSpeakerAdjustment() = %v, want multi-token speaker bonus %v", got, recallSpeakerMatchBonus)
+	}
+}
+
 func TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
