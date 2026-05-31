@@ -61,14 +61,8 @@ func vectorSearchQueryFromRecall(q RecallQuery, workspaceID, profileID, peer, sc
 }
 
 func recallCandidateFromVectorHit(hit VectorSearchHit, observer, scopeID string) RecallCandidate {
-	memoryID := strings.TrimSpace(hit.MemoryID)
-	if memoryID == "" {
-		memoryID = semanticMemoryID(hit)
-	}
-	sourceType := strings.TrimSpace(hit.SourceType)
-	if sourceType == "" {
-		sourceType = "vector"
-	}
+	memoryID := vectorHitMemoryID(hit)
+	sourceType := vectorHitSourceType(hit)
 	agentID := strings.TrimSpace(hit.AgentID)
 	if agentID == "" {
 		agentID = observer
@@ -86,14 +80,34 @@ func recallCandidateFromVectorHit(hit VectorSearchHit, observer, scopeID string)
 		ScopeID:    candidateScope,
 		CreatedAt:  hit.CreatedAt,
 		Importance: hit.Importance,
-		Provenance: []EvidenceItem{{
-			Kind:     "semantic",
-			Source:   "vector_store",
-			ID:       memoryID,
-			Score:    clampRecall(hit.Score),
-			Note:     "matched optional vector store",
-			Metadata: maputil.CloneStringStringNilIfEmpty(hit.Metadata),
-		}},
+		Provenance: []EvidenceItem{semanticVectorEvidence(hit, memoryID)},
+	}
+}
+
+func vectorHitMemoryID(hit VectorSearchHit) string {
+	memoryID := strings.TrimSpace(hit.MemoryID)
+	if memoryID == "" {
+		return semanticMemoryID(hit)
+	}
+	return memoryID
+}
+
+func vectorHitSourceType(hit VectorSearchHit) string {
+	sourceType := strings.TrimSpace(hit.SourceType)
+	if sourceType == "" {
+		return "vector"
+	}
+	return sourceType
+}
+
+func semanticVectorEvidence(hit VectorSearchHit, memoryID string) EvidenceItem {
+	return EvidenceItem{
+		Kind:     "semantic",
+		Source:   "vector_store",
+		ID:       memoryID,
+		Score:    clampRecall(hit.Score),
+		Note:     "matched optional vector store",
+		Metadata: maputil.CloneStringStringNilIfEmpty(hit.Metadata),
 	}
 }
 

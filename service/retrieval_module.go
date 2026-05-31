@@ -11,7 +11,6 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/contexttokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
-	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -269,28 +268,14 @@ func trimSearchHits(hits []SearchHit, limit int) []SearchHit {
 }
 
 func searchHitFromVectorHit(hit VectorSearchHit) SearchHit {
-	id, _ := idutil.ParseDecimal(hit.MemoryID)
-	source := strings.TrimSpace(hit.SourceType)
-	if source == "" {
-		source = "vector"
-	}
-	memoryID := strings.TrimSpace(hit.MemoryID)
-	if memoryID == "" {
-		memoryID = semanticMemoryID(hit)
-	}
+	memoryID := vectorHitMemoryID(hit)
+	id, _ := idutil.ParseDecimal(memoryID)
 	return SearchHit{
 		ID:         id,
-		Source:     source,
+		Source:     vectorHitSourceType(hit),
 		Content:    hit.Content,
 		SessionKey: hit.SessionID,
-		Provenance: []EvidenceItem{{
-			Kind:     "semantic",
-			Source:   "vector_store",
-			ID:       memoryID,
-			Score:    clampRecall(hit.Score),
-			Note:     "matched optional vector store",
-			Metadata: maputil.CloneStringStringNilIfEmpty(hit.Metadata),
-		}},
+		Provenance: []EvidenceItem{semanticVectorEvidence(hit, memoryID)},
 	}
 }
 
