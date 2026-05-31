@@ -33,6 +33,16 @@ func TestFilterRedactsSecretShapesAndMetadataKeys(t *testing.T) {
 	}
 }
 
+func TestFilterRedactsSensitiveMetadataKeyAfterUTF8Sanitization(t *testing.T) {
+	got := Filter(Payload{Metadata: map[string]string{"api_token": string([]byte{'s', 'e', 'c', 'r', 'e', 't', 0xff})}}, 1024)
+	if got.Payload.Metadata["api_token"] != "[REDACTED:metadata_secret]" {
+		t.Fatalf("api_token metadata = %q, want metadata redaction marker", got.Payload.Metadata["api_token"])
+	}
+	if !got.Redacted || got.RedactionCount != 1 {
+		t.Fatalf("result redaction = (%v, %d), want true and 1", got.Redacted, got.RedactionCount)
+	}
+}
+
 func TestFilterTruncatesAfterValidUTF8(t *testing.T) {
 	got := Filter(Payload{Content: string([]byte{'a', 0xff, 'b'}) + strings.Repeat("x", 16)}, 8)
 	if !got.Truncated {

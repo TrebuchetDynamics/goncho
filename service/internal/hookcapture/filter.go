@@ -58,13 +58,8 @@ func Filter(payload Payload, maxBytes int) Result {
 	if payload.Metadata != nil {
 		out.Payload.Metadata = maputil.CloneStringString(payload.Metadata)
 		for key, value := range out.Payload.Metadata {
-			filteredValue, next := FilterString(value, out, maxBytes)
+			filteredValue, next := FilterMetadataValue(key, value, out, maxBytes)
 			out = next
-			if SensitiveMetadataKey(key) && filteredValue == value && textutil.NonBlank(value) {
-				filteredValue = "[REDACTED:metadata_secret]"
-				out.Redacted = true
-				out.RedactionCount++
-			}
 			out.Payload.Metadata[key] = filteredValue
 		}
 	}
@@ -96,6 +91,23 @@ func FilterString(value string, state Result, maxBytes int) (string, Result) {
 		state.Truncated = true
 	}
 	return value, state
+}
+
+// FilterMetadataValue applies string filtering plus the metadata-key invariant:
+// a nonblank value under a secret-like key must not survive merely because UTF-8
+// sanitization or truncation changed the value before key-based redaction runs.
+func FilterMetadataValue(key, value string, state Result, maxBytes int) (string, Result) {
+	filteredValue, next := FilterString(value, state, maxBytes)
+	if shouldRedactSensitiveMetadataValue(key, value, state, next) {
+		filteredValue = "[REDACTED:metadata_secret]"
+		next.Redacted = true
+		next.RedactionCount++
+	}
+	return filteredValue, next
+}
+
+func shouldRedactSensitiveMetadataValue(key, value string, before, after Result) bool {
+	return SensitiveMetadataKey(key) && textutil.NonBlank(value) && after.RedactionCount == before.RedactionCount
 }
 
 func SensitiveMetadataKey(key string) bool {
