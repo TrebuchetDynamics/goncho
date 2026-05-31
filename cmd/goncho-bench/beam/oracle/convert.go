@@ -209,14 +209,14 @@ func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fall
 }
 
 func beamHuggingFaceMessages(record beamHuggingFaceRecord) ([]beamConvertedMessage, error) {
-	if len(bytes.TrimSpace(record.Chat)) > 0 && string(bytes.TrimSpace(record.Chat)) != "null" {
+	if !shared.JSONRawIsEmptyOrNull(record.Chat) {
 		return flattenBeamChat(record.Chat)
 	}
 	return flattenBeamPlans(record.Plans)
 }
 
 func flattenBeamPlans(raw json.RawMessage) ([]beamConvertedMessage, error) {
-	if len(bytes.TrimSpace(raw)) == 0 || string(bytes.TrimSpace(raw)) == "null" {
+	if shared.JSONRawIsEmptyOrNull(raw) {
 		return nil, nil
 	}
 	var plans []struct {
@@ -243,8 +243,8 @@ func flattenBeamChat(raw json.RawMessage) ([]beamConvertedMessage, error) {
 	}
 	out := []beamConvertedMessage{}
 	for _, item := range items {
-		trimmed := bytes.TrimSpace(item)
-		if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		trimmed := shared.TrimJSONRaw(item)
+		if shared.JSONRawIsEmptyOrNull(trimmed) {
 			continue
 		}
 		switch trimmed[0] {
@@ -271,8 +271,8 @@ func flattenBeamChat(raw json.RawMessage) ([]beamConvertedMessage, error) {
 }
 
 func parseBeamHuggingFaceQuestions(raw json.RawMessage) (map[string][]beamConvertedQuestion, error) {
-	trimmed := bytes.TrimSpace(raw)
-	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+	trimmed := shared.TrimJSONRaw(raw)
+	if shared.JSONRawIsEmptyOrNull(trimmed) {
 		return map[string][]beamConvertedQuestion{}, nil
 	}
 	var parsed map[string][]beamConvertedQuestion
