@@ -29,6 +29,14 @@ func TestTemporalMarkersMatchShortMonthAsToken(t *testing.T) {
 	}
 }
 
+func TestTemporalRerankBonusRequiresMarkerBoundaries(t *testing.T) {
+	features := Intent("What did I finish first in May?")
+	bonus := RerankBonus(features, "user: Maybe I should finish the migration soon.", 0, 2, 1, 1)
+	if bonus != 0 {
+		t.Fatalf("RerankBonus with marker substring = %v, want 0", bonus)
+	}
+}
+
 func stringSliceContains(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

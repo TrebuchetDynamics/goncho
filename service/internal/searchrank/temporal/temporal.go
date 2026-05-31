@@ -82,6 +82,16 @@ func normalizeQuery(query string) string {
 	return strings.ToLower(query)
 }
 
+func markerMatchCount(value string, markers []string) int {
+	count := 0
+	for _, marker := range markers {
+		if containsMarker(value, marker) {
+			count++
+		}
+	}
+	return count
+}
+
 func markerCandidates() []string {
 	return []string{
 		"today", "yesterday", "tomorrow", "most recently", "this weekend", "this week", "this month", "this year", "past few months", "past three months", "last week", "last month", "last year", "last friday", "last saturday", "last sunday",
@@ -99,14 +109,8 @@ func RerankBonus(features Features, content string, index, total int, score, max
 	if features.Direction == DirectionNone || score < maxScore*0.78 {
 		return 0
 	}
-	contentLower := strings.ToLower(content)
-	markerMatches := 0
-	for _, marker := range features.Markers {
-		if strings.Contains(contentLower, marker) {
-			markerMatches++
-		}
-	}
-	alignment := float64(markerMatches)
+	contentLower := normalizeQuery(content)
+	alignment := float64(markerMatchCount(contentLower, features.Markers))
 	switch features.Direction {
 	case DirectionNewer:
 		// Newer/current phrasing is common in distractors (for example "new products"),
