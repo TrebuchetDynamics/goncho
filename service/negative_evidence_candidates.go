@@ -178,11 +178,32 @@ func negativeEvidenceFailureObservation(obs Observation) bool {
 }
 
 func negativeEvidenceReviewSubjectID(candidate NegativeEvidenceCandidate) string {
-	parts := []string{"negative-evidence", string(candidate.Kind), candidate.ToolName, candidate.SessionKey}
+	parts := negativeEvidenceReviewSubjectParts(candidate)
 	for i, part := range parts {
-		parts[i] = strings.ReplaceAll(strings.TrimSpace(part), " ", "-")
+		parts[i] = negativeEvidenceSubjectToken(part)
 	}
 	return strings.Join(parts, ":")
+}
+
+func negativeEvidenceReviewSubjectParts(candidate NegativeEvidenceCandidate) []string {
+	return []string{
+		"negative-evidence",
+		"kind-" + string(candidate.Kind),
+		"workspace-" + candidate.WorkspaceID,
+		"profile-" + candidate.ProfileID,
+		"peer-" + candidate.PeerID,
+		"session-" + candidate.SessionKey,
+		"tool-" + candidate.ToolName,
+	}
+}
+
+func negativeEvidenceSubjectToken(part string) string {
+	part = strings.TrimSpace(part)
+	part = strings.ReplaceAll(part, " ", "-")
+	if part == "" {
+		return "unknown"
+	}
+	return part
 }
 
 func negativeEvidenceRecommendation(candidate NegativeEvidenceCandidate) string {
