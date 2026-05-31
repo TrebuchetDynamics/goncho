@@ -377,20 +377,29 @@ func Compile(expr Expression, peer string) (Compiled, error) {
 func compileComparisonFilter(expr Expression, peer string) (Compiled, error) {
 	switch expr.Field {
 	case "session_id":
-		if !isEqualityOperator(expr.Operator) {
-			return Compiled{}, unsupportedFilter(expr.Field, string(expr.Operator), "session_id only supports equality, in, and wildcard filters")
+		values, err := compileEqualityFilterValues(expr, false)
+		if err != nil {
+			return Compiled{}, err
 		}
-		return Compiled{SessionIDs: normalizeFilterValues(expr.Values, false)}, nil
+		if len(values) == 0 {
+			return Compiled{DenyAll: true}, nil
+		}
+		return Compiled{SessionIDs: values}, nil
 	case "source":
-		if !isEqualityOperator(expr.Operator) {
-			return Compiled{}, unsupportedFilter(expr.Field, string(expr.Operator), "source only supports equality, in, and wildcard filters")
+		values, err := compileEqualityFilterValues(expr, true)
+		if err != nil {
+			return Compiled{}, err
 		}
-		return Compiled{Sources: normalizeFilterValues(expr.Values, true)}, nil
+		if len(values) == 0 {
+			return Compiled{DenyAll: true}, nil
+		}
+		return Compiled{Sources: values}, nil
 	case "peer_id":
-		if !isEqualityOperator(expr.Operator) {
-			return Compiled{}, unsupportedFilter(expr.Field, string(expr.Operator), "peer_id only supports equality, in, and wildcard filters")
+		values, err := compileEqualityFilterValues(expr, false)
+		if err != nil {
+			return Compiled{}, err
 		}
-		if peerFilterMatches(expr.Values, peer) {
+		if peerFilterMatches(values, peer) {
 			return Compiled{}, nil
 		}
 		return Compiled{DenyAll: true}, nil
@@ -402,6 +411,13 @@ func compileComparisonFilter(expr Expression, peer string) (Compiled, error) {
 		}
 		return Compiled{}, unsupportedFilter(expr.Field, string(expr.Operator), "unknown filter field")
 	}
+}
+
+func compileEqualityFilterValues(expr Expression, lower bool) ([]string, error) {
+	if !isEqualityOperator(expr.Operator) {
+		return nil, unsupportedFilter(expr.Field, string(expr.Operator), expr.Field+" only supports equality, in, and wildcard filters")
+	}
+	return normalizeFilterValues(expr.Values, lower), nil
 }
 
 func isEqualityOperator(op Operator) bool {

@@ -163,6 +163,36 @@ func TestService_SearchSessionIDFilterTreatsReservedLookingValueAsLiteral(t *tes
 	}
 }
 
+func TestService_SearchBlankSourceFilterCannotWidenSameChatRecall(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	now := time.Now().Unix()
+	if _, err := svc.db.ExecContext(ctx,
+		`INSERT INTO turns(session_id, role, content, ts_unix, chat_id)
+		 VALUES ('sess-current', 'user', 'Atlas current Discord note.', ?, 'discord:chan-9')`,
+		now,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := svc.Search(ctx, SearchParams{
+		Peer:       "user-juan",
+		Query:      "Atlas",
+		SessionKey: "discord:chan-9",
+		Filters: map[string]any{
+			"source": "   ",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Results) != 0 {
+		t.Fatalf("Search returned same-chat results for blank source filter: %+v", got.Results)
+	}
+}
+
 func TestService_SearchSourceFilterCannotWidenSameChatRecall(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

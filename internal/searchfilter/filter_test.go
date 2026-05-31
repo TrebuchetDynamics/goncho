@@ -140,6 +140,30 @@ func TestCompilerSupportsSessionSourcePeerAndRejectsMetadata(t *testing.T) {
 	}
 }
 
+func TestCompilerTreatsBlankEqualityFiltersAsDenyAll(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter map[string]any
+	}{
+		{name: "blank session", filter: map[string]any{"session_id": "   "}},
+		{name: "blank source", filter: map[string]any{"source": "\t"}},
+		{name: "blank-only session in list", filter: map[string]any{"session_id": map[string]any{"in": []any{" ", ""}}}},
+		{name: "blank-only source in list", filter: map[string]any{"source": map[string]any{"in": []any{" ", ""}}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compiled, err := searchfilter.Compile(mustParse(t, tt.filter), "user-juan")
+			if err != nil {
+				t.Fatalf("Compile: %v", err)
+			}
+			if !compiled.DenyAll {
+				t.Fatalf("DenyAll = false for blank-only equality filter: %+v", compiled)
+			}
+		})
+	}
+}
+
 func TestCompilerTracksDenyAllWithoutReservedValueCollision(t *testing.T) {
 	literal, err := searchfilter.Compile(mustParse(t, map[string]any{
 		"session_id": "__deny_all__",
