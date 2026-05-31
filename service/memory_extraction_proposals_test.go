@@ -151,6 +151,35 @@ func TestExtractMemoryProposalsDoesNotDuplicateOpenReviewItems(t *testing.T) {
 	}
 }
 
+func TestSelectProposalWindowKeepsNewestMessagesInTimelineOrder(t *testing.T) {
+	messages := []MessageRecord{
+		{ID: 1, Content: "oldest"},
+		{ID: 2, Content: "middle"},
+		{ID: 3, Content: "newest"},
+	}
+
+	selection := selectProposalWindow(messages, 2)
+
+	if selection.Window.Requested != 2 || selection.Window.MessageCount != 2 || selection.Window.Total != 3 || !selection.Window.Truncated {
+		t.Fatalf("window = %+v, want requested=2 message_count=2 total=3 truncated=true", selection.Window)
+	}
+	if got := []int64{selection.Messages[0].ID, selection.Messages[1].ID}; !slices.Equal(got, []int64{2, 3}) {
+		t.Fatalf("selected message ids = %v, want newest messages in original timeline order", got)
+	}
+	selection.Messages[0].Content = "mutated selection"
+	if messages[1].Content != "middle" {
+		t.Fatalf("source messages were mutated through selection alias: %+v", messages)
+	}
+}
+
+func TestSelectProposalWindowDefaultsNonPositiveRequests(t *testing.T) {
+	selection := selectProposalWindow([]MessageRecord{{ID: 1}}, 0)
+
+	if selection.Window.Requested != 20 || selection.Window.MessageCount != 1 || selection.Window.Total != 1 || selection.Window.Truncated {
+		t.Fatalf("window = %+v, want default requested=20 without truncation", selection.Window)
+	}
+}
+
 func TestExtractMemoryProposalsPreferenceScopeDoesNotLeakAcrossProfiles(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

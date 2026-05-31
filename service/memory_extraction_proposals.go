@@ -103,24 +103,14 @@ func (s *Service) ExtractMemoryProposals(ctx context.Context, params ExtractMemo
 		return ExtractMemoryProposalsResult{}, err
 	}
 	messages = filterProposalMessagesByScope(messages, proposalMessageScope{Peer: peer, ProfileID: params.ProfileID})
-	total := len(messages)
-	window := limitutil.Default(params.Window, 20)
-	truncated := false
-	if total > window {
-		messages = messages[total-window:]
-		truncated = true
-	}
+	selection := selectProposalWindow(messages, params.Window)
+	messages = selection.Messages
 	result := ExtractMemoryProposalsResult{
-		WorkspaceID: workspaceID,
-		ProfileID:   strings.TrimSpace(params.ProfileID),
-		Peer:        peer,
-		SessionKey:  sessionKey,
-		Window: ProposalWindow{
-			Requested:    window,
-			MessageCount: len(messages),
-			Total:        total,
-			Truncated:    truncated,
-		},
+		WorkspaceID:        workspaceID,
+		ProfileID:          strings.TrimSpace(params.ProfileID),
+		Peer:               peer,
+		SessionKey:         sessionKey,
+		Window:             selection.Window,
 		Proposals:          []MemoryProposal{},
 		ActiveMemoryWrites: 0,
 	}
@@ -263,6 +253,31 @@ func (s *Service) findContradictoryMemory(ctx context.Context, peer, sessionKey,
 		}
 	}
 	return related, len(related) > 0
+}
+
+type proposalWindowSelection struct {
+	Messages []MessageRecord
+	Window   ProposalWindow
+}
+
+func selectProposalWindow(messages []MessageRecord, requested int) proposalWindowSelection {
+	window := limitutil.Default(requested, 20)
+	total := len(messages)
+	selected := messages
+	truncated := false
+	if total > window {
+		selected = messages[total-window:]
+		truncated = true
+	}
+	return proposalWindowSelection{
+		Messages: sliceutil.Clone(selected),
+		Window: ProposalWindow{
+			Requested:    window,
+			MessageCount: len(selected),
+			Total:        total,
+			Truncated:    truncated,
+		},
+	}
 }
 
 type proposalMessageScope struct {
