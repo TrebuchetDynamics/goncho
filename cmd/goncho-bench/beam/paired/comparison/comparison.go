@@ -101,11 +101,11 @@ func Build(cfg Config) (comparisoncontract.Report, error) {
 	}
 	bootstrapSamples := cfg.CompareBootstrapSamples
 	if bootstrapSamples <= 0 {
-		bootstrapSamples = 5000
+		bootstrapSamples = comparisoncontract.DefaultBootstrapSamples
 	}
 	effectSizeFloor := cfg.CompareEffectSizeFloor
 	if effectSizeFloor <= 0 {
-		effectSizeFloor = 0.02
+		effectSizeFloor = comparisoncontract.DefaultEffectSizeFloor
 	}
 	report := Summarize(comparisonRows, bootstrapSamples, effectSizeFloor)
 	report.GeneratedAt = shared.FormatArtifactTimestamp(time.Now())
