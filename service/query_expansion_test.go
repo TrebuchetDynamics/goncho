@@ -3,6 +3,7 @@ package goncho
 import (
 	"context"
 	"errors"
+	"math"
 	"strconv"
 	"testing"
 )
@@ -244,6 +245,24 @@ func TestSearchRerankerDistinguishesSyntheticDuplicateContentHits(t *testing.T) 
 	}
 	if len(got) != 2 || got[0].SessionKey != "newer" {
 		t.Fatalf("reranked duplicate-content hits = %+v, want second synthetic hit movable by its own score", got)
+	}
+}
+
+func TestSearchRerankerIgnoresNonFiniteScores(t *testing.T) {
+	hits := []SearchHit{
+		{ID: 1, Source: "turn", Content: "orchid invalid score"},
+		{ID: 2, Source: "turn", Content: "orchid finite score"},
+		{ID: 3, Source: "turn", Content: "orchid unscored"},
+	}
+	reranker := fakeSearchReranker{scores: map[string]float64{
+		"1": math.NaN(),
+		"2": 0.2,
+	}}
+
+	got := applySearchReranker(context.Background(), reranker, "orchid", hits)
+
+	if len(got) != 3 || got[0].ID != 2 || got[1].ID != 3 || got[2].ID != 1 {
+		t.Fatalf("reranked hits = %+v, want finite scores ordered before ignored invalid score", got)
 	}
 }
 

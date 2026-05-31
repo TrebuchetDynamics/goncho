@@ -2,6 +2,7 @@ package goncho
 
 import (
 	"context"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,21 +44,7 @@ func applySearchReranker(ctx context.Context, reranker SearchReranker, query str
 	if err != nil || len(scored) == 0 {
 		return hits
 	}
-	scoresByID := map[string]float64{}
-	for _, score := range scored {
-		if id := strings.TrimSpace(score.ID); id != "" {
-			scoresByID[id] = score.Score
-		}
-	}
-	if len(scoresByID) == 0 {
-		return hits
-	}
-	scoresByHit := map[int]float64{}
-	for _, plan := range plans {
-		if score, ok := scoresByID[plan.ID]; ok {
-			scoresByHit[plan.Index] = score
-		}
-	}
+	scoresByHit := searchRerankScoresByHit(plans, scored)
 	if len(scoresByHit) == 0 {
 		return hits
 	}
@@ -85,6 +72,36 @@ func applySearchReranker(ctx context.Context, reranker SearchReranker, query str
 	return sliceutil.Map(out, func(item scoredSearchHit) SearchHit {
 		return item.Hit
 	})
+}
+
+func searchRerankScoresByHit(plans []searchRerankCandidatePlan, scored []SearchRerankScore) map[int]float64 {
+	scoresByID := searchRerankFiniteScoresByID(scored)
+	if len(scoresByID) == 0 {
+		return nil
+	}
+	scoresByHit := map[int]float64{}
+	for _, plan := range plans {
+		if score, ok := scoresByID[plan.ID]; ok {
+			scoresByHit[plan.Index] = score
+		}
+	}
+	return scoresByHit
+}
+
+func searchRerankFiniteScoresByID(scored []SearchRerankScore) map[string]float64 {
+	scoresByID := map[string]float64{}
+	for _, score := range scored {
+		id := strings.TrimSpace(score.ID)
+		if id == "" || !searchRerankScoreIsFinite(score.Score) {
+			continue
+		}
+		scoresByID[id] = score.Score
+	}
+	return scoresByID
+}
+
+func searchRerankScoreIsFinite(score float64) bool {
+	return !math.IsNaN(score) && !math.IsInf(score, 0)
 }
 
 type searchRerankCandidatePlan struct {
