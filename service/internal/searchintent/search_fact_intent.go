@@ -9,13 +9,17 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
-const searchMetricUnitPattern = `ms|sec|seconds?|minutes?|hours?|days?|weeks?|months?|%|kb|mb|gb|tb|rows?|columns?|roles?|features?|bugs?|commits?|cards?|users?|items?|tests?|apis?|endpoints?|tickets?`
+const (
+	searchMetricNumberPattern    = `(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)`
+	searchMetricUnitPattern      = `ms|sec|seconds?|minutes?|hours?|days?|weeks?|months?|%|kb|mb|gb|tb|rows?|columns?|roles?|features?|bugs?|commits?|cards?|users?|items?|tests?|apis?|endpoints?|tickets?`
+	searchMetricValuePatternText = searchMetricNumberPattern + `\s*(?:` + searchMetricUnitPattern + `)`
+)
 
 var (
 	searchOwnerQuestionPattern = regexp.MustCompile(`(?i)\bwho\s+(?:currently\s+|now\s+)?owns?\s+([^?!.]+)`)
 	searchOwnerAnswerPattern   = regexp.MustCompile(`(?i)^\s*([a-z][a-z0-9 _.'-]{0,80}?)\s+(?:currently\s+|now\s+)?owns?\s+(.+?)\s*$`)
-	searchMetricValuePattern   = regexp.MustCompile(`(?i)^\d+(?:[.,]\d+)?\s*(?:` + searchMetricUnitPattern + `)\s*$`)
-	searchMetricAnswerPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+(?:is|was|=)\s+(\d+(?:[.,]\d+)?\s*(?:` + searchMetricUnitPattern + `))\s*$`)
+	searchMetricValuePattern   = regexp.MustCompile(`(?i)^` + searchMetricValuePatternText + `\s*$`)
+	searchMetricAnswerPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+(?:is|was|=)\s+(` + searchMetricValuePatternText + `)\s*$`)
 	searchVersionValuePattern  = regexp.MustCompile(`(?i)^v?\d+\.\d+(?:\.\d+)?\s*$`)
 	searchVersionIsPattern     = regexp.MustCompile(`(?i)^\s*(.+?)\s+version\s+(?:is|was|=)\s+(v?\d+\.\d+(?:\.\d+)?)\s*$`)
 	searchVersionShortPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+v(\d+\.\d+(?:\.\d+)?)\s*$`)

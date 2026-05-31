@@ -61,3 +61,9 @@ func TestMetricFactIntentKeepsCommaGroupedMetricValue(t *testing.T) {
 		t.Fatalf("metric fact score = %v, want 1 for comma-grouped metric value", score)
 	}
 }
+
+func TestMetricFactIntentKeepsMultiCommaGroupedMetricValue(t *testing.T) {
+	if score := Score("how many queue rows?", "Queue rows is 1,024,000 rows."); score != 1 {
+		t.Fatalf("metric fact score = %v, want 1 for multi-comma grouped metric value", score)
+	}
+}
