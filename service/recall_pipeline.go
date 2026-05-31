@@ -139,15 +139,10 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 	for _, item := range scored {
 		if recallScopeMismatch(q, item.Candidate) {
 			scopeRejected++
-			rejected = append(rejected, RejectedRecallCandidate{
-				Candidate: item.Candidate,
-				Score:     item.Score,
-				Reason:    RecallRejectScopeMismatch,
-				WhyRejected: []string{
-					fmt.Sprintf("candidate_scope=%s", item.Candidate.ScopeID),
-					fmt.Sprintf("query_scope=%s", q.ScopeID),
-				},
-			})
+			rejected = append(rejected, recallRejectedCandidate(item, RecallRejectScopeMismatch, []string{
+				fmt.Sprintf("candidate_scope=%s", item.Candidate.ScopeID),
+				fmt.Sprintf("query_scope=%s", q.ScopeID),
+			}))
 			continue
 		}
 		eligible = append(eligible, item)
@@ -180,16 +175,11 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 		chosen := applyRecallSelectionAdjustment(remaining[bestIdx], recallSelectionAdjustmentFor(remaining[bestIdx], selected, q.Query, e.opts.scoringConfig), true)
 		tokenCost := estimateRecallTokens(chosen.Candidate.Content)
 		if budget > 0 && usedTokens+tokenCost > budget {
-			rejected = append(rejected, RejectedRecallCandidate{
-				Candidate: chosen.Candidate,
-				Score:     chosen.Score,
-				Reason:    RecallRejectTokenBudget,
-				WhyRejected: []string{
-					fmt.Sprintf("used_tokens=%d", usedTokens),
-					fmt.Sprintf("candidate_tokens=%d", tokenCost),
-					fmt.Sprintf("token_budget=%d", budget),
-				},
-			})
+			rejected = append(rejected, recallRejectedCandidate(chosen, RecallRejectTokenBudget, []string{
+				fmt.Sprintf("used_tokens=%d", usedTokens),
+				fmt.Sprintf("candidate_tokens=%d", tokenCost),
+				fmt.Sprintf("token_budget=%d", budget),
+			}))
 			warnings = appendRecallWarnings(warnings, RecallWarning{
 				Code:     RecallWarningTokenBudgetTruncated,
 				Stage:    RecallStageSelect,
@@ -206,17 +196,20 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 	}
 	for _, item := range remaining {
 		item = applyRecallSelectionAdjustment(item, recallRejectedSelectionAdjustmentFor(item, selected, e.opts.scoringConfig), false)
-		rejected = append(rejected, RejectedRecallCandidate{
-			Candidate: item.Candidate,
-			Score:     item.Score,
-			Reason:    RecallRejectNotSelected,
-			WhyRejected: []string{
-				fmt.Sprintf("limit=%d", limit),
-			},
-		})
+		rejected = append(rejected, recallRejectedCandidate(item, RecallRejectNotSelected, []string{
+			fmt.Sprintf("limit=%d", limit),
+		}))
 	}
-	sortRejectedRecall(rejected)
 	return selected, rejected, warnings
+}
+
+func recallRejectedCandidate(item ScoredRecallCandidate, reason string, why []string) RejectedRecallCandidate {
+	return RejectedRecallCandidate{
+		Candidate:   item.Candidate,
+		Score:       item.Score,
+		Reason:      reason,
+		WhyRejected: sliceutil.Clone(why),
+	}
 }
 
 type recallSelectionAdjustment struct {
@@ -856,15 +849,6 @@ func compareScoredRecall(left, right ScoredRecallCandidate) int {
 		return 1
 	}
 	return 0
-}
-
-func sortRejectedRecall(items []RejectedRecallCandidate) {
-	sort.SliceStable(items, func(i, j int) bool {
-		if items[i].Reason != items[j].Reason {
-			return items[i].Reason < items[j].Reason
-		}
-		return items[i].Candidate.MemoryID < items[j].Candidate.MemoryID
-	})
 }
 
 func recallTraceID(trace RecallTrace) string {

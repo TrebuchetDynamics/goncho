@@ -133,6 +133,72 @@ func TestRecallPipelineTokenBudgetSkipsOversizedBestCandidate(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineRejectedOrderPreservesSelectionFlow(t *testing.T) {
+	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-z-too-large",
+			SourceType: "turn",
+			Content:    "auth deployment runbook with many extra words beyond budget",
+			SessionID:  "sess-large",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 1}},
+		},
+		{
+			MemoryID:   "mem-a-small",
+			SourceType: "turn",
+			Content:    "fallback",
+			SessionID:  "sess-small",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.9}},
+		},
+		{
+			MemoryID:   "mem-b-leftover",
+			SourceType: "turn",
+			Content:    "second fallback",
+			SessionID:  "sess-leftover",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.8}},
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "rejection-flow-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "rejection-flow-test-v1",
+			Weights:     map[string]float64{"keyword": 1},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 3,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "auth",
+		ScopeID:     "team",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := selectedRecallIDs(trace); !slices.Equal(got, []string{"mem-a-small"}) {
+		t.Fatalf("selected IDs = %v, want fallback selected after oversized best is rejected", got)
+	}
+	if got := rejectedRecallIDs(trace); !slices.Equal(got, []string{"mem-z-too-large", "mem-b-leftover"}) {
+		t.Fatalf("rejected IDs = %v, want selection-flow order: token-budget rejection before leftover", got)
+	}
+	if trace.Rejected[0].Reason != RecallRejectTokenBudget || trace.Rejected[1].Reason != RecallRejectNotSelected {
+		t.Fatalf("rejected = %+v, want token-budget rejection before not-selected leftover", trace.Rejected)
+	}
+}
+
 func TestRecallPipelineSingleNameSpeakerTargetMatchesFullSpeakerIdentity(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
@@ -623,5 +689,13 @@ func (g staticRecallGenerator) Generate(ctx context.Context, q RecallQuery) ([]R
 func (g staticRecallGenerator) RecallWarnings() []RecallWarning {
 	out := make([]RecallWarning, len(g.warnings))
 	copy(out, g.warnings)
+	return out
+}
+
+func rejectedRecallIDs(trace RecallTrace) []string {
+	out := make([]string, 0, len(trace.Rejected))
+	for _, item := range trace.Rejected {
+		out = append(out, item.Candidate.MemoryID)
+	}
 	return out
 }
