@@ -193,8 +193,7 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 		results = fallback.Results
 		scopeEvidence = fallback.ScopeEvidence
 	}
-	results = applySearchReranker(ctx, r.searchReranker, params.Query, results)
-	results = limitHitsByTokens(results, params.MaxTokens)
+	results = finalizeSearchResults(ctx, r.searchReranker, params.Query, results, limit, params.MaxTokens)
 
 	if scopeEvidence == nil && profileID != "" {
 		scopeEvidence = profileScopeEvidence(profileID, memoryScope)
@@ -255,7 +254,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 		index[key] = len(out)
 		out = append(out, searchHit)
 	}
-	return trimSearchHits(out, limit), nil
+	return out, nil
 }
 
 // vectorSearchSources is the explicit handoff from Honcho source filters to
@@ -264,6 +263,14 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 // conclusion vector hits through a filter such as {"source":"turn"}.
 func vectorSearchSources(effectiveSources []string) []string {
 	return sliceutil.Clone(effectiveSources)
+}
+
+func finalizeSearchResults(ctx context.Context, reranker SearchReranker, query string, hits []SearchHit, limit, maxTokens int) []SearchHit {
+	// Keep candidate-producing lanes separate from final top-K truncation so the
+	// optional reranker can see semantic candidates added after lexical search.
+	hits = applySearchReranker(ctx, reranker, query, hits)
+	hits = trimSearchHits(hits, limit)
+	return limitHitsByTokens(hits, maxTokens)
 }
 
 func trimSearchHits(hits []SearchHit, limit int) []SearchHit {

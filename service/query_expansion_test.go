@@ -96,6 +96,32 @@ func TestSearchVectorCandidatesDoNotOverflowLimit(t *testing.T) {
 	}
 }
 
+func TestSearchRerankerSeesVectorCandidatesBeforeFinalLimit(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+	if _, err := svc.Conclude(ctx, ConcludeParams{Peer: "peer-fusion-rerank", Conclusion: "orchid lexical candidate one", Scope: "benchmark"}); err != nil {
+		t.Fatalf("conclude lexical one: %v", err)
+	}
+	if _, err := svc.Conclude(ctx, ConcludeParams{Peer: "peer-fusion-rerank", Conclusion: "orchid lexical candidate two", Scope: "benchmark"}); err != nil {
+		t.Fatalf("conclude lexical two: %v", err)
+	}
+	svc.vectorStore = &fakeVectorStore{hits: []VectorSearchHit{{MemoryID: "semantic-dossier", SourceType: "conclusion", Content: "botanical dossier lives in the blue notebook", Score: 0.99}}}
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+	svc.searchReranker = fakeSearchReranker{scores: map[string]float64{"semantic-dossier": 1}}
+
+	got, err := svc.Search(ctx, SearchParams{Peer: "peer-fusion-rerank", Query: "orchid", Limit: 2})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Results) != 2 {
+		t.Fatalf("hybrid Search results len = %d, want limit 2: %+v", len(got.Results), got.Results)
+	}
+	if got.Results[0].Content != "botanical dossier lives in the blue notebook" {
+		t.Fatalf("top hybrid result = %+v, want reranker-visible vector candidate before final limit", got.Results)
+	}
+}
+
 func TestSearchRerankerIsOptInByDefault(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
