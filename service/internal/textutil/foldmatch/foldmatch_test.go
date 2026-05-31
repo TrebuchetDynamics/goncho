@@ -20,6 +20,18 @@ func TestPrefixContracts(t *testing.T) {
 	}
 }
 
+func TestSubstringCutContracts(t *testing.T) {
+	before, marker, after, ok := CutAroundAnySubstringMatch("abc", []string{""})
+	if before != "" || marker != "" || after != "abc" || !ok {
+		t.Fatalf("CutAroundAnySubstringMatch empty marker = (%q, %q, %q, %v), want (%q, %q, %q, %v)", before, marker, after, ok, "", "", "abc", true)
+	}
+
+	before, ok = CutBeforeAnySubstring("abc", "")
+	if before != "abc" || ok {
+		t.Fatalf("CutBeforeAnySubstring empty marker = (%q, %v), want (%q, %v)", before, ok, "abc", false)
+	}
+}
+
 func TestEitherSubstring(t *testing.T) {
 	if !EitherSubstring("Deployment Owner", "owner") {
 		t.Fatal("expected case-folded either-direction substring match")

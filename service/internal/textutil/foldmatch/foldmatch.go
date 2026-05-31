@@ -63,38 +63,49 @@ func firstPrefix(value string, prefixes []string, skipEmpty bool) (string, bool)
 // using simple lower-case matching. Returned parts preserve original casing and
 // spacing from value; marker is the policy marker that matched.
 func CutAroundAnySubstringMatch(value string, markers []string) (before, marker, after string, ok bool) {
-	lower := foldcase.Lower(value)
-	for _, candidate := range markers {
-		idx := foldcase.IndexFolded(lower, candidate)
-		if idx < 0 {
-			continue
-		}
-		return value[:idx], candidate, value[idx+len(candidate):], true
+	match, ok := firstSubstringMatch(value, markers, false, false)
+	if !ok {
+		return "", "", "", false
 	}
-	return "", "", "", false
+	return value[:match.index], match.marker, value[match.index+len(match.marker):], true
 }
 
 // CutBeforeAnySubstring returns value before the earliest matching non-empty
 // marker using simple lower-case matching.
 func CutBeforeAnySubstring(value string, markers ...string) (string, bool) {
+	match, ok := firstSubstringMatch(value, markers, true, true)
+	if !ok {
+		return value, false
+	}
+	return value[:match.index], true
+}
+
+type substringMatch struct {
+	marker string
+	index  int
+}
+
+func firstSubstringMatch(value string, markers []string, skipEmpty, earliest bool) (substringMatch, bool) {
 	lower := foldcase.Lower(value)
-	best := -1
+	var best substringMatch
+	matched := false
 	for _, marker := range markers {
-		if marker == "" {
+		if skipEmpty && marker == "" {
 			continue
 		}
 		idx := foldcase.IndexFolded(lower, marker)
 		if idx < 0 {
 			continue
 		}
-		if best < 0 || idx < best {
-			best = idx
+		if !earliest {
+			return substringMatch{marker: marker, index: idx}, true
+		}
+		if !matched || idx < best.index {
+			best = substringMatch{marker: marker, index: idx}
+			matched = true
 		}
 	}
-	if best < 0 {
-		return value, false
-	}
-	return value[:best], true
+	return best, matched
 }
 
 // EitherSubstring reports whether either value contains the other using simple

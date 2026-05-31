@@ -101,12 +101,15 @@ func ContainsEqualFold(values []string, want string) bool {
 // OptionalMatch reports whether value satisfies an optional exact-match filter
 // after trimming the filter. An empty filter matches every value.
 func OptionalMatch(value, filter string) bool {
-	filter = Space(filter)
-	return filter == "" || value == filter
+	return optionalMatch(value, filter, false)
 }
 
 // OptionalMatchOrEmpty is OptionalMatch plus legacy-empty value admission.
 func OptionalMatchOrEmpty(value, filter string) bool {
+	return optionalMatch(value, filter, true)
+}
+
+func optionalMatch(value, filter string, admitEmptyValue bool) bool {
 	filter = Space(filter)
-	return filter == "" || value == "" || value == filter
+	return filter == "" || (admitEmptyValue && value == "") || value == filter
 }
