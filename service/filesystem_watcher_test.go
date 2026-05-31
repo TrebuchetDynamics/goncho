@@ -116,6 +116,56 @@ func TestFilesystemWatcherRequiresExplicitIncludeRules(t *testing.T) {
 	}
 }
 
+func TestFilesystemWatcherImportDoesNotReplayDistinctChangeKinds(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	root := t.TempDir()
+	path := filepath.Join(root, "docs/plan.md")
+	writeWatcherFixture(t, root, "docs/plan.md", "# Plan\n")
+
+	base := FilesystemWatcherImportParams{
+		RootDir:      root,
+		Paths:        []string{path},
+		IncludeGlobs: []string{"**/*.md"},
+		PeerID:       "fs-watcher-kind",
+		SessionKey:   "fs-session-kind",
+	}
+	first, err := svc.ImportFilesystemWatcherChanges(context.Background(), base)
+	if err != nil {
+		t.Fatalf("ImportFilesystemWatcherChanges first: %v", err)
+	}
+	if first.ImportedCount != 1 || first.ReplayedCount != 0 {
+		t.Fatalf("first import = %+v, want fresh file_change observation", first)
+	}
+
+	base.ChangeKind = "file_touch"
+	second, err := svc.ImportFilesystemWatcherChanges(context.Background(), base)
+	if err != nil {
+		t.Fatalf("ImportFilesystemWatcherChanges second: %v", err)
+	}
+	if second.ImportedCount != 1 || second.ReplayedCount != 0 {
+		t.Fatalf("second import = %+v, want distinct change_kind observation instead of replay", second)
+	}
+
+	obs, err := svc.ListObservations(context.Background(), ObservationQuery{PeerID: "fs-watcher-kind", SessionKey: "fs-session-kind", Kinds: []ObservationKind{ObservationKindCustom}, Limit: 10})
+	if err != nil {
+		t.Fatalf("ListObservations: %v", err)
+	}
+	if obs.Count != 2 {
+		t.Fatalf("observations = %+v, want both change kinds retained", obs.Observations)
+	}
+	seen := map[string]bool{}
+	for _, item := range obs.Observations {
+		seen[item.Metadata["change_kind"]] = true
+	}
+	if !seen["file_change"] || !seen["file_touch"] {
+		t.Fatalf("change kinds = %+v, want file_change and file_touch provenance", seen)
+	}
+}
+
 func TestFilesystemWatcherPreviewRejectsSymlinkEscapingRoot(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

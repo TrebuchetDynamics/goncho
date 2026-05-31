@@ -245,6 +245,10 @@ func looksBinary(raw []byte) bool {
 }
 
 func filesystemWatcherObservationID(params FilesystemWatcherImportParams, candidate FilesystemWatcherCandidate) string {
-	seed := strings.Join([]string{params.WorkspaceID, params.ProfileID, params.PeerID, params.SessionKey, candidate.RelativePath, candidate.Checksum}, "\x00")
+	seed := strings.Join(filesystemWatcherObservationIDSeedParts(params, candidate), "\x00")
 	return "fswatch_" + hashutil.SHA256HexStringPrefix(seed, 16)
+}
+
+func filesystemWatcherObservationIDSeedParts(params FilesystemWatcherImportParams, candidate FilesystemWatcherCandidate) []string {
+	return []string{params.WorkspaceID, params.ProfileID, params.PeerID, params.SessionKey, candidate.RelativePath, candidate.ChangeKind, candidate.Checksum}
 }
