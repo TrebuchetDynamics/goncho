@@ -137,6 +137,26 @@ func TestFormatRecallReplayIncludesZeroFinalScoresForCandidates(t *testing.T) {
 	}
 }
 
+func TestRecallReplayFingerprintTreatsNilAndEmptyTraceSlicesEqually(t *testing.T) {
+	base := RecallTrace{
+		TraceID:         "trace-empty-slices",
+		PipelineVersion: "test-pipeline",
+		Query:           RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "nothing matched"},
+		ScoringConfig:   RecallScoringConfig{Version: "empty-slices-v1"},
+	}
+	empty := base
+	empty.Candidates = []ScoredRecallCandidate{}
+	empty.Selected = []ScoredRecallCandidate{}
+	empty.Rejected = []RejectedRecallCandidate{}
+	empty.Warnings = []RecallWarning{}
+
+	baseReplay := BuildRecallReplay(base)
+	emptyReplay := BuildRecallReplay(empty)
+	if baseReplay.ReplayFingerprint != emptyReplay.ReplayFingerprint {
+		t.Fatalf("ReplayFingerprint differs for nil vs empty replay slices: nil=%s empty=%s", baseReplay.ReplayFingerprint, emptyReplay.ReplayFingerprint)
+	}
+}
+
 func TestRecallReplayWarningEventsIncludeStableEvidence(t *testing.T) {
 	trace := RecallTrace{
 		TraceID:         "trace-warning-evidence",

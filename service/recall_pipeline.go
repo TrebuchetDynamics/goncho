@@ -1019,9 +1019,12 @@ func recallTraceReplayFingerprintView(trace RecallTrace) any {
 		PipelineVersion string                           `json:"pipeline_version"`
 	}{
 		Query:           trace.Query,
+		Candidates:      []recallTraceReplayCandidateView{},
+		Selected:        []recallTraceReplayCandidateView{},
+		Rejected:        []recallTraceReplayRejectedView{},
+		Warnings:        normalizeRecallTraceReplayWarnings(trace.Warnings),
 		ScoringConfig:   trace.ScoringConfig,
 		PipelineVersion: trace.PipelineVersion,
-		Warnings:        trace.Warnings,
 	}
 	for _, item := range trace.Candidates {
 		view.Candidates = append(view.Candidates, recallTraceReplayCandidateView{Candidate: item.Candidate, Score: item.Score})
@@ -1033,6 +1036,13 @@ func recallTraceReplayFingerprintView(trace RecallTrace) any {
 		view.Rejected = append(view.Rejected, recallTraceReplayRejectedView{Candidate: item.Candidate, Score: item.Score, Reason: item.Reason, WhyRejected: item.WhyRejected})
 	}
 	return view
+}
+
+func normalizeRecallTraceReplayWarnings(warnings []RecallWarning) []RecallWarning {
+	if warnings == nil {
+		return []RecallWarning{}
+	}
+	return warnings
 }
 
 func clampRecall(value float64) float64 {
