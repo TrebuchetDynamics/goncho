@@ -1,6 +1,7 @@
 package queryexpand
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
@@ -36,7 +37,14 @@ func reciprocalLexicon(entries map[string][]string) map[string][]string {
 			out[alias] = appendUnique(out[alias], term)
 		}
 	}
+	sortLexiconAliases(out)
 	return out
+}
+
+func sortLexiconAliases(lexicon map[string][]string) {
+	for term := range lexicon {
+		sort.Strings(lexicon[term])
+	}
 }
 
 func appendUnique(values []string, candidates ...string) []string {
@@ -68,6 +76,7 @@ func Expand(query string) Expanded {
 		terms = append(terms, synonyms[token]...)
 	}
 	terms = textutil.UniqueLowerTrimmed(terms, false)
+	sort.Strings(terms)
 	if len(terms) == 0 {
 		return Expanded{Original: original, Expanded: original}
 	}

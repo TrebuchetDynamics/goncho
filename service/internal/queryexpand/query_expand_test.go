@@ -1,6 +1,9 @@
 package queryexpand
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestExpandUsesReciprocalSynonyms(t *testing.T) {
 	got := Expand("authentication")
@@ -18,6 +21,14 @@ func TestSynonymLexiconIsReciprocal(t *testing.T) {
 				t.Fatalf("synonym lexicon drift: %q lists %q, but reverse entry is missing", term, alias)
 			}
 		}
+	}
+}
+
+func TestExpandReturnsDeterministicSortedTerms(t *testing.T) {
+	got := Expand("authentication")
+	want := []string{"auth", "login", "signin"}
+	if !slices.Equal(got.Terms, want) {
+		t.Fatalf("Expand(authentication) terms = %v, want deterministic sorted terms %v", got.Terms, want)
 	}
 }
 
