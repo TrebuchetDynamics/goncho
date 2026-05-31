@@ -25,6 +25,28 @@ func TestSearchUsesOptionalVectorStoreForSemanticLane(t *testing.T) {
 	}
 }
 
+func TestSearchSourceVectorRunsSemanticLaneWithoutConclusions(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	vectorStore := &fakeVectorStore{hits: []VectorSearchHit{{MemoryID: "semantic-vector-only", SourceType: "vector", Content: "semantic-only search content", Score: 0.93}}}
+	svc.vectorStore = vectorStore
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+
+	got, err := svc.Search(context.Background(), SearchParams{Peer: "peer-semantic-vector-only", Query: "semantic only", Sources: []string{"vector"}, Limit: 1})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(vectorStore.queries) != 1 {
+		t.Fatalf("vector queries = %d, want source=vector to run semantic lane", len(vectorStore.queries))
+	}
+	if len(got.Results) != 1 || got.Results[0].Content != "semantic-only search content" {
+		t.Fatalf("Search results = %+v, want vector-only semantic hit", got.Results)
+	}
+	if !searchHitHasEvidenceKind(got.Results[0], "semantic") {
+		t.Fatalf("vector-only Search provenance = %+v, want semantic evidence", got.Results[0].Provenance)
+	}
+}
+
 func TestSearchSourceFilterSuppressesConclusionVectorLane(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

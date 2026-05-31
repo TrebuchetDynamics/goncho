@@ -230,7 +230,7 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 
 func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchParams, profileID, peer, scopeID string, effectiveSources []string, base []SearchHit, limit int) ([]SearchHit, error) {
 	vectorSources := vectorSearchSources(effectiveSources)
-	if r.vectorStore == nil || strings.TrimSpace(params.Query) == "" || !vectorSourceAllowed(vectorSources, "conclusion") {
+	if r.vectorStore == nil || strings.TrimSpace(params.Query) == "" || !vectorSearchLaneAllowed(vectorSources) {
 		return base, nil
 	}
 	query := VectorSearchQuery{
@@ -260,18 +260,18 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 		return searchHitVectorMergeKey(hit), true
 	})
 	for _, hit := range vectorHitsByScoreDesc(hits) {
-		if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(vectorSources, hit.SourceType) {
+		decision := vectorSearchMergeDecisionFor(hit, vectorSources, index)
+		if decision.Skip {
 			continue
 		}
 		searchHit := searchHitFromVectorHit(hit)
-		key := searchHitVectorMergeKey(searchHit)
-		if idx, ok := index[key]; ok {
-			if len(searchHit.Provenance) > 0 && !evidenceListHas(out[idx].Provenance, "semantic", searchHit.Provenance[0].ID) {
-				out[idx].Provenance = append(out[idx].Provenance, searchHit.Provenance...)
+		if decision.Merge {
+			if len(searchHit.Provenance) > 0 && !evidenceListHas(out[decision.Index].Provenance, "semantic", searchHit.Provenance[0].ID) {
+				out[decision.Index].Provenance = append(out[decision.Index].Provenance, searchHit.Provenance...)
 			}
 			continue
 		}
-		index[key] = len(out)
+		index[decision.Key] = len(out)
 		out = append(out, searchHit)
 	}
 	return out, nil
@@ -283,6 +283,29 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 // conclusion vector hits through a filter such as {"source":"turn"}.
 func vectorSearchSources(effectiveSources []string) []string {
 	return sliceutil.Clone(effectiveSources)
+}
+
+func vectorSearchLaneAllowed(sources []string) bool {
+	return vectorSourceAllowed(sources, "conclusion") || vectorSourceAllowed(sources, "vector")
+}
+
+type vectorSearchMergeDecision struct {
+	Skip  bool
+	Merge bool
+	Key   string
+	Index int
+}
+
+func vectorSearchMergeDecisionFor(hit VectorSearchHit, vectorSources []string, index map[string]int) vectorSearchMergeDecision {
+	if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(vectorSources, hit.SourceType) {
+		return vectorSearchMergeDecision{Skip: true}
+	}
+	searchHit := searchHitFromVectorHit(hit)
+	key := searchHitVectorMergeKey(searchHit)
+	if idx, ok := index[key]; ok {
+		return vectorSearchMergeDecision{Merge: true, Key: key, Index: idx}
+	}
+	return vectorSearchMergeDecision{Key: key}
 }
 
 func finalizeSearchResults(ctx context.Context, reranker SearchReranker, query string, hits []SearchHit, limit, maxTokens int) []SearchHit {
