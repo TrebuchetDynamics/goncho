@@ -213,11 +213,12 @@ func TestCognitiveMapSuppressesLowActivationGraphBranches(t *testing.T) {
 	}
 }
 
-func TestGraphRecallIgnoresMalformedRelationsWithEmptyEndpoints(t *testing.T) {
+func TestGraphRecallIgnoresMalformedRelationsWithUnstableEndpoints(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 10, 0, 0, time.UTC)
 	base := []RecallCandidate{{
+		MemoryID:   "mem-auth-service",
 		SourceType: "conclusion",
-		Content:    "An imported memory without a stable memory id mentions the auth owner.",
+		Content:    "The auth service mentions the owner path.",
 		ScopeID:    "team",
 		CreatedAt:  now,
 	}}
@@ -230,20 +231,59 @@ func TestGraphRecallIgnoresMalformedRelationsWithEmptyEndpoints(t *testing.T) {
 				ScopeID:    "team",
 				CreatedAt:  now,
 			},
+			"mem-empty-target": {
+				SourceType: "conclusion",
+				Content:    "Imported graph target without a stable memory id.",
+				ScopeID:    "team",
+				CreatedAt:  now,
+			},
+			"mem-mismatched-target": {
+				MemoryID:   "mem-other-id",
+				SourceType: "conclusion",
+				Content:    "Imported graph target stored under the wrong endpoint key.",
+				ScopeID:    "team",
+				CreatedAt:  now,
+			},
 		},
-		Relations: []GraphRelation{{
-			FromMemoryID: "",
-			ToMemoryID:   "mem-auth-owner",
-			Relation:     "owned_by",
-			QueryTerms:   []string{"owner"},
-			EvidenceID:   "edge-missing-from",
-			Score:        0.95,
-		}},
+		Relations: []GraphRelation{
+			{
+				FromMemoryID: "",
+				ToMemoryID:   "mem-auth-owner",
+				Relation:     "owned_by",
+				QueryTerms:   []string{"owner"},
+				EvidenceID:   "edge-missing-from",
+				Score:        0.95,
+			},
+			{
+				FromMemoryID: "mem-auth-service",
+				ToMemoryID:   "",
+				Relation:     "owned_by",
+				QueryTerms:   []string{"owner"},
+				EvidenceID:   "edge-missing-to",
+				Score:        0.95,
+			},
+			{
+				FromMemoryID: "mem-auth-service",
+				ToMemoryID:   "mem-empty-target",
+				Relation:     "owned_by",
+				QueryTerms:   []string{"owner"},
+				EvidenceID:   "edge-empty-target-id",
+				Score:        0.95,
+			},
+			{
+				FromMemoryID: "mem-auth-service",
+				ToMemoryID:   "mem-mismatched-target",
+				Relation:     "owned_by",
+				QueryTerms:   []string{"owner"},
+				EvidenceID:   "edge-mismatched-target-id",
+				Score:        0.95,
+			},
+		},
 	}
 
 	got := expandGraphRecallCandidates(RecallQuery{Query: "owner", ScopeID: "team"}, base, index)
-	if len(got) != 1 || got[0].MemoryID != "" {
-		t.Fatalf("expanded IDs = %v, want malformed empty-endpoint relation ignored", recallCandidateMemoryIDs(got))
+	if ids := recallCandidateMemoryIDs(got); !slices.Equal(ids, []string{"mem-auth-service"}) {
+		t.Fatalf("expanded IDs = %v, want malformed endpoint relations ignored", ids)
 	}
 }
 

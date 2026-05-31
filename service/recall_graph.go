@@ -66,7 +66,7 @@ func expandGraphRecallCandidates(q RecallQuery, base []RecallCandidate, index Gr
 			if !ok {
 				continue
 			}
-			target, ok := index.Memories[relation.ToMemoryID]
+			target, ok := graphRelationTargetCandidate(relation, index)
 			if !ok || recallScopeMismatch(q, target) {
 				continue
 			}
@@ -111,6 +111,17 @@ func graphRelationCanExpand(q RecallQuery, relation GraphRelation, seen map[stri
 
 func graphRelationHasEndpoints(relation GraphRelation) bool {
 	return relation.FromMemoryID != "" && relation.ToMemoryID != ""
+}
+
+func graphRelationTargetCandidate(relation GraphRelation, index GraphExpansionIndex) (RecallCandidate, bool) {
+	if !graphRelationHasEndpoints(relation) {
+		return RecallCandidate{}, false
+	}
+	target, ok := index.Memories[relation.ToMemoryID]
+	if !ok || target.MemoryID != relation.ToMemoryID {
+		return RecallCandidate{}, false
+	}
+	return target, true
 }
 
 func graphExpandedProvenance(source, target RecallCandidate, relation GraphRelation) []EvidenceItem {
