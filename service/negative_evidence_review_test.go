@@ -265,6 +265,44 @@ func TestNegativeEvidenceReviewLimitAppliesAfterCandidateGeneration(t *testing.T
 	}
 }
 
+func TestNegativeEvidenceReviewLimitCountsNewItemsAfterExistingOpenItems(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	failed := false
+	for _, tool := range []string{"curl", "bash"} {
+		for i := 1; i <= 2; i++ {
+			id := tool + "-existing-skip-fail-" + strconv.Itoa(i)
+			observedAt := time.Unix(int64(10+i), 0).UTC()
+			if tool == "bash" {
+				observedAt = time.Unix(int64(100+i), 0).UTC()
+			}
+			if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, ProfileID: "mineru", PeerID: "peer-review-existing-skip", SessionKey: "sess-review-existing-skip", Success: &failed, Metadata: map[string]string{"tool_name": tool}, ObservedAt: observedAt}); err != nil {
+				t.Fatalf("Observe %s: %v", id, err)
+			}
+		}
+	}
+
+	first, err := svc.CreateNegativeEvidenceReviewItems(ctx, NegativeEvidenceReviewRequest{PeerID: "peer-review-existing-skip", SessionKey: "sess-review-existing-skip", Limit: 1, CreatedAt: time.Unix(200, 0).UTC()})
+	if err != nil {
+		t.Fatalf("CreateNegativeEvidenceReviewItems first: %v", err)
+	}
+	if len(first) != 1 || !strings.Contains(first[0].SubjectID, ":tool-bash") {
+		t.Fatalf("first created = %+v, want most recent bash candidate", first)
+	}
+
+	second, err := svc.CreateNegativeEvidenceReviewItems(ctx, NegativeEvidenceReviewRequest{PeerID: "peer-review-existing-skip", SessionKey: "sess-review-existing-skip", Limit: 1, CreatedAt: time.Unix(300, 0).UTC()})
+	if err != nil {
+		t.Fatalf("CreateNegativeEvidenceReviewItems second: %v", err)
+	}
+	if len(second) != 1 || !strings.Contains(second[0].SubjectID, ":tool-curl") {
+		t.Fatalf("second created = %+v, want limit to count new review items after skipping existing open bash", second)
+	}
+}
+
 func TestAcceptNegativeEvidenceCandidatesCreatesFormalReviewItems(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

@@ -79,7 +79,7 @@ func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req Neg
 		return nil, err
 	}
 	created := []ReviewItem{}
-	for _, candidate := range limitNegativeEvidenceCandidates(candidates, req.Limit) {
+	for _, candidate := range candidates {
 		reviewWorkspaceID := negativeEvidenceReviewWorkspaceID(requestWorkspaceID, candidate)
 		subjectID := negativeEvidenceReviewSubjectID(candidate)
 		existing, err := s.ListReviewItems(ctx, ReviewQuery{WorkspaceID: reviewWorkspaceID, PeerID: candidate.PeerID, SessionKey: candidate.SessionKey, SubjectID: subjectID, Status: ReviewStatusOpen, Limit: 1})
@@ -104,6 +104,9 @@ func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req Neg
 			return nil, err
 		}
 		created = append(created, item)
+		if negativeEvidenceReviewCreationLimitReached(len(created), req.Limit) {
+			break
+		}
 	}
 	return created, nil
 }
@@ -462,6 +465,10 @@ func limitNegativeEvidenceCandidates(candidates []NegativeEvidenceCandidate, lim
 		return candidates
 	}
 	return append([]NegativeEvidenceCandidate(nil), candidates[:limit]...)
+}
+
+func negativeEvidenceReviewCreationLimitReached(created, limit int) bool {
+	return limit > 0 && created >= limit
 }
 
 func negativeEvidenceRecommendation(candidate NegativeEvidenceCandidate) string {
