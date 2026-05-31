@@ -5,16 +5,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/casecontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
 const (
-	beamServiceDefaultConfigID   = "goncho-service-beam-v1"
-	beamServiceScale             = "100K"
-	beamServiceConversationID    = "goncho-service-memoria-fixtures"
-	beamServiceModelName         = "goncho-service-recall"
-	beamServiceJudgeModelName    = "none"
+	beamServiceDefaultConfigID   = casecontract.DefaultConfigID
+	beamServiceScale             = casecontract.DefaultScale
+	beamServiceConversationID    = casecontract.DefaultConversationID
+	beamServiceModelName         = casecontract.ModelName
+	beamServiceJudgeModelName    = casecontract.JudgeModelName
 	beamServiceSummaryDateFormat = time.RFC3339
 )
 
@@ -156,7 +157,7 @@ func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cf
 }
 
 func normalizeBeamServiceConfigID(configID string) string {
-	return shared.FirstNonEmptyTrimmed(configID, beamServiceDefaultConfigID)
+	return casecontract.NormalizeConfigID(configID)
 }
 
 func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) error {
@@ -293,37 +294,15 @@ func beamServiceCaseRecallProvenance(c goncho.RecallBenchmarkCaseReport) beamSer
 }
 
 func beamServiceVoiceMap(kinds []string) map[string]float64 {
-	out := map[string]float64{}
-	for _, kind := range kinds {
-		kind = shared.NormalizeEvidenceKind(kind)
-		if kind != "" {
-			out[kind]++
-		}
-	}
-	return out
+	return casecontract.VoiceMap(kinds)
 }
 
 func beamServiceTopResultTier(kinds []string) string {
-	for _, kind := range kinds {
-		switch shared.NormalizeEvidenceKind(kind) {
-		case "graph", "fact":
-			return "structured"
-		}
-	}
-	if len(kinds) > 0 {
-		return "episodic"
-	}
-	return "unknown"
+	return casecontract.TopResultTier(kinds)
 }
 
 func beamServiceCaseAssessment(c goncho.RecallBenchmarkCaseReport, score float64) string {
-	if score >= 1 {
-		return "pure-recall context selected the required memory and provenance gates passed"
-	}
-	if len(c.WarningCodes) > 0 {
-		return "pure-recall context did not satisfy benchmark gates; see warning_codes in the service report"
-	}
-	return "pure-recall context did not satisfy benchmark gates"
+	return casecontract.Assessment(c, score)
 }
 
 func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) error {
@@ -456,59 +435,19 @@ func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, confi
 }
 
 func beamServiceFirstRelevantRank(candidateIDs, relevantIDs []string) int {
-	relevant := map[string]struct{}{}
-	for _, id := range relevantIDs {
-		id = strings.TrimSpace(id)
-		if id != "" {
-			relevant[id] = struct{}{}
-		}
-	}
-	for i, id := range candidateIDs {
-		if _, ok := relevant[strings.TrimSpace(id)]; ok {
-			return i + 1
-		}
-	}
-	return 0
+	return casecontract.FirstRelevantRank(candidateIDs, relevantIDs)
 }
 
 func beamServiceFailureMode(c goncho.RecallBenchmarkCaseReport, score float64) string {
-	if len(c.RelevantIDs) == 0 && !c.ExpectedNoAnswer {
-		return "unscorable_missing_relevant_ids"
-	}
-	if c.ExpectedNoAnswer && len(c.SelectedMemoryIDs) > 0 {
-		return "abstention_failed"
-	}
-	rank := beamServiceFirstRelevantRank(c.CandidateMemoryIDs, c.RelevantIDs)
-	if c.RecallAt5 <= 0 {
-		if rank == 0 {
-			return "missing_candidate"
-		}
-		return "rank_too_low"
-	}
-	if !c.ContextSatisfied {
-		return "context_unsatisfied"
-	}
-	if len(c.RequiredEvidenceKinds) > 0 && !c.ProvenanceSatisfied {
-		return "provenance_unsatisfied"
-	}
-	if !c.TokenBudgetWithin {
-		return "token_budget_exceeded"
-	}
-	if len(c.WarningCodes) > 0 {
-		return "recall_warning"
-	}
-	if score < 1 {
-		return "partial_recall"
-	}
-	return "unknown"
+	return casecontract.FailureMode(c, score)
 }
 
 func beamServiceCaseScale(c goncho.RecallBenchmarkCaseReport) string {
-	return shared.FirstNonEmptyTrimmed(c.Scale, beamServiceScale)
+	return casecontract.Scale(c)
 }
 
 func beamServiceCaseConversationID(c goncho.RecallBenchmarkCaseReport) string {
-	return shared.FirstNonEmptyTrimmed(c.ConversationID, beamServiceConversationID)
+	return casecontract.ConversationID(c)
 }
 
 func beamServiceArtifactScore(c goncho.RecallBenchmarkCaseReport, judgments *beamServiceJudgmentSet) float64 {
@@ -533,11 +472,5 @@ func beamServiceSummaryDescription(judgments *beamServiceJudgmentSet) string {
 }
 
 func beamServiceCaseScore(c goncho.RecallBenchmarkCaseReport) float64 {
-	if c.RecallAt5 <= 0 || !c.ContextSatisfied || !c.TokenBudgetWithin {
-		return 0
-	}
-	if len(c.RequiredEvidenceKinds) > 0 && !c.ProvenanceSatisfied {
-		return 0
-	}
-	return shared.RoundMetric(c.RecallAt5)
+	return casecontract.Score(c)
 }
