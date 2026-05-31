@@ -2,19 +2,18 @@
 from __future__ import annotations
 
 import hashlib
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from support import import_attrs
 
-try:
-    from shared.checksums import sha256
-    from shared.jsonl import load_jsonl, write_jsonl
-except ModuleNotFoundError:  # pragma: no cover - package import path
-    from scripts.shared.checksums import sha256
-    from scripts.shared.jsonl import load_jsonl, write_jsonl
+sha256, = import_attrs(("shared.checksums", "scripts.shared.checksums"), "sha256")
+load_jsonl, write_jsonl = import_attrs(
+    ("shared.jsonl", "scripts.shared.jsonl"),
+    "load_jsonl",
+    "write_jsonl",
+)
 
 
 class IoHelperTests(unittest.TestCase):

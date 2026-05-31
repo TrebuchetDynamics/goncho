@@ -2,18 +2,17 @@
 from __future__ import annotations
 
 import json
-import sys
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from support import import_attrs
 
-try:
-    from shared.http_json import post_json_url, read_json_url
-except ModuleNotFoundError:  # pragma: no cover - package import path
-    from scripts.shared.http_json import post_json_url, read_json_url
+post_json_url, read_json_url = import_attrs(
+    ("shared.http_json", "scripts.shared.http_json"),
+    "post_json_url",
+    "read_json_url",
+)
 
 
 class JsonHandler(BaseHTTPRequestHandler):

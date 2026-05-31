@@ -6,14 +6,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from support import import_attrs, import_first, write_package_module
 
-try:
-    from shared.compatibility.runtime.path import add_scripts_root
-    from shared.compatibility.wrappers.legacy import export_module, export_public
-except ModuleNotFoundError:  # pragma: no cover - package import path
-    from scripts.shared.compatibility.runtime.path import add_scripts_root
-    from scripts.shared.compatibility.wrappers.legacy import export_module, export_public
+add_scripts_root, = import_attrs(
+    ("shared.compatibility.path", "scripts.shared.compatibility.path"),
+    "add_scripts_root",
+)
+export_module, export_public = import_attrs(
+    ("shared.compatibility.legacy", "scripts.shared.compatibility.legacy"),
+    "export_module",
+    "export_public",
+)
 
 
 class CompatibilityHelpersTest(unittest.TestCase):
@@ -29,12 +32,7 @@ class CompatibilityHelpersTest(unittest.TestCase):
     def test_export_public_exports_declared_names_from_moved_module(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            package = root / "moved"
-            package.mkdir()
-            (package / "__init__.py").write_text("", encoding="utf-8")
-            (package / "module.py").write_text(
-                "__all__ = ['VALUE']\nVALUE = 7\nHIDDEN = 9\n", encoding="utf-8"
-            )
+            write_package_module(root, "moved", "module", "__all__ = ['VALUE']\nVALUE = 7\nHIDDEN = 9\n")
             namespace: dict[str, object] = {}
             try:
                 module = export_public("moved.module", str(root / "wrapper.py"), namespace)
@@ -49,12 +47,7 @@ class CompatibilityHelpersTest(unittest.TestCase):
     def test_export_module_returns_and_exports_main(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            package = root / "moved"
-            package.mkdir()
-            (package / "__init__.py").write_text("", encoding="utf-8")
-            (package / "runner.py").write_text(
-                "def main():\n    return 3\n", encoding="utf-8"
-            )
+            write_package_module(root, "moved", "runner", "def main():\n    return 3\n")
             namespace: dict[str, object] = {}
             try:
                 main = export_module("moved.runner", str(root / "wrapper.py"), namespace)
@@ -74,7 +67,7 @@ class CompatibilityHelpersTest(unittest.TestCase):
         ]
         for name in modules:
             with self.subTest(name=name):
-                module = importlib.import_module(name)
+                module = import_first(name, f"scripts.{name}")
                 self.assertTrue(module.__all__)
 
 

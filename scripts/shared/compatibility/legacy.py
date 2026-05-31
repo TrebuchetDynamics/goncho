@@ -10,6 +10,8 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - package import path
     from scripts.shared.compatibility.path import add_scripts_root
 
+__all__ = ["export_module", "export_public"]
+
 
 def export_public(module_name: str, anchor: str, namespace: MutableMapping[str, Any]) -> Any:
     """Export public names from a moved module into a legacy wrapper."""
