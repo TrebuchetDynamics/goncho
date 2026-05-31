@@ -3,6 +3,7 @@ package paired
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +56,7 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 	if err := json.Unmarshal(bytes.TrimSpace(pairedRaw), &importedRow); err != nil {
 		t.Fatalf("decode imported paired outcome row: %v", err)
 	}
-	if importedRow.SourcePath != resultsPath || importedRow.SourceSHA256 != checksumBytesSHA256([]byte(nestedResults)) {
+	if importedRow.SourcePath != resultsPath || importedRow.SourceSHA256 != shared.ChecksumBytesSHA256([]byte(nestedResults)) {
 		t.Fatalf("imported paired outcome source = %+v, want nested result path and checksum", importedRow)
 	}
 	candidateRow := `{"config_id":"goncho-current","run_started_at":"2026-05-24T00:01:00Z","scale":"100K","conversation_id":"conv-beam-real","qid":"q-source-beam-id","ability":"IE","question":"Who owns LedgerDB?","score":1,"correct":true}` + "\n"
@@ -102,7 +103,7 @@ func TestRunBeamPairedResultsImportPairsMnemosyneQIDsByQuestion(t *testing.T) {
 	if row.MatchKey != "question" || row.Question != "Who owns LedgerDB?" || row.BaselineQID != "conv-beam-real:q0" || row.CandidateQID != "q-source-beam-id" || row.QID != "q-source-beam-id" {
 		t.Fatalf("question-key paired row = %+v, want visible qid mismatch matched by question", row)
 	}
-	if row.BaselineSourcePath != resultsPath || row.BaselineSourceSHA256 != checksumBytesSHA256([]byte(nestedResults)) {
+	if row.BaselineSourcePath != resultsPath || row.BaselineSourceSHA256 != shared.ChecksumBytesSHA256([]byte(nestedResults)) {
 		t.Fatalf("question-key paired source = %+v, want baseline nested result provenance", row)
 	}
 }

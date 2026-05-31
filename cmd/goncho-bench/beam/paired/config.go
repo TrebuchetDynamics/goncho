@@ -1,10 +1,5 @@
 package paired
 
-import (
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/checksum"
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
-)
-
 type Config struct {
 	ComparePath             string
 	BaselineConfigID        string
@@ -30,12 +25,4 @@ type servicePairedOutcome struct {
 	SourceSHA256   string  `json:"source_sha256,omitempty"`
 	Score          float64 `json:"score"`
 	Correct        bool    `json:"correct"`
-}
-
-func roundMetric(v float64) float64 {
-	return metrics.Round(v)
-}
-
-func checksumBytesSHA256(raw []byte) string {
-	return checksum.SHA256Bytes(raw)
 }

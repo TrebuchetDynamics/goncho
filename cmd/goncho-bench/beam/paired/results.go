@@ -3,6 +3,7 @@ package paired
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +47,7 @@ func AppendPairedOutcomesFromResults(cfg Config) error {
 	if err := json.Unmarshal(raw, &results); err != nil {
 		return fmt.Errorf("goncho-bench: decode BEAM paired results: %w", err)
 	}
-	rows, err := beamPairedOutcomesFromResults(results, cfg.ResultsConfigID, inputPath, checksumBytesSHA256(raw))
+	rows, err := beamPairedOutcomesFromResults(results, cfg.ResultsConfigID, inputPath, shared.ChecksumBytesSHA256(raw))
 	if err != nil {
 		return err
 	}
@@ -94,7 +95,7 @@ func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfig
 			if qid == "" {
 				return nil, fmt.Errorf("goncho-bench: BEAM paired result conversation %d result %d missing qid", conversationIndex+1, resultIndex+1)
 			}
-			score := roundMetric(result.Score)
+			score := shared.RoundMetric(result.Score)
 			out = append(out, servicePairedOutcome{
 				ConfigID:       configID,
 				RunStartedAt:   runStartedAt,

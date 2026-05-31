@@ -16,7 +16,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/checksum"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
 )
 
@@ -143,7 +143,7 @@ func loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale string) ([]be
 	if err != nil {
 		return nil, beamConversionDiagnostics{}, err
 	}
-	diagnostics.ConvertedJSONLSHA256 = checksumBytesSHA256(convertedRaw)
+	diagnostics.ConvertedJSONLSHA256 = shared.ChecksumBytesSHA256(convertedRaw)
 	return out, diagnostics, nil
 }
 
@@ -392,10 +392,6 @@ func encodeBeamJSONL(w io.Writer, records []beamJSONLRecord) error {
 		}
 	}
 	return nil
-}
-
-func checksumBytesSHA256(raw []byte) string {
-	return checksum.SHA256Bytes(raw)
 }
 
 func summarizeBeamConversionRecords(records []beamJSONLRecord) beamConversionDiagnostics {

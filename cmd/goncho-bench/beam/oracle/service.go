@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/shared"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 

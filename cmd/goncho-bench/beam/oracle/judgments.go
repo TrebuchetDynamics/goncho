@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/checksum"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -50,7 +50,7 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 	if err != nil {
 		return nil, fmt.Errorf("goncho-bench: open BEAM service judgments: %w", err)
 	}
-	sourceSHA256 := checksum.SHA256Bytes(raw)
+	sourceSHA256 := shared.ChecksumBytesSHA256(raw)
 	rows := map[string]beamServiceJudgment{}
 	questionRows := map[string]beamServiceJudgment{}
 	trimmed := bytes.TrimSpace(raw)

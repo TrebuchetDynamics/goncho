@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 )
 
 const beamPairedComparisonBootstrapSeed int64 = 42
@@ -180,8 +180,8 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 			MatchKey:              matched.matchKey,
 			Ability:               ability,
 			Question:              question,
-			BaselineScore:         roundMetric(base.Score),
-			CandidateScore:        roundMetric(cand.Score),
+			BaselineScore:         shared.RoundMetric(base.Score),
+			CandidateScore:        shared.RoundMetric(cand.Score),
 			ScoreDelta:            delta,
 			BaselineCorrect:       base.Correct,
 			CandidateCorrect:      cand.Correct,
@@ -349,7 +349,7 @@ func beamPairedComparisonWinner(baseScore, candidateScore float64) string {
 func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamples int, effectSizeFloor float64) beamPairedComparisonReport {
 	report := beamPairedComparisonReport{
 		PairedCount:      len(rows),
-		EffectSizeFloor:  roundMetric(effectSizeFloor),
+		EffectSizeFloor:  shared.RoundMetric(effectSizeFloor),
 		BootstrapSamples: bootstrapSamples,
 		BootstrapSeed:    beamPairedComparisonBootstrapSeed,
 		ByAbility:        map[string]beamPairedComparisonStats{},
@@ -373,8 +373,8 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 		abilityRows[row.Ability] = append(abilityRows[row.Ability], row)
 	}
 	n := float64(len(rows))
-	report.BaselineAvgScore = roundMetric(baseTotal / n)
-	report.CandidateAvgScore = roundMetric(candidateTotal / n)
+	report.BaselineAvgScore = shared.RoundMetric(baseTotal / n)
+	report.CandidateAvgScore = shared.RoundMetric(candidateTotal / n)
 	report.ScoreDelta = roundSignedMetric(report.CandidateAvgScore - report.BaselineAvgScore)
 	report.ScoreDeltaCI95 = bootstrapMeanCI(diffs, bootstrapSamples)
 	report.Conclusion, report.ConclusionReason = beamPairedComparisonConclusion(report.ScoreDeltaCI95, report.EffectSizeFloor)
@@ -400,8 +400,8 @@ func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow, effectSize
 		}
 	}
 	n := float64(len(rows))
-	stats.BaselineAvgScore = roundMetric(baseTotal / n)
-	stats.CandidateAvgScore = roundMetric(candidateTotal / n)
+	stats.BaselineAvgScore = shared.RoundMetric(baseTotal / n)
+	stats.CandidateAvgScore = shared.RoundMetric(candidateTotal / n)
 	stats.ScoreDelta = roundSignedMetric(stats.CandidateAvgScore - stats.BaselineAvgScore)
 	stats.Conclusion, stats.ConclusionReason = beamPairedComparisonPointConclusion(stats.ScoreDelta, effectSizeFloor)
 	return stats
@@ -428,7 +428,7 @@ func beamPairedComparisonPointConclusion(delta, effectSizeFloor float64) (string
 }
 
 func roundSignedMetric(v float64) float64 {
-	return metrics.RoundSigned(v)
+	return shared.RoundSignedMetric(v)
 }
 
 func bootstrapMeanCI(values []float64, samples int) beamPairedComparisonCI {
