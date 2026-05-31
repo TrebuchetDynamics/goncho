@@ -176,10 +176,20 @@ func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCand
 	if existing.Importance == 0 {
 		existing.Importance = incoming.Importance
 	}
+	indexByEvidence := make(map[string]int, len(existing.Provenance)+len(incoming.Provenance))
+	for i, evidence := range existing.Provenance {
+		indexByEvidence[recallCandidateEvidenceKey(evidence)] = i
+	}
 	for _, evidence := range incoming.Provenance {
-		if !recallCandidateHasEvidence(existing, evidence.Kind, evidence.ID) {
-			existing.Provenance = append(existing.Provenance, evidence)
+		key := recallCandidateEvidenceKey(evidence)
+		if idx, ok := indexByEvidence[key]; ok {
+			if evidence.Score > existing.Provenance[idx].Score {
+				existing.Provenance[idx] = evidence
+			}
+			continue
 		}
+		indexByEvidence[key] = len(existing.Provenance)
+		existing.Provenance = append(existing.Provenance, evidence)
 	}
 	return existing
 }

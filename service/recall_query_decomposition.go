@@ -44,13 +44,13 @@ func (g queryDecomposingRecallGenerator) Generate(ctx context.Context, q RecallQ
 		return nil, err
 	}
 	out := []RecallCandidate{}
-	seen := map[string]struct{}{}
+	indexByMemoryID := map[string]int{}
 	for _, query := range plannedRecallQueries(q, g.planner) {
 		items, err := g.base.Generate(ctx, query)
 		if err != nil {
 			return nil, err
 		}
-		out = appendMergedRecallCandidates(out, seen, items)
+		out = appendMergedRecallCandidates(out, indexByMemoryID, items)
 	}
 	return out, nil
 }
@@ -78,19 +78,24 @@ func plannedRecallQueries(q RecallQuery, planner recallSubqueryPlanner) []Recall
 	return queries
 }
 
-func appendMergedRecallCandidates(out []RecallCandidate, seen map[string]struct{}, items []RecallCandidate) []RecallCandidate {
+func appendMergedRecallCandidates(out []RecallCandidate, indexByMemoryID map[string]int, items []RecallCandidate) []RecallCandidate {
 	for _, item := range items {
 		if item.MemoryID == "" {
 			out = append(out, item)
 			continue
 		}
-		if _, ok := seen[item.MemoryID]; ok {
+		if idx, ok := indexByMemoryID[item.MemoryID]; ok {
+			out[idx] = mergeRecallCandidateEvidence(out[idx], item)
 			continue
 		}
-		seen[item.MemoryID] = struct{}{}
+		indexByMemoryID[item.MemoryID] = len(out)
 		out = append(out, item)
 	}
 	return out
+}
+
+func recallCandidateEvidenceKey(evidence EvidenceItem) string {
+	return evidence.Kind + "\x00" + evidence.Source + "\x00" + evidence.ID + "\x00" + evidence.Note
 }
 
 func recallQueryKey(q RecallQuery) string {

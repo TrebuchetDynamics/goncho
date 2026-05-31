@@ -120,6 +120,33 @@ func TestRecallQueryDecompositionDeduplicatesStableMemoryIDs(t *testing.T) {
 	}
 }
 
+func TestRecallQueryDecompositionMergesProvenanceForDuplicateMemoryIDs(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
+	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{
+		"authentication owner incident": {
+			{MemoryID: "mem-auth-owner", Content: "Mira owns authentication.", ScopeID: "team", CreatedAt: now, Importance: 0.80, Provenance: []EvidenceItem{{Kind: "keyword", Source: "fts", Score: 0.40, Note: "original composite query"}}},
+		},
+		"authentication owner": {
+			{MemoryID: "mem-auth-owner", Content: "Mira owns authentication.", ScopeID: "team", CreatedAt: now, Importance: 0.80, Provenance: []EvidenceItem{{Kind: "fact", Source: "goncho_memory_annotations", ID: "ann-owner", Score: 1.0, Note: "fact=Mira owns authentication"}}},
+		},
+	}}
+	items, err := newQueryDecomposingRecallGenerator(base, fixedRecallSubqueries(
+		"authentication owner",
+	)).Generate(context.Background(), RecallQuery{Query: "authentication owner incident", ScopeID: "team"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].MemoryID != "mem-auth-owner" {
+		t.Fatalf("merged candidates = %+v, want one stable memory candidate", items)
+	}
+	if len(items[0].Provenance) != 2 {
+		t.Fatalf("merged provenance = %+v, want original and decomposed-query evidence retained", items[0].Provenance)
+	}
+	if !evidenceListHas(items[0].Provenance, "fact", "ann-owner") {
+		t.Fatalf("merged provenance = %+v, want decomposed fact evidence retained", items[0].Provenance)
+	}
+}
+
 type queryKeyedRecallGenerator struct {
 	candidatesByQuery map[string][]RecallCandidate
 }
