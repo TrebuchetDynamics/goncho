@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sensitive"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
@@ -55,7 +56,7 @@ func Filter(payload Payload, maxBytes int) Result {
 	filtered, out = FilterString(payload.Summary, out, maxBytes)
 	out.Payload.Summary = filtered
 	if payload.Metadata != nil {
-		out.Payload.Metadata = cloneStringMap(payload.Metadata)
+		out.Payload.Metadata = maputil.CloneStringString(payload.Metadata)
 		for key, value := range out.Payload.Metadata {
 			filteredValue, next := FilterString(value, out, maxBytes)
 			out = next
@@ -99,15 +100,4 @@ func FilterString(value string, state Result, maxBytes int) (string, Result) {
 
 func SensitiveMetadataKey(key string) bool {
 	return sensitive.MetadataKeySecretLike(key)
-}
-
-func cloneStringMap(in map[string]string) map[string]string {
-	if in == nil {
-		return nil
-	}
-	out := make(map[string]string, len(in))
-	for key, value := range in {
-		out[key] = value
-	}
-	return out
 }

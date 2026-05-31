@@ -178,8 +178,5 @@ func vectorSourceAllowed(sources []string, sourceType string) bool {
 }
 
 func cloneVectorMetadata(in map[string]string) map[string]string {
-	if len(in) == 0 {
-		return nil
-	}
-	return maputil.CloneStringString(in)
+	return maputil.CloneStringStringNilIfEmpty(in)
 }

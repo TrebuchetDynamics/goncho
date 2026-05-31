@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/vectorcalc"
 )
 
 // TextEmbeddingProvider turns text into deterministic local vectors. It is kept
@@ -108,7 +108,7 @@ func (i *LocalVectorIndex) Upsert(ctx context.Context, memory LocalVectorMemory)
 	if err != nil {
 		return fmt.Errorf("goncho: embed local vector memory: %w", err)
 	}
-	if err := validateLocalVector(vector); err != nil {
+	if err := vectorcalc.ValidateEmbedding(vector); err != nil {
 		return err
 	}
 	entry := localVectorEntry{LocalVectorMemory: memory, Vector: sliceutil.Clone(vector), ContentChecksum: contentChecksum(memory.Content), IndexedAt: time.Now().UTC()}
@@ -149,7 +149,7 @@ func (i *LocalVectorIndex) Search(ctx context.Context, query VectorSearchQuery) 
 	if err != nil {
 		return nil, fmt.Errorf("goncho: embed local vector query: %w", err)
 	}
-	if err := validateLocalVector(qv); err != nil {
+	if err := vectorcalc.ValidateEmbedding(qv); err != nil {
 		return nil, err
 	}
 	i.mu.RLock()
@@ -166,7 +166,7 @@ func (i *LocalVectorIndex) Search(ctx context.Context, query VectorSearchQuery) 
 		if !localVectorEntryMatches(query, entry) || len(entry.Vector) != len(qv) {
 			continue
 		}
-		score := cosineSimilarity(qv, entry.Vector)
+		score := vectorcalc.CosineSimilarity(qv, entry.Vector)
 		if score <= 0 {
 			continue
 		}
@@ -302,31 +302,6 @@ func localVectorEntryMatches(query VectorSearchQuery, entry localVectorEntry) bo
 		return false
 	}
 	return vectorSourceAllowed(query.Sources, entry.SourceType)
-}
-
-func validateLocalVector(vector []float64) error {
-	if len(vector) == 0 {
-		return errors.New("goncho: embedding vector is empty")
-	}
-	for _, value := range vector {
-		if math.IsNaN(value) || math.IsInf(value, 0) {
-			return errors.New("goncho: embedding vector contains non-finite value")
-		}
-	}
-	return nil
-}
-
-func cosineSimilarity(a, b []float64) float64 {
-	var dot, normA, normB float64
-	for idx := range a {
-		dot += a[idx] * b[idx]
-		normA += a[idx] * a[idx]
-		normB += b[idx] * b[idx]
-	}
-	if normA == 0 || normB == 0 {
-		return 0
-	}
-	return dot / (math.Sqrt(normA) * math.Sqrt(normB))
 }
 
 func localVectorIndexChecksum(dimensions int, entries []localVectorEntry) string {

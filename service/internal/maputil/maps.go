@@ -12,6 +12,15 @@ func CloneStringString(in map[string]string) map[string]string {
 	return out
 }
 
+// CloneStringStringNilIfEmpty returns a shallow copy of a string-to-string map,
+// preserving nil/empty input as nil for optional metadata fields.
+func CloneStringStringNilIfEmpty(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return nil
+	}
+	return CloneStringString(in)
+}
+
 // CloneStringAny returns a shallow copy of a string-to-any map. Empty maps are
 // preserved as non-nil to match lifecycle metadata JSON behavior.
 func CloneStringAny(in map[string]any) map[string]any {
