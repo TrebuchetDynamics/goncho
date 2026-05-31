@@ -1,333 +1,72 @@
 package webhooks
 
 import (
-	"context"
 	"errors"
-	"fmt"
-	"strings"
 	"time"
 
+	deliverycontract "github.com/TrebuchetDynamics/goncho/internal/webhooks/delivery"
 	eventcontract "github.com/TrebuchetDynamics/goncho/internal/webhooks/events"
-	"github.com/TrebuchetDynamics/goncho/internal/webhooks/signing"
 	"github.com/TrebuchetDynamics/goncho/internal/webhooks/urlpolicy"
 )
 
 const (
-	defaultWebhookDeliveryMaxAttempts = 3
-	defaultWebhookDeliveryBackoff     = 30 * time.Second
+	defaultWebhookDeliveryMaxAttempts = deliverycontract.DefaultMaxAttempts
+	defaultWebhookDeliveryBackoff     = deliverycontract.DefaultBackoff
 )
 
-type WebhookDeliveryStatus string
+type WebhookDeliveryStatus = deliverycontract.Status
 
 const (
-	WebhookDeliveryDelivered        WebhookDeliveryStatus = "delivered"
-	WebhookDeliveryRetryable        WebhookDeliveryStatus = "retryable"
-	WebhookDeliveryFailed           WebhookDeliveryStatus = "failed"
-	WebhookDeliveryEndpointDisabled WebhookDeliveryStatus = "endpoint_disabled"
-	WebhookDeliverySkipped          WebhookDeliveryStatus = "skipped"
+	WebhookDeliveryDelivered        WebhookDeliveryStatus = deliverycontract.Delivered
+	WebhookDeliveryRetryable        WebhookDeliveryStatus = deliverycontract.Retryable
+	WebhookDeliveryFailed           WebhookDeliveryStatus = deliverycontract.Failed
+	WebhookDeliveryEndpointDisabled WebhookDeliveryStatus = deliverycontract.EndpointDisabled
+	WebhookDeliverySkipped          WebhookDeliveryStatus = deliverycontract.Skipped
 )
 
-type WebhookDeliveryErrorClass string
+type WebhookDeliveryErrorClass = deliverycontract.ErrorClass
 
 const (
-	WebhookDeliveryErrorNone       WebhookDeliveryErrorClass = ""
-	WebhookDeliveryErrorHTTPStatus WebhookDeliveryErrorClass = "http_status"
-	WebhookDeliveryErrorNetwork    WebhookDeliveryErrorClass = "network"
-	WebhookDeliveryErrorSigning    WebhookDeliveryErrorClass = "signing"
-	WebhookDeliveryErrorStore      WebhookDeliveryErrorClass = "store"
-	WebhookDeliveryErrorDisabled   WebhookDeliveryErrorClass = "endpoint_disabled"
+	WebhookDeliveryErrorNone       WebhookDeliveryErrorClass = deliverycontract.ErrorNone
+	WebhookDeliveryErrorHTTPStatus WebhookDeliveryErrorClass = deliverycontract.ErrorHTTPStatus
+	WebhookDeliveryErrorNetwork    WebhookDeliveryErrorClass = deliverycontract.ErrorNetwork
+	WebhookDeliveryErrorSigning    WebhookDeliveryErrorClass = deliverycontract.ErrorSigning
+	WebhookDeliveryErrorStore      WebhookDeliveryErrorClass = deliverycontract.ErrorStore
+	WebhookDeliveryErrorDisabled   WebhookDeliveryErrorClass = deliverycontract.ErrorDisabled
 )
 
-type WebhookDeliveryEndpoint struct {
-	ID             string
-	WorkspaceID    string
-	URL            string
-	Disabled       bool
-	DisabledReason string
-}
+type WebhookDeliveryEndpoint = deliverycontract.Endpoint
 
-type WebhookDeliveryStore interface {
-	ListWebhookDeliveryEndpoints(ctx context.Context, workspaceID string) ([]WebhookDeliveryEndpoint, error)
-	RecordWebhookDelivery(ctx context.Context, attempt WebhookDeliveryAttempt) error
-	DisableWebhookDeliveryEndpoint(ctx context.Context, endpoint WebhookDeliveryEndpoint, reason string, now time.Time) error
-}
+type WebhookDeliveryStore = deliverycontract.Store
 
-type WebhookHTTPClient interface {
-	PostWebhook(ctx context.Context, req WebhookHTTPRequest) (WebhookHTTPResponse, error)
-}
+type WebhookHTTPClient = deliverycontract.HTTPClient
 
-type WebhookClock interface {
-	Now() time.Time
-}
+type WebhookClock = deliverycontract.Clock
 
-type WebhookDeliveryWorker struct {
-	Store       WebhookDeliveryStore
-	Client      WebhookHTTPClient
-	Clock       WebhookClock
-	Secret      string
-	MaxAttempts int
-	Backoff     func(attempt int) time.Duration
-}
+type WebhookDeliveryWorker = deliverycontract.Worker
 
-type WebhookDeliveryRequest struct {
-	WorkspaceID string
-	Event       WebhookEvent
-	Attempt     int
-}
+type WebhookDeliveryRequest = deliverycontract.Request
 
-type WebhookHTTPRequest struct {
-	URL     string
-	Body    string
-	Headers map[string]string
-}
+type WebhookHTTPRequest = deliverycontract.HTTPRequest
 
-type WebhookHTTPResponse struct {
-	StatusCode int
-}
+type WebhookHTTPResponse = deliverycontract.HTTPResponse
 
-type WebhookDeliveryAttempt struct {
-	EndpointID  string
-	WorkspaceID string
-	EventType   WebhookEventType
-	Attempt     int
-	Status      WebhookDeliveryStatus
-	StatusCode  int
-	ErrorClass  WebhookDeliveryErrorClass
-	Error       string
-	Retry       bool
-	NextRetryAt *time.Time
-	Evidence    WebhookDeliveryEvidence
-	RecordedAt  time.Time
-}
+type WebhookDeliveryAttempt = deliverycontract.Attempt
 
-type WebhookDeliveryResult struct {
-	EndpointID  string
-	WorkspaceID string
-	EventType   WebhookEventType
-	Attempt     int
-	Status      WebhookDeliveryStatus
-	StatusCode  int
-	ErrorClass  WebhookDeliveryErrorClass
-	Error       string
-	Retry       bool
-	NextRetryAt *time.Time
-	Evidence    WebhookDeliveryEvidence
-}
+type WebhookDeliveryResult = deliverycontract.Result
 
-type WebhookDeliveryEvidence struct {
-	EndpointID  string
-	EndpointURL string
-	WorkspaceID string
-	EventType   WebhookEventType
-	Status      WebhookDeliveryStatus
-	StatusCode  int
-	ErrorClass  WebhookDeliveryErrorClass
-	Attempt     int
-	NextRetryAt *time.Time
-}
-
-type systemWebhookClock struct{}
-
-func (systemWebhookClock) Now() time.Time {
-	return time.Now().UTC()
-}
-
-func (w WebhookDeliveryWorker) Deliver(ctx context.Context, req WebhookDeliveryRequest) ([]WebhookDeliveryResult, error) {
-	workspaceID := strings.TrimSpace(req.WorkspaceID)
-	if workspaceID == "" {
-		workspaceID = strings.TrimSpace(req.Event.WorkspaceID)
-	}
-	if workspaceID == "" {
-		return nil, ErrWebhookWorkspaceRequired
-	}
-	if w.Store == nil {
-		return nil, errors.New("goncho: webhook delivery store is required")
-	}
-	if w.Client == nil {
-		return nil, errors.New("goncho: webhook http client is required")
-	}
-	now := w.now()
-	attempt := req.Attempt
-	if attempt <= 0 {
-		attempt = 1
-	}
-	maxAttempts := w.MaxAttempts
-	if maxAttempts <= 0 {
-		maxAttempts = defaultWebhookDeliveryMaxAttempts
-	}
-
-	endpoints, err := w.Store.ListWebhookDeliveryEndpoints(ctx, workspaceID)
-	if err != nil {
-		return nil, fmt.Errorf("goncho: list webhook delivery endpoints: %w", err)
-	}
-	if len(endpoints) == 0 {
-		result := w.result(WebhookDeliveryEndpoint{
-			WorkspaceID: workspaceID,
-		}, req.Event.Type, attempt, WebhookDeliverySkipped, 0, WebhookDeliveryErrorNone, "no webhook endpoints", false, nil, now)
-		if err := w.record(ctx, result, now); err != nil {
-			return []WebhookDeliveryResult{result}, err
-		}
-		return []WebhookDeliveryResult{result}, nil
-	}
-
-	body, err := buildWebhookDeliveryPayload(req.Event, now)
-	if err != nil {
-		return nil, err
-	}
-	signature, err := signing.SignPayload(body, w.Secret)
-	if err != nil {
-		return []WebhookDeliveryResult{w.result(WebhookDeliveryEndpoint{
-			WorkspaceID: workspaceID,
-		}, req.Event.Type, attempt, WebhookDeliveryFailed, 0, WebhookDeliveryErrorSigning, err.Error(), false, nil, now)}, nil
-	}
-
-	results := make([]WebhookDeliveryResult, 0, len(endpoints))
-	for _, endpoint := range endpoints {
-		if endpoint.WorkspaceID == "" {
-			endpoint.WorkspaceID = workspaceID
-		}
-		if endpoint.Disabled {
-			result := w.result(endpoint, req.Event.Type, attempt, WebhookDeliveryEndpointDisabled, 0, WebhookDeliveryErrorDisabled, endpoint.DisabledReason, false, nil, now)
-			results = append(results, result)
-			if err := w.record(ctx, result, now); err != nil {
-				return results, err
-			}
-			continue
-		}
-
-		httpReq := WebhookHTTPRequest{
-			URL:  endpoint.URL,
-			Body: body,
-			Headers: map[string]string{
-				"Content-Type":       "application/json",
-				"X-Honcho-Signature": signature,
-			},
-		}
-		httpResp, err := w.Client.PostWebhook(ctx, httpReq)
-		result := w.classify(endpoint, req.Event.Type, attempt, maxAttempts, httpResp, err, now)
-		results = append(results, result)
-		if err := w.record(ctx, result, now); err != nil {
-			return results, err
-		}
-		if result.Status == WebhookDeliveryFailed {
-			if disableErr := w.Store.DisableWebhookDeliveryEndpoint(ctx, endpoint, failureDisableReason(result), now); disableErr != nil {
-				return results, fmt.Errorf("goncho: disable webhook endpoint: %w", disableErr)
-			}
-		}
-	}
-	return results, nil
-}
-
-func (w WebhookDeliveryWorker) classify(endpoint WebhookDeliveryEndpoint, eventType WebhookEventType, attempt, maxAttempts int, response WebhookHTTPResponse, err error, now time.Time) WebhookDeliveryResult {
-	if err != nil {
-		return w.failureOrRetry(endpoint, eventType, attempt, maxAttempts, 0, WebhookDeliveryErrorNetwork, err.Error(), now)
-	}
-	statusCode := response.StatusCode
-	if statusCode >= 200 && statusCode < 300 {
-		return w.result(endpoint, eventType, attempt, WebhookDeliveryDelivered, statusCode, WebhookDeliveryErrorNone, "", false, nil, now)
-	}
-	if retryableWebhookStatus(statusCode) {
-		return w.failureOrRetry(endpoint, eventType, attempt, maxAttempts, statusCode, WebhookDeliveryErrorHTTPStatus, fmt.Sprintf("status %d", statusCode), now)
-	}
-	return w.result(endpoint, eventType, attempt, WebhookDeliveryFailed, statusCode, WebhookDeliveryErrorHTTPStatus, fmt.Sprintf("status %d", statusCode), false, nil, now)
-}
-
-func (w WebhookDeliveryWorker) failureOrRetry(endpoint WebhookDeliveryEndpoint, eventType WebhookEventType, attempt, maxAttempts, statusCode int, class WebhookDeliveryErrorClass, message string, now time.Time) WebhookDeliveryResult {
-	if attempt >= maxAttempts {
-		return w.result(endpoint, eventType, attempt, WebhookDeliveryFailed, statusCode, class, message, false, nil, now)
-	}
-	next := now.Add(w.backoff(attempt))
-	return w.result(endpoint, eventType, attempt, WebhookDeliveryRetryable, statusCode, class, message, true, &next, now)
-}
-
-func (w WebhookDeliveryWorker) result(endpoint WebhookDeliveryEndpoint, eventType WebhookEventType, attempt int, status WebhookDeliveryStatus, statusCode int, class WebhookDeliveryErrorClass, message string, retry bool, nextRetryAt *time.Time, now time.Time) WebhookDeliveryResult {
-	evidence := WebhookDeliveryEvidence{
-		EndpointID:  endpoint.ID,
-		EndpointURL: redactWebhookEndpointURL(endpoint.URL),
-		WorkspaceID: endpoint.WorkspaceID,
-		EventType:   eventType,
-		Status:      status,
-		StatusCode:  statusCode,
-		ErrorClass:  class,
-		Attempt:     attempt,
-		NextRetryAt: nextRetryAt,
-	}
-	return WebhookDeliveryResult{
-		EndpointID:  endpoint.ID,
-		WorkspaceID: endpoint.WorkspaceID,
-		EventType:   eventType,
-		Attempt:     attempt,
-		Status:      status,
-		StatusCode:  statusCode,
-		ErrorClass:  class,
-		Error:       message,
-		Retry:       retry,
-		NextRetryAt: nextRetryAt,
-		Evidence:    evidence,
-	}
-}
-
-func (w WebhookDeliveryWorker) record(ctx context.Context, result WebhookDeliveryResult, now time.Time) error {
-	if w.Store == nil {
-		return nil
-	}
-	attempt := WebhookDeliveryAttempt{
-		EndpointID:  result.EndpointID,
-		WorkspaceID: result.WorkspaceID,
-		EventType:   result.EventType,
-		Attempt:     result.Attempt,
-		Status:      result.Status,
-		StatusCode:  result.StatusCode,
-		ErrorClass:  result.ErrorClass,
-		Error:       result.Error,
-		Retry:       result.Retry,
-		NextRetryAt: result.NextRetryAt,
-		Evidence:    result.Evidence,
-		RecordedAt:  now,
-	}
-	if err := w.Store.RecordWebhookDelivery(ctx, attempt); err != nil {
-		return fmt.Errorf("goncho: record webhook delivery: %w", err)
-	}
-	return nil
-}
-
-func (w WebhookDeliveryWorker) now() time.Time {
-	if w.Clock == nil {
-		return systemWebhookClock{}.Now()
-	}
-	return w.Clock.Now().UTC()
-}
-
-func (w WebhookDeliveryWorker) backoff(attempt int) time.Duration {
-	if w.Backoff != nil {
-		return w.Backoff(attempt)
-	}
-	if attempt <= 0 {
-		attempt = 1
-	}
-	delay := defaultWebhookDeliveryBackoff
-	for i := 1; i < attempt; i++ {
-		delay *= 2
-	}
-	return delay
-}
+type WebhookDeliveryEvidence = deliverycontract.Evidence
 
 func retryableWebhookStatus(statusCode int) bool {
-	return statusCode == 408 || statusCode == 429 || statusCode >= 500
+	return deliverycontract.RetryableStatus(statusCode)
 }
 
 func failureDisableReason(result WebhookDeliveryResult) string {
-	if result.Attempt > 0 && result.ErrorClass == WebhookDeliveryErrorNetwork {
-		return "max_attempts_exhausted"
-	}
-	if retryableWebhookStatus(result.StatusCode) {
-		return "max_attempts_exhausted"
-	}
-	return "permanent_failure"
+	return deliverycontract.FailureDisableReason(result)
 }
 
 func buildWebhookDeliveryPayload(event WebhookEvent, now time.Time) (string, error) {
-	payload, err := eventcontract.Payload(event, now)
+	payload, err := deliverycontract.Payload(event, now)
 	if errors.Is(err, eventcontract.ErrWorkspaceRequired) {
 		return "", ErrWebhookWorkspaceRequired
 	}

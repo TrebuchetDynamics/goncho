@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/internal/webhooks/workspace"
 )
 
 // ErrWorkspaceRequired reports a missing webhook event workspace.
-var ErrWorkspaceRequired = errors.New("goncho: workspace_id is required")
+var ErrWorkspaceRequired = workspace.ErrRequired
 
 // Type identifies a webhook event contract.
 type Type string
@@ -38,7 +40,7 @@ type QueueEmptyParams struct {
 
 // NewTest returns a test webhook event for a workspace.
 func NewTest(workspaceID string) (Event, error) {
-	workspaceID = strings.TrimSpace(workspaceID)
+	workspaceID = workspace.Trim(workspaceID)
 	if workspaceID == "" {
 		return Event{}, ErrWorkspaceRequired
 	}
@@ -51,7 +53,7 @@ func NewTest(workspaceID string) (Event, error) {
 
 // NewQueueEmpty returns a queue-empty webhook event for a workspace.
 func NewQueueEmpty(params QueueEmptyParams) (Event, error) {
-	workspaceID := strings.TrimSpace(params.WorkspaceID)
+	workspaceID := workspace.Trim(params.WorkspaceID)
 	if workspaceID == "" {
 		return Event{}, ErrWorkspaceRequired
 	}
@@ -81,7 +83,7 @@ func NewQueueEmpty(params QueueEmptyParams) (Event, error) {
 
 // Payload renders the event into the signed webhook delivery payload.
 func Payload(event Event, now time.Time) (string, error) {
-	if strings.TrimSpace(event.WorkspaceID) == "" {
+	if workspace.Trim(event.WorkspaceID) == "" {
 		return "", ErrWorkspaceRequired
 	}
 	if event.Type == "" {
