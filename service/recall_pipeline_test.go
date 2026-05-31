@@ -80,6 +80,21 @@ func TestRecallPipelineWarningsAndTokenBudget(t *testing.T) {
 	}
 }
 
+func TestAppendRecallWarningsPreservesDistinctReplayEvidence(t *testing.T) {
+	warnings := appendRecallWarnings(nil,
+		RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Evidence: map[string]string{"generator": "vector", "error": "timeout"}},
+		RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Evidence: map[string]string{"generator": "graph", "error": "timeout"}},
+		RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Evidence: map[string]string{"error": "timeout", "generator": "vector"}},
+	)
+
+	if len(warnings) != 2 {
+		t.Fatalf("warnings = %+v, want two distinct replayable semantic_unavailable warnings", warnings)
+	}
+	if warnings[0].Evidence["generator"] != "vector" || warnings[1].Evidence["generator"] != "graph" {
+		t.Fatalf("warnings = %+v, want stable first-seen evidence order after exact duplicate removal", warnings)
+	}
+}
+
 func TestRecallPipelineTokenBudgetSkipsOversizedBestCandidate(t *testing.T) {
 	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{

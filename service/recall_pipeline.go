@@ -340,7 +340,7 @@ func appendRecallWarnings(existing []RecallWarning, warnings ...RecallWarning) [
 		if warning.Code == "" {
 			continue
 		}
-		key := warning.Stage + "\x00" + warning.Code
+		key := recallWarningDedupKey(warning)
 		if _, ok := seen[key]; ok {
 			continue
 		}
@@ -354,6 +354,29 @@ func appendRecallWarnings(existing []RecallWarning, warnings ...RecallWarning) [
 		return out[i].Code < out[j].Code
 	})
 	return out
+}
+
+func recallWarningDedupKey(warning RecallWarning) string {
+	return warning.Stage + "\x00" + warning.Code + "\x00" + recallWarningEvidenceKey(warning.Evidence)
+}
+
+func recallWarningEvidenceKey(evidence map[string]string) string {
+	if len(evidence) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(evidence))
+	for key := range evidence {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	for _, key := range keys {
+		b.WriteString(key)
+		b.WriteByte('=')
+		b.WriteString(evidence[key])
+		b.WriteByte('\x00')
+	}
+	return b.String()
 }
 
 func maxEvidenceScore(items []EvidenceItem, kind string, fallback float64) float64 {
