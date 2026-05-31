@@ -157,6 +157,21 @@ func TestRecallReplayFingerprintTreatsNilAndEmptyTraceSlicesEqually(t *testing.T
 	}
 }
 
+func TestBuildRecallReplaySnapshotsQuerySources(t *testing.T) {
+	trace := RecallTrace{
+		TraceID:         "trace-query-sources",
+		PipelineVersion: "test-pipeline",
+		Query:           RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "auth", Sources: []string{"memory", "vector"}},
+	}
+
+	replay := BuildRecallReplay(trace)
+	trace.Query.Sources[0] = "mutated-after-build"
+
+	if got := replay.Query.Sources; len(got) != 2 || got[0] != "memory" || got[1] != "vector" {
+		t.Fatalf("replay query sources = %v, want immutable replay snapshot", got)
+	}
+}
+
 func TestRecallReplayWarningEventsIncludeStableEvidence(t *testing.T) {
 	trace := RecallTrace{
 		TraceID:         "trace-warning-evidence",
