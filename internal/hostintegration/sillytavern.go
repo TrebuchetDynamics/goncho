@@ -2,45 +2,12 @@ package hostintegration
 
 import (
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/internal/hostintegration/contracts"
 )
 
-// SillyTavernInput models the Honcho SillyTavern panel decisions
-// Goncho needs to preserve without importing the browser extension or Node
-// plugin.
-type SillyTavernInput struct {
-	Workspace                string
-	PeerMode                 string
-	PeerName                 string
-	PersonaName              string
-	SessionNaming            string
-	ChatInstanceID           string
-	CharacterName            string
-	CustomSessionName        string
-	ExistingSessionKey       string
-	ResetActiveSession       bool
-	GroupCharacterNames      []string
-	ExistingCharacterPeerIDs []string
-	MessageCharacterName     string
-	EnrichmentMode           string
-	UnsupportedPanelKnobs    []string
-}
-
-// SillyTavernMapping is Goncho's fixture-level interpretation of
-// the SillyTavern host contract.
-type SillyTavernMapping struct {
-	WorkspaceID               string
-	UserPeerID                string
-	SessionKey                string
-	OrphanedSessionKey        string
-	CharacterPeerIDs          []string
-	LazyAddedCharacterPeerIDs []string
-	InjectContext             bool
-	UseReasoning              bool
-	ReasoningToolName         string
-	ExposeTools               bool
-	ExternalToolNames         []string
-	Unsupported               []UnsupportedMapping
-}
+type SillyTavernInput = contracts.SillyTavernInput
+type SillyTavernMapping = contracts.SillyTavernMapping
 
 // MapSillyTavern maps the SillyTavern-specific Honcho integration
 // controls into Goncho's host compatibility fixture surface.
