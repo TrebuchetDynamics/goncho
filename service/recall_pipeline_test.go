@@ -584,6 +584,27 @@ func TestRecallPipelineSelectedReasonsReportAdjustedFinalScore(t *testing.T) {
 	}
 }
 
+func TestRecallScopeSelectionInputsExposeScopedEligibility(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
+	scored := []ScoredRecallCandidate{
+		{Candidate: RecallCandidate{MemoryID: "team", ScopeID: "team", CreatedAt: now}},
+		{Candidate: RecallCandidate{MemoryID: "global", CreatedAt: now}},
+		{Candidate: RecallCandidate{MemoryID: "other", ScopeID: "other", CreatedAt: now}},
+	}
+
+	eligible, rejected, warnings := recallScopeSelectionInputs(RecallQuery{ScopeID: "team"}, scored)
+
+	if got := scoredRecallCandidateIDs(eligible); !slices.Equal(got, []string{"team", "global"}) {
+		t.Fatalf("eligible IDs = %v, want matching scope plus unscoped/global candidate", got)
+	}
+	if got := rejectedRecallCandidateIDs(rejected); !slices.Equal(got, []string{"other"}) {
+		t.Fatalf("rejected IDs = %v, want only conflicting scope rejected", got)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("warnings = %+v, want no all-excluded warning while global candidate remains eligible", warnings)
+	}
+}
+
 func TestRecallSelectionPolicyMakesLimitAndBudgetAssumptionsExplicit(t *testing.T) {
 	policy := recallSelectionPolicyFor(RecallQuery{Limit: 0}, RecallScoringConfig{TokenBudget: 120})
 	if policy.Limit != 5 || policy.TokenBudget != 120 {
@@ -729,8 +750,20 @@ func (g staticRecallGenerator) RecallWarnings() []RecallWarning {
 }
 
 func rejectedRecallIDs(trace RecallTrace) []string {
-	out := make([]string, 0, len(trace.Rejected))
-	for _, item := range trace.Rejected {
+	return rejectedRecallCandidateIDs(trace.Rejected)
+}
+
+func scoredRecallCandidateIDs(candidates []ScoredRecallCandidate) []string {
+	out := make([]string, 0, len(candidates))
+	for _, item := range candidates {
+		out = append(out, item.Candidate.MemoryID)
+	}
+	return out
+}
+
+func rejectedRecallCandidateIDs(candidates []RejectedRecallCandidate) []string {
+	out := make([]string, 0, len(candidates))
+	for _, item := range candidates {
 		out = append(out, item.Candidate.MemoryID)
 	}
 	return out

@@ -128,7 +128,86 @@ func (e *recallPipelineEngine) score(q RecallQuery, candidates []RecallCandidate
 }
 
 func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRecallCandidate) ([]ScoredRecallCandidate, []RejectedRecallCandidate, []RecallWarning) {
-	policy := recallSelectionPolicyFor(q, e.opts.scoringConfig)
+	flow := newRecallSelectionFlow(q, scored, e.opts.scoringConfig)
+	return flow.run()
+}
+
+type recallSelectionFlow struct {
+	query      RecallQuery
+	config     RecallScoringConfig
+	policy     recallSelectionPolicy
+	eligible   []ScoredRecallCandidate
+	remaining  []ScoredRecallCandidate
+	selected   []ScoredRecallCandidate
+	rejected   []RejectedRecallCandidate
+	warnings   []RecallWarning
+	usedTokens int
+}
+
+func newRecallSelectionFlow(q RecallQuery, scored []ScoredRecallCandidate, config RecallScoringConfig) recallSelectionFlow {
+	policy := recallSelectionPolicyFor(q, config)
+	eligible, rejected, warnings := recallScopeSelectionInputs(q, scored)
+	return recallSelectionFlow{
+		query:     q,
+		config:    config,
+		policy:    policy,
+		eligible:  eligible,
+		remaining: sliceutil.Clone(eligible),
+		selected:  make([]ScoredRecallCandidate, 0, min(policy.Limit, len(eligible))),
+		rejected:  rejected,
+		warnings:  warnings,
+	}
+}
+
+func (f *recallSelectionFlow) run() ([]ScoredRecallCandidate, []RejectedRecallCandidate, []RecallWarning) {
+	f.addTemporalWarnings()
+	for len(f.selected) < f.policy.Limit && len(f.remaining) > 0 {
+		f.selectNextCandidate()
+	}
+	f.rejectUnselectedRemainder()
+	return f.selected, f.rejected, f.warnings
+}
+
+func (f *recallSelectionFlow) addTemporalWarnings() {
+	if recallQueryAsksCurrentTruth(f.query.Query) && recallHasSupersededEvidence(f.eligible) {
+		f.warnings = appendRecallWarnings(f.warnings, RecallWarning{
+			Code:     RecallWarningSupersededEvidenceObserved,
+			Stage:    RecallStageSelect,
+			Severity: RecallWarningInfo,
+			Message:  "recall candidates include superseded evidence; current-truth routing adjusted selection",
+		})
+	}
+}
+
+func (f *recallSelectionFlow) selectNextCandidate() {
+	bestIdx := recallBestSelectionIndex(f.remaining, f.selected, f.query.Query, f.config)
+	chosen := applyRecallSelectionAdjustment(f.remaining[bestIdx], recallSelectionAdjustmentFor(f.remaining[bestIdx], f.selected, f.query.Query, f.config), true)
+	tokenCost := estimateRecallTokens(chosen.Candidate.Content)
+	if !f.policy.FitsTokenBudget(f.usedTokens, tokenCost) {
+		f.rejected = append(f.rejected, recallRejectedCandidate(chosen, RecallRejectTokenBudget, f.policy.TokenBudgetRejectionReasons(f.usedTokens, tokenCost)))
+		f.warnings = appendRecallWarnings(f.warnings, f.policy.TokenBudgetWarning())
+		f.dropRemaining(bestIdx)
+		return
+	}
+	f.usedTokens += tokenCost
+	f.selected = append(f.selected, chosen)
+	f.dropRemaining(bestIdx)
+}
+
+func (f *recallSelectionFlow) dropRemaining(idx int) {
+	f.remaining = append(f.remaining[:idx], f.remaining[idx+1:]...)
+}
+
+func (f *recallSelectionFlow) rejectUnselectedRemainder() {
+	for _, item := range f.remaining {
+		item = applyRecallSelectionAdjustment(item, recallRejectedSelectionAdjustmentFor(item, f.selected, f.config), false)
+		f.rejected = append(f.rejected, recallRejectedCandidate(item, RecallRejectNotSelected, []string{
+			fmt.Sprintf("limit=%d", f.policy.Limit),
+		}))
+	}
+}
+
+func recallScopeSelectionInputs(q RecallQuery, scored []ScoredRecallCandidate) ([]ScoredRecallCandidate, []RejectedRecallCandidate, []RecallWarning) {
 	eligible := make([]ScoredRecallCandidate, 0, len(scored))
 	rejected := make([]RejectedRecallCandidate, 0)
 	scopeRejected := 0
@@ -154,39 +233,7 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 			Evidence: map[string]string{"scope_id": q.ScopeID},
 		})
 	}
-	if recallQueryAsksCurrentTruth(q.Query) && recallHasSupersededEvidence(eligible) {
-		warnings = appendRecallWarnings(warnings, RecallWarning{
-			Code:     RecallWarningSupersededEvidenceObserved,
-			Stage:    RecallStageSelect,
-			Severity: RecallWarningInfo,
-			Message:  "recall candidates include superseded evidence; current-truth routing adjusted selection",
-		})
-	}
-
-	selected := make([]ScoredRecallCandidate, 0, min(policy.Limit, len(eligible)))
-	remaining := sliceutil.Clone(eligible)
-	usedTokens := 0
-	for len(selected) < policy.Limit && len(remaining) > 0 {
-		bestIdx := recallBestSelectionIndex(remaining, selected, q.Query, e.opts.scoringConfig)
-		chosen := applyRecallSelectionAdjustment(remaining[bestIdx], recallSelectionAdjustmentFor(remaining[bestIdx], selected, q.Query, e.opts.scoringConfig), true)
-		tokenCost := estimateRecallTokens(chosen.Candidate.Content)
-		if !policy.FitsTokenBudget(usedTokens, tokenCost) {
-			rejected = append(rejected, recallRejectedCandidate(chosen, RecallRejectTokenBudget, policy.TokenBudgetRejectionReasons(usedTokens, tokenCost)))
-			warnings = appendRecallWarnings(warnings, policy.TokenBudgetWarning())
-			remaining = append(remaining[:bestIdx], remaining[bestIdx+1:]...)
-			continue
-		}
-		usedTokens += tokenCost
-		selected = append(selected, chosen)
-		remaining = append(remaining[:bestIdx], remaining[bestIdx+1:]...)
-	}
-	for _, item := range remaining {
-		item = applyRecallSelectionAdjustment(item, recallRejectedSelectionAdjustmentFor(item, selected, e.opts.scoringConfig), false)
-		rejected = append(rejected, recallRejectedCandidate(item, RecallRejectNotSelected, []string{
-			fmt.Sprintf("limit=%d", policy.Limit),
-		}))
-	}
-	return selected, rejected, warnings
+	return eligible, rejected, warnings
 }
 
 type recallSelectionPolicy struct {
