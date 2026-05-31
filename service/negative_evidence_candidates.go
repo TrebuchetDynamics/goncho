@@ -128,35 +128,9 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 	if minFailures <= 0 {
 		minFailures = 2
 	}
-	type bucket struct {
-		candidate      NegativeEvidenceCandidate
-		evidenceID     []negativeEvidenceEvidenceRef
-		observationIDs map[string]struct{}
-	}
-	buckets := map[negativeEvidenceCandidateKey]*bucket{}
+	buckets := map[negativeEvidenceCandidateKey]*negativeEvidenceBucket{}
 	for _, obs := range input.Observations {
-		if !negativeEvidenceFailureObservation(obs) {
-			continue
-		}
-		key, seed := negativeEvidenceCandidateSeed(input.Projection, obs)
-		b := buckets[key]
-		if b == nil {
-			b = &bucket{candidate: seed, observationIDs: map[string]struct{}{}}
-			buckets[key] = b
-		}
-		if !negativeEvidenceRecordObservation(b.observationIDs, obs.ID) {
-			continue
-		}
-		b.candidate.FailureCount++
-		if id := negativeEvidenceObservationID(obs.ID); id != "" {
-			b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: id, ObservedAt: obs.ObservedAt})
-		}
-		if !obs.ObservedAt.IsZero() && (b.candidate.FirstObservedAt.IsZero() || obs.ObservedAt.Before(b.candidate.FirstObservedAt)) {
-			b.candidate.FirstObservedAt = obs.ObservedAt
-		}
-		if !obs.ObservedAt.IsZero() && obs.ObservedAt.After(b.candidate.LastObservedAt) {
-			b.candidate.LastObservedAt = obs.ObservedAt
-		}
+		negativeEvidenceBucketObservation(buckets, input.Projection, obs)
 	}
 	out := []NegativeEvidenceCandidate{}
 	for _, b := range buckets {
@@ -186,6 +160,37 @@ type negativeEvidenceCandidateKey struct {
 	PeerID      string
 	SessionKey  string
 	ToolName    string
+}
+
+type negativeEvidenceBucket struct {
+	candidate      NegativeEvidenceCandidate
+	evidenceID     []negativeEvidenceEvidenceRef
+	observationIDs map[string]struct{}
+}
+
+func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]*negativeEvidenceBucket, projection SessionEvidenceProjection, obs Observation) {
+	if !negativeEvidenceFailureObservation(obs) {
+		return
+	}
+	key, seed := negativeEvidenceCandidateSeed(projection, obs)
+	b := buckets[key]
+	if b == nil {
+		b = &negativeEvidenceBucket{candidate: seed, observationIDs: map[string]struct{}{}}
+		buckets[key] = b
+	}
+	if !negativeEvidenceRecordObservation(b.observationIDs, obs.ID) {
+		return
+	}
+	b.candidate.FailureCount++
+	if id := negativeEvidenceObservationID(obs.ID); id != "" {
+		b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: id, ObservedAt: obs.ObservedAt})
+	}
+	if !obs.ObservedAt.IsZero() && (b.candidate.FirstObservedAt.IsZero() || obs.ObservedAt.Before(b.candidate.FirstObservedAt)) {
+		b.candidate.FirstObservedAt = obs.ObservedAt
+	}
+	if !obs.ObservedAt.IsZero() && obs.ObservedAt.After(b.candidate.LastObservedAt) {
+		b.candidate.LastObservedAt = obs.ObservedAt
+	}
 }
 
 func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceCandidateKey, NegativeEvidenceCandidate) {

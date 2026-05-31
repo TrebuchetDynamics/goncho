@@ -33,6 +33,28 @@ func TestNegativeEvidenceCandidatesDoNotCollapseDelimiterBearingDimensions(t *te
 	}
 }
 
+func TestNegativeEvidenceCandidatesTreatReplayIDsPerCandidateScope(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "shared-fail-id", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "mineru-second", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+			{ID: "shared-fail-id", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "yunobo", SessionKey: "sess-b", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(30, 0).UTC()},
+			{ID: "yunobo-second", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "yunobo", SessionKey: "sess-b", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(40, 0).UTC()},
+		},
+	})
+	if len(candidates) != 2 {
+		t.Fatalf("candidates = %+v, want replay IDs deduped only within each scoped candidate bucket", candidates)
+	}
+	for _, candidate := range candidates {
+		if candidate.FailureCount != 2 {
+			t.Fatalf("candidate = %+v, want each scoped bucket to retain two unique failures", candidate)
+		}
+	}
+}
+
 func TestNegativeEvidenceCandidatesDoNotPromoteReplayedObservationID(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
