@@ -202,13 +202,7 @@ func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]
 }
 
 func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceCandidateKey, NegativeEvidenceCandidate) {
-	toolName := strings.TrimSpace(obs.Metadata["tool_name"])
-	if toolName == "" {
-		toolName = strings.TrimSpace(obs.Metadata["custom_kind"])
-	}
-	if toolName == "" {
-		toolName = string(obs.Kind)
-	}
+	toolName := negativeEvidenceToolName(obs)
 	workspaceID := strings.TrimSpace(obs.WorkspaceID)
 	if workspaceID == "" {
 		workspaceID = projection.WorkspaceID
@@ -226,6 +220,15 @@ func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Obs
 		ToolName:    toolName,
 		EvidenceIDs: []string{},
 	}
+}
+
+func negativeEvidenceToolName(obs Observation) string {
+	for _, key := range []string{"tool_name", "custom_kind"} {
+		if value := strings.TrimSpace(obs.Metadata[key]); value != "" {
+			return strings.ToLower(value)
+		}
+	}
+	return string(obs.Kind)
 }
 
 func negativeEvidenceFailureObservation(obs Observation) bool {

@@ -101,6 +101,24 @@ func TestNegativeEvidenceCandidatesStillTreatImplicitToolErrorsAsFailures(t *tes
 	}
 }
 
+func TestNegativeEvidenceCandidatesNormalizeToolNameCase(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "mixed-case-tool", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "Bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "lower-case-tool", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+		},
+	})
+	if len(candidates) != 1 {
+		t.Fatalf("candidates = %+v, want tool_name case variants grouped as one repeated-failure candidate", candidates)
+	}
+	if candidates[0].ToolName != "bash" || candidates[0].FailureCount != 2 {
+		t.Fatalf("candidate = %+v, want normalized bash candidate with two failures", candidates[0])
+	}
+}
+
 func TestNegativeEvidenceCandidatesOrderEvidenceByFailureTimeline(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
