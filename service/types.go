@@ -354,6 +354,7 @@ type MessageRecord struct {
 	ID          int64          `json:"id"`
 	WorkspaceID string         `json:"workspace_id"`
 	SessionKey  string         `json:"session_key"`
+	ProfileID   string         `json:"profile_id,omitempty"`
 	Peer        string         `json:"peer_id"`
 	Role        string         `json:"role"`
 	Content     string         `json:"content"`

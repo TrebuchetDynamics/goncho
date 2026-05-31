@@ -121,6 +121,7 @@ func TestExtractMemoryProposalsPreferenceScopeDoesNotLeakAcrossProfiles(t *testi
 	}
 	if _, err := svc.CreateMessages(ctx, CreateMessagesParams{SessionKey: "sess-pref", Messages: []CreateMessage{
 		{Peer: "peer-pref", ProfileID: "profile-a", Role: "user", Content: "Preference: prefers terse release notes."},
+		{Peer: "peer-pref", ProfileID: "profile-b", Role: "user", Content: "Preference: prefers detailed release notes."},
 	}}); err != nil {
 		t.Fatalf("CreateMessages: %v", err)
 	}
@@ -130,11 +131,14 @@ func TestExtractMemoryProposalsPreferenceScopeDoesNotLeakAcrossProfiles(t *testi
 		t.Fatalf("ExtractMemoryProposals: %v", err)
 	}
 	if len(got.Proposals) != 1 {
-		t.Fatalf("proposals = %+v, want one preference proposal", got.Proposals)
+		t.Fatalf("proposals = %+v, want only profile-a preference proposal", got.Proposals)
 	}
 	proposal := got.Proposals[0]
 	if proposal.Kind != MemoryProposalPreference || proposal.Scope != MemoryScopeProfile || proposal.ProfileID != "profile-a" || !strings.Contains(proposal.ExpiryHint, "stable preference") {
 		t.Fatalf("preference proposal = %+v, want profile-scoped stable preference", proposal)
+	}
+	if strings.Contains(proposal.Content, "detailed") {
+		t.Fatalf("preference proposal = %+v, want no profile-b content attributed to profile-a", proposal)
 	}
 	other, err := svc.ProfileInNamespace(ctx, MemoryNamespace{ProfileID: "profile-b", PeerID: "peer-pref"})
 	if err != nil {

@@ -102,7 +102,7 @@ func (s *Service) ExtractMemoryProposals(ctx context.Context, params ExtractMemo
 	if err != nil {
 		return ExtractMemoryProposalsResult{}, err
 	}
-	messages = filterProposalMessagesByPeer(messages, peer)
+	messages = filterProposalMessagesByScope(messages, proposalMessageScope{Peer: peer, ProfileID: params.ProfileID})
 	total := len(messages)
 	window := limitutil.Default(params.Window, 20)
 	truncated := false
@@ -241,9 +241,22 @@ func (s *Service) findContradictoryMemory(ctx context.Context, peer, sessionKey,
 	return related, len(related) > 0
 }
 
-func filterProposalMessagesByPeer(messages []MessageRecord, peer string) []MessageRecord {
+type proposalMessageScope struct {
+	Peer      string
+	ProfileID string
+}
+
+func filterProposalMessagesByScope(messages []MessageRecord, scope proposalMessageScope) []MessageRecord {
+	peer := strings.TrimSpace(scope.Peer)
+	profileID := strings.TrimSpace(scope.ProfileID)
 	return sliceutil.FilterMap(messages, func(msg MessageRecord) (MessageRecord, bool) {
-		return msg, strings.TrimSpace(msg.Peer) == peer
+		if strings.TrimSpace(msg.Peer) != peer {
+			return msg, false
+		}
+		if profileID != "" && strings.TrimSpace(msg.ProfileID) != profileID {
+			return msg, false
+		}
+		return msg, true
 	})
 }
 

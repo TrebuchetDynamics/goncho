@@ -41,6 +41,7 @@ type sessionSummaryRow struct {
 
 type lifecycleMessageMeta struct {
 	WorkspaceID string         `json:"workspace_id"`
+	ProfileID   string         `json:"profile_id,omitempty"`
 	PeerID      string         `json:"peer_id"`
 	Sequence    int            `json:"seq_in_session"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
@@ -73,6 +74,7 @@ func createLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, works
 		if peer == "" {
 			return nil, fmt.Errorf("goncho: peer_id is required")
 		}
+		profileID := strings.TrimSpace(input.ProfileID)
 		content := strings.TrimSpace(input.Content)
 		if content == "" {
 			return nil, fmt.Errorf("goncho: message content is required")
@@ -92,6 +94,7 @@ func createLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, works
 		meta := lifecycleTurnMeta{
 			Goncho: lifecycleMessageMeta{
 				WorkspaceID: workspaceID,
+				ProfileID:   profileID,
 				PeerID:      peer,
 				Sequence:    sequence,
 				Metadata:    maputil.CloneStringAny(input.Metadata),
@@ -116,6 +119,7 @@ func createLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, works
 			ID:          id,
 			WorkspaceID: workspaceID,
 			SessionKey:  sessionKey,
+			ProfileID:   profileID,
 			Peer:        peer,
 			Role:        role,
 			Content:     content,
@@ -183,6 +187,7 @@ func listLifecycleMessages(ctx context.Context, db sqlutil.LifecycleSQL, workspa
 			return nil, err
 		}
 		msg.Sequence = meta.Goncho.Sequence
+		msg.ProfileID = strings.TrimSpace(meta.Goncho.ProfileID)
 		if meta.Goncho.PeerID != "" {
 			msg.Peer = meta.Goncho.PeerID
 		}
