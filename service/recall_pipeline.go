@@ -1005,12 +1005,8 @@ func recallEvidenceScalarSpanValue(fields []string, start int, first string) (st
 	if first = recallNormalizeEvidenceNoteField(first); first != "" {
 		parts = append(parts, first)
 	}
-	spanUntilNextAssignment := recallEvidenceHasAssignmentAtOrAfter(fields, start)
 	for i := start; i < len(fields); i++ {
-		if recallEvidenceFieldStartsAssignment(fields, i) {
-			break
-		}
-		if len(parts) > 0 && !spanUntilNextAssignment {
+		if recallEvidenceScalarSpanStopsAtField(fields, i) {
 			break
 		}
 		field := recallNormalizeEvidenceNoteField(fields[i])
@@ -1025,13 +1021,23 @@ func recallEvidenceScalarSpanValue(fields []string, start int, first string) (st
 	return strings.Join(parts, " "), true
 }
 
-func recallEvidenceHasAssignmentAtOrAfter(fields []string, start int) bool {
-	for i := start; i < len(fields); i++ {
-		if recallEvidenceFieldStartsAssignment(fields, i) {
-			return true
-		}
+func recallEvidenceScalarSpanStopsAtField(fields []string, idx int) bool {
+	if recallEvidenceFieldStartsAssignment(fields, idx) {
+		return true
 	}
-	return false
+	return recallEvidenceScalarSpanBoundaryField(fields, idx)
+}
+
+func recallEvidenceScalarSpanBoundaryField(fields []string, idx int) bool {
+	if idx <= 0 || idx >= len(fields) {
+		return false
+	}
+	switch fields[idx] {
+	case "observed", "captured", "recorded", "source", "from", "via":
+		return true
+	default:
+		return false
+	}
 }
 
 func recallEvidenceFieldStartsAssignment(fields []string, idx int) bool {

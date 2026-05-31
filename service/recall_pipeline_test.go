@@ -431,6 +431,63 @@ func TestRecallPipelineRejectedOrderPreservesSelectionFlow(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineSpeakerNoteWithoutTrailingAssignmentKeepsMultiWordIdentity(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-juan-perez-note",
+			SourceType: "turn",
+			Content:    "Requested speaker gave the deployment rollback note.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{
+				{Kind: "keyword", Score: 0.10},
+				{Kind: "speaker", Note: "speaker=Juan Perez"},
+			},
+		},
+		{
+			MemoryID:   "mem-juan-lopez-note",
+			SourceType: "turn",
+			Content:    "Deployment rollback window changed today.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{
+				{Kind: "keyword", Score: 0.20},
+				{Kind: "speaker", Note: "speaker=Juan Lopez"},
+			},
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "speaker-note-unterminated-multi-word-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "speaker-note-unterminated-multi-word-test-v1",
+			Weights:     map[string]float64{"keyword": 1},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 80,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "what did Juan Perez say about deployments?",
+		ScopeID:     "team",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(selectedRecallIDs(trace), []string{"mem-juan-perez-note"}) {
+		t.Fatalf("selected IDs = %v, want unterminated multi-word speaker note to disambiguate same first-name speakers", selectedRecallIDs(trace))
+	}
+	if !strings.Contains(strings.Join(trace.Selected[0].Score.WhySelected, "\n"), "speaker_adjustment=0.120000") {
+		t.Fatalf("why selected = %v, want speaker adjustment evidence from full multi-word speaker note", trace.Selected[0].Score.WhySelected)
+	}
+}
+
 func TestRecallPipelineSpeakerNoteKeepsMultiWordIdentity(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
