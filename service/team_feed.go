@@ -98,39 +98,63 @@ type TeamFeedAuditResult struct {
 	Count  int                  `json:"count"`
 }
 
+type teamFeedAuthorization struct {
+	Allowed          bool
+	ActorWorkspaceID string
+	ActorProfileID   string
+	Role             string
+	Reason           string
+}
+
 func (s *Service) TeamFeed(ctx context.Context, query TeamFeedQuery) (TeamFeedResult, error) {
 	norm, err := s.normalizeTeamFeedQuery(query)
 	if err != nil {
 		return TeamFeedResult{}, err
 	}
-	actorScope := scopeauth.NormalizeActorScope(query.ActorWorkspaceID, query.ActorProfileID, norm.WorkspaceID)
-	role := strings.TrimSpace(query.Role)
-	allowed := role == "admin" || scopeauth.SameScope(actorScope, norm.WorkspaceID, norm.ProfileID)
-	if !allowed {
-		reason := scopeauth.DeniedReadReason(actorScope, "team feed", norm.WorkspaceID, norm.ProfileID)
-		auditID, err := s.insertTeamFeedAudit(ctx, norm, actorScope.WorkspaceID, actorScope.ProfileID, role, TeamFeedDecisionDenied, reason)
+	authorization := decideTeamFeedAuthorization(query, norm)
+	if !authorization.Allowed {
+		auditID, err := s.insertTeamFeedAudit(ctx, norm, authorization.ActorWorkspaceID, authorization.ActorProfileID, authorization.Role, TeamFeedDecisionDenied, authorization.Reason)
 		if err != nil {
 			return TeamFeedResult{}, err
 		}
-		return TeamFeedResult{Decision: TeamFeedDecisionDenied, Reason: reason, Entries: []TeamFeedEntry{}, AuditID: auditID}, nil
+		return TeamFeedResult{Decision: TeamFeedDecisionDenied, Reason: authorization.Reason, Entries: []TeamFeedEntry{}, AuditID: auditID}, nil
 	}
 	limit := limitutil.DefaultClamped(query.Limit, 50, 100)
-	cursor := int64(0)
-	if strings.TrimSpace(query.Cursor) != "" {
-		cursor, err = idutil.ParseDecimal(query.Cursor)
-		if err != nil || cursor < 0 {
-			return TeamFeedResult{}, fmt.Errorf("goncho: invalid team feed cursor %q", query.Cursor)
-		}
+	cursor, err := parseTeamFeedCursor(query.Cursor)
+	if err != nil {
+		return TeamFeedResult{}, err
 	}
 	entries, next, err := s.listTeamFeedEntries(ctx, norm, cursor, limit)
 	if err != nil {
 		return TeamFeedResult{}, err
 	}
-	auditID, err := s.insertTeamFeedAudit(ctx, norm, actorScope.WorkspaceID, actorScope.ProfileID, role, TeamFeedDecisionAllowed, "team feed read")
+	auditID, err := s.insertTeamFeedAudit(ctx, norm, authorization.ActorWorkspaceID, authorization.ActorProfileID, authorization.Role, TeamFeedDecisionAllowed, "team feed read")
 	if err != nil {
 		return TeamFeedResult{}, err
 	}
 	return TeamFeedResult{Authorized: true, Decision: TeamFeedDecisionAllowed, Entries: entries, NextCursor: next, AuditID: auditID}, nil
+}
+
+func decideTeamFeedAuthorization(query TeamFeedQuery, target TeamFeedEntry) teamFeedAuthorization {
+	actorScope := scopeauth.NormalizeActorScope(query.ActorWorkspaceID, query.ActorProfileID, target.WorkspaceID)
+	role := strings.TrimSpace(query.Role)
+	allowed := role == "admin" || scopeauth.SameScope(actorScope, target.WorkspaceID, target.ProfileID)
+	decision := teamFeedAuthorization{Allowed: allowed, ActorWorkspaceID: actorScope.WorkspaceID, ActorProfileID: actorScope.ProfileID, Role: role}
+	if !allowed {
+		decision.Reason = scopeauth.DeniedReadReason(actorScope, "team feed", target.WorkspaceID, target.ProfileID)
+	}
+	return decision
+}
+
+func parseTeamFeedCursor(cursor string) (int64, error) {
+	if strings.TrimSpace(cursor) == "" {
+		return 0, nil
+	}
+	parsed, err := idutil.ParseDecimal(cursor)
+	if err != nil || parsed < 0 {
+		return 0, fmt.Errorf("goncho: invalid team feed cursor %q", cursor)
+	}
+	return parsed, nil
 }
 
 func (s *Service) ListTeamFeedAudit(ctx context.Context, query TeamFeedAuditQuery) (TeamFeedAuditResult, error) {

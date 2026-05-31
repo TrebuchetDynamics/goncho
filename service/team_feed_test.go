@@ -2,8 +2,42 @@ package goncho
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
+
+func TestTeamFeedAuthorizationDecisionIsReplayable(t *testing.T) {
+	target := TeamFeedEntry{WorkspaceID: "workspace-a", ProfileID: "profile-a", Peer: "peer-team"}
+
+	sameProfile := decideTeamFeedAuthorization(TeamFeedQuery{Actor: "agent:a", ActorProfileID: "profile-a"}, target)
+	if !sameProfile.Allowed || sameProfile.ActorWorkspaceID != "workspace-a" || sameProfile.ActorProfileID != "profile-a" || sameProfile.Reason != "" {
+		t.Fatalf("same-profile authorization = %+v, want allowed defaulted to target workspace", sameProfile)
+	}
+
+	admin := decideTeamFeedAuthorization(TeamFeedQuery{Actor: "agent:admin", ActorWorkspaceID: "workspace-b", ActorProfileID: "profile-b", Role: " admin "}, target)
+	if !admin.Allowed || admin.Role != "admin" || admin.ActorWorkspaceID != "workspace-b" || admin.ActorProfileID != "profile-b" {
+		t.Fatalf("admin authorization = %+v, want cross-scope admin allowed with trimmed audit role", admin)
+	}
+
+	denied := decideTeamFeedAuthorization(TeamFeedQuery{Actor: "agent:b", ActorProfileID: "profile-b"}, target)
+	if denied.Allowed || !strings.Contains(denied.Reason, "cannot read team feed") {
+		t.Fatalf("cross-profile authorization = %+v, want denied with replayable reason", denied)
+	}
+}
+
+func TestParseTeamFeedCursorContract(t *testing.T) {
+	if cursor, err := parseTeamFeedCursor(" 42 "); err != nil || cursor != 42 {
+		t.Fatalf("parseTeamFeedCursor = (%d, %v), want 42 nil", cursor, err)
+	}
+	if cursor, err := parseTeamFeedCursor(" "); err != nil || cursor != 0 {
+		t.Fatalf("blank parseTeamFeedCursor = (%d, %v), want 0 nil", cursor, err)
+	}
+	for _, cursor := range []string{"-1", "abc"} {
+		if _, err := parseTeamFeedCursor(cursor); err == nil {
+			t.Fatalf("parseTeamFeedCursor(%q) succeeded, want error", cursor)
+		}
+	}
+}
 
 func TestTeamFeedListsActionSignalsWithPaginationForAuthorizedActor(t *testing.T) {
 	svc, cleanup := newTestService(t)
