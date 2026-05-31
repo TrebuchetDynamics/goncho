@@ -136,7 +136,7 @@ func (s *Service) ExtractMemoryProposals(ctx context.Context, params ExtractMemo
 				PeerID:      peer,
 				SessionKey:  sessionKey,
 				SubjectID:   proposal.ID,
-				RelatedID:   firstString(proposal.RelatedIDs),
+				RelatedID:   sliceutil.First(proposal.RelatedIDs),
 				Reason:      proposal.ReviewReason,
 				EvidenceIDs: proposal.EvidenceIDs,
 			})
@@ -252,11 +252,4 @@ func memoryProposalID(operation MemoryProposalOperation, kind MemoryProposalKind
 	_, _ = h.Write([]byte(string(operation)))
 	_, _ = h.Write([]byte("\x00" + string(kind) + "\x00" + content + "\x00" + strings.Join(evidence, "\x00")))
 	return fmt.Sprintf("proposal_%016x", h.Sum64())
-}
-
-func firstString(values []string) string {
-	if len(values) == 0 {
-		return ""
-	}
-	return values[0]
 }

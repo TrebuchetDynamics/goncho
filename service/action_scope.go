@@ -2,23 +2,16 @@ package goncho
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
+	"github.com/TrebuchetDynamics/goncho/service/internal/actionscope"
 )
 
-type scopedAction struct {
-	WorkspaceID string
-	ProfileID   string
-	Peer        string
-	ActionID    string
-}
+type scopedAction = actionscope.Scope
 
 func (s *Service) normalizeScopedAction(workspaceID, profileID, peer, actionID, requiredMessage string, requireActionID bool) (scopedAction, error) {
-	scope := scopekey.Normalize(s.workspaceID, workspaceID, profileID, peer)
-	trimmedActionID := strings.TrimSpace(actionID)
-	if !scope.Complete() || (requireActionID && trimmedActionID == "") {
+	scope := actionscope.Normalize(s.workspaceID, workspaceID, profileID, peer, actionID)
+	if !scope.Complete() || (requireActionID && scope.ActionID == "") {
 		return scopedAction{}, fmt.Errorf("goncho: %s", requiredMessage)
 	}
-	return scopedAction{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: trimmedActionID}, nil
+	return scope, nil
 }

@@ -10,10 +10,6 @@ func firstNonBlank(values ...string) string {
 	return textutil.FirstNonBlank(values...)
 }
 
-func firstNonEmpty(values ...string) string {
-	return firstNonBlank(values...)
-}
-
 func cloneStringMap(in map[string]string) map[string]string {
 	return maputil.CloneStringString(in)
 }

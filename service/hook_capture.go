@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hookcapture"
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/ptrutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -68,7 +70,7 @@ func HostHookEventSchemas() []HostHookEventSchema {
 		out = append(out, HostHookEventSchema{
 			Event:          spec.event,
 			Description:    spec.description,
-			RequiredFields: cloneStrings(spec.required),
+			RequiredFields: sliceutil.Clone(spec.required),
 			JSONSchema:     hostHookJSONSchema(spec.event, spec.required),
 		})
 	}
@@ -78,7 +80,7 @@ func HostHookEventSchemas() []HostHookEventSchema {
 func hostHookJSONSchema(event HostHookEventName, required []string) map[string]any {
 	return map[string]any{
 		"type":     "object",
-		"required": cloneStrings(required),
+		"required": sliceutil.Clone(required),
 		"properties": map[string]any{
 			"event":        map[string]any{"type": "string", "const": string(event)},
 			"host":         map[string]any{"type": "string"},
@@ -189,7 +191,7 @@ func (s *Service) CaptureHostHook(ctx context.Context, event HostHookEvent) (Hoo
 				Peer:      event.PeerID,
 				Role:      role,
 				Content:   content,
-				Metadata:  stringMapToAny(metadata),
+				Metadata:  maputil.StringStringToAny(metadata),
 				CreatedAt: event.ObservedAt,
 			}},
 		})
