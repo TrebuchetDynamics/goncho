@@ -375,13 +375,7 @@ func encodeBeamJSONLBytes(records []beamJSONLRecord) ([]byte, error) {
 }
 
 func encodeBeamJSONL(w io.Writer, records []beamJSONLRecord) error {
-	encoder := json.NewEncoder(w)
-	for _, record := range records {
-		if err := encoder.Encode(record); err != nil {
-			return fmt.Errorf("goncho-bench: write converted BEAM JSONL: %w", err)
-		}
-	}
-	return nil
+	return shared.WriteJSONLRows(w, records, "goncho-bench: write converted BEAM JSONL")
 }
 
 func summarizeBeamConversionRecords(records []beamJSONLRecord) beamConversionDiagnostics {

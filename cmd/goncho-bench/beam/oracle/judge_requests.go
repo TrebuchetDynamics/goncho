@@ -1,7 +1,6 @@
 package oracle
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -55,13 +54,7 @@ func writeBeamServiceJudgeRequests(path string, report goncho.RecallBenchmarkRep
 		return err
 	}
 	defer file.Close()
-	encoder := json.NewEncoder(file)
-	for _, row := range buildBeamServiceJudgeRequestRows(report, configID, runStartedAt) {
-		if err := encoder.Encode(row); err != nil {
-			return fmt.Errorf("goncho-bench: write BEAM judge request row: %w", err)
-		}
-	}
-	return nil
+	return shared.WriteJSONLRows(file, buildBeamServiceJudgeRequestRows(report, configID, runStartedAt), "goncho-bench: write BEAM judge request row")
 }
 
 func buildBeamServiceJudgeRequestRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceJudgeRequestRow {

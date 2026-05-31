@@ -58,13 +58,7 @@ func AppendPairedOutcomesFromResults(cfg Config) error {
 		return err
 	}
 	defer file.Close()
-	encoder := json.NewEncoder(file)
-	for _, row := range rows {
-		if err := encoder.Encode(row); err != nil {
-			return fmt.Errorf("goncho-bench: write BEAM paired result row: %w", err)
-		}
-	}
-	return nil
+	return shared.WriteJSONLRows(file, rows, "goncho-bench: write BEAM paired result row")
 }
 
 func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfigID, sourcePath, sourceSHA256 string) ([]servicePairedOutcome, error) {

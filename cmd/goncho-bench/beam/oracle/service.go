@@ -1,7 +1,6 @@
 package oracle
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -412,13 +411,7 @@ func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkR
 		return err
 	}
 	defer file.Close()
-	encoder := json.NewEncoder(file)
-	for _, outcome := range buildBeamServicePairedOutcomes(report, configID, runStartedAt, judgments) {
-		if err := encoder.Encode(outcome); err != nil {
-			return fmt.Errorf("goncho-bench: write BEAM service paired outcome: %w", err)
-		}
-	}
-	return nil
+	return shared.WriteJSONLRows(file, buildBeamServicePairedOutcomes(report, configID, runStartedAt, judgments), "goncho-bench: write BEAM service paired outcome")
 }
 
 func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) []beamServicePairedOutcome {
@@ -447,13 +440,7 @@ func writeBeamServiceFailureAudit(path string, report goncho.RecallBenchmarkRepo
 		return err
 	}
 	defer file.Close()
-	encoder := json.NewEncoder(file)
-	for _, row := range buildBeamServiceFailureAuditRows(report, configID, runStartedAt) {
-		if err := encoder.Encode(row); err != nil {
-			return fmt.Errorf("goncho-bench: write BEAM service failure audit row: %w", err)
-		}
-	}
-	return nil
+	return shared.WriteJSONLRows(file, buildBeamServiceFailureAuditRows(report, configID, runStartedAt), "goncho-bench: write BEAM service failure audit row")
 }
 
 func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceFailureAuditRow {
