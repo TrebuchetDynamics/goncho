@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/internal/webhooks/signing"
+	"github.com/TrebuchetDynamics/goncho/internal/webhooks/urlpolicy"
 )
 
 const (
@@ -173,7 +175,7 @@ func (w WebhookDeliveryWorker) Deliver(ctx context.Context, req WebhookDeliveryR
 	if err != nil {
 		return nil, err
 	}
-	signature, err := SignWebhookPayload(body, w.Secret)
+	signature, err := signing.SignPayload(body, w.Secret)
 	if err != nil {
 		return []WebhookDeliveryResult{w.result(WebhookDeliveryEndpoint{
 			WorkspaceID: workspaceID,
@@ -350,17 +352,5 @@ func buildWebhookDeliveryPayload(event WebhookEvent, now time.Time) (string, err
 }
 
 func redactWebhookEndpointURL(raw string) string {
-	if strings.TrimSpace(raw) == "" {
-		return ""
-	}
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return "<redacted>"
-	}
-	parsed.User = nil
-	if parsed.RawQuery != "" || parsed.ForceQuery {
-		parsed.RawQuery = "<redacted>"
-	}
-	parsed.Fragment = ""
-	return parsed.String()
+	return urlpolicy.RedactEndpoint(raw)
 }

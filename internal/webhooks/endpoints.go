@@ -2,17 +2,17 @@ package webhooks
 
 import (
 	"context"
-	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"net"
-	"net/url"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/internal/webhooks/signing"
+	"github.com/TrebuchetDynamics/goncho/internal/webhooks/urlpolicy"
 )
 
 const (
@@ -235,12 +235,11 @@ func NewQueueEmptyWebhookEvent(params QueueEmptyWebhookEventParams) (WebhookEven
 }
 
 func SignWebhookPayload(payload, secret string) (string, error) {
-	if strings.TrimSpace(secret) == "" {
+	signature, err := signing.SignPayload(payload, secret)
+	if errors.Is(err, signing.ErrSecretMissing) {
 		return "", ErrWebhookSecretMissing
 	}
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(payload))
-	return hex.EncodeToString(mac.Sum(nil)), nil
+	return signature, err
 }
 
 func ensureEndpointTable(ctx context.Context, db *sql.DB) error {
@@ -262,30 +261,11 @@ func ensureEndpointTable(ctx context.Context, db *sql.DB) error {
 }
 
 func normalizeWebhookURL(raw string) (string, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" || len(raw) > MaxWebhookURLLength {
+	endpointURL, err := urlpolicy.NormalizeEndpoint(raw, MaxWebhookURLLength)
+	if errors.Is(err, urlpolicy.ErrInvalid) {
 		return "", ErrWebhookInvalidURL
 	}
-	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return "", ErrWebhookInvalidURL
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "", ErrWebhookInvalidURL
-	}
-	host := parsed.Hostname()
-	if host == "" || privateWebhookHost(host) {
-		return "", ErrWebhookInvalidURL
-	}
-	return parsed.String(), nil
-}
-
-func privateWebhookHost(host string) bool {
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return false
-	}
-	return ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified()
+	return endpointURL, err
 }
 
 type webhookEndpointScanner interface {
