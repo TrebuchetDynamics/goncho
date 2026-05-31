@@ -1,10 +1,8 @@
 package paired
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -180,24 +178,7 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 }
 
 func loadBeamPairedOutcomes(path string) ([]servicePairedOutcome, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("goncho-bench: read BEAM paired outcomes: %w", err)
-	}
-	defer file.Close()
-	rows := []servicePairedOutcome{}
-	scanner := shared.NewJSONLScanner(file)
-	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: scan BEAM paired outcomes", func(lineNumber int, line string) error {
-		var row servicePairedOutcome
-		if err := json.Unmarshal([]byte(line), &row); err != nil {
-			return fmt.Errorf("goncho-bench: decode BEAM paired outcome line %d: %w", lineNumber, err)
-		}
-		rows = append(rows, row)
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	return rows, nil
+	return shared.ReadJSONLFile[servicePairedOutcome](path, "goncho-bench: read BEAM paired outcomes", "goncho-bench: scan BEAM paired outcomes", "goncho-bench: decode BEAM paired outcome")
 }
 
 func beamPairedOutcomeKey(row servicePairedOutcome) beamPairedComparisonKey {

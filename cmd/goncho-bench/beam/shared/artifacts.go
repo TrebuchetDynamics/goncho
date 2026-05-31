@@ -16,6 +16,15 @@ func MarshalIndentedJSON(value any) ([]byte, error) {
 	return append(raw, '\n'), nil
 }
 
+// ReadFileWithChecksum reads a BEAM artifact and returns its raw bytes plus SHA-256 checksum.
+func ReadFileWithChecksum(path, readContext string) ([]byte, string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, "", fmt.Errorf("%s: %w", readContext, err)
+	}
+	return raw, ChecksumBytesSHA256(raw), nil
+}
+
 // CreateFileWithParents creates/truncates a BEAM artifact file after ensuring its parent directory exists.
 func CreateFileWithParents(path, mkdirContext, createContext string) (*os.File, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

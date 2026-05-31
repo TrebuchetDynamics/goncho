@@ -1,9 +1,7 @@
 package oracle
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
@@ -50,22 +48,8 @@ type beamJSONLQuestion struct {
 }
 
 func loadBeamServiceJSONLCases(path string) ([]goncho.RecallBenchmarkServiceCase, error) {
-	file, err := os.Open(path)
+	records, err := shared.ReadJSONLFile[beamJSONLRecord](path, "goncho-bench: open BEAM JSONL dataset", "goncho-bench: read BEAM JSONL dataset", "goncho-bench: decode BEAM JSONL")
 	if err != nil {
-		return nil, fmt.Errorf("goncho-bench: open BEAM JSONL dataset: %w", err)
-	}
-	defer file.Close()
-
-	records := []beamJSONLRecord{}
-	scanner := shared.NewJSONLScanner(file)
-	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: read BEAM JSONL dataset", func(lineNo int, line string) error {
-		var record beamJSONLRecord
-		if err := json.Unmarshal([]byte(line), &record); err != nil {
-			return fmt.Errorf("goncho-bench: decode BEAM JSONL line %d: %w", lineNo, err)
-		}
-		records = append(records, record)
-		return nil
-	}); err != nil {
 		return nil, err
 	}
 	return beamServiceCasesFromJSONLRecords(records)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -18,6 +19,29 @@ func NewJSONLScanner(r io.Reader) *bufio.Scanner {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, jsonlInitialScanBuffer), jsonlMaxScanBuffer)
 	return scanner
+}
+
+// ReadJSONLFile decodes a BEAM JSONL file using the shared scan and non-empty-line convention.
+func ReadJSONLFile[T any](path, openContext, scanContext, decodeContext string) ([]T, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", openContext, err)
+	}
+	defer file.Close()
+
+	rows := []T{}
+	scanner := NewJSONLScanner(file)
+	if err := ForEachNonEmptyJSONLLine(scanner, scanContext, func(lineNo int, line string) error {
+		var row T
+		if err := json.Unmarshal([]byte(line), &row); err != nil {
+			return fmt.Errorf("%s line %d: %w", decodeContext, lineNo, err)
+		}
+		rows = append(rows, row)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 // WriteJSONLRows writes BEAM JSONL rows using the shared one-object-per-line artifact convention.

@@ -6,6 +6,23 @@ import (
 	"testing"
 )
 
+func TestReadFileWithChecksumReturnsRawBytesAndSHA256(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "artifact.json")
+	if err := os.WriteFile(path, []byte("{}\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	raw, sha256, err := ReadFileWithChecksum(path, "read artifact")
+	if err != nil {
+		t.Fatalf("ReadFileWithChecksum() error = %v", err)
+	}
+	if string(raw) != "{}\n" {
+		t.Fatalf("ReadFileWithChecksum() raw = %q, want artifact bytes", raw)
+	}
+	if sha256 != ChecksumBytesSHA256(raw) {
+		t.Fatalf("ReadFileWithChecksum() sha256 = %q, want %q", sha256, ChecksumBytesSHA256(raw))
+	}
+}
+
 func TestWriteBytesArtifactCreatesParentDirectories(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nested", "artifact.json")
 	if err := WriteBytesArtifact(path, []byte("{}\n"), "make dir", "write artifact"); err != nil {

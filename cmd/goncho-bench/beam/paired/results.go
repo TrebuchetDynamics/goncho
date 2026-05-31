@@ -3,10 +3,10 @@ package paired
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 )
 
 const beamPairedResultsDefaultConfigID = "beam-results"
@@ -38,15 +38,15 @@ func AppendPairedOutcomesFromResults(cfg Config) error {
 	if outPath == "" {
 		return fmt.Errorf("goncho-bench: --beam-paired-results-out is required for --beam-paired-results-in")
 	}
-	raw, err := os.ReadFile(inputPath)
+	raw, sourceSHA256, err := shared.ReadFileWithChecksum(inputPath, "goncho-bench: read BEAM paired results")
 	if err != nil {
-		return fmt.Errorf("goncho-bench: read BEAM paired results: %w", err)
+		return err
 	}
 	var results beamPairedResultsFile
 	if err := json.Unmarshal(raw, &results); err != nil {
 		return fmt.Errorf("goncho-bench: decode BEAM paired results: %w", err)
 	}
-	rows, err := beamPairedOutcomesFromResults(results, cfg.ResultsConfigID, inputPath, shared.ChecksumBytesSHA256(raw))
+	rows, err := beamPairedOutcomesFromResults(results, cfg.ResultsConfigID, inputPath, sourceSHA256)
 	if err != nil {
 		return err
 	}

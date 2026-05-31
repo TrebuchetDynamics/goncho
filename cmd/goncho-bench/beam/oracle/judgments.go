@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
@@ -45,11 +44,10 @@ type beamServiceJudgmentDiagnostics struct {
 }
 
 func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
-	raw, err := os.ReadFile(path)
+	raw, sourceSHA256, err := shared.ReadFileWithChecksum(path, "goncho-bench: open BEAM service judgments")
 	if err != nil {
-		return nil, fmt.Errorf("goncho-bench: open BEAM service judgments: %w", err)
+		return nil, err
 	}
-	sourceSHA256 := shared.ChecksumBytesSHA256(raw)
 	rows := map[shared.OutcomeKey]beamServiceJudgment{}
 	questionRows := map[shared.QuestionKey]beamServiceJudgment{}
 	trimmed := bytes.TrimSpace(raw)

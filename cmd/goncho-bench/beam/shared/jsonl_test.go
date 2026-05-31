@@ -45,6 +45,34 @@ func TestNewJSONLScannerAcceptsLargePromptRows(t *testing.T) {
 	}
 }
 
+func TestReadJSONLFileSkipsBlankLinesAndWrapsDecodeContext(t *testing.T) {
+	type row struct {
+		Name string `json:"name"`
+	}
+	path := filepath.Join(t.TempDir(), "rows.jsonl")
+	if err := os.WriteFile(path, []byte("{\"name\":\"alpha\"}\n\n{bad}\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	_, err := ReadJSONLFile[row](path, "open rows", "scan rows", "decode row")
+	if err == nil {
+		t.Fatal("ReadJSONLFile() error = nil")
+	}
+	if !strings.Contains(err.Error(), "decode row line 3") {
+		t.Fatalf("ReadJSONLFile() error = %v, want decode context with physical line number", err)
+	}
+
+	if err := os.WriteFile(path, []byte("{\"name\":\"alpha\"}\n\n{\"name\":\"beta\"}\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	got, err := ReadJSONLFile[row](path, "open rows", "scan rows", "decode row")
+	if err != nil {
+		t.Fatalf("ReadJSONLFile() error = %v", err)
+	}
+	if len(got) != 2 || got[0].Name != "alpha" || got[1].Name != "beta" {
+		t.Fatalf("ReadJSONLFile() = %#v, want alpha/beta rows", got)
+	}
+}
+
 func TestWriteAndAppendJSONLFileWithParents(t *testing.T) {
 	type row struct {
 		Name string `json:"name"`
