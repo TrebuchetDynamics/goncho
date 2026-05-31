@@ -24,11 +24,11 @@ type Features struct {
 func Intent(query string) Features {
 	q := normalizeQuery(query)
 	features := Features{Markers: Markers(q), Temporal: Query(q)}
-	if textutil.ContainsAnySubstring(q, []string{"first", "earliest", "initial", "original", "started first"}) {
+	if containsTemporalPhraseAny(q, olderDirectionPhraseCandidates()) {
 		features.Direction = DirectionOlder
 		return features
 	}
-	if textutil.ContainsAnySubstring(q, []string{"latest", "current", "currently", "most recently"}) {
+	if containsTemporalPhraseAny(q, newerDirectionPhraseCandidates()) {
 		features.Direction = DirectionNewer
 		return features
 	}
@@ -40,7 +40,24 @@ func Query(query string) bool {
 	if len(Markers(q)) > 0 {
 		return true
 	}
-	return textutil.ContainsAnySubstring(q, temporalQueryPhraseCandidates())
+	return containsTemporalPhraseAny(q, temporalQueryPhraseCandidates())
+}
+
+func containsTemporalPhraseAny(query string, candidates []string) bool {
+	for _, candidate := range candidates {
+		if containsMarker(query, candidate) {
+			return true
+		}
+	}
+	return false
+}
+
+func olderDirectionPhraseCandidates() []string {
+	return []string{"first", "earliest", "initial", "initially", "original", "started first"}
+}
+
+func newerDirectionPhraseCandidates() []string {
+	return []string{"latest", "current", "currently", "most recently"}
 }
 
 func temporalQueryPhraseCandidates() []string {

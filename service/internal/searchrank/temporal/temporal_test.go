@@ -31,6 +31,20 @@ func TestTemporalMarkersRequireTokenBoundaries(t *testing.T) {
 	}
 }
 
+func TestTemporalQueryPhrasesRequireTokenBoundaries(t *testing.T) {
+	for _, query := range []string{
+		"What should I do whenever the deploy finishes?",
+		"Where is the firstName field stored?",
+	} {
+		if Query(query) {
+			t.Fatalf("Query(%q) = true, want false for temporal phrase substring", query)
+		}
+	}
+	if !Query("When did the deploy finish?") {
+		t.Fatalf("Query(when) = false, want temporal phrase retained")
+	}
+}
+
 func TestTemporalMarkersMatchShortMonthAsToken(t *testing.T) {
 	query := "What did I finish in May?"
 	markers := Markers(query)
