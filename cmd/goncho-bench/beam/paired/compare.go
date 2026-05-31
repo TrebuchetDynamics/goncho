@@ -2,11 +2,11 @@ package paired
 
 import (
 	"fmt"
-	"math/rand"
-	"sort"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/matchcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 )
 
@@ -35,10 +35,7 @@ type beamPairedComparisonReport struct {
 	Rows                 []beamPairedComparisonRow            `json:"rows"`
 }
 
-type beamPairedComparisonCI struct {
-	Lower float64 `json:"lower"`
-	Upper float64 `json:"upper"`
-}
+type beamPairedComparisonCI = comparisoncontract.CI
 
 type beamPairedComparisonStats struct {
 	PairedCount       int     `json:"paired_count"`
@@ -71,16 +68,6 @@ type beamPairedComparisonRow struct {
 	BaselineCorrect       bool    `json:"baseline_correct"`
 	CandidateCorrect      bool    `json:"candidate_correct"`
 	Winner                string  `json:"winner"`
-}
-
-type beamPairedComparisonKey = shared.OutcomeKey
-
-type beamPairedComparisonQuestionKey = shared.QuestionKey
-
-type beamPairedMatchedOutcome struct {
-	baseline  servicePairedOutcome
-	candidate servicePairedOutcome
-	matchKey  string
 }
 
 func RunPairedComparison(cfg Config) error {
@@ -123,7 +110,7 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 			candidateRows = append(candidateRows, row)
 		}
 	}
-	matchedRows, dropped, err := matchBeamPairedOutcomes(baselineRows, candidateRows)
+	matchedRows, dropped, err := matchcontract.MatchOutcomes(baselineRows, candidateRows)
 	if err != nil {
 		return beamPairedComparisonReport{}, err
 	}
@@ -132,7 +119,7 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 	}
 	comparisonRows := make([]beamPairedComparisonRow, 0, len(matchedRows))
 	for _, matched := range matchedRows {
-		base, cand := matched.baseline, matched.candidate
+		base, cand := matched.Baseline, matched.Candidate
 		ability := shared.FirstNonEmptyTrimmed(shared.NormalizeAbility(cand.Ability), shared.NormalizeAbility(base.Ability))
 		question := shared.FirstNonEmptyTrimmed(cand.Question, base.Question)
 		scale := shared.FirstNonEmptyTrimmed(cand.Scale, base.Scale)
@@ -149,7 +136,7 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 			BaselineSourceSHA256:  strings.TrimSpace(base.SourceSHA256),
 			CandidateSourcePath:   strings.TrimSpace(cand.SourcePath),
 			CandidateSourceSHA256: strings.TrimSpace(cand.SourceSHA256),
-			MatchKey:              matched.matchKey,
+			MatchKey:              matched.MatchKey,
 			Ability:               ability,
 			Question:              question,
 			BaselineScore:         shared.RoundMetric(base.Score),
@@ -157,7 +144,7 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 			ScoreDelta:            delta,
 			BaselineCorrect:       base.Correct,
 			CandidateCorrect:      cand.Correct,
-			Winner:                beamPairedComparisonWinner(base.Score, cand.Score),
+			Winner:                comparisoncontract.Winner(base.Score, cand.Score),
 		})
 	}
 	bootstrapSamples := cfg.CompareBootstrapSamples
@@ -179,97 +166,6 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 
 func loadBeamPairedOutcomes(path string) ([]servicePairedOutcome, error) {
 	return shared.ReadJSONLFile[servicePairedOutcome](path, "goncho-bench: read BEAM paired outcomes", "goncho-bench: scan BEAM paired outcomes", "goncho-bench: decode BEAM paired outcome")
-}
-
-func beamPairedOutcomeKey(row servicePairedOutcome) beamPairedComparisonKey {
-	return shared.NewOutcomeKey(row.Scale, row.ConversationID, row.QID)
-}
-
-func beamPairedOutcomeQuestionKey(row servicePairedOutcome) beamPairedComparisonQuestionKey {
-	key := shared.NewQuestionKey(row.Scale, row.ConversationID, row.Ability, row.Question)
-	if key.Question == "" {
-		return beamPairedComparisonQuestionKey{}
-	}
-	return key
-}
-
-func matchBeamPairedOutcomes(baselineRows, candidateRows []servicePairedOutcome) ([]beamPairedMatchedOutcome, int, error) {
-	sort.Slice(baselineRows, func(i, j int) bool { return servicePairedOutcomeLess(baselineRows[i], baselineRows[j]) })
-	sort.Slice(candidateRows, func(i, j int) bool { return servicePairedOutcomeLess(candidateRows[i], candidateRows[j]) })
-	candidateByQID := map[beamPairedComparisonKey]int{}
-	candidateByQuestion := map[beamPairedComparisonQuestionKey]int{}
-	candidateQuestionCounts := map[beamPairedComparisonQuestionKey]int{}
-	for i, row := range candidateRows {
-		if key := beamPairedOutcomeKey(row); key.QID != "" {
-			if _, ok := candidateByQID[key]; !ok {
-				candidateByQID[key] = i
-			}
-		}
-		if key := beamPairedOutcomeQuestionKey(row); key.Question != "" {
-			candidateQuestionCounts[key]++
-			if _, ok := candidateByQuestion[key]; !ok {
-				candidateByQuestion[key] = i
-			}
-		}
-	}
-	baselineQuestionCounts := map[beamPairedComparisonQuestionKey]int{}
-	for _, row := range baselineRows {
-		if key := beamPairedOutcomeQuestionKey(row); key.Question != "" {
-			baselineQuestionCounts[key]++
-		}
-	}
-	usedCandidates := map[int]struct{}{}
-	matched := []beamPairedMatchedOutcome{}
-	dropped := 0
-	for _, base := range baselineRows {
-		if idx, ok := candidateByQID[beamPairedOutcomeKey(base)]; ok {
-			if _, used := usedCandidates[idx]; !used {
-				usedCandidates[idx] = struct{}{}
-				matched = append(matched, beamPairedMatchedOutcome{baseline: base, candidate: candidateRows[idx], matchKey: "qid"})
-				continue
-			}
-		}
-		if questionKey := beamPairedOutcomeQuestionKey(base); questionKey.Question != "" {
-			candidateCount := candidateQuestionCounts[questionKey]
-			baselineCount := baselineQuestionCounts[questionKey]
-			if candidateCount > 0 && (baselineCount > 1 || candidateCount > 1) {
-				return nil, 0, fmt.Errorf("goncho-bench: ambiguous BEAM paired question-key fallback for scale=%q conversation_id=%q ability=%q question=%q (baseline_rows=%d candidate_rows=%d)", questionKey.Scale, questionKey.ConversationID, questionKey.Ability, questionKey.Question, baselineCount, candidateCount)
-			}
-			if idx, ok := candidateByQuestion[questionKey]; ok {
-				if _, used := usedCandidates[idx]; !used {
-					usedCandidates[idx] = struct{}{}
-					matched = append(matched, beamPairedMatchedOutcome{baseline: base, candidate: candidateRows[idx], matchKey: "question"})
-					continue
-				}
-			}
-		}
-		dropped++
-	}
-	dropped += len(candidateRows) - len(usedCandidates)
-	return matched, dropped, nil
-}
-
-func servicePairedOutcomeLess(a, b servicePairedOutcome) bool {
-	ak, bk := beamPairedOutcomeKey(a), beamPairedOutcomeKey(b)
-	if ak != bk {
-		return ak.Less(bk)
-	}
-	aq, bq := beamPairedOutcomeQuestionKey(a), beamPairedOutcomeQuestionKey(b)
-	if aq.Question != bq.Question {
-		return aq.Question < bq.Question
-	}
-	return strings.TrimSpace(a.ConfigID) < strings.TrimSpace(b.ConfigID)
-}
-
-func beamPairedComparisonWinner(baseScore, candidateScore float64) string {
-	switch {
-	case candidateScore > baseScore:
-		return "candidate"
-	case baseScore > candidateScore:
-		return "baseline"
-	default:
-		return "tie"
-	}
 }
 
 func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamples int, effectSizeFloor float64) beamPairedComparisonReport {
@@ -301,8 +197,8 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 	report.BaselineAvgScore = baselineTally.Average()
 	report.CandidateAvgScore = candidateTally.Average()
 	report.ScoreDelta = shared.RoundSignedMetric(report.CandidateAvgScore - report.BaselineAvgScore)
-	report.ScoreDeltaCI95 = bootstrapMeanCI(diffs, bootstrapSamples)
-	report.Conclusion, report.ConclusionReason = beamPairedComparisonConclusion(report.ScoreDeltaCI95, report.EffectSizeFloor)
+	report.ScoreDeltaCI95 = comparisoncontract.BootstrapMeanCI(diffs, bootstrapSamples, beamPairedComparisonBootstrapSeed)
+	report.Conclusion, report.ConclusionReason = comparisoncontract.Conclusion(report.ScoreDeltaCI95, report.EffectSizeFloor)
 	for ability, rows := range abilityRows {
 		report.ByAbility[ability] = beamPairedComparisonStatsForRows(rows, report.EffectSizeFloor)
 	}
@@ -327,50 +223,8 @@ func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow, effectSize
 	stats.BaselineAvgScore = baselineTally.Average()
 	stats.CandidateAvgScore = candidateTally.Average()
 	stats.ScoreDelta = shared.RoundSignedMetric(stats.CandidateAvgScore - stats.BaselineAvgScore)
-	stats.Conclusion, stats.ConclusionReason = beamPairedComparisonPointConclusion(stats.ScoreDelta, effectSizeFloor)
+	stats.Conclusion, stats.ConclusionReason = comparisoncontract.PointConclusion(stats.ScoreDelta, effectSizeFloor)
 	return stats
-}
-
-func beamPairedComparisonConclusion(ci beamPairedComparisonCI, effectSizeFloor float64) (string, string) {
-	if ci.Lower > effectSizeFloor {
-		return "candidate_superior", "candidate_ci_above_effect_floor"
-	}
-	if ci.Upper < -effectSizeFloor {
-		return "baseline_superior", "baseline_ci_below_negative_effect_floor"
-	}
-	return "inconclusive", "ci_overlaps_effect_floor"
-}
-
-func beamPairedComparisonPointConclusion(delta, effectSizeFloor float64) (string, string) {
-	if delta > effectSizeFloor {
-		return "candidate_superior", "candidate_delta_above_effect_floor"
-	}
-	if delta < -effectSizeFloor {
-		return "baseline_superior", "baseline_delta_below_negative_effect_floor"
-	}
-	return "inconclusive", "delta_within_effect_floor"
-}
-
-func bootstrapMeanCI(values []float64, samples int) beamPairedComparisonCI {
-	if len(values) == 0 || samples <= 0 {
-		return beamPairedComparisonCI{}
-	}
-	rng := rand.New(rand.NewSource(beamPairedComparisonBootstrapSeed))
-	means := make([]float64, 0, samples)
-	for i := 0; i < samples; i++ {
-		total := 0.0
-		for range values {
-			total += values[rng.Intn(len(values))]
-		}
-		means = append(means, total/float64(len(values)))
-	}
-	sort.Float64s(means)
-	lowerIndex := int(0.025 * float64(samples))
-	upperIndex := int(0.975 * float64(samples))
-	if upperIndex >= len(means) {
-		upperIndex = len(means) - 1
-	}
-	return beamPairedComparisonCI{Lower: shared.RoundSignedMetric(means[lowerIndex]), Upper: shared.RoundSignedMetric(means[upperIndex])}
 }
 
 func writeBeamPairedComparisonJSON(jsonOut, markdownOut string, report beamPairedComparisonReport) error {
