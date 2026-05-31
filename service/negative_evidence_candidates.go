@@ -125,13 +125,18 @@ func negativeEvidenceReviewWorkspaceID(requestWorkspaceID string, candidate Nega
 }
 
 func negativeEvidenceObservationQuery(q ObservationQuery) ObservationQuery {
-	if q.Limit <= 0 {
-		q.Limit = negativeEvidenceObservationScanLimit
-	}
+	q.Limit = negativeEvidenceObservationLimit(q.Limit)
 	if len(q.Kinds) == 0 {
 		q.Kinds = negativeEvidenceFailureCapableKinds()
 	}
 	return q
+}
+
+func negativeEvidenceObservationLimit(limit int) int {
+	if limit <= 0 || limit > negativeEvidenceObservationScanLimit {
+		return negativeEvidenceObservationScanLimit
+	}
+	return limit
 }
 
 func negativeEvidenceFailureCapableKinds() []ObservationKind {

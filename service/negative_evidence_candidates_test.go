@@ -6,6 +6,13 @@ import (
 	"time"
 )
 
+func TestNegativeEvidenceObservationQueryCapsCallerLimitAtScanGuard(t *testing.T) {
+	q := negativeEvidenceObservationQuery(ObservationQuery{Limit: negativeEvidenceObservationScanLimit + 1})
+	if q.Limit != negativeEvidenceObservationScanLimit {
+		t.Fatalf("limit = %d, want scan guard %d", q.Limit, negativeEvidenceObservationScanLimit)
+	}
+}
+
 func TestNegativeEvidenceCandidatesTrimScopeAndToolBeforeBucketing(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
