@@ -89,6 +89,22 @@ func TestNegativeEvidenceCandidatesDoNotPromoteReplayedObservationID(t *testing.
 	}
 }
 
+func TestNegativeEvidenceCandidatesRequireReplayableObservationIDs(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: " ", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+			{ID: "replayable-fail", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(30, 0).UTC()},
+		},
+	})
+	if len(candidates) != 0 {
+		t.Fatalf("candidates = %+v, want unreplayable failures without observation ids not to create negative-memory candidates", candidates)
+	}
+}
+
 func TestNegativeEvidenceCandidatesIgnoreExplicitlySuccessfulToolErrors(t *testing.T) {
 	succeeded := true
 	failed := false

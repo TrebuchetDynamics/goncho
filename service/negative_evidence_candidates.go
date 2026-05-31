@@ -177,7 +177,8 @@ type negativeEvidenceBucket struct {
 }
 
 func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]*negativeEvidenceBucket, projection SessionEvidenceProjection, obs Observation) {
-	if !negativeEvidenceFailureObservation(obs) {
+	evidenceID, ok := negativeEvidenceReplayableFailureObservation(obs)
+	if !ok {
 		return
 	}
 	scope := negativeEvidenceObservationScopeFrom(projection, obs)
@@ -187,13 +188,11 @@ func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]
 		b = &negativeEvidenceBucket{candidate: scope.candidate(), observationIDs: map[string]struct{}{}}
 		buckets[key] = b
 	}
-	if !negativeEvidenceRecordObservation(b.observationIDs, obs.ID) {
+	if !negativeEvidenceRecordObservation(b.observationIDs, evidenceID) {
 		return
 	}
 	b.candidate.FailureCount++
-	if id := negativeEvidenceObservationID(obs.ID); id != "" {
-		b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: id, ObservedAt: obs.ObservedAt})
-	}
+	b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: evidenceID, ObservedAt: obs.ObservedAt})
 	if !obs.ObservedAt.IsZero() && (b.candidate.FirstObservedAt.IsZero() || obs.ObservedAt.Before(b.candidate.FirstObservedAt)) {
 		b.candidate.FirstObservedAt = obs.ObservedAt
 	}
@@ -249,6 +248,17 @@ func negativeEvidenceToolName(obs Observation) string {
 	return string(obs.Kind)
 }
 
+func negativeEvidenceReplayableFailureObservation(obs Observation) (string, bool) {
+	if !negativeEvidenceFailureObservation(obs) {
+		return "", false
+	}
+	id := negativeEvidenceObservationID(obs.ID)
+	if id == "" {
+		return "", false
+	}
+	return id, true
+}
+
 func negativeEvidenceFailureObservation(obs Observation) bool {
 	if obs.Success != nil && *obs.Success {
 		return false
@@ -274,7 +284,7 @@ func negativeEvidenceFailureCapableKind(kind ObservationKind) bool {
 func negativeEvidenceRecordObservation(seen map[string]struct{}, rawID string) bool {
 	id := negativeEvidenceObservationID(rawID)
 	if id == "" {
-		return true
+		return false
 	}
 	if _, ok := seen[id]; ok {
 		return false
