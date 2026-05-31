@@ -35,33 +35,13 @@ func OutcomeQuestionKey(row Outcome) QuestionKey {
 func MatchOutcomes(baselineRows, candidateRows []Outcome) ([]MatchedOutcome, int, error) {
 	sort.Slice(baselineRows, func(i, j int) bool { return outcomeLess(baselineRows[i], baselineRows[j]) })
 	sort.Slice(candidateRows, func(i, j int) bool { return outcomeLess(candidateRows[i], candidateRows[j]) })
-	candidateByQID := map[Key]int{}
-	candidateByQuestion := map[QuestionKey]int{}
-	candidateQuestionCounts := map[QuestionKey]int{}
-	for i, row := range candidateRows {
-		if key := OutcomeKey(row); key.QID != "" {
-			if _, ok := candidateByQID[key]; !ok {
-				candidateByQID[key] = i
-			}
-		}
-		if key := OutcomeQuestionKey(row); key.Question != "" {
-			candidateQuestionCounts[key]++
-			if _, ok := candidateByQuestion[key]; !ok {
-				candidateByQuestion[key] = i
-			}
-		}
-	}
-	baselineQuestionCounts := map[QuestionKey]int{}
-	for _, row := range baselineRows {
-		if key := OutcomeQuestionKey(row); key.Question != "" {
-			baselineQuestionCounts[key]++
-		}
-	}
+	candidateIndex := newMatchIndex(candidateRows)
+	baselineIndex := newMatchIndex(baselineRows)
 	usedCandidates := map[int]struct{}{}
 	matched := []MatchedOutcome{}
 	dropped := 0
 	for _, base := range baselineRows {
-		if idx, ok := candidateByQID[OutcomeKey(base)]; ok {
+		if idx, ok := candidateIndex.byQID[OutcomeKey(base)]; ok {
 			if _, used := usedCandidates[idx]; !used {
 				usedCandidates[idx] = struct{}{}
 				matched = append(matched, MatchedOutcome{Baseline: base, Candidate: candidateRows[idx], MatchKey: "qid"})
@@ -69,12 +49,12 @@ func MatchOutcomes(baselineRows, candidateRows []Outcome) ([]MatchedOutcome, int
 			}
 		}
 		if questionKey := OutcomeQuestionKey(base); questionKey.Question != "" {
-			candidateCount := candidateQuestionCounts[questionKey]
-			baselineCount := baselineQuestionCounts[questionKey]
+			candidateCount := candidateIndex.questionCounts[questionKey]
+			baselineCount := baselineIndex.questionCounts[questionKey]
 			if candidateCount > 0 && (baselineCount > 1 || candidateCount > 1) {
 				return nil, 0, fmt.Errorf("goncho-bench: ambiguous BEAM paired question-key fallback for scale=%q conversation_id=%q ability=%q question=%q (baseline_rows=%d candidate_rows=%d)", questionKey.Scale, questionKey.ConversationID, questionKey.Ability, questionKey.Question, baselineCount, candidateCount)
 			}
-			if idx, ok := candidateByQuestion[questionKey]; ok {
+			if idx, ok := candidateIndex.byQuestion[questionKey]; ok {
 				if _, used := usedCandidates[idx]; !used {
 					usedCandidates[idx] = struct{}{}
 					matched = append(matched, MatchedOutcome{Baseline: base, Candidate: candidateRows[idx], MatchKey: "question"})
@@ -86,6 +66,34 @@ func MatchOutcomes(baselineRows, candidateRows []Outcome) ([]MatchedOutcome, int
 	}
 	dropped += len(candidateRows) - len(usedCandidates)
 	return matched, dropped, nil
+}
+
+type matchIndex struct {
+	byQID          map[Key]int
+	byQuestion     map[QuestionKey]int
+	questionCounts map[QuestionKey]int
+}
+
+func newMatchIndex(rows []Outcome) matchIndex {
+	index := matchIndex{
+		byQID:          map[Key]int{},
+		byQuestion:     map[QuestionKey]int{},
+		questionCounts: map[QuestionKey]int{},
+	}
+	for i, row := range rows {
+		if key := OutcomeKey(row); key.QID != "" {
+			if _, ok := index.byQID[key]; !ok {
+				index.byQID[key] = i
+			}
+		}
+		if key := OutcomeQuestionKey(row); key.Question != "" {
+			index.questionCounts[key]++
+			if _, ok := index.byQuestion[key]; !ok {
+				index.byQuestion[key] = i
+			}
+		}
+	}
+	return index
 }
 
 func outcomeLess(a, b Outcome) bool {
