@@ -6,6 +6,15 @@ import (
 	"testing"
 )
 
+func TestApplyPreservesNilNormalizerContract(t *testing.T) {
+	if got := Apply(nil, " Value "); got != " Value " {
+		t.Fatalf("Apply(nil) = %q, want unchanged", got)
+	}
+	if got := Apply(strings.TrimSpace, " Value "); got != "Value" {
+		t.Fatalf("Apply(trim) = %q, want Value", got)
+	}
+}
+
 func TestUniquePreservesOrderOrSortsNormalizedValues(t *testing.T) {
 	got := Unique([]string{"./src", "src", " ./pkg "}, func(value string) string {
 		value = strings.TrimSpace(value)
