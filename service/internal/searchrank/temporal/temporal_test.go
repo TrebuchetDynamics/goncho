@@ -13,6 +13,16 @@ func TestTemporalQueryAndMarkersNormalizeCase(t *testing.T) {
 	}
 }
 
+func TestTemporalQueryDoesNotTreatLastNameAsTemporal(t *testing.T) {
+	query := "What is Maya's last name?"
+	if Query(query) {
+		t.Fatalf("Query(%q) = true, want false for non-temporal last-name phrase", query)
+	}
+	if !Query("What happened last week?") {
+		t.Fatalf("Query(last week) = false, want temporal phrase retained")
+	}
+}
+
 func TestTemporalMarkersRequireTokenBoundaries(t *testing.T) {
 	query := "Maybe we should review honeymoon notes."
 	markers := Markers(query)

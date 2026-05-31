@@ -36,8 +36,15 @@ func Intent(query string) Features {
 }
 
 func Query(query string) bool {
-	needles := []string{"when", "first", "earliest", "initial", "original", "latest", "current", "currently", "recent", "today", "yesterday", "tomorrow", "last ", "this ", "past ", "how many days", "how many weeks", "how many months", "how many years", "how long", "order of"}
-	return textutil.ContainsAnySubstring(normalizeQuery(query), needles)
+	q := normalizeQuery(query)
+	if len(Markers(q)) > 0 {
+		return true
+	}
+	return textutil.ContainsAnySubstring(q, temporalQueryPhraseCandidates())
+}
+
+func temporalQueryPhraseCandidates() []string {
+	return []string{"when", "first", "earliest", "initial", "original", "latest", "current", "currently", "recent", "how many days", "how many weeks", "how many months", "how many years", "how long", "order of", "last time", "this morning", "this afternoon", "this evening"}
 }
 
 func Markers(query string) []string {
