@@ -1,6 +1,7 @@
 ---
 title: Design Boundaries
 description: What Goncho is and is not.
+slug: concepts/design-boundaries
 ---
 
 Goncho is not a vector database, hosted memory SaaS, app database, or agent framework.

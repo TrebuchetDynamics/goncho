@@ -1,6 +1,7 @@
 ---
 title: Session Lifecycle
 description: How sessions create evidence and consolidation boundaries.
+slug: concepts/session-lifecycle
 ---
 
 Sessions are where memory gets formed.

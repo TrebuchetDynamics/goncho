@@ -1,6 +1,7 @@
 ---
 title: Local-First Memory
 description: Why Goncho keeps memory in the agent runtime by default.
+slug: concepts/local-first-memory
 ---
 
 Goncho is designed to run inside a Go binary with local persistence. No hosted memory service is required for the agent to remember across sessions.

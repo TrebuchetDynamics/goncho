@@ -1,6 +1,7 @@
 ---
 title: Evidence, Claims, and Beliefs
 description: The vocabulary behind trust-preserving memory.
+slug: concepts/evidence-claims-beliefs
 ---
 
 Chunks are not memory. Summaries are not automatically truth. A memory system needs a way to separate what happened from what it currently believes.

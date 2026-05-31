@@ -1,6 +1,7 @@
 ---
 title: Negative Memory
 description: Failed paths and contradictions are part of intelligent memory.
+slug: concepts/negative-memory
 ---
 
 Useful memory is not only a list of successful facts.

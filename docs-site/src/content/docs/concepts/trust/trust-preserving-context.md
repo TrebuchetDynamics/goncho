@@ -1,6 +1,7 @@
 ---
 title: Trust-Preserving Context
 description: Goncho's core memory model.
+slug: concepts/trust-preserving-context
 ---
 
 Memory is not a vector database problem.

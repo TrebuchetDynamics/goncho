@@ -1,6 +1,7 @@
 ---
 title: Orientation Packs
 description: Why Goncho returns context products instead of memory dumps.
+slug: concepts/orientation-packs
 ---
 
 An agent does not need every remembered fact. It needs the facts that orient the next action.
