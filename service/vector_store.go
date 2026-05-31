@@ -199,26 +199,23 @@ func cloneRecallEvidenceItem(item EvidenceItem) EvidenceItem {
 }
 
 func mergeRecallCandidateFields(existing, incoming RecallCandidate) RecallCandidate {
-	if existing.Content == "" {
-		existing.Content = incoming.Content
-	}
-	if existing.SourceType == "" {
-		existing.SourceType = incoming.SourceType
-	}
-	if existing.SessionID == "" {
-		existing.SessionID = incoming.SessionID
-	}
-	if existing.AgentID == "" {
-		existing.AgentID = incoming.AgentID
-	}
-	if existing.ScopeID == "" {
-		existing.ScopeID = incoming.ScopeID
-	}
+	existing.Content = preferNonBlankCandidateField(existing.Content, incoming.Content)
+	existing.SourceType = preferNonBlankCandidateField(existing.SourceType, incoming.SourceType)
+	existing.SessionID = preferNonBlankCandidateField(existing.SessionID, incoming.SessionID)
+	existing.AgentID = preferNonBlankCandidateField(existing.AgentID, incoming.AgentID)
+	existing.ScopeID = preferNonBlankCandidateField(existing.ScopeID, incoming.ScopeID)
 	if existing.CreatedAt.IsZero() {
 		existing.CreatedAt = incoming.CreatedAt
 	}
 	if incoming.Importance > existing.Importance {
 		existing.Importance = incoming.Importance
+	}
+	return existing
+}
+
+func preferNonBlankCandidateField(existing, incoming string) string {
+	if strings.TrimSpace(existing) == "" && strings.TrimSpace(incoming) != "" {
+		return incoming
 	}
 	return existing
 }

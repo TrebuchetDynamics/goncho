@@ -230,6 +230,17 @@ func TestMergeRecallCandidateEvidenceDeduplicatesWhitespaceEquivalentEvidenceIDs
 	}
 }
 
+func TestMergeRecallCandidateEvidenceFillsWhitespaceOnlyIdentityFields(t *testing.T) {
+	merged := mergeRecallCandidateEvidence(
+		RecallCandidate{MemoryID: "mem-auth-owner", Content: "   ", SourceType: "\t", SessionID: "\n", AgentID: " ", ScopeID: "  "},
+		RecallCandidate{MemoryID: "mem-auth-owner", Content: "Mira owns authentication.", SourceType: "fact", SessionID: "sess-auth", AgentID: "agent-auth", ScopeID: "team"},
+	)
+
+	if merged.Content != "Mira owns authentication." || merged.SourceType != "fact" || merged.SessionID != "sess-auth" || merged.AgentID != "agent-auth" || merged.ScopeID != "team" {
+		t.Fatalf("merged fields = {content:%q source:%q session:%q agent:%q scope:%q}, want incoming nonblank fields to replace whitespace-only placeholders", merged.Content, merged.SourceType, merged.SessionID, merged.AgentID, merged.ScopeID)
+	}
+}
+
 func TestMergeRecallCandidateEvidenceKeepsStrongestImportance(t *testing.T) {
 	merged := mergeRecallCandidateEvidence(
 		RecallCandidate{MemoryID: "mem-auth-owner", Importance: 0.20, Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.90, Note: "original query"}}},
