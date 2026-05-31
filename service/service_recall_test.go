@@ -284,6 +284,31 @@ func TestServiceRecallUsesOptionalVectorStoreForSemanticRRF(t *testing.T) {
 	}
 }
 
+func TestServiceRecallSourceVectorRunsSemanticLaneWithoutConclusions(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	vectorStore := &fakeVectorStore{hits: []VectorSearchHit{{
+		MemoryID:   "vec-only",
+		SourceType: "vector",
+		Content:    "semantic-only recall content",
+		SessionID:  "sess-vector-only",
+		Score:      0.99,
+	}}}
+	svc.vectorStore = vectorStore
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+
+	trace, err := svc.Recall(context.Background(), RecallQuery{Peer: "peer-vector-only", Query: "semantic only", Sources: []string{"vector"}, Limit: 1})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	if len(vectorStore.queries) != 1 {
+		t.Fatalf("vector queries = %d, want source=vector to run semantic lane", len(vectorStore.queries))
+	}
+	if got := selectedRecallIDs(trace); !slices.Equal(got, []string{"vec-only"}) {
+		t.Fatalf("selected IDs = %v, want vector-only candidate", got)
+	}
+}
+
 func TestServiceRecallDeduplicatesVectorHitsByMemoryID(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

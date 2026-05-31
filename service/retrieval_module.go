@@ -53,7 +53,8 @@ func (r retrievalModule) Generate(ctx context.Context, q RecallQuery) ([]RecallC
 	if peer == "" {
 		return nil, fmt.Errorf("goncho: peer is required")
 	}
-	if !recallSourcesAllowConclusions(q.Sources) {
+	sourcePlan := recallSourcePlan(q.Sources)
+	if !sourcePlan.IncludeConclusions && !sourcePlan.IncludeVector {
 		return []RecallCandidate{}, nil
 	}
 	workspaceID := strings.TrimSpace(q.WorkspaceID)
@@ -61,18 +62,24 @@ func (r retrievalModule) Generate(ctx context.Context, q RecallQuery) ([]RecallC
 		workspaceID = r.workspaceID
 	}
 	memoryScope := normalizeMemoryScope(q.ScopeID, "")
-	hits, err := findConclusions(ctx, r.db, workspaceID, "", r.observer, peer, q.Query, q.SessionKey, memoryScope, compiledSearchFilter{}, recallCandidateSearchLimit(q.Limit))
-	if err != nil {
-		return nil, err
+	var out []RecallCandidate
+	if sourcePlan.IncludeConclusions {
+		hits, err := findConclusions(ctx, r.db, workspaceID, "", r.observer, peer, q.Query, q.SessionKey, memoryScope, compiledSearchFilter{}, recallCandidateSearchLimit(q.Limit))
+		if err != nil {
+			return nil, err
+		}
+		out = sliceutil.Map(hits, func(hit SearchHit) RecallCandidate {
+			return recallCandidateFromSearchHit(q, hit, r.observer, memoryScope)
+		})
 	}
-	out := sliceutil.Map(hits, func(hit SearchHit) RecallCandidate {
-		return recallCandidateFromSearchHit(q, hit, r.observer, memoryScope)
-	})
-	out, err = r.mergeVectorRecall(ctx, q, workspaceID, "", peer, memoryScope, out)
-	if err != nil {
-		return nil, err
+	if sourcePlan.IncludeVector {
+		var err error
+		out, err = r.mergeVectorRecall(ctx, q, workspaceID, "", peer, memoryScope, out)
+		if err != nil {
+			return nil, err
+		}
 	}
-	out, err = r.expandAnnotationGraphRecall(ctx, q, workspaceID, peer, memoryScope, out)
+	out, err := r.expandAnnotationGraphRecall(ctx, q, workspaceID, peer, memoryScope, out)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +92,19 @@ func recallCandidateSearchLimit(selectionLimit int) int {
 		limit = 10
 	}
 	return normalizeSearchLimit(limit)
+}
+
+type recallCandidateSourcePlan struct {
+	IncludeConclusions bool
+	IncludeVector      bool
+}
+
+func recallSourcePlan(sources []string) recallCandidateSourcePlan {
+	includeConclusions := recallSourcesAllowConclusions(sources)
+	return recallCandidateSourcePlan{
+		IncludeConclusions: includeConclusions,
+		IncludeVector:      includeConclusions || sourcefilter.Allows(sources, "vector", true),
+	}
 }
 
 func recallSourcesAllowConclusions(sources []string) bool {
