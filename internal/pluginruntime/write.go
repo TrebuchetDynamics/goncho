@@ -1,25 +1,24 @@
 package pluginruntime
 
 import (
-	"sync"
-
-	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/evidence"
+	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/asyncwrite"
 	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/session"
 	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/writefrequency"
+	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/writerouter"
 )
 
 const (
-	GonchoWriteFlushed     = "goncho_write_flushed"
-	GonchoWriteDeferred    = "goncho_write_deferred"
-	GonchoWriteQueued      = "goncho_write_queued"
-	GonchoWriteFlushFailed = "goncho_write_flush_failed"
+	GonchoWriteFlushed     = writerouter.Flushed
+	GonchoWriteDeferred    = writerouter.Deferred
+	GonchoWriteQueued      = writerouter.Queued
+	GonchoWriteFlushFailed = writerouter.FlushFailed
 
-	GonchoAsyncEnqueued    = "goncho_async_enqueued"
-	GonchoAsyncFlushed     = "goncho_async_flushed"
-	GonchoAsyncRetry       = "goncho_async_retry"
-	GonchoAsyncFlushFailed = "goncho_async_flush_failed"
-	GonchoAsyncShutdown    = "goncho_async_shutdown"
-	GonchoAsyncClosed      = "goncho_async_closed"
+	GonchoAsyncEnqueued    = asyncwrite.Enqueued
+	GonchoAsyncFlushed     = asyncwrite.Flushed
+	GonchoAsyncRetry       = asyncwrite.Retry
+	GonchoAsyncFlushFailed = asyncwrite.FlushFailed
+	GonchoAsyncShutdown    = asyncwrite.Shutdown
+	GonchoAsyncClosed      = asyncwrite.Closed
 )
 
 type WriteFrequencyMode = writefrequency.Mode
@@ -46,185 +45,20 @@ type PluginSessionFlusher = session.Flusher
 
 type PluginSessionFlusherFunc = session.FlusherFunc
 
-type PluginWriteRouterConfig struct {
-	Frequency   PluginWriteFrequency
-	Flusher     PluginSessionFlusher
-	AsyncWriter *PluginAsyncWriter
-}
+type PluginWriteRouterConfig = writerouter.Config
 
-type PluginWriteRouter struct {
-	frequency   PluginWriteFrequency
-	flusher     PluginSessionFlusher
-	asyncWriter *PluginAsyncWriter
-	turn        int
-}
+type PluginWriteRouter = writerouter.Router
 
 func NewPluginWriteRouter(cfg PluginWriteRouterConfig) *PluginWriteRouter {
-	frequency := cfg.Frequency
-	if frequency.Mode == "" || frequency.Mode == WriteFrequencyInvalid {
-		frequency = PluginWriteFrequency{Mode: WriteFrequencyAsync, Raw: "async"}
-	}
-	return &PluginWriteRouter{frequency: frequency, flusher: cfg.Flusher, asyncWriter: cfg.AsyncWriter}
+	return writerouter.New(cfg)
 }
 
-type PluginWriteResult struct {
-	Code     string
-	Evidence []string
-}
+type PluginWriteResult = writerouter.Result
 
-func (r *PluginWriteRouter) Save(session PluginMemorySession) PluginWriteResult {
-	if r == nil {
-		return PluginWriteResult{Code: GonchoWriteDeferred}
-	}
-	r.turn++
-	switch r.frequency.Mode {
-	case WriteFrequencyAsync:
-		if r.asyncWriter == nil {
-			return PluginWriteResult{Code: GonchoWriteDeferred}
-		}
-		result := r.asyncWriter.Enqueue(session)
-		if result.Code == GonchoAsyncEnqueued {
-			return PluginWriteResult{Code: GonchoWriteQueued}
-		}
-		return PluginWriteResult{Code: GonchoWriteFlushFailed, Evidence: []string{result.Code}}
-	case WriteFrequencyTurn:
-		return r.flush(session)
-	case WriteFrequencySession:
-		if r.asyncWriter != nil {
-			r.asyncWriter.Cache(session)
-		}
-		return PluginWriteResult{Code: GonchoWriteDeferred}
-	case WriteFrequencyEvery:
-		if r.frequency.Every > 0 && r.turn%r.frequency.Every == 0 {
-			return r.flush(session)
-		}
-		return PluginWriteResult{Code: GonchoWriteDeferred}
-	default:
-		return PluginWriteResult{Code: GonchoWriteDeferred}
-	}
-}
-
-func (r *PluginWriteRouter) flush(session PluginMemorySession) PluginWriteResult {
-	if r.flusher == nil {
-		return PluginWriteResult{Code: GonchoWriteFlushFailed}
-	}
-	if err := r.flusher.FlushPluginSession(session); err != nil {
-		return PluginWriteResult{Code: GonchoWriteFlushFailed, Evidence: []string{GonchoWriteFlushFailed}}
-	}
-	return PluginWriteResult{Code: GonchoWriteFlushed}
-}
-
-type PluginAsyncWriter struct {
-	mu      sync.Mutex
-	flusher PluginSessionFlusher
-	queue   []PluginMemorySession
-	cache   map[string]PluginMemorySession
-	closed  bool
-}
+type PluginAsyncWriter = asyncwrite.Writer
 
 func NewPluginAsyncWriter(flusher PluginSessionFlusher) *PluginAsyncWriter {
-	return &PluginAsyncWriter{flusher: flusher, cache: map[string]PluginMemorySession{}}
+	return asyncwrite.NewWriter(flusher)
 }
 
-type PluginAsyncResult struct {
-	Code     string
-	Flushed  int
-	Pending  int
-	Evidence []string
-}
-
-func (r PluginAsyncResult) HasEvidence(code string) bool {
-	return evidence.Has(r.Evidence, code)
-}
-
-func (w *PluginAsyncWriter) Enqueue(session PluginMemorySession) PluginAsyncResult {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.closed {
-		return PluginAsyncResult{Code: GonchoAsyncClosed, Pending: len(w.queue) + len(w.cache)}
-	}
-	w.queue = append(w.queue, session)
-	return PluginAsyncResult{Code: GonchoAsyncEnqueued, Pending: len(w.queue) + len(w.cache)}
-}
-
-func (w *PluginAsyncWriter) Cache(session PluginMemorySession) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.cache == nil {
-		w.cache = map[string]PluginMemorySession{}
-	}
-	w.cache[session.Key] = session
-}
-
-func (w *PluginAsyncWriter) FlushAll() PluginAsyncResult {
-	w.mu.Lock()
-	items := append([]PluginMemorySession(nil), w.queue...)
-	w.queue = nil
-	cacheKeys := make([]string, 0, len(w.cache))
-	for key, session := range w.cache {
-		cacheKeys = append(cacheKeys, key)
-		items = append(items, session)
-	}
-	w.mu.Unlock()
-
-	var result PluginAsyncResult
-	failedQueue := make([]PluginMemorySession, 0)
-	failedCache := map[string]PluginMemorySession{}
-	for i, session := range items {
-		if err := w.flushWithRetry(session, &result); err != nil {
-			if i < len(items)-len(cacheKeys) {
-				failedQueue = append(failedQueue, session)
-			} else {
-				failedCache[session.Key] = session
-			}
-			continue
-		}
-		result.Flushed++
-	}
-
-	w.mu.Lock()
-	if len(failedQueue) > 0 {
-		w.queue = append(failedQueue, w.queue...)
-	}
-	for _, key := range cacheKeys {
-		delete(w.cache, key)
-	}
-	for key, session := range failedCache {
-		w.cache[key] = session
-	}
-	result.Pending = len(w.queue) + len(w.cache)
-	w.mu.Unlock()
-
-	if result.Pending > 0 {
-		result.Code = GonchoAsyncFlushFailed
-		result.Evidence = evidence.Append(result.Evidence, GonchoAsyncFlushFailed)
-		return result
-	}
-	result.Code = GonchoAsyncFlushed
-	return result
-}
-
-func (w *PluginAsyncWriter) Shutdown() PluginAsyncResult {
-	result := w.FlushAll()
-	w.mu.Lock()
-	w.closed = true
-	result.Code = GonchoAsyncShutdown
-	result.Pending = len(w.queue) + len(w.cache)
-	w.mu.Unlock()
-	return result
-}
-
-func (w *PluginAsyncWriter) flushWithRetry(session PluginMemorySession, result *PluginAsyncResult) error {
-	if w.flusher == nil {
-		return errPluginAsyncNoFlusher{}
-	}
-	if err := w.flusher.FlushPluginSession(session); err != nil {
-		result.Evidence = evidence.Append(result.Evidence, GonchoAsyncRetry)
-		return w.flusher.FlushPluginSession(session)
-	}
-	return nil
-}
-
-type errPluginAsyncNoFlusher struct{}
-
-func (errPluginAsyncNoFlusher) Error() string { return "goncho async writer: no flusher configured" }
+type PluginAsyncResult = asyncwrite.Result

@@ -1,16 +1,14 @@
 package pluginruntime
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/evidence"
+	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/ids"
 	workspacepkg "github.com/TrebuchetDynamics/goncho/workspace"
 )
 
@@ -282,10 +280,10 @@ func ResolvePluginSessionName(cfg PluginConfig, input SessionNameInput) string {
 			return manual
 		}
 	}
-	if title := sanitizePluginID(input.Title); title != "" {
+	if title := ids.Sanitize(input.Title); title != "" {
 		return withPluginPeerPrefix(cfg, title)
 	}
-	if key := sanitizePluginID(input.GatewaySessionKey); key != "" {
+	if key := ids.Sanitize(input.GatewaySessionKey); key != "" {
 		return enforcePluginSessionIDLimit(key, input.GatewaySessionKey)
 	}
 	strategy := strings.TrimSpace(cfg.SessionStrategy)
@@ -296,12 +294,12 @@ func ResolvePluginSessionName(cfg PluginConfig, input SessionNameInput) string {
 		return withPluginPeerPrefix(cfg, strings.TrimSpace(input.SessionID))
 	}
 	if strategy == "global" {
-		if workspace := sanitizePluginID(cfg.WorkspaceID); workspace != "" {
+		if workspace := ids.Sanitize(cfg.WorkspaceID); workspace != "" {
 			return workspace
 		}
 		return workspacepkg.DefaultWorkspaceID
 	}
-	return withPluginPeerPrefix(cfg, sanitizePluginID(filepath.Base(cwd)))
+	return withPluginPeerPrefix(cfg, ids.Sanitize(filepath.Base(cwd)))
 }
 
 func withPluginPeerPrefix(cfg PluginConfig, value string) string {
@@ -310,21 +308,14 @@ func withPluginPeerPrefix(cfg PluginConfig, value string) string {
 		return ""
 	}
 	if cfg.SessionPeerPrefix && strings.TrimSpace(cfg.PeerName) != "" {
-		return sanitizePluginID(cfg.PeerName) + "-" + value
+		return ids.Sanitize(cfg.PeerName) + "-" + value
 	}
 	return value
 }
 
 func enforcePluginSessionIDLimit(sanitized, original string) string {
 	const maxLen = 120
-	const hashLen = 12
-	if len(sanitized) <= maxLen {
-		return sanitized
-	}
-	sum := sha256.Sum256([]byte(original))
-	digest := hex.EncodeToString(sum[:])[:hashLen]
-	prefixLen := maxLen - hashLen - 1
-	return strings.TrimRight(sanitized[:prefixLen], "-") + "-" + digest
+	return ids.EnforceLimit(sanitized, original, maxLen)
 }
 
 type PluginPeerInput struct {
@@ -362,19 +353,7 @@ func ResolvePluginPeerNames(input PluginPeerInput) PluginPeerResolution {
 		assistant = "hermes-assistant"
 	}
 	return PluginPeerResolution{
-		UserPeerID:      sanitizePluginID(user),
-		AssistantPeerID: sanitizePluginID(assistant),
+		UserPeerID:      ids.Sanitize(user),
+		AssistantPeerID: ids.Sanitize(assistant),
 	}
-}
-
-var pluginIDUnsafe = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
-
-func sanitizePluginID(raw string) string {
-	value := strings.TrimSpace(raw)
-	if value == "" {
-		return ""
-	}
-	value = pluginIDUnsafe.ReplaceAllString(value, "-")
-	value = strings.Trim(value, "-")
-	return value
 }
