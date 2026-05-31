@@ -189,7 +189,7 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 			conversationOrder = append(conversationOrder, key)
 		}
 		scales[scale] = struct{}{}
-		judgment, hasJudgment := judgments.find(c)
+		judgment, hasJudgment := judgments.Find(c)
 		score := beamServiceCaseScore(c)
 		aiAnswer := ""
 		nuggets := []string{}
@@ -276,7 +276,7 @@ func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversi
 		diagnostics["leakage"] = *leakageChecks
 	}
 	if judgments != nil {
-		diagnostics["judgments"] = judgments.diagnostics(report)
+		diagnostics["judgments"] = judgments.Diagnostics(report)
 	}
 	return diagnostics
 }
@@ -451,7 +451,7 @@ func beamServiceCaseConversationID(c goncho.RecallBenchmarkCaseReport) string {
 }
 
 func beamServiceArtifactScore(c goncho.RecallBenchmarkCaseReport, judgments *beamServiceJudgmentSet) float64 {
-	if row, ok := judgments.find(c); ok {
+	if row, ok := judgments.Find(c); ok {
 		return shared.RoundMetric(row.Score)
 	}
 	return beamServiceCaseScore(c)
