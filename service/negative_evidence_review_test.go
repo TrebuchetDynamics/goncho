@@ -49,7 +49,7 @@ func TestNegativeEvidenceReviewsDoNotCollapseDistinctProfiles(t *testing.T) {
 	}
 }
 
-func TestNegativeEvidenceReviewSubjectIDEscapesDelimiterBearingDimensions(t *testing.T) {
+func TestNegativeEvidenceReviewSubjectIDEscapesAmbiguousDimensions(t *testing.T) {
 	left := negativeEvidenceReviewSubjectID(NegativeEvidenceCandidate{
 		Kind:        NegativeEvidenceRepeatedToolFailure,
 		WorkspaceID: "default",
@@ -71,6 +71,29 @@ func TestNegativeEvidenceReviewSubjectIDEscapesDelimiterBearingDimensions(t *tes
 	}
 	if strings.Contains(left, "a:peer-b") || strings.Contains(right, "b:peer-c") {
 		t.Fatalf("subject ids expose raw delimiter-bearing dimensions: left=%q right=%q", left, right)
+	}
+
+	withSpace := negativeEvidenceReviewSubjectID(NegativeEvidenceCandidate{
+		Kind:        NegativeEvidenceRepeatedToolFailure,
+		WorkspaceID: "default",
+		ProfileID:   "a b",
+		PeerID:      "c",
+		SessionKey:  "sess-review",
+		ToolName:    "bash",
+	})
+	withHyphen := negativeEvidenceReviewSubjectID(NegativeEvidenceCandidate{
+		Kind:        NegativeEvidenceRepeatedToolFailure,
+		WorkspaceID: "default",
+		ProfileID:   "a-b",
+		PeerID:      "c",
+		SessionKey:  "sess-review",
+		ToolName:    "bash",
+	})
+	if withSpace == withHyphen {
+		t.Fatalf("subject ids collapsed space and hyphen dimensions: %q", withSpace)
+	}
+	if strings.Contains(withSpace, " ") {
+		t.Fatalf("subject id exposes raw spaces: %q", withSpace)
 	}
 }
 

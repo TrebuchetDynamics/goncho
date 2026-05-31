@@ -235,7 +235,6 @@ func negativeEvidenceReviewSubjectParts(candidate NegativeEvidenceCandidate) []s
 
 func negativeEvidenceSubjectToken(part string) string {
 	part = strings.TrimSpace(part)
-	part = strings.ReplaceAll(part, " ", "-")
 	if part == "" {
 		return "unknown"
 	}
