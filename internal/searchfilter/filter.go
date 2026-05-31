@@ -98,7 +98,8 @@ func parseFilterMap(raw map[string]any, path []string) (Expression, error) {
 	}
 
 	children := make([]Expression, 0, len(raw))
-	for key, value := range raw {
+	for _, key := range sortedMapKeys(raw) {
+		value := raw[key]
 		switch key {
 		case "AND", "OR", "NOT":
 			child, err := parseLogicalFilter(key, value, path)
@@ -167,7 +168,8 @@ func parseMetadataFilter(value any) (Expression, error) {
 
 func parseMetadataMap(raw map[string]any, path []string) (Expression, error) {
 	children := make([]Expression, 0, len(raw))
-	for key, value := range raw {
+	for _, key := range sortedMapKeys(raw) {
+		value := raw[key]
 		fieldPath := appendPath(path, key)
 		if nested, ok := value.(map[string]any); ok {
 			classification := classifyOperatorMap(nested)

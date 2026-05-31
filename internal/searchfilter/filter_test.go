@@ -106,6 +106,22 @@ func TestGrammarRejectsUnknownFieldsAndOperators(t *testing.T) {
 	}
 }
 
+func TestGrammarReportsFirstUnsupportedFilterDeterministically(t *testing.T) {
+	for i := 0; i < 50; i++ {
+		_, err := searchfilter.Parse(map[string]any{
+			"zz_workspace_slug": "prod",
+			"aa_workspace_id":   "workspace-1",
+		})
+		var unsupported *searchfilter.UnsupportedFilterError
+		if !errors.As(err, &unsupported) {
+			t.Fatalf("Parse err = %T %[1]v, want UnsupportedFilterError", err)
+		}
+		if unsupported.Field != "aa_workspace_id" {
+			t.Fatalf("iteration %d unsupported field = %q, want deterministic lexicographic first field aa_workspace_id", i, unsupported.Field)
+		}
+	}
+}
+
 func TestGrammarReportsFirstUnknownOperatorDeterministically(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		_, err := searchfilter.Parse(map[string]any{
