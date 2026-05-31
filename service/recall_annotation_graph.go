@@ -92,9 +92,7 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 		return base, nil
 	}
 	out := sliceutil.Clone(base)
-	indexByID := sliceutil.IndexBy(out, func(candidate RecallCandidate) (string, bool) {
-		return candidate.MemoryID, true
-	})
+	indexByID := recallCandidateIndexByStableMemoryID(out)
 	for _, source := range base {
 		for _, evidence := range source.Provenance {
 			if evidence.Kind != "fact" || evidence.Source != "goncho_memory_annotations" {
@@ -635,15 +633,20 @@ func annotationGraphVersionEvidence(sourceMemoryID, targetMemoryID, firstRelatio
 }
 
 func appendAnnotationGraphCandidate(out []RecallCandidate, indexByID map[string]int, candidate RecallCandidate, evidence EvidenceItem) []RecallCandidate {
-	if idx, exists := indexByID[candidate.MemoryID]; exists {
-		if !recallCandidateHasEvidence(out[idx], evidence.Kind, evidence.ID) {
-			out[idx].Provenance = append(out[idx].Provenance, evidence)
+	memoryID, stable := recallCandidateStableMemoryID(candidate)
+	if stable {
+		if idx, exists := lookupRecallCandidateStableIndex(out, indexByID, memoryID); exists {
+			if !recallCandidateHasEvidence(out[idx], evidence.Kind, evidence.ID) {
+				out[idx].Provenance = append(out[idx].Provenance, evidence)
+			}
+			return out
 		}
-		return out
 	}
 	candidate.Provenance = append(candidate.Provenance, evidence)
 	out = append(out, candidate)
-	indexByID[candidate.MemoryID] = len(out) - 1
+	if stable {
+		indexByID[memoryID] = len(out) - 1
+	}
 	return out
 }
 

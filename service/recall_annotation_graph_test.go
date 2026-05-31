@@ -838,6 +838,36 @@ func TestRecallExpandsNegationThroughDurableKGRelation(t *testing.T) {
 	}
 }
 
+func TestAppendAnnotationGraphCandidateMergesTrimEquivalentMemoryIDs(t *testing.T) {
+	out := []RecallCandidate{{MemoryID: " mem-target ", Provenance: []EvidenceItem{{Kind: "fact", ID: "source-fact"}}}}
+	indexByID := map[string]int{" mem-target ": 0}
+	evidence := EvidenceItem{Kind: "graph_relation", ID: "path-owner-target"}
+
+	out = appendAnnotationGraphCandidate(out, indexByID, RecallCandidate{MemoryID: "mem-target"}, evidence)
+
+	if len(out) != 1 {
+		t.Fatalf("candidate count = %d, want trim-equivalent graph target merged into existing memory: %+v", len(out), out)
+	}
+	if !evidenceListHas(out[0].Provenance, "graph_relation", "path-owner-target") {
+		t.Fatalf("provenance = %+v, want graph path evidence appended to existing candidate", out[0].Provenance)
+	}
+}
+
+func TestAppendAnnotationGraphCandidateTreatsBlankMemoryIDsAsUnstable(t *testing.T) {
+	out := []RecallCandidate{{MemoryID: "   ", Provenance: []EvidenceItem{{Kind: "fact", ID: "source-fact"}}}}
+	indexByID := map[string]int{"": 0}
+	evidence := EvidenceItem{Kind: "graph_relation", ID: "path-anonymous-target"}
+
+	out = appendAnnotationGraphCandidate(out, indexByID, RecallCandidate{MemoryID: "\t", Provenance: []EvidenceItem{{Kind: "fact", ID: "target-fact"}}}, evidence)
+
+	if len(out) != 2 {
+		t.Fatalf("candidate count = %d, want blank graph target memory IDs kept as unstable candidates: %+v", len(out), out)
+	}
+	if !evidenceListHas(out[1].Provenance, "graph_relation", "path-anonymous-target") {
+		t.Fatalf("new candidate provenance = %+v, want graph path evidence appended", out[1].Provenance)
+	}
+}
+
 func lookupAnnotationID(t *testing.T, svc *Service, memoryID int64, value string) int64 {
 	t.Helper()
 	var id int64

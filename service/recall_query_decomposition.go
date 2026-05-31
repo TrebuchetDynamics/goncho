@@ -46,7 +46,7 @@ func (g queryDecomposingRecallGenerator) Generate(ctx context.Context, q RecallQ
 		return nil, err
 	}
 	out := []RecallCandidate{}
-	indexByMemoryID := map[string]int{}
+	indexByMemoryID := recallCandidateIndexByStableMemoryID(out)
 	for _, query := range plannedRecallQueries(q, g.planner) {
 		items, err := g.base.Generate(ctx, query)
 		if err != nil {
@@ -99,11 +99,6 @@ func appendMergedRecallCandidates(out []RecallCandidate, indexByMemoryID map[str
 		out = append(out, item)
 	}
 	return out
-}
-
-func recallCandidateStableMemoryID(candidate RecallCandidate) (string, bool) {
-	memoryID := strings.TrimSpace(candidate.MemoryID)
-	return memoryID, memoryID != ""
 }
 
 func recallCandidateEvidenceKey(evidence EvidenceItem) string {

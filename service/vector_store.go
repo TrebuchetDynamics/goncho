@@ -119,7 +119,7 @@ func semanticMemoryID(hit VectorSearchHit) string {
 
 func mergeVectorRecallCandidates(base []RecallCandidate, hits []VectorSearchHit, observer, scopeID string, sources []string) []RecallCandidate {
 	out := sliceutil.Clone(base)
-	indexByID := sliceutil.IndexBy(out, recallCandidateStableMemoryID)
+	indexByID := recallCandidateIndexByStableMemoryID(out)
 	for _, hit := range vectorHitsByScoreDesc(hits) {
 		if strings.TrimSpace(hit.Content) == "" || !vectorHitAllowedBySources(sources, hit) {
 			continue
