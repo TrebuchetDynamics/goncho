@@ -106,6 +106,43 @@ func TestGrammarRejectsUnknownFieldsAndOperators(t *testing.T) {
 	}
 }
 
+func TestGrammarRejectsEmptyOperatorMaps(t *testing.T) {
+	tests := []struct {
+		name      string
+		filter    map[string]any
+		wantField string
+	}{
+		{
+			name:      "top-level field",
+			filter:    map[string]any{"session_id": map[string]any{}},
+			wantField: "session_id",
+		},
+		{
+			name: "metadata field",
+			filter: map[string]any{"metadata": map[string]any{
+				"score": map[string]any{},
+			}},
+			wantField: "metadata.score",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := searchfilter.Parse(tt.filter)
+			var unsupported *searchfilter.UnsupportedFilterError
+			if !errors.As(err, &unsupported) {
+				t.Fatalf("Parse err = %T %[1]v, want UnsupportedFilterError", err)
+			}
+			if unsupported.Field != tt.wantField {
+				t.Fatalf("UnsupportedFilterError.Field = %q, want %q", unsupported.Field, tt.wantField)
+			}
+			if unsupported.Reason == "" {
+				t.Fatalf("UnsupportedFilterError.Reason is empty for %+v", unsupported)
+			}
+		})
+	}
+}
+
 func TestGrammarReportsFirstUnsupportedFilterDeterministically(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		_, err := searchfilter.Parse(map[string]any{

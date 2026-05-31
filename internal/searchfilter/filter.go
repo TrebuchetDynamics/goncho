@@ -172,6 +172,9 @@ func parseMetadataMap(raw map[string]any, path []string) (Expression, error) {
 		fieldPath := appendPath(path, key)
 		if nested, ok := value.(map[string]any); ok {
 			classification := classifyOperatorMap(nested)
+			if classification.Empty {
+				return Expression{}, unsupportedFilter(strings.Join(fieldPath, "."), "", "operator map must not be empty")
+			}
 			if classification.Mixed {
 				return Expression{}, unsupportedFilter(strings.Join(fieldPath, "."), classification.UnknownOperator, "unknown filter operator")
 			}
@@ -223,6 +226,9 @@ var supportedFilterOperators = map[string]Operator{
 }
 
 func parseOperatorConditions(field string, rawOps map[string]any) (Expression, error) {
+	if len(rawOps) == 0 {
+		return Expression{}, unsupportedFilter(field, "", "operator map must not be empty")
+	}
 	children := make([]Expression, 0, len(rawOps))
 	for _, rawOp := range sortedMapKeys(rawOps) {
 		rawValue := rawOps[rawOp]
@@ -276,6 +282,7 @@ func isSupportedTopLevelFilterField(field string) bool {
 }
 
 type operatorMapClassification struct {
+	Empty           bool
 	Valid           bool
 	Mixed           bool
 	UnknownOperator string
@@ -287,7 +294,7 @@ func isOperatorMap(raw map[string]any) bool {
 
 func classifyOperatorMap(raw map[string]any) operatorMapClassification {
 	if len(raw) == 0 {
-		return operatorMapClassification{}
+		return operatorMapClassification{Empty: true}
 	}
 
 	knownOperators := 0
