@@ -44,3 +44,9 @@ func TestNegationFactIntentKeepsCoordinatedNegativeObject(t *testing.T) {
 		t.Fatalf("negation fact score = %v, want 1 for coordinated negative object", score)
 	}
 }
+
+func TestMetricFactIntentKeepsCommaGroupedMetricValue(t *testing.T) {
+	if score := Score("how many queue rows?", "Queue rows is 1,024 rows."); score != 1 {
+		t.Fatalf("metric fact score = %v, want 1 for comma-grouped metric value", score)
+	}
+}

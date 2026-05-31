@@ -319,7 +319,7 @@ func searchMetricAnswerParts(sentence string) (key, value string, ok bool) {
 		return "", "", false
 	}
 	key = cleanFactObject(match[1])
-	value = cleanFactValue(match[2])
+	value = cleanMetricValue(match[2])
 	return key, value, searchFactObjectLooksAssertive(key) && searchMetricValueLooksAssertive(value)
 }
 
@@ -790,6 +790,14 @@ func cleanFactObject(value string) string {
 func cleanFactValue(value string) string {
 	value = textutil.TrimSpaceAndQuotes(value)
 	if before, ok := textutil.CutBeforeAnySubstringFold(value, ";", ",", " because ", " but ", " and "); ok && strings.TrimSpace(before) != "" {
+		value = strings.TrimSpace(before)
+	}
+	return value
+}
+
+func cleanMetricValue(value string) string {
+	value = textutil.TrimSpaceAndQuotes(value)
+	if before, ok := textutil.CutBeforeAnySubstringFold(value, ";", " because ", " but ", " and "); ok && strings.TrimSpace(before) != "" {
 		value = strings.TrimSpace(before)
 	}
 	return value
