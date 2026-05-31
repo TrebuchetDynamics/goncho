@@ -73,28 +73,44 @@ func (t *GonchoSearchTool) Description() string {
 	return "Search local Goncho memory with peer, session, scope, and token controls."
 }
 func (t *GonchoSearchTool) Schema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"profile_id":{"type":"string"},"peer_id":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"},"max_tokens":{"type":"integer"}},"required":["peer_id","query"]}`)
+	return json.RawMessage(`{"type":"object","properties":{"profile_id":{"type":"string"},"peer_id":{"type":"string"},"query":{"type":"string"},"session_key":{"type":"string"},"scope":{"type":"string"},"limit":{"type":"integer"},"max_tokens":{"type":"integer"}},"required":["peer_id","query"]}`)
 }
 func (t *GonchoSearchTool) Spec() toolmeta.OperationSpec {
 	return gonchoPublicToolSpec(t.Name(), t.Description(), t.Schema(), false, true)
 }
+
+type gonchoSearchToolRequest struct {
+	ProfileID  string `json:"profile_id"`
+	PeerID     string `json:"peer_id"`
+	Peer       string `json:"peer"`
+	Query      string `json:"query"`
+	SessionKey string `json:"session_key"`
+	Scope      string `json:"scope"`
+	Limit      int    `json:"limit"`
+	MaxTokens  int    `json:"max_tokens"`
+}
+
+func (r gonchoSearchToolRequest) searchParams() SearchParams {
+	return SearchParams{
+		ProfileID:  r.ProfileID,
+		Peer:       textutil.FirstNonBlank(r.PeerID, r.Peer),
+		Query:      r.Query,
+		SessionKey: r.SessionKey,
+		Scope:      r.Scope,
+		Limit:      r.Limit,
+		MaxTokens:  r.MaxTokens,
+	}
+}
+
 func (t *GonchoSearchTool) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	if t == nil || t.svc == nil {
 		return nil, errors.New("goncho_search: service is required")
 	}
-	var in struct {
-		ProfileID  string `json:"profile_id"`
-		PeerID     string `json:"peer_id"`
-		Peer       string `json:"peer"`
-		Query      string `json:"query"`
-		SessionKey string `json:"session_key"`
-		Scope      string `json:"scope"`
-		MaxTokens  int    `json:"max_tokens"`
-	}
+	var in gonchoSearchToolRequest
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("goncho_search: %w", err)
 	}
-	out, err := t.svc.Search(ctx, SearchParams{ProfileID: in.ProfileID, Peer: textutil.FirstNonBlank(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, Scope: in.Scope, MaxTokens: in.MaxTokens})
+	out, err := t.svc.Search(ctx, in.searchParams())
 	if err != nil {
 		return nil, fmt.Errorf("goncho_search: %w", err)
 	}

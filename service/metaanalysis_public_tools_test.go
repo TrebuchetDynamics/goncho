@@ -54,6 +54,28 @@ func TestGonchoGoalPublicContextToolGeneratesPrimerWithinTokenBudgetE2E(t *testi
 	}
 }
 
+func TestGonchoSearchToolHonorsLimitRequest(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+	peer := "peer-search-limit"
+	sessionKey := "session-search-limit"
+
+	for _, claim := range []string{
+		"Search limit regression alpha orchid marker.",
+		"Search limit regression beta orchid marker.",
+	} {
+		if _, err := svc.Conclude(ctx, ConcludeParams{Peer: peer, Conclusion: claim, SessionKey: sessionKey}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	searched := executeMemoryTool(t, ctx, NewGonchoSearchTool(svc), `{"peer_id":"`+peer+`","query":"orchid marker","session_key":"`+sessionKey+`","limit":1}`)
+	if intField(t, searched, "count") != 1 {
+		t.Fatalf("search output = %+v, want public tool limit to cap results", searched)
+	}
+}
+
 func TestGonchoRecallToolCompactOutputKeepsDiagnosticsWithoutLargeTracePayload(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
