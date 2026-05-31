@@ -2,6 +2,12 @@ package score
 
 import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 
+const (
+	WinnerCandidate = "candidate"
+	WinnerBaseline  = "baseline"
+	WinnerTie       = "tie"
+)
+
 type Summary struct {
 	PairedCount       int
 	BaselineAvgScore  float64
@@ -26,9 +32,9 @@ func (s *Summary) Add(baselineScore, candidateScore float64, winner string) {
 
 func (s *Summary) AddWinner(winner string) {
 	switch winner {
-	case "candidate":
+	case WinnerCandidate:
 		s.CandidateWins++
-	case "baseline":
+	case WinnerBaseline:
 		s.BaselineWins++
 	default:
 		s.Ties++
@@ -38,10 +44,10 @@ func (s *Summary) AddWinner(winner string) {
 func Winner(baseScore, candidateScore float64) string {
 	switch {
 	case candidateScore > baseScore:
-		return "candidate"
+		return WinnerCandidate
 	case baseScore > candidateScore:
-		return "baseline"
+		return WinnerBaseline
 	default:
-		return "tie"
+		return WinnerTie
 	}
 }

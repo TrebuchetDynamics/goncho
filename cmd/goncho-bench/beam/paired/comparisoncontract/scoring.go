@@ -6,6 +6,12 @@ import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/compari
 // score.Summary contract with lower-level comparison helpers.
 type ScoreSummary = score.Summary
 
+const (
+	WinnerCandidate = score.WinnerCandidate
+	WinnerBaseline  = score.WinnerBaseline
+	WinnerTie       = score.WinnerTie
+)
+
 // Winner preserves the comparisoncontract winner API while delegating to the
 // focused score contract.
 func Winner(baseScore, candidateScore float64) string {
