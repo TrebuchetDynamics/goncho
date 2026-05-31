@@ -286,6 +286,37 @@ func TestWebhookDeliveryRecordsSkippedWhenNoEndpoints(t *testing.T) {
 	}
 }
 
+func TestWebhookDeliveryRecordsSigningFailure(t *testing.T) {
+	store := &recordingWebhookDeliveryStore{
+		endpoints: []webhooks.WebhookDeliveryEndpoint{{
+			ID:          "we_signing",
+			WorkspaceID: "workspace-a",
+			URL:         "https://hooks.example/signing",
+		}},
+	}
+	client := &recordingWebhookHTTPClient{}
+	worker := testWebhookDeliveryWorker(store, client)
+	worker.Secret = ""
+
+	results, err := worker.Deliver(context.Background(), webhooks.WebhookDeliveryRequest{
+		WorkspaceID: "workspace-a",
+		Event:       mustTestWebhookEvent(t, "workspace-a"),
+		Attempt:     1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 || results[0].Status != webhooks.WebhookDeliveryFailed || results[0].ErrorClass != webhooks.WebhookDeliveryErrorSigning || results[0].Retry {
+		t.Fatalf("results = %+v, want terminal signing failure", results)
+	}
+	if len(client.calls) != 0 {
+		t.Fatalf("client calls = %+v, want no HTTP call when signing fails", client.calls)
+	}
+	if len(store.attempts) != 1 || store.attempts[0].Status != webhooks.WebhookDeliveryFailed || store.attempts[0].ErrorClass != webhooks.WebhookDeliveryErrorSigning {
+		t.Fatalf("attempts = %+v, want signing failure audit record", store.attempts)
+	}
+}
+
 func testWebhookDeliveryWorker(store webhooks.WebhookDeliveryStore, client webhooks.WebhookHTTPClient) webhooks.WebhookDeliveryWorker {
 	return webhooks.WebhookDeliveryWorker{
 		Store:       store,

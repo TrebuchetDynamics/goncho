@@ -161,10 +161,7 @@ func (w Worker) Deliver(ctx context.Context, req Request) ([]Result, error) {
 	}
 	if len(endpoints) == 0 {
 		result := w.result(Endpoint{WorkspaceID: workspaceID}, req.Event.Type, attempt, Skipped, 0, ErrorNone, "no webhook endpoints", false, nil, now)
-		if err := w.record(ctx, result, now); err != nil {
-			return []Result{result}, err
-		}
-		return []Result{result}, nil
+		return w.recordSingle(ctx, result, now)
 	}
 
 	body, err := Payload(req.Event, now)
@@ -173,7 +170,8 @@ func (w Worker) Deliver(ctx context.Context, req Request) ([]Result, error) {
 	}
 	signature, err := signing.SignPayload(body, w.Secret)
 	if err != nil {
-		return []Result{w.result(Endpoint{WorkspaceID: workspaceID}, req.Event.Type, attempt, Failed, 0, ErrorSigning, err.Error(), false, nil, now)}, nil
+		result := w.result(Endpoint{WorkspaceID: workspaceID}, req.Event.Type, attempt, Failed, 0, ErrorSigning, err.Error(), false, nil, now)
+		return w.recordSingle(ctx, result, now)
 	}
 
 	results := make([]Result, 0, len(endpoints))
@@ -260,6 +258,13 @@ func (w Worker) result(endpoint Endpoint, eventType eventcontract.Type, attempt 
 		NextRetryAt: nextRetryAt,
 		Evidence:    evidence,
 	}
+}
+
+func (w Worker) recordSingle(ctx context.Context, result Result, now time.Time) ([]Result, error) {
+	if err := w.record(ctx, result, now); err != nil {
+		return []Result{result}, err
+	}
+	return []Result{result}, nil
 }
 
 func (w Worker) record(ctx context.Context, result Result, now time.Time) error {
