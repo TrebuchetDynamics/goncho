@@ -663,10 +663,11 @@ func recallTemporalState(items []EvidenceItem) recallTemporalEvidenceState {
 	return state
 }
 
+const recallEvidenceNoteFieldTrimCutset = " .:()[]{}"
+
 func recallTemporalEvidenceNoteState(note string) recallTemporalEvidenceState {
 	state := recallTemporalEvidenceUnknown
 	for _, field := range recallTemporalEvidenceNoteFields(note) {
-		field = strings.Trim(field, " .:()[]{}")
 		switch {
 		case strings.HasPrefix(field, "superseded_by=") && strings.TrimSpace(strings.TrimPrefix(field, "superseded_by=")) != "":
 			return recallTemporalEvidenceSuperseded
@@ -684,14 +685,29 @@ func recallTemporalEvidenceNoteFields(note string) []string {
 	if note == "" {
 		return nil
 	}
-	return strings.FieldsFunc(note, func(r rune) bool {
-		switch r {
-		case ' ', '\t', '\n', '\r', ',', ';':
-			return true
-		default:
-			return false
+	fields := strings.FieldsFunc(note, recallEvidenceNoteFieldSeparator)
+	out := fields[:0]
+	for _, field := range fields {
+		field = recallNormalizeEvidenceNoteField(field)
+		if field == "" {
+			continue
 		}
-	})
+		out = append(out, field)
+	}
+	return out
+}
+
+func recallEvidenceNoteFieldSeparator(r rune) bool {
+	switch r {
+	case ' ', '\t', '\n', '\r', ',', ';':
+		return true
+	default:
+		return false
+	}
+}
+
+func recallNormalizeEvidenceNoteField(field string) string {
+	return strings.Trim(strings.TrimSpace(field), recallEvidenceNoteFieldTrimCutset)
 }
 
 var recallCurrentTruthIntentTokens = map[string]struct{}{
@@ -855,7 +871,7 @@ func recallEvidenceNoteValue(note, key string) (string, bool) {
 
 func recallEvidenceNoteFieldBoundary(r byte) bool {
 	switch r {
-	case ' ', '\t', '\n', '\r', ',', ';':
+	case ' ', '\t', '\n', '\r', ',', ';', '(', '[', '{':
 		return true
 	default:
 		return false
@@ -863,22 +879,22 @@ func recallEvidenceNoteFieldBoundary(r byte) bool {
 }
 
 func recallTrimTrailingEvidenceNoteFields(value string) string {
-	value = strings.TrimSpace(value)
+	value = recallNormalizeEvidenceNoteField(value)
 	if value == "" {
 		return ""
 	}
 	for _, separator := range []string{",", ";"} {
 		if before, _, ok := strings.Cut(value, separator); ok {
-			value = strings.TrimSpace(before)
+			value = recallNormalizeEvidenceNoteField(before)
 		}
 	}
 	fields := strings.Fields(value)
 	for i, field := range fields {
 		if i > 0 && strings.Contains(field, "=") {
-			return strings.Join(fields[:i], " ")
+			return recallNormalizeEvidenceNoteField(strings.Join(fields[:i], " "))
 		}
 	}
-	return value
+	return recallNormalizeEvidenceNoteField(value)
 }
 
 func recallQuerySpeakerTargets(query string) []string {
