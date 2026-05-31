@@ -257,6 +257,15 @@ func TestNormalizeLimitDefaultsToTenAndClampsAtHonchoMaximum(t *testing.T) {
 	}
 }
 
+func TestHasWildcardTrimsValuesLikeSourceFilters(t *testing.T) {
+	if !searchfilter.HasWildcard([]string{" * "}) {
+		t.Fatalf("HasWildcard should detect a wildcard after trimming source values")
+	}
+	if searchfilter.HasWildcard([]string{"", "source"}) {
+		t.Fatalf("HasWildcard should not treat blank values as wildcard in compiled search filters")
+	}
+}
+
 func mustParse(t *testing.T, raw map[string]any) searchfilter.Expression {
 	t.Helper()
 

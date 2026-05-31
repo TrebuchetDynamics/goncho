@@ -367,29 +367,32 @@ func Compile(expr Expression, peer string) (Compiled, error) {
 func compileComparisonFilter(expr Expression, peer string) (Compiled, error) {
 	switch expr.Field {
 	case "session_id":
-		values, err := compileEqualityFilterValues(expr, false)
+		valueSet, err := compileEqualityValueSet(expr, false)
 		if err != nil {
 			return Compiled{}, err
 		}
-		if len(values) == 0 {
+		if valueSet.DenyAll {
 			return Compiled{DenyAll: true}, nil
 		}
-		return Compiled{SessionIDs: values}, nil
+		return Compiled{SessionIDs: valueSet.Values}, nil
 	case "source":
-		values, err := compileEqualityFilterValues(expr, true)
+		valueSet, err := compileEqualityValueSet(expr, true)
 		if err != nil {
 			return Compiled{}, err
 		}
-		if len(values) == 0 {
+		if valueSet.DenyAll {
 			return Compiled{DenyAll: true}, nil
 		}
-		return Compiled{Sources: values}, nil
+		return Compiled{Sources: valueSet.Values}, nil
 	case "peer_id":
-		values, err := compileEqualityFilterValues(expr, false)
+		valueSet, err := compileEqualityValueSet(expr, false)
 		if err != nil {
 			return Compiled{}, err
 		}
-		if peerFilterMatches(values, peer) {
+		if valueSet.DenyAll {
+			return Compiled{DenyAll: true}, nil
+		}
+		if peerFilterMatches(valueSet.Values, peer) {
 			return Compiled{}, nil
 		}
 		return Compiled{DenyAll: true}, nil
@@ -401,6 +404,19 @@ func compileComparisonFilter(expr Expression, peer string) (Compiled, error) {
 		}
 		return Compiled{}, unsupportedFilter(expr.Field, string(expr.Operator), "unknown filter field")
 	}
+}
+
+type equalityValueSet struct {
+	Values  []string
+	DenyAll bool
+}
+
+func compileEqualityValueSet(expr Expression, lower bool) (equalityValueSet, error) {
+	values, err := compileEqualityFilterValues(expr, lower)
+	if err != nil {
+		return equalityValueSet{}, err
+	}
+	return equalityValueSet{Values: values, DenyAll: len(values) == 0}, nil
 }
 
 func compileEqualityFilterValues(expr Expression, lower bool) ([]string, error) {
@@ -497,5 +513,10 @@ func MergeSources(paramsSources, filterSources []string) (sources []string, deny
 }
 
 func HasWildcard(values []string) bool {
-	return slices.Contains(values, "*")
+	for _, value := range values {
+		if strings.TrimSpace(value) == "*" {
+			return true
+		}
+	}
+	return false
 }
