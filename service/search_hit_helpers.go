@@ -1,11 +1,9 @@
 package goncho
 
+import "github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+
 func conclusionsFromSearchHits(hits []SearchHit) []string {
-	conclusions := make([]string, 0, len(hits))
-	for _, hit := range hits {
-		if hit.Source == "conclusion" {
-			conclusions = append(conclusions, hit.Content)
-		}
-	}
-	return conclusions
+	return sliceutil.FilterMap(hits, func(hit SearchHit) (string, bool) {
+		return hit.Content, hit.Source == "conclusion"
+	})
 }

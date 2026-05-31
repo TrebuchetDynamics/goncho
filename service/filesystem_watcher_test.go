@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestFilesystemWatcherPreviewAppliesExplicitIncludeExcludeWithoutWriting(t *testing.T) {
@@ -126,10 +128,9 @@ func writeWatcherFixture(t *testing.T, root, rel, content string) {
 }
 
 func watcherCandidatePaths(candidates []FilesystemWatcherCandidate) []string {
-	out := make([]string, 0, len(candidates))
-	for _, candidate := range candidates {
-		out = append(out, candidate.RelativePath)
-	}
+	out := sliceutil.Map(candidates, func(candidate FilesystemWatcherCandidate) string {
+		return candidate.RelativePath
+	})
 	slices.Sort(out)
 	return out
 }

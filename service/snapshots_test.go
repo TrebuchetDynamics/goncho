@@ -4,6 +4,8 @@ import (
 	"context"
 	"slices"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestSnapshotManifestIsDeterministicAndGitOperationsAreAdapterOwned(t *testing.T) {
@@ -67,17 +69,9 @@ func TestSnapshotManifestIsDeterministicAndGitOperationsAreAdapterOwned(t *testi
 }
 
 func snapshotEntryKeys(entries []SnapshotEntry) []string {
-	out := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, entry.Key)
-	}
-	return out
+	return sliceutil.Map(entries, func(entry SnapshotEntry) string { return entry.Key })
 }
 
 func snapshotEntryKinds(entries []SnapshotEntry) []string {
-	out := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, entry.Kind)
-	}
-	return out
+	return sliceutil.Map(entries, func(entry SnapshotEntry) string { return entry.Kind })
 }

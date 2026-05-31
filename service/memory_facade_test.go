@@ -99,11 +99,7 @@ func TestMemoryFacadeAddSearchUpdateDeleteHistoryWithStableIDs(t *testing.T) {
 }
 
 func historyActions(events []MemoryHistoryEvent) []string {
-	out := make([]string, 0, len(events))
-	for _, event := range events {
-		out = append(out, event.Action)
-	}
-	return out
+	return sliceutil.Map(events, func(event MemoryHistoryEvent) string { return event.Action })
 }
 
 func historyContainsContent(events []MemoryHistoryEvent, want string) bool {

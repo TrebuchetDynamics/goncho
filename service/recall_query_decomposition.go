@@ -3,6 +3,8 @@ package goncho
 import (
 	"context"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type recallSubqueryPlanner func(RecallQuery) []RecallQuery
@@ -18,17 +20,15 @@ func newQueryDecomposingRecallGenerator(base recallCandidateGenerator, planner r
 
 func fixedRecallSubqueries(queries ...string) recallSubqueryPlanner {
 	return func(q RecallQuery) []RecallQuery {
-		out := make([]RecallQuery, 0, len(queries))
-		for _, query := range queries {
+		return sliceutil.FilterMap(queries, func(query string) (RecallQuery, bool) {
 			query = strings.TrimSpace(query)
 			if query == "" || query == q.Query {
-				continue
+				return RecallQuery{}, false
 			}
 			sub := q
 			sub.Query = query
-			out = append(out, sub)
-		}
-		return out
+			return sub, true
+		})
 	}
 }
 

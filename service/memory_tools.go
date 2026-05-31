@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/internal/memorytools"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
@@ -110,11 +111,7 @@ func (a memoryToolStoreAdapter) Retrieve(ctx context.Context, query string, limi
 	if err != nil {
 		return nil, err
 	}
-	out := make([]memorytools.Entry, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, toMemoryToolsEntry(entry))
-	}
-	return out, nil
+	return sliceutil.Map(entries, toMemoryToolsEntry), nil
 }
 
 func (a memoryToolStoreAdapter) Update(ctx context.Context, id string, content string) error {

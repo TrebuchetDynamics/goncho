@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/TrebuchetDynamics/goncho/internal/localmarkdown"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 // LocalMarkdownMemoryConfig wires the local-first Goncho V1 memory tools to a
@@ -38,11 +39,7 @@ func (s *LocalMarkdownMemoryStore) Retrieve(ctx context.Context, query string, l
 	if err != nil {
 		return nil, err
 	}
-	out := make([]MemoryToolEntry, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, fromLocalMarkdownEntry(entry))
-	}
-	return out, nil
+	return sliceutil.Map(entries, fromLocalMarkdownEntry), nil
 }
 
 func (s *LocalMarkdownMemoryStore) Update(ctx context.Context, id string, content string) error {

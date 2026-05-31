@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 func TestRecallTraceStableIDAndJSONFixture(t *testing.T) {
@@ -164,9 +166,7 @@ func TestRecallProjectionIsTraceOnly(t *testing.T) {
 }
 
 func selectedRecallIDs(trace RecallTrace) []string {
-	ids := make([]string, 0, len(trace.Selected))
-	for _, item := range trace.Selected {
-		ids = append(ids, item.Candidate.MemoryID)
-	}
-	return ids
+	return sliceutil.Map(trace.Selected, func(item ScoredRecallCandidate) string {
+		return item.Candidate.MemoryID
+	})
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/internal/importance"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 const defaultDecayHalfLife = importance.DefaultDecayHalfLife
@@ -30,20 +31,12 @@ func (s *ImportanceScorer) Score(entry MemoryToolEntry, relevanceScore float64, 
 
 func (s *ImportanceScorer) Rank(entries []MemoryToolEntry, relevanceByID map[string]float64, now time.Time) []ScoredMemory {
 	ranked := s.module().Rank(toImportanceEntries(entries), relevanceByID, now)
-	out := make([]ScoredMemory, 0, len(ranked))
-	for _, item := range ranked {
-		out = append(out, fromScoredImportanceEntry(item))
-	}
-	return out
+	return sliceutil.Map(ranked, fromScoredImportanceEntry)
 }
 
 func (s *ImportanceScorer) RankByQuery(entries []MemoryToolEntry, query string, now time.Time) []ScoredMemory {
 	ranked := s.module().RankByQuery(toImportanceEntries(entries), query, now)
-	out := make([]ScoredMemory, 0, len(ranked))
-	for _, item := range ranked {
-		out = append(out, fromScoredImportanceEntry(item))
-	}
-	return out
+	return sliceutil.Map(ranked, fromScoredImportanceEntry)
 }
 
 func (s *ImportanceScorer) EffectiveImportance(entry MemoryToolEntry, now time.Time) float64 {
@@ -66,11 +59,7 @@ func (s *ImportanceScorer) module() *importance.Scorer {
 }
 
 func toImportanceEntries(entries []MemoryToolEntry) []importance.Entry {
-	out := make([]importance.Entry, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, toImportanceEntry(entry))
-	}
-	return out
+	return sliceutil.Map(entries, toImportanceEntry)
 }
 
 func toImportanceEntry(entry MemoryToolEntry) importance.Entry {

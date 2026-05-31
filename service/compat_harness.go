@@ -163,20 +163,19 @@ func (h *HonchoSDKCompatibilityHarness) SeedSession(ctx context.Context, seed Ho
 		})
 	}
 
-	inputs := make([]CreateMessage, 0, len(seed.Messages))
-	for _, msg := range seed.Messages {
+	inputs := sliceutil.Map(seed.Messages, func(msg HonchoSDKMessageInput) CreateMessage {
 		msgPeer := strings.TrimSpace(msg.PeerID)
 		if msgPeer == "" {
 			msgPeer = peerID
 		}
-		inputs = append(inputs, CreateMessage{
+		return CreateMessage{
 			Peer:      msgPeer,
 			Role:      msg.Role,
 			Content:   msg.Content,
 			Metadata:  msg.Metadata,
 			CreatedAt: msg.CreatedAt,
-		})
-	}
+		}
+	})
 	created, err := h.service.CreateMessages(ctx, CreateMessagesParams{
 		SessionKey: sessionID,
 		Messages:   inputs,
@@ -264,9 +263,8 @@ func (h *HonchoSDKCompatibilityHarness) requireService() error {
 }
 
 func mapHonchoSDKMessages(messages []MessageRecord) []HonchoSDKMessage {
-	out := make([]HonchoSDKMessage, 0, len(messages))
-	for _, msg := range messages {
-		out = append(out, HonchoSDKMessage{
+	return sliceutil.Map(messages, func(msg MessageRecord) HonchoSDKMessage {
+		return HonchoSDKMessage{
 			ID:          msg.ID,
 			WorkspaceID: msg.WorkspaceID,
 			SessionID:   msg.SessionKey,
@@ -276,24 +274,21 @@ func mapHonchoSDKMessages(messages []MessageRecord) []HonchoSDKMessage {
 			Sequence:    msg.Sequence,
 			CreatedAt:   msg.CreatedAt,
 			Metadata:    copyMetadata(msg.Metadata),
-		})
-	}
-	return out
+		}
+	})
 }
 
 func mapHonchoSDKSearchHits(hits []SearchHit) []HonchoSDKSearchHit {
-	out := make([]HonchoSDKSearchHit, 0, len(hits))
-	for _, hit := range hits {
-		out = append(out, HonchoSDKSearchHit{
+	return sliceutil.Map(hits, func(hit SearchHit) HonchoSDKSearchHit {
+		return HonchoSDKSearchHit{
 			ID:           hit.ID,
 			Source:       hit.Source,
 			OriginSource: hit.OriginSource,
 			Content:      hit.Content,
 			SessionID:    hit.SessionKey,
 			Lineage:      hit.Lineage,
-		})
-	}
-	return out
+		}
+	})
 }
 
 func mapHonchoSDKSummary(summary *SessionSummary) *HonchoSDKContextSummary {
@@ -313,12 +308,9 @@ func mapContextUnsupportedFlows(unavailable []ContextUnavailableEvidence) []Honc
 	if len(unavailable) == 0 {
 		return nil
 	}
-	fields := make([]string, 0, len(unavailable))
-	for _, item := range unavailable {
-		if item.Field != "" {
-			fields = append(fields, item.Field)
-		}
-	}
+	fields := sliceutil.FilterMap(unavailable, func(item ContextUnavailableEvidence) (string, bool) {
+		return item.Field, item.Field != ""
+	})
 	return []HonchoSDKUnsupportedFlow{
 		UnsupportedHonchoSDKFlow("GET", "/v3/workspaces/{workspace_id}/peers/{peer_id}/context", fields...),
 	}
