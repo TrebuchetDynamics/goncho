@@ -71,5 +71,3 @@ func searchSequenceQuestionSubject(query string) (string, bool) {
 func searchVersionAnswerParts(sentence string) (subject, version string, ok bool) {
 	return searchintent.VersionAnswerParts(sentence)
 }
-func cleanFactObject(value string) string { return searchintent.CleanFactObject(value) }
-func cleanFactValue(value string) string  { return searchintent.CleanFactValue(value) }

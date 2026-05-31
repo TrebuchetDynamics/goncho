@@ -100,13 +100,13 @@ func buildGonchoProofMatrixReport(input gonchoProofMatrixReportInput) (gonchoPro
 		Service:                    "goncho",
 		ProofVersion:               gonchoProofMatrixVersion,
 		SQLiteRestartVerified:      input.SQLiteRestartVerified,
-		APIContractsVerified:       sortedGonchoProofStrings(input.APIContractsVerified),
+		APIContractsVerified:       textutil.UniqueTrimmed(input.APIContractsVerified, true),
 		ScopeIsolationVerified:     input.ScopeIsolationVerified,
 		TombstoneExclusionVerified: input.TombstoneExclusionVerified,
 		TraceProjectionInvariant:   projectionInvariant,
 		StableTraceIDs:             sliceutil.Clone(stableTraceIDs),
-		WarningCodesSeen:           sortedGonchoProofStringSet(warningCodes),
-		NegativeControlsRejected:   sortedGonchoProofStrings(input.NegativeControlsRejected),
+		WarningCodesSeen:           textutil.SortedSetValues(warningCodes, strings.TrimSpace),
+		NegativeControlsRejected:   textutil.UniqueTrimmed(input.NegativeControlsRejected, true),
 		BenchmarkSummary: gonchoProofBenchmarkSummary{
 			CorpusVersion:       input.Benchmark.CorpusVersion,
 			CaseCount:           input.Benchmark.CaseCount,
@@ -134,12 +134,4 @@ func buildGonchoProofMatrixReport(input gonchoProofMatrixReportInput) (gonchoPro
 		report.RejectedMemoryIDs = []string{}
 	}
 	return report, nil
-}
-
-func sortedGonchoProofStrings(values []string) []string {
-	return textutil.UniqueTrimmed(values, true)
-}
-
-func sortedGonchoProofStringSet(values map[string]struct{}) []string {
-	return textutil.SortedSetValues(values, strings.TrimSpace)
 }

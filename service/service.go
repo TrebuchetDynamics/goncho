@@ -11,6 +11,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/contexttokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/memoryscope"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -330,15 +331,7 @@ func normalizeScope(scope string) string {
 }
 
 func normalizeMemoryScope(scope, profileID string) string {
-	scope = textutil.LowerTrimmed(scope)
-	switch scope {
-	case MemoryScopeProfile, MemoryScopeWorkspace, MemoryScopeShared, MemoryScopeSession, MemoryScopeGlobal:
-		return scope
-	}
-	if strings.TrimSpace(profileID) != "" {
-		return MemoryScopeProfile
-	}
-	return MemoryScopeWorkspace
+	return memoryscope.Normalize(scope, profileID)
 }
 
 func profileScopeEvidence(profileID, scope string) *CrossChatRecallEvidence {

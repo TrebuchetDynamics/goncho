@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const gonchoMetaanalysisCoverageVersion = "goncho-metaanalysis-goal-v1"
@@ -88,8 +89,8 @@ func BuildGonchoMetaanalysisCoverageReport(input GonchoMetaanalysisCoverageInput
 		CoverageVersion:          gonchoMetaanalysisCoverageVersion,
 		SourceDocumentPath:       input.SourceDocumentPath,
 		SourceDocumentSHA256:     input.SourceDocumentSHA256,
-		DocsArchitectureKeywords: sortedGonchoProofStrings(input.DocsArchitectureKeywords),
-		PrinciplesCovered: sortedGonchoProofStrings([]string{
+		DocsArchitectureKeywords: textutil.UniqueTrimmed(input.DocsArchitectureKeywords, true),
+		PrinciplesCovered: textutil.UniqueTrimmed([]string{
 			"evidence_before_memory",
 			"claims_not_chunks",
 			"hooks_over_manual_saves",
@@ -97,22 +98,22 @@ func BuildGonchoMetaanalysisCoverageReport(input GonchoMetaanalysisCoverageInput
 			"negative_memory_matters",
 			"small_agent_surface",
 			"trust_is_the_moat",
-		}),
-		ContextLayersCovered: sortedGonchoProofStrings([]string{
+		}, true),
+		ContextLayersCovered: textutil.UniqueTrimmed([]string{
 			"evidence",
 			"claims",
 			"beliefs",
 			"orientation",
 			"governance",
-		}),
-		LifecycleStatesCovered: sortedGonchoProofStrings([]string{
+		}, true),
+		LifecycleStatesCovered: textutil.UniqueTrimmed([]string{
 			"active",
 			"canonical",
 			"superseded",
 			"quarantined",
 			"review_required",
-		}),
-		CoreEvaluationsCovered: sortedGonchoProofStrings([]string{
+		}, true),
+		CoreEvaluationsCovered: textutil.UniqueTrimmed([]string{
 			"exact_recall",
 			"paraphrase_recall",
 			"multi_hop_recall",
@@ -124,22 +125,22 @@ func BuildGonchoMetaanalysisCoverageReport(input GonchoMetaanalysisCoverageInput
 			"scope_isolation",
 			"prompt_injection_persistence",
 			"drift_prevention",
-		}),
-		PublicToolsVerified: sortedGonchoProofStrings([]string{
+		}, true),
+		PublicToolsVerified: textutil.UniqueTrimmed([]string{
 			"goncho_context",
 			"goncho_search",
 			"goncho_recall",
 			"goncho_remember",
 			"goncho_review",
 			"goncho_handoff",
-		}),
-		LocalFeaturesVerified: sortedGonchoProofStrings(features),
-		DeferredFeatures: sortedGonchoProofStrings([]string{
+		}, true),
+		LocalFeaturesVerified: textutil.UniqueTrimmed(features, true),
+		DeferredFeatures: textutil.UniqueTrimmed([]string{
 			"full_cognitive_map_ui",
 			"postgres_team_adapter",
 			"cloud_embeddings_required",
 			"dashboard_visualization",
-		}),
+		}, true),
 		CompletionCondition:           completion,
 		AllLocalEvaluatorChecksPassed: allPassed,
 	}
