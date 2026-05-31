@@ -25,6 +25,30 @@ func TestSearchUsesOptionalVectorStoreForSemanticLane(t *testing.T) {
 	}
 }
 
+func TestSearchSourceFilterSuppressesConclusionVectorLane(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	vectorStore := &fakeVectorStore{hits: []VectorSearchHit{{MemoryID: "semantic-orchid", SourceType: "conclusion", Content: "Mira stores the rare orchid archive in the blue vault.", Score: 0.91}}}
+	svc.vectorStore = vectorStore
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+
+	got, err := svc.Search(context.Background(), SearchParams{
+		Peer:    "peer-source-filter",
+		Query:   "botanical dossier location",
+		Filters: map[string]any{"source": "turn"},
+		Limit:   3,
+	})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(vectorStore.queries) != 0 {
+		t.Fatalf("vector queries = %d, want source filter to skip conclusion vector lane", len(vectorStore.queries))
+	}
+	if len(got.Results) != 0 {
+		t.Fatalf("Search results = %+v, want no conclusion vector hits for source=turn", got.Results)
+	}
+}
+
 func TestSearchVectorCandidatesDoNotOverflowLimit(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

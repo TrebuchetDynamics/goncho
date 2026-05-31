@@ -181,7 +181,7 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 		}
 	}
 
-	results, err = r.mergeVectorSearch(ctx, params, profileID, peer, memoryScope, results, limit)
+	results, err = r.mergeVectorSearch(ctx, params, profileID, peer, memoryScope, compiled.Sources, results, limit)
 	if err != nil {
 		return SearchResultSet{}, err
 	}
@@ -209,8 +209,9 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 	}, nil
 }
 
-func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchParams, profileID, peer, scopeID string, base []SearchHit, limit int) ([]SearchHit, error) {
-	if r.vectorStore == nil || strings.TrimSpace(params.Query) == "" || !vectorSourceAllowed(params.Sources, "conclusion") {
+func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchParams, profileID, peer, scopeID string, effectiveSources []string, base []SearchHit, limit int) ([]SearchHit, error) {
+	vectorSources := vectorSearchSources(effectiveSources)
+	if r.vectorStore == nil || strings.TrimSpace(params.Query) == "" || !vectorSourceAllowed(vectorSources, "conclusion") {
 		return base, nil
 	}
 	query := VectorSearchQuery{
@@ -220,7 +221,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 		Query:       params.Query,
 		SessionKey:  params.SessionKey,
 		ScopeID:     scopeID,
-		Sources:     sliceutil.Clone(params.Sources),
+		Sources:     vectorSources,
 		Limit:       recallCandidateSearchLimit(limit),
 	}
 	if maxPayload := r.providers.MaxPayloadBytes(string(ProviderKindEmbedding)); maxPayload > 0 && len(query.Query) > maxPayload {
@@ -243,7 +244,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 		return hits[i].Score > hits[j].Score
 	})
 	for _, hit := range hits {
-		if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(params.Sources, hit.SourceType) {
+		if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(vectorSources, hit.SourceType) {
 			continue
 		}
 		searchHit := searchHitFromVectorHit(hit)
@@ -258,6 +259,14 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 		out = append(out, searchHit)
 	}
 	return trimSearchHits(out, limit), nil
+}
+
+// vectorSearchSources is the explicit handoff from Honcho source filters to
+// the optional semantic lane. Callers must pass already-merged SearchParams
+// sources and compiled source filters; using only raw params.Sources can leak
+// conclusion vector hits through a filter such as {"source":"turn"}.
+func vectorSearchSources(effectiveSources []string) []string {
+	return sliceutil.Clone(effectiveSources)
 }
 
 func trimSearchHits(hits []SearchHit, limit int) []SearchHit {
