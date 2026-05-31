@@ -20,3 +20,15 @@ func TestSequenceMarkerCountIgnoresEmbeddedMarkerText(t *testing.T) {
 		t.Fatalf("embedded marker count = %d, want 1", got)
 	}
 }
+
+func TestDecisionFactIntentKeepsCoordinatedDecisionObject(t *testing.T) {
+	if score := Score("what did we decide about redis?", "We decided to use Postgres and Redis."); score != 1 {
+		t.Fatalf("decision fact score = %v, want 1 for coordinated decision object", score)
+	}
+}
+
+func TestNegationFactIntentKeepsCoordinatedNegativeObject(t *testing.T) {
+	if score := Score("have we ever used kubernetes?", "We never used Docker and Kubernetes."); score != 1 {
+		t.Fatalf("negation fact score = %v, want 1 for coordinated negative object", score)
+	}
+}

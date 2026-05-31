@@ -536,7 +536,7 @@ func searchNegationAnswerParts(sentence string) (object string, ok bool) {
 	if len(match) != 2 {
 		return "", false
 	}
-	object = cleanFactValue(match[1])
+	object = cleanFactCoordinatedValue(match[1])
 	return object, searchFactObjectLooksAssertive(object)
 }
 
@@ -586,7 +586,7 @@ func searchDecisionAnswerParts(sentence string) (decision string, ok bool) {
 	if len(match) != 2 {
 		return "", false
 	}
-	decision = cleanFactValue(match[1])
+	decision = cleanFactCoordinatedValue(match[1])
 	return decision, searchFactObjectLooksAssertive(decision)
 }
 
@@ -751,6 +751,14 @@ func cleanFactObject(value string) string {
 func cleanFactValue(value string) string {
 	value = textutil.TrimSpaceAndQuotes(value)
 	if before, ok := textutil.CutBeforeAnySubstringFold(value, ";", ",", " because ", " but ", " and "); ok && strings.TrimSpace(before) != "" {
+		value = strings.TrimSpace(before)
+	}
+	return value
+}
+
+func cleanFactCoordinatedValue(value string) string {
+	value = textutil.TrimSpaceAndQuotes(value)
+	if before, ok := textutil.CutBeforeAnySubstringFold(value, ";", " because ", " but "); ok && strings.TrimSpace(before) != "" {
 		value = strings.TrimSpace(before)
 	}
 	return value
