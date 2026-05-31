@@ -1,16 +1,7 @@
 package searchfilter
 
-const (
-	defaultSearchLimit = 10
-	maxSearchLimit     = 100
-)
+import "github.com/TrebuchetDynamics/goncho/internal/searchfilter/policy"
 
 func NormalizeLimit(limit int) int {
-	if limit <= 0 {
-		return defaultSearchLimit
-	}
-	if limit > maxSearchLimit {
-		return maxSearchLimit
-	}
-	return limit
+	return policy.NormalizeLimit(limit)
 }

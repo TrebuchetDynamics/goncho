@@ -1,39 +1,31 @@
 package searchfilter
 
-type Kind string
+import "github.com/TrebuchetDynamics/goncho/internal/searchfilter/contracts"
+
+type Kind = contracts.Kind
 
 const (
-	KindAll        Kind = "all"
-	KindAnd        Kind = "and"
-	KindOr         Kind = "or"
-	KindNot        Kind = "not"
-	KindComparison Kind = "comparison"
+	KindAll        = contracts.KindAll
+	KindAnd        = contracts.KindAnd
+	KindOr         = contracts.KindOr
+	KindNot        = contracts.KindNot
+	KindComparison = contracts.KindComparison
 )
 
-type Operator string
+type Operator = contracts.Operator
 
 const (
-	OpEQ        Operator = "eq"
-	OpGT        Operator = "gt"
-	OpGTE       Operator = "gte"
-	OpLT        Operator = "lt"
-	OpLTE       Operator = "lte"
-	OpNE        Operator = "ne"
-	OpIn        Operator = "in"
-	OpContains  Operator = "contains"
-	OpIContains Operator = "icontains"
+	OpEQ        = contracts.OpEQ
+	OpGT        = contracts.OpGT
+	OpGTE       = contracts.OpGTE
+	OpLT        = contracts.OpLT
+	OpLTE       = contracts.OpLTE
+	OpNE        = contracts.OpNE
+	OpIn        = contracts.OpIn
+	OpContains  = contracts.OpContains
+	OpIContains = contracts.OpIContains
 )
 
-type Expression struct {
-	Kind     Kind
-	Children []Expression
-	Field    string
-	Operator Operator
-	Values   []string
-}
+type Expression = contracts.Expression
 
-type Compiled struct {
-	SessionIDs []string
-	Sources    []string
-	DenyAll    bool
-}
+type Compiled = contracts.Compiled
