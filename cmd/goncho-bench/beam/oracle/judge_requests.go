@@ -1,13 +1,12 @@
 package oracle
 
 import (
-	"strings"
 	"time"
 
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/artifactcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/judgeprompt"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/judgerequestcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
-	"github.com/TrebuchetDynamics/goncho/service"
+	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
 const (
@@ -16,23 +15,7 @@ const (
 	beamAnswerPlaceholder  = judgeprompt.AnswerPlaceholder
 )
 
-type beamServiceJudgeRequestRow struct {
-	ConfigID             string                      `json:"config_id"`
-	RunStartedAt         string                      `json:"run_started_at"`
-	Scale                string                      `json:"scale"`
-	ConversationID       string                      `json:"conversation_id"`
-	QID                  string                      `json:"qid"`
-	Ability              string                      `json:"ability"`
-	Question             string                      `json:"question"`
-	PureRecall           bool                        `json:"pure_recall"`
-	AnswerRequest        beamServicePromptRequest    `json:"answer_request"`
-	JudgeRequest         beamServiceJudgePrompt      `json:"judge_request"`
-	RecallProvenance     beamServiceRecallProvenance `json:"recall_provenance"`
-	CandidateMemoryIDs   []string                    `json:"candidate_memory_ids,omitempty"`
-	SelectedMemoryIDs    []string                    `json:"selected_memory_ids,omitempty"`
-	RubricContextScore   float64                     `json:"rubric_context_score,omitempty"`
-	RubricContextMatches []string                    `json:"rubric_context_matches,omitempty"`
-}
+type beamServiceJudgeRequestRow = judgerequestcontract.Row
 
 type beamServicePromptRequest = judgeprompt.AnswerRequest
 
@@ -43,30 +26,7 @@ func writeBeamServiceJudgeRequests(path string, report goncho.RecallBenchmarkRep
 }
 
 func buildBeamServiceJudgeRequestRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceJudgeRequestRow {
-	out := make([]beamServiceJudgeRequestRow, 0, len(report.Cases))
-	started := shared.FormatArtifactTimestamp(runStartedAt)
-	for _, c := range report.Cases {
-		fields := artifactcontract.BuildCaseFields(c)
-		context := strings.TrimSpace(c.SelectedContext)
-		out = append(out, beamServiceJudgeRequestRow{
-			ConfigID:             configID,
-			RunStartedAt:         started,
-			Scale:                fields.Scale,
-			ConversationID:       fields.ConversationID,
-			QID:                  fields.QID,
-			Ability:              fields.Ability,
-			Question:             fields.Question,
-			PureRecall:           true,
-			AnswerRequest:        buildBeamServiceAnswerRequest(fields.Question, context),
-			JudgeRequest:         buildBeamServiceJudgePrompt(fields.Question, c.IdealAnswer, c.Rubric),
-			RecallProvenance:     beamServiceCaseRecallProvenance(c),
-			CandidateMemoryIDs:   fields.CandidateMemoryIDs,
-			SelectedMemoryIDs:    fields.SelectedMemoryIDs,
-			RubricContextScore:   fields.RubricContextScore,
-			RubricContextMatches: fields.RubricContextMatches,
-		})
-	}
-	return out
+	return judgerequestcontract.BuildRows(report, configID, runStartedAt)
 }
 
 func buildBeamServiceAnswerRequest(question, context string) beamServicePromptRequest {
