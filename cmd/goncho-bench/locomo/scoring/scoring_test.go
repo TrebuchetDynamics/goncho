@@ -1,4 +1,4 @@
-package locomo
+package scoring
 
 import "testing"
 
