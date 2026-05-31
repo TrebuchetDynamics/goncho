@@ -150,6 +150,11 @@ func (s *Service) CaptureHostHook(ctx context.Context, event HostHookEvent) (Hoo
 	if err != nil {
 		return HookCaptureResult{}, err
 	}
+	messageRole := hostHookMessageRole(event.Event)
+	messageContent := hostHookMessageContent(event)
+	if messageRole != "" && messageContent == "" {
+		return HookCaptureResult{}, fmt.Errorf("goncho: hook %s requires message content", event.Event)
+	}
 	metadata := hostHookMetadata(event)
 	if filtered.Redacted {
 		metadata["hook_redacted"] = "true"
@@ -179,18 +184,14 @@ func (s *Service) CaptureHostHook(ctx context.Context, event HostHookEvent) (Hoo
 	}
 	result.Observations = append(result.Observations, observed.Observation)
 
-	if role := hostHookMessageRole(event.Event); role != "" {
-		content := strings.TrimSpace(textutil.FirstNonBlank(event.Content, event.Input, event.Output))
-		if content == "" {
-			return HookCaptureResult{}, fmt.Errorf("goncho: hook %s requires message content", event.Event)
-		}
+	if messageRole != "" {
 		created, err := s.CreateMessages(ctx, CreateMessagesParams{
 			SessionKey: strings.TrimSpace(event.SessionKey),
 			Messages: []CreateMessage{{
 				ProfileID: event.ProfileID,
 				Peer:      event.PeerID,
-				Role:      role,
-				Content:   content,
+				Role:      messageRole,
+				Content:   messageContent,
 				Metadata:  maputil.StringStringToAny(metadata),
 				CreatedAt: event.ObservedAt,
 			}},
@@ -314,6 +315,10 @@ func hostHookMessageRole(event HostHookEventName) string {
 	default:
 		return ""
 	}
+}
+
+func hostHookMessageContent(event HostHookEvent) string {
+	return strings.TrimSpace(textutil.FirstNonBlank(event.Content, event.Input, event.Output))
 }
 
 func hostHookSuccess(event HostHookEvent) *bool {

@@ -76,6 +76,31 @@ func TestServiceCaptureHostHookAcceptsP1AgentLifecycleEvents(t *testing.T) {
 	}
 }
 
+func TestServiceCaptureHostHookRejectsBlankConversationalHooksBeforeDurableWrites(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+
+	_, err := svc.CaptureHostHook(context.Background(), HostHookEvent{
+		Event:      HostHookPrompt,
+		PeerID:     "user-blank",
+		SessionKey: "sess-blank-hook",
+		Content:    "   ",
+	})
+	if err == nil {
+		t.Fatal("CaptureHostHook unexpectedly succeeded for blank prompt")
+	}
+	list, listErr := svc.ListObservations(context.Background(), ObservationQuery{SessionKey: "sess-blank-hook", Limit: 10})
+	if listErr != nil {
+		t.Fatalf("ListObservations: %v", listErr)
+	}
+	if list.Count != 0 {
+		t.Fatalf("observations after rejected hook = %d, want 0", list.Count)
+	}
+}
+
 func TestServiceCaptureHostHookRedactsSecretsAndTruncatesBeforeStorage(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
