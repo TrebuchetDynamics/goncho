@@ -48,21 +48,21 @@ func (g graphExpandingRecallGenerator) Generate(ctx context.Context, q RecallQue
 	return expandGraphRecallCandidates(q, base, g.index), nil
 }
 
+type graphExpansionState struct {
+	seen   map[string]bool
+	active map[string]RecallCandidate
+}
+
 func expandGraphRecallCandidates(q RecallQuery, base []RecallCandidate, index GraphExpansionIndex) []RecallCandidate {
 	out := sliceutil.Clone(base)
-	seen := make(map[string]bool, len(out)+len(index.Memories))
-	active := make(map[string]RecallCandidate, len(out)+len(index.Memories))
-	for _, candidate := range out {
-		seen[candidate.MemoryID] = true
-		active[candidate.MemoryID] = candidate
-	}
+	state := newGraphExpansionState(out, len(index.Memories))
 	for {
 		added := false
 		for _, relation := range index.Relations {
-			if !graphRelationCanExpand(q, relation, seen) {
+			if !graphRelationCanExpand(q, relation, state.seen) {
 				continue
 			}
-			source, ok := active[relation.FromMemoryID]
+			source, ok := state.active[relation.FromMemoryID]
 			if !ok {
 				continue
 			}
@@ -72,8 +72,7 @@ func expandGraphRecallCandidates(q RecallQuery, base []RecallCandidate, index Gr
 			}
 			target.Provenance = graphExpandedProvenance(source, target, relation)
 			out = append(out, target)
-			seen[target.MemoryID] = true
-			active[target.MemoryID] = target
+			state.add(target)
 			added = true
 		}
 		if !added {
@@ -82,12 +81,36 @@ func expandGraphRecallCandidates(q RecallQuery, base []RecallCandidate, index Gr
 	}
 }
 
+func newGraphExpansionState(candidates []RecallCandidate, extraCapacity int) graphExpansionState {
+	state := graphExpansionState{
+		seen:   make(map[string]bool, len(candidates)+extraCapacity),
+		active: make(map[string]RecallCandidate, len(candidates)+extraCapacity),
+	}
+	for _, candidate := range candidates {
+		state.add(candidate)
+	}
+	return state
+}
+
+func (s graphExpansionState) add(candidate RecallCandidate) {
+	if candidate.MemoryID == "" {
+		return
+	}
+	s.seen[candidate.MemoryID] = true
+	s.active[candidate.MemoryID] = candidate
+}
+
 func graphRelationCanExpand(q RecallQuery, relation GraphRelation, seen map[string]bool) bool {
-	return graphRelationIsAccepted(relation) &&
+	return graphRelationHasEndpoints(relation) &&
+		graphRelationIsAccepted(relation) &&
 		seen[relation.FromMemoryID] &&
 		!seen[relation.ToMemoryID] &&
 		graphRelationMatchesQuery(q.Query, relation.QueryTerms) &&
 		graphRelationMatchesQuery(q.Query, relation.ActivationTerms)
+}
+
+func graphRelationHasEndpoints(relation GraphRelation) bool {
+	return relation.FromMemoryID != "" && relation.ToMemoryID != ""
 }
 
 func graphExpandedProvenance(source, target RecallCandidate, relation GraphRelation) []EvidenceItem {

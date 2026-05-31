@@ -213,6 +213,40 @@ func TestCognitiveMapSuppressesLowActivationGraphBranches(t *testing.T) {
 	}
 }
 
+func TestGraphRecallIgnoresMalformedRelationsWithEmptyEndpoints(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 10, 0, 0, time.UTC)
+	base := []RecallCandidate{{
+		SourceType: "conclusion",
+		Content:    "An imported memory without a stable memory id mentions the auth owner.",
+		ScopeID:    "team",
+		CreatedAt:  now,
+	}}
+	index := GraphExpansionIndex{
+		Memories: map[string]RecallCandidate{
+			"mem-auth-owner": {
+				MemoryID:   "mem-auth-owner",
+				SourceType: "conclusion",
+				Content:    "Mira owns auth.",
+				ScopeID:    "team",
+				CreatedAt:  now,
+			},
+		},
+		Relations: []GraphRelation{{
+			FromMemoryID: "",
+			ToMemoryID:   "mem-auth-owner",
+			Relation:     "owned_by",
+			QueryTerms:   []string{"owner"},
+			EvidenceID:   "edge-missing-from",
+			Score:        0.95,
+		}},
+	}
+
+	got := expandGraphRecallCandidates(RecallQuery{Query: "owner", ScopeID: "team"}, base, index)
+	if len(got) != 1 || got[0].MemoryID != "" {
+		t.Fatalf("expanded IDs = %v, want malformed empty-endpoint relation ignored", recallCandidateMemoryIDs(got))
+	}
+}
+
 func TestGraphRecallExpandsMultiHopRelationsIndependentOfRelationOrder(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 15, 0, 0, time.UTC)
 	base := staticRecallGenerator{candidates: []RecallCandidate{{
@@ -384,6 +418,14 @@ func recallCandidateIDs(trace RecallTrace) []string {
 	ids := make([]string, 0, len(trace.Candidates))
 	for _, item := range trace.Candidates {
 		ids = append(ids, item.Candidate.MemoryID)
+	}
+	return ids
+}
+
+func recallCandidateMemoryIDs(candidates []RecallCandidate) []string {
+	ids := make([]string, 0, len(candidates))
+	for _, item := range candidates {
+		ids = append(ids, item.MemoryID)
 	}
 	return ids
 }
