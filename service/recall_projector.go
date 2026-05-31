@@ -5,6 +5,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type RecallProjector struct{}
@@ -62,16 +63,12 @@ func (p *RecallProjector) ProjectContext(trace RecallTrace) ContextResult {
 
 func graphRelationPathNotes(provenance []EvidenceItem) []string {
 	notes := make([]string, 0)
-	seen := make(map[string]bool)
 	for _, item := range provenance {
-		note := strings.TrimSpace(item.Note)
-		if item.Kind != "graph" || note == "" || seen[note] {
-			continue
+		if item.Kind == "graph" {
+			notes = append(notes, item.Note)
 		}
-		notes = append(notes, note)
-		seen[note] = true
 	}
-	return notes
+	return textutil.NormalizeUnique(notes, strings.TrimSpace, false)
 }
 
 func parseRecallMemoryID(id string) int64 {

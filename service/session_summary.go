@@ -38,12 +38,6 @@ func (s *Service) OnSessionEnd(ctx context.Context, sessionKey string, messages 
 
 func extractStructuredSummary(messages []Message) *StructuredSummary {
 	var summary StructuredSummary
-	seenFiles := make(map[string]bool)
-	seenDecisions := make(map[string]bool)
-	seenQuestions := make(map[string]bool)
-	seenSkills := make(map[string]bool)
-	seenNextSteps := make(map[string]bool)
-
 	for _, msg := range messages {
 		content := msg.Content
 		if content == "" {
@@ -51,40 +45,36 @@ func extractStructuredSummary(messages []Message) *StructuredSummary {
 		}
 
 		for _, m := range filePathRE.FindAllString(content, -1) {
-			if !seenFiles[m] {
-				seenFiles[m] = true
-				summary.FilesModified = append(summary.FilesModified, m)
-			}
+			summary.FilesModified = append(summary.FilesModified, m)
 		}
 
 		for _, m := range decisionRE.FindAllStringSubmatch(content, -1) {
-			if len(m) > 1 && !seenDecisions[m[0]] {
-				seenDecisions[m[0]] = true
-				summary.DecisionsMade = append(summary.DecisionsMade, strings.TrimSpace(m[0]))
+			if len(m) > 1 {
+				summary.DecisionsMade = append(summary.DecisionsMade, m[0])
 			}
 		}
 
 		for _, line := range strings.Split(content, "\n") {
 			line = strings.TrimSpace(line)
-			if strings.HasSuffix(line, "?") && len(line) > 10 && !seenQuestions[line] {
-				seenQuestions[line] = true
+			if strings.HasSuffix(line, "?") && len(line) > 10 {
 				summary.OpenQuestions = append(summary.OpenQuestions, line)
 			}
 			if textutil.HasAnyPrefixFold(line, "next:", "todo:", "still need") {
-				if !seenNextSteps[line] {
-					seenNextSteps[line] = true
-					summary.NextSteps = append(summary.NextSteps, line)
-				}
+				summary.NextSteps = append(summary.NextSteps, line)
 			}
 		}
 
 		for _, m := range skillRE.FindAllStringSubmatch(content, -1) {
-			if len(m) > 1 && !seenSkills[m[1]] {
-				seenSkills[m[1]] = true
+			if len(m) > 1 {
 				summary.SkillOutcomes = append(summary.SkillOutcomes, m[1])
 			}
 		}
 	}
 
+	summary.FilesModified = textutil.NormalizeUnique(summary.FilesModified, nil, false)
+	summary.DecisionsMade = textutil.NormalizeUnique(summary.DecisionsMade, strings.TrimSpace, false)
+	summary.OpenQuestions = textutil.NormalizeUnique(summary.OpenQuestions, strings.TrimSpace, false)
+	summary.SkillOutcomes = textutil.NormalizeUnique(summary.SkillOutcomes, nil, false)
+	summary.NextSteps = textutil.NormalizeUnique(summary.NextSteps, strings.TrimSpace, false)
 	return &summary
 }

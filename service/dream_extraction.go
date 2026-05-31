@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 var conclusionPatternRE = regexp.MustCompile(`(?i)(?:decided|chose|using|switched to|opted for|settled on|prefer|the solution is|we should|must|need to)\s+(.+)`)
@@ -56,9 +58,7 @@ func readSessionTurns(ctx context.Context, db *sql.DB, workspaceID, sessionKey s
 }
 
 func extractConclusionsFromTurns(turns []string) []string {
-	seen := make(map[string]bool)
 	var conclusions []string
-
 	for _, turn := range turns {
 		for _, line := range strings.Split(turn, "\n") {
 			line = strings.TrimSpace(line)
@@ -68,14 +68,10 @@ func extractConclusionsFromTurns(turns []string) []string {
 			matches := conclusionPatternRE.FindAllStringSubmatch(line, -1)
 			for _, m := range matches {
 				if len(m) > 1 {
-					conclusion := strings.TrimSpace(m[0])
-					if !seen[conclusion] {
-						seen[conclusion] = true
-						conclusions = append(conclusions, conclusion)
-					}
+					conclusions = append(conclusions, m[0])
 				}
 			}
 		}
 	}
-	return conclusions
+	return textutil.NormalizeUnique(conclusions, strings.TrimSpace, false)
 }

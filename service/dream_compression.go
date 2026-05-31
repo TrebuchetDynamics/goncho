@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/textmatch"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 func (s *Service) ExecuteDreamCompression(ctx context.Context) (int, error) {
@@ -86,12 +87,11 @@ func wordSimilarity(a, b string) float64 {
 }
 
 func wordSet(s string) map[string]struct{} {
-	words := make(map[string]struct{})
-	for _, w := range strings.Fields(strings.ToLower(s)) {
-		w = strings.Trim(w, ".,;:!?\"'()[]{}")
-		if len(w) > 2 {
-			words[w] = struct{}{}
+	return textutil.Set(strings.Fields(s), func(w string) string {
+		w = strings.Trim(strings.ToLower(w), ".,;:!?\"'()[]{}")
+		if len(w) <= 2 {
+			return ""
 		}
-	}
-	return words
+		return w
+	})
 }
