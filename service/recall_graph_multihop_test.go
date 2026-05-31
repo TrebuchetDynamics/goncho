@@ -213,6 +213,48 @@ func TestCognitiveMapSuppressesLowActivationGraphBranches(t *testing.T) {
 	}
 }
 
+func TestGraphRecallAnnotatesAlreadyRetrievedTargetsWithRelationProvenance(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 12, 0, 0, time.UTC)
+	base := []RecallCandidate{
+		{
+			MemoryID:   "mem-auth-service",
+			SourceType: "conclusion",
+			Content:    "The auth service handles login.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+		},
+		{
+			MemoryID:   "mem-auth-owner",
+			SourceType: "conclusion",
+			Content:    "Mira owns auth.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Provenance: []EvidenceItem{{Kind: "keyword", ID: "kw-owner"}},
+		},
+	}
+	index := GraphExpansionIndex{
+		Memories: map[string]RecallCandidate{
+			"mem-auth-owner": base[1],
+		},
+		Relations: []GraphRelation{{
+			FromMemoryID: "mem-auth-service",
+			ToMemoryID:   "mem-auth-owner",
+			Relation:     "owned_by",
+			QueryTerms:   []string{"owner"},
+			EvidenceID:   "edge-auth-owned-by-mira",
+			Score:        0.95,
+		}},
+	}
+
+	got := expandGraphRecallCandidates(RecallQuery{Query: "owner", ScopeID: "team"}, base, index)
+	if ids := recallCandidateMemoryIDs(got); !slices.Equal(ids, []string{"mem-auth-service", "mem-auth-owner"}) {
+		t.Fatalf("expanded IDs = %v, want no duplicate target candidate", ids)
+	}
+	if !recallCandidateHasGraphProvenance(got[1], "edge-auth-owned-by-mira") {
+		t.Fatalf("target provenance = %+v, want relation provenance on already retrieved target", got[1].Provenance)
+	}
+}
+
 func TestGraphRecallIgnoresMalformedRelationsWithUnstableEndpoints(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 10, 0, 0, time.UTC)
 	base := []RecallCandidate{{
