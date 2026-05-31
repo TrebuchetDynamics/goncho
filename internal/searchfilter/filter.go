@@ -220,27 +220,21 @@ func parseFieldCondition(field string, value any) (Expression, error) {
 	}, nil
 }
 
+var supportedFilterOperators = map[string]Operator{
+	string(OpEQ):        OpEQ,
+	string(OpGT):        OpGT,
+	string(OpGTE):       OpGTE,
+	string(OpLT):        OpLT,
+	string(OpLTE):       OpLTE,
+	string(OpNE):        OpNE,
+	string(OpIn):        OpIn,
+	string(OpContains):  OpContains,
+	string(OpIContains): OpIContains,
+}
+
 func parseFilterOperator(op string) (Operator, bool) {
-	switch op {
-	case string(OpGT):
-		return OpGT, true
-	case string(OpGTE):
-		return OpGTE, true
-	case string(OpLT):
-		return OpLT, true
-	case string(OpLTE):
-		return OpLTE, true
-	case string(OpNE):
-		return OpNE, true
-	case string(OpIn):
-		return OpIn, true
-	case string(OpContains):
-		return OpContains, true
-	case string(OpIContains):
-		return OpIContains, true
-	default:
-		return "", false
-	}
+	parsed, ok := supportedFilterOperators[op]
+	return parsed, ok
 }
 
 func filterValues(value any, op Operator) ([]string, error) {

@@ -11,7 +11,7 @@ import (
 func TestGrammarParsesHonchoOperators(t *testing.T) {
 	expr, err := searchfilter.Parse(map[string]any{
 		"AND": []any{
-			map[string]any{"session_id": "sess-discord"},
+			map[string]any{"session_id": map[string]any{"eq": "sess-discord"}},
 			map[string]any{"OR": []any{
 				map[string]any{"created_at": map[string]any{
 					"gt":  "2024-01-01T00:00:00Z",
@@ -40,6 +40,9 @@ func TestGrammarParsesHonchoOperators(t *testing.T) {
 		t.Fatalf("root kind = %v, want %v", expr.Kind, searchfilter.KindAnd)
 	}
 	requireParsedComparison(t, expr, "session_id", searchfilter.OpEQ)
+	if got := comparisonValues(t, expr, "session_id", searchfilter.OpEQ); !slices.Equal(got, []string{"sess-discord"}) {
+		t.Fatalf("session_id eq values = %v, want sess-discord", got)
+	}
 	requireParsedComparison(t, expr, "created_at", searchfilter.OpGT)
 	requireParsedComparison(t, expr, "created_at", searchfilter.OpGTE)
 	requireParsedComparison(t, expr, "created_at", searchfilter.OpLT)
@@ -159,12 +162,19 @@ func mustParse(t *testing.T, raw map[string]any) searchfilter.Expression {
 func requireParsedComparison(t *testing.T, expr searchfilter.Expression, field string, op searchfilter.Operator) {
 	t.Helper()
 
+	_ = comparisonValues(t, expr, field, op)
+}
+
+func comparisonValues(t *testing.T, expr searchfilter.Expression, field string, op searchfilter.Operator) []string {
+	t.Helper()
+
 	for _, cmp := range searchfilter.FlattenComparisons(expr) {
 		if cmp.Field == field && cmp.Operator == op {
-			return
+			return cmp.Values
 		}
 	}
 	t.Fatalf("comparison %s %s not found in %#v", field, op, expr)
+	return nil
 }
 
 func containsWildcard(expr searchfilter.Expression) bool {
