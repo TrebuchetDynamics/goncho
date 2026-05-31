@@ -372,15 +372,29 @@ func memoryFacadeEnvelopeMatches(env memoryFacadeEnvelope, p MemorySearchParams)
 }
 
 func memoryFacadeQueryMatches(content, query string) bool {
-	query = strings.TrimSpace(query)
-	if query == "" {
+	terms, constrained := memoryFacadeQueryTerms(query)
+	if !constrained {
 		return true
 	}
-	tokens := strings.Fields(query)
-	for i := range tokens {
-		tokens[i] = strings.Trim(tokens[i], ".,;:!?()[]{}\"'")
+	if len(terms) == 0 {
+		return false
 	}
-	return textutil.ContainsAllSubstringsFold(content, tokens)
+	return textutil.ContainsAllSubstringsFold(content, terms)
+}
+
+func memoryFacadeQueryTerms(query string) ([]string, bool) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, false
+	}
+	terms := []string{}
+	for _, token := range strings.Fields(query) {
+		term := strings.Trim(token, ".,;:!?()[]{}\"'")
+		if term != "" {
+			terms = append(terms, term)
+		}
+	}
+	return terms, true
 }
 
 func memoryFacadeMetadataFromObservation(metadata map[string]string) map[string]string {
