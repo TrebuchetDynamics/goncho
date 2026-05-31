@@ -149,6 +149,26 @@ func TestRecallSpeakerRoutingMatchesMultiTokenSpeakerTarget(t *testing.T) {
 	}
 }
 
+func TestRecallSpeakerRoutingParsesSpeakerFieldWithoutTrailingMetadata(t *testing.T) {
+	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
+		MemoryID: "mem-mira-metadata",
+		Content:  "Mira summarized the migration risk.",
+		Provenance: []EvidenceItem{{
+			Kind:   "speaker",
+			Source: "turn-17",
+			Score:  1,
+			Note:   "speaker=Mira source=turn-17",
+		}},
+	}}
+
+	if got := recallCandidateSpeaker(candidate.Candidate); got != "mira" {
+		t.Fatalf("recallCandidateSpeaker() = %q, want speaker identity without trailing note metadata", got)
+	}
+	if got := recallSpeakerAdjustment(candidate, "What did Mira say about migration risk?"); got != recallSpeakerMatchBonus {
+		t.Fatalf("recallSpeakerAdjustment() = %v, want speaker bonus %v", got, recallSpeakerMatchBonus)
+	}
+}
+
 func TestRecallSpeakerRoutingPrefersExplicitSpeakerNoteOverOpaqueSource(t *testing.T) {
 	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
 		MemoryID: "mem-mira",
