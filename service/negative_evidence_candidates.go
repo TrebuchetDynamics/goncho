@@ -318,11 +318,15 @@ func negativeEvidenceSuccessSignalFrom(projection SessionEvidenceProjection, obs
 }
 
 func negativeEvidenceFailureResolvedByLaterSuccess(signal negativeEvidenceFailureSignal, latestSuccessByScope map[negativeEvidenceCandidateKey]time.Time) bool {
-	if signal.ObservedAt.IsZero() {
+	latestSuccess := latestSuccessByScope[signal.Scope.key()]
+	return negativeEvidenceSuccessObservedAfterFailure(signal.ObservedAt, latestSuccess)
+}
+
+func negativeEvidenceSuccessObservedAfterFailure(failureObservedAt, successObservedAt time.Time) bool {
+	if failureObservedAt.IsZero() || successObservedAt.IsZero() {
 		return false
 	}
-	latestSuccess := latestSuccessByScope[signal.Scope.key()]
-	return !latestSuccess.IsZero() && !signal.ObservedAt.After(latestSuccess)
+	return successObservedAt.After(failureObservedAt)
 }
 
 func negativeEvidenceFailureSignalFrom(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceFailureSignal, bool) {

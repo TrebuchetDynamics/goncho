@@ -169,6 +169,24 @@ func TestNegativeEvidenceCandidatesDoNotPromoteFailuresResolvedByLaterSuccess(t 
 	}
 }
 
+func TestNegativeEvidenceCandidatesDoNotTreatSameTimestampSuccessAsLaterResolution(t *testing.T) {
+	failed := false
+	succeeded := true
+	observedAt := time.Unix(30, 0).UTC()
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "same-time-fail-1", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: observedAt},
+			{ID: "same-time-fail-2", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: observedAt},
+			{ID: "same-time-success", Kind: ObservationKindToolResult, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &succeeded, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: observedAt},
+		},
+	})
+	if len(candidates) != 1 || candidates[0].FailureCount != 2 {
+		t.Fatalf("candidates = %+v, want same-timestamp success not to masquerade as later resolution", candidates)
+	}
+}
+
 func TestNegativeEvidenceCandidatesStillPromoteFailuresAfterLastSuccess(t *testing.T) {
 	failed := false
 	succeeded := true
