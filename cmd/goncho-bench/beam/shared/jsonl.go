@@ -8,6 +8,18 @@ import (
 	"strings"
 )
 
+const (
+	jsonlInitialScanBuffer = 1024 * 1024
+	jsonlMaxScanBuffer     = 16 * 1024 * 1024
+)
+
+// NewJSONLScanner returns a scanner sized for BEAM JSONL artifacts that can contain large prompt/context rows.
+func NewJSONLScanner(r io.Reader) *bufio.Scanner {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, jsonlInitialScanBuffer), jsonlMaxScanBuffer)
+	return scanner
+}
+
 // WriteJSONLRows writes BEAM JSONL rows using the shared one-object-per-line artifact convention.
 func WriteJSONLRows[T any](w io.Writer, rows []T, writeContext string) error {
 	encoder := json.NewEncoder(w)

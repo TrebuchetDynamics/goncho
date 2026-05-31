@@ -69,7 +69,7 @@ func buildBeamServiceJudgeRequestRows(report goncho.RecallBenchmarkReport, confi
 			Scale:                beamServiceCaseScale(c),
 			ConversationID:       beamServiceCaseConversationID(c),
 			QID:                  c.ID,
-			Ability:              strings.ToUpper(strings.TrimSpace(c.Ability)),
+			Ability:              shared.NormalizeAbility(c.Ability),
 			Question:             question,
 			PureRecall:           true,
 			AnswerRequest:        buildBeamServiceAnswerRequest(question, context),

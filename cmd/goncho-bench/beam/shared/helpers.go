@@ -24,6 +24,11 @@ func ChecksumBytesSHA256(raw []byte) string {
 	return checksum.SHA256Bytes(raw)
 }
 
+// NormalizeAbility returns the canonical BEAM ability code used in artifacts and match keys.
+func NormalizeAbility(ability string) string {
+	return strings.ToUpper(strings.TrimSpace(ability))
+}
+
 // NormalizeQuestionText returns the canonical question text used for BEAM question-key matching.
 func NormalizeQuestionText(question string) string {
 	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(question))), " ")

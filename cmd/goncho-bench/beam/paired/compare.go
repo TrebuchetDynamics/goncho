@@ -1,7 +1,6 @@
 package paired
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -136,9 +135,9 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 	comparisonRows := make([]beamPairedComparisonRow, 0, len(matchedRows))
 	for _, matched := range matchedRows {
 		base, cand := matched.baseline, matched.candidate
-		ability := strings.ToUpper(strings.TrimSpace(cand.Ability))
+		ability := shared.NormalizeAbility(cand.Ability)
 		if ability == "" {
-			ability = strings.ToUpper(strings.TrimSpace(base.Ability))
+			ability = shared.NormalizeAbility(base.Ability)
 		}
 		question := strings.TrimSpace(cand.Question)
 		if question == "" {
@@ -156,7 +155,7 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 		if qid == "" {
 			qid = strings.TrimSpace(base.QID)
 		}
-		delta := roundSignedMetric(cand.Score - base.Score)
+		delta := shared.RoundSignedMetric(cand.Score - base.Score)
 		comparisonRows = append(comparisonRows, beamPairedComparisonRow{
 			Scale:                 scale,
 			ConversationID:        conversationID,
@@ -202,7 +201,7 @@ func loadBeamPairedOutcomes(path string) ([]servicePairedOutcome, error) {
 	}
 	defer file.Close()
 	rows := []servicePairedOutcome{}
-	scanner := bufio.NewScanner(file)
+	scanner := shared.NewJSONLScanner(file)
 	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: scan BEAM paired outcomes", func(lineNumber int, line string) error {
 		var row servicePairedOutcome
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
@@ -336,7 +335,7 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 	n := float64(len(rows))
 	report.BaselineAvgScore = shared.RoundMetric(baseTotal / n)
 	report.CandidateAvgScore = shared.RoundMetric(candidateTotal / n)
-	report.ScoreDelta = roundSignedMetric(report.CandidateAvgScore - report.BaselineAvgScore)
+	report.ScoreDelta = shared.RoundSignedMetric(report.CandidateAvgScore - report.BaselineAvgScore)
 	report.ScoreDeltaCI95 = bootstrapMeanCI(diffs, bootstrapSamples)
 	report.Conclusion, report.ConclusionReason = beamPairedComparisonConclusion(report.ScoreDeltaCI95, report.EffectSizeFloor)
 	for ability, rows := range abilityRows {
@@ -363,7 +362,7 @@ func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow, effectSize
 	n := float64(len(rows))
 	stats.BaselineAvgScore = shared.RoundMetric(baseTotal / n)
 	stats.CandidateAvgScore = shared.RoundMetric(candidateTotal / n)
-	stats.ScoreDelta = roundSignedMetric(stats.CandidateAvgScore - stats.BaselineAvgScore)
+	stats.ScoreDelta = shared.RoundSignedMetric(stats.CandidateAvgScore - stats.BaselineAvgScore)
 	stats.Conclusion, stats.ConclusionReason = beamPairedComparisonPointConclusion(stats.ScoreDelta, effectSizeFloor)
 	return stats
 }
@@ -388,10 +387,6 @@ func beamPairedComparisonPointConclusion(delta, effectSizeFloor float64) (string
 	return "inconclusive", "delta_within_effect_floor"
 }
 
-func roundSignedMetric(v float64) float64 {
-	return shared.RoundSignedMetric(v)
-}
-
 func bootstrapMeanCI(values []float64, samples int) beamPairedComparisonCI {
 	if len(values) == 0 || samples <= 0 {
 		return beamPairedComparisonCI{}
@@ -411,7 +406,7 @@ func bootstrapMeanCI(values []float64, samples int) beamPairedComparisonCI {
 	if upperIndex >= len(means) {
 		upperIndex = len(means) - 1
 	}
-	return beamPairedComparisonCI{Lower: roundSignedMetric(means[lowerIndex]), Upper: roundSignedMetric(means[upperIndex])}
+	return beamPairedComparisonCI{Lower: shared.RoundSignedMetric(means[lowerIndex]), Upper: shared.RoundSignedMetric(means[upperIndex])}
 }
 
 func writeBeamPairedComparisonJSON(jsonOut, markdownOut string, report beamPairedComparisonReport) error {

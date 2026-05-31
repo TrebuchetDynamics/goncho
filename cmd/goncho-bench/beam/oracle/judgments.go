@@ -1,7 +1,6 @@
 package oracle
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -65,8 +64,7 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 }
 
 func loadJSONLBeamServiceJudgments(raw []byte, rows map[shared.OutcomeKey]beamServiceJudgment, questionRows map[shared.QuestionKey]beamServiceJudgment) error {
-	scanner := bufio.NewScanner(bytes.NewReader(raw))
-	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
+	scanner := shared.NewJSONLScanner(bytes.NewReader(raw))
 	return shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: read BEAM service judgments", func(lineNo int, line string) error {
 		var row beamServiceJudgment
 		if err := json.Unmarshal([]byte(line), &row); err != nil {
@@ -107,7 +105,7 @@ func addBeamServiceJudgment(rows map[shared.OutcomeKey]beamServiceJudgment, ques
 	row.Scale = strings.TrimSpace(row.Scale)
 	row.ConversationID = strings.TrimSpace(row.ConversationID)
 	row.QID = strings.TrimSpace(row.QID)
-	row.Ability = strings.ToUpper(strings.TrimSpace(row.Ability))
+	row.Ability = shared.NormalizeAbility(row.Ability)
 	row.Question = strings.TrimSpace(row.Question)
 	if row.QID == "" {
 		return fmt.Errorf("goncho-bench: BEAM service judgment %s missing qid", location)
@@ -135,7 +133,7 @@ func (s *beamServiceJudgmentSet) find(c goncho.RecallBenchmarkCaseReport) (beamS
 			return row, true
 		}
 	}
-	ability := strings.ToUpper(strings.TrimSpace(c.Ability))
+	ability := shared.NormalizeAbility(c.Ability)
 	question := strings.TrimSpace(c.Question)
 	if question == "" {
 		return beamServiceJudgment{}, false

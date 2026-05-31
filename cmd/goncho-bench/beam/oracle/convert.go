@@ -1,7 +1,6 @@
 package oracle
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -111,8 +110,7 @@ func loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale string) ([]be
 		fallbackScale = beamServiceScale
 	}
 	out := []beamJSONLRecord{{Type: "meta", Dataset: "beam-huggingface-converted", Scale: fallbackScale}}
-	scanner := bufio.NewScanner(io.TeeReader(file, sourceHasher))
-	scanner.Buffer(make([]byte, 0, 1024*1024), 16*1024*1024)
+	scanner := shared.NewJSONLScanner(io.TeeReader(file, sourceHasher))
 	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: read HuggingFace BEAM JSONL", func(lineNo int, line string) error {
 		var record beamHuggingFaceRecord
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
@@ -210,7 +208,7 @@ func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fall
 				Scale:                 scale,
 				Peer:                  peer,
 				SessionKey:            sessionKey,
-				Ability:               strings.ToUpper(strings.TrimSpace(ability)),
+				Ability:               shared.NormalizeAbility(ability),
 				Query:                 query,
 				IdealAnswer:           stringutil.FirstNonEmpty(question.IdealAnswer, question.IdealResponse, question.Answer, question.IdealSummary),
 				Rubric:                append([]string(nil), question.Rubric...),
@@ -319,7 +317,7 @@ func parseBeamHuggingFaceQuestions(raw json.RawMessage) (map[string][]beamConver
 func normalizeBeamQuestionAbilityMap(in map[string][]beamConvertedQuestion) map[string][]beamConvertedQuestion {
 	out := map[string][]beamConvertedQuestion{}
 	for ability, questions := range in {
-		ability = strings.ToUpper(strings.TrimSpace(ability))
+		ability = shared.NormalizeAbility(ability)
 		if ability != "" {
 			out[ability] = questions
 		}
@@ -396,7 +394,7 @@ func summarizeBeamConversionRecords(records []beamJSONLRecord) beamConversionDia
 			diagnostics.QuestionCount++
 			conversationID := normalizeBeamJSONLConversationID(record.ConversationID)
 			conversations[conversationID] = struct{}{}
-			ability := strings.ToUpper(strings.TrimSpace(record.Ability))
+			ability := shared.NormalizeAbility(record.Ability)
 			if ability == "" {
 				ability = "UNKNOWN"
 			}

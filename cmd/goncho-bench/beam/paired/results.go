@@ -92,7 +92,7 @@ func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfig
 				Scale:          scale,
 				ConversationID: conversationID,
 				QID:            qid,
-				Ability:        strings.ToUpper(strings.TrimSpace(result.Ability)),
+				Ability:        shared.NormalizeAbility(result.Ability),
 				Question:       strings.TrimSpace(result.Question),
 				SourcePath:     strings.TrimSpace(sourcePath),
 				SourceSHA256:   strings.TrimSpace(sourceSHA256),

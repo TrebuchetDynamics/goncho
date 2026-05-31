@@ -218,7 +218,7 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 		}
 		acc.results = append(acc.results, beamServiceQuestionResult{
 			QID:                  c.ID,
-			Ability:              strings.ToUpper(strings.TrimSpace(c.Ability)),
+			Ability:              shared.NormalizeAbility(c.Ability),
 			Question:             strings.TrimSpace(c.Question),
 			IdealAnswer:          strings.TrimSpace(c.IdealAnswer),
 			Rubric:               append([]string(nil), c.Rubric...),
@@ -361,7 +361,7 @@ func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID strin
 	}
 	stats := map[string]*scaleStats{}
 	for _, c := range report.Cases {
-		ability := strings.ToUpper(strings.TrimSpace(c.Ability))
+		ability := shared.NormalizeAbility(c.Ability)
 		if ability == "" {
 			continue
 		}
@@ -425,7 +425,7 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 			Scale:          beamServiceCaseScale(c),
 			ConversationID: beamServiceCaseConversationID(c),
 			QID:            c.ID,
-			Ability:        strings.ToUpper(strings.TrimSpace(c.Ability)),
+			Ability:        shared.NormalizeAbility(c.Ability),
 			Question:       strings.TrimSpace(c.Question),
 			Score:          score,
 			Correct:        score >= 0.5,
@@ -457,7 +457,7 @@ func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, confi
 			Scale:                 beamServiceCaseScale(c),
 			ConversationID:        beamServiceCaseConversationID(c),
 			QID:                   c.ID,
-			Ability:               strings.ToUpper(strings.TrimSpace(c.Ability)),
+			Ability:               shared.NormalizeAbility(c.Ability),
 			Question:              strings.TrimSpace(c.Question),
 			Score:                 score,
 			FailureMode:           beamServiceFailureMode(c, score),

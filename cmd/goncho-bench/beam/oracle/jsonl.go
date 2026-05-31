@@ -1,7 +1,6 @@
 package oracle
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -58,7 +57,7 @@ func loadBeamServiceJSONLCases(path string) ([]goncho.RecallBenchmarkServiceCase
 	defer file.Close()
 
 	records := []beamJSONLRecord{}
-	scanner := bufio.NewScanner(file)
+	scanner := shared.NewJSONLScanner(file)
 	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: read BEAM JSONL dataset", func(lineNo int, line string) error {
 		var record beamJSONLRecord
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
@@ -172,7 +171,7 @@ func beamJSONLQuestionFromRecord(record beamJSONLRecord, defaultScale string, li
 		ConversationID:        normalizeBeamJSONLConversationID(record.ConversationID),
 		Peer:                  strings.TrimSpace(record.Peer),
 		SessionKey:            strings.TrimSpace(record.SessionKey),
-		Ability:               strings.ToUpper(strings.TrimSpace(record.Ability)),
+		Ability:               shared.NormalizeAbility(record.Ability),
 		Query:                 query,
 		IdealAnswer:           strings.TrimSpace(record.IdealAnswer),
 		Rubric:                append([]string(nil), record.Rubric...),

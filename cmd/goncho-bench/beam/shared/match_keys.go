@@ -45,7 +45,7 @@ func NewQuestionKey(scale, conversationID, ability, question string) QuestionKey
 	return QuestionKey{
 		Scale:          strings.TrimSpace(scale),
 		ConversationID: strings.TrimSpace(conversationID),
-		Ability:        strings.ToUpper(strings.TrimSpace(ability)),
+		Ability:        NormalizeAbility(ability),
 		Question:       NormalizeQuestionText(question),
 	}
 }

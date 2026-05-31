@@ -32,6 +32,17 @@ func TestWriteJSONLRowsWrapsEncoderErrors(t *testing.T) {
 	}
 }
 
+func TestNewJSONLScannerAcceptsLargePromptRows(t *testing.T) {
+	largeLine := strings.Repeat("x", 128*1024)
+	scanner := NewJSONLScanner(strings.NewReader(largeLine + "\n"))
+	if !scanner.Scan() {
+		t.Fatalf("NewJSONLScanner().Scan() = false, err = %v", scanner.Err())
+	}
+	if got := scanner.Text(); got != largeLine {
+		t.Fatalf("NewJSONLScanner().Text() length = %d, want %d", len(got), len(largeLine))
+	}
+}
+
 type errWriter struct{}
 
 func (errWriter) Write([]byte) (int, error) {
