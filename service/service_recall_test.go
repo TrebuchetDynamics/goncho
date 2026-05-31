@@ -3,7 +3,9 @@ package goncho
 import (
 	"context"
 	"slices"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/TrebuchetDynamics/goncho/memory"
 )
@@ -61,6 +63,58 @@ func TestServiceRecallReturnsScoredTraceWithProvenance(t *testing.T) {
 		if item.Score.FinalScore <= 0 {
 			t.Fatalf("selected candidate %s final_score = %v, want > 0", item.Candidate.MemoryID, item.Score.FinalScore)
 		}
+	}
+}
+
+func TestServiceRecallUsesConclusionUpdatedAtForRecencyVoice(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	oldResult, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "peer-recall-recency",
+		Conclusion: "Recency marker belongs to the older conclusion.",
+		SessionKey: "sess-recall-recency",
+	})
+	if err != nil {
+		t.Fatalf("conclude old: %v", err)
+	}
+	newResult, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "peer-recall-recency",
+		Conclusion: "Recency marker belongs to the newer conclusion.",
+		SessionKey: "sess-recall-recency",
+	})
+	if err != nil {
+		t.Fatalf("conclude new: %v", err)
+	}
+	oldUpdatedAt := time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC)
+	newUpdatedAt := oldUpdatedAt.Add(24 * time.Hour)
+	if _, err := svc.db.ExecContext(ctx, `UPDATE goncho_conclusions SET updated_at = ? WHERE id = ?`, oldUpdatedAt.Unix(), oldResult.ID); err != nil {
+		t.Fatalf("set old updated_at: %v", err)
+	}
+	if _, err := svc.db.ExecContext(ctx, `UPDATE goncho_conclusions SET updated_at = ? WHERE id = ?`, newUpdatedAt.Unix(), newResult.ID); err != nil {
+		t.Fatalf("set new updated_at: %v", err)
+	}
+
+	trace, err := svc.RecallWithScoringConfig(ctx, RecallQuery{
+		Peer:       "peer-recall-recency",
+		Query:      "recency marker",
+		SessionKey: "sess-recall-recency",
+		Limit:      1,
+	}, RecallScoringConfig{
+		Version: "recency-regression-v1",
+		Weights: map[string]float64{"recency": 1},
+		RRFK:    60,
+	})
+	if err != nil {
+		t.Fatalf("RecallWithScoringConfig: %v", err)
+	}
+	newMemoryID := strconv.FormatInt(newResult.ID, 10)
+	if !slices.Equal(selectedRecallIDs(trace), []string{newMemoryID}) {
+		t.Fatalf("selected IDs = %v, want newer conclusion %s selected by recency", selectedRecallIDs(trace), newMemoryID)
+	}
+	if len(trace.Selected) != 1 || !trace.Selected[0].Candidate.CreatedAt.Equal(newUpdatedAt) || trace.Selected[0].Score.RecencyScore <= 0 {
+		t.Fatalf("selected = %+v, want updated_at propagated as non-zero recency evidence", trace.Selected)
 	}
 }
 

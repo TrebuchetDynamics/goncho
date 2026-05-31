@@ -473,7 +473,7 @@ func deleteConclusion(ctx context.Context, db *sql.DB, workspaceID, profileID, o
 
 func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer, query, sessionKey, memoryScope string, filter compiledSearchFilter, limit int) ([]SearchHit, error) {
 	base := `
-		SELECT id, content, COALESCE(session_key, '')
+		SELECT id, content, COALESCE(session_key, ''), updated_at
 		FROM goncho_conclusions
 		WHERE observer_peer_id = ? AND peer_id = ? AND status IN ('processed', 'active')
 	`
@@ -526,8 +526,12 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 	for rows.Next() {
 		var hit SearchHit
 		hit.Source = "conclusion"
-		if err := rows.Scan(&hit.ID, &hit.Content, &hit.SessionKey); err != nil {
+		var updatedAt int64
+		if err := rows.Scan(&hit.ID, &hit.Content, &hit.SessionKey, &updatedAt); err != nil {
 			return nil, fmt.Errorf("goncho: scan conclusion: %w", err)
+		}
+		if updatedAt > 0 {
+			hit.updatedAt = time.Unix(updatedAt, 0).UTC()
 		}
 		hits = append(hits, hit)
 	}

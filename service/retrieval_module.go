@@ -138,6 +138,7 @@ func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeI
 		SessionID:  hit.SessionKey,
 		AgentID:    observer,
 		ScopeID:    scopeID,
+		CreatedAt:  hit.updatedAt,
 		Provenance: provenance,
 	}
 }

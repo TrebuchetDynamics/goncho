@@ -209,6 +209,7 @@ type SearchHit struct {
 	Lineage      *SearchLineage `json:"lineage,omitempty"`
 	Provenance   []EvidenceItem `json:"provenance,omitempty"`
 
+	updatedAt       time.Time
 	factAnnotations []memoryFactAnnotation
 }
 
