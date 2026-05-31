@@ -103,7 +103,8 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 		minFailures = 2
 	}
 	type bucket struct {
-		candidate NegativeEvidenceCandidate
+		candidate  NegativeEvidenceCandidate
+		evidenceID []negativeEvidenceEvidenceRef
 	}
 	buckets := map[string]*bucket{}
 	for _, obs := range input.Observations {
@@ -118,7 +119,7 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 		}
 		b.candidate.FailureCount++
 		if strings.TrimSpace(obs.ID) != "" {
-			b.candidate.EvidenceIDs = append(b.candidate.EvidenceIDs, strings.TrimSpace(obs.ID))
+			b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: strings.TrimSpace(obs.ID), ObservedAt: obs.ObservedAt})
 		}
 		if !obs.ObservedAt.IsZero() && (b.candidate.FirstObservedAt.IsZero() || obs.ObservedAt.Before(b.candidate.FirstObservedAt)) {
 			b.candidate.FirstObservedAt = obs.ObservedAt
@@ -133,7 +134,7 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 		if candidate.FailureCount < minFailures {
 			continue
 		}
-		sort.Strings(candidate.EvidenceIDs)
+		candidate.EvidenceIDs = negativeEvidenceOrderedEvidenceIDs(b.evidenceID)
 		candidate.Recommendation = negativeEvidenceRecommendation(candidate)
 		out = append(out, candidate)
 	}
@@ -184,6 +185,32 @@ func negativeEvidenceFailureObservation(obs Observation) bool {
 		return obs.Kind == ObservationKindToolResult || obs.Kind == ObservationKindCustom || obs.Kind == ObservationKindToolCall
 	}
 	return false
+}
+
+type negativeEvidenceEvidenceRef struct {
+	ID         string
+	ObservedAt time.Time
+}
+
+func negativeEvidenceOrderedEvidenceIDs(refs []negativeEvidenceEvidenceRef) []string {
+	refs = append([]negativeEvidenceEvidenceRef(nil), refs...)
+	sort.SliceStable(refs, func(i, j int) bool {
+		left, right := refs[i], refs[j]
+		if left.ObservedAt.IsZero() != right.ObservedAt.IsZero() {
+			return !left.ObservedAt.IsZero()
+		}
+		if !left.ObservedAt.Equal(right.ObservedAt) {
+			return left.ObservedAt.Before(right.ObservedAt)
+		}
+		return left.ID < right.ID
+	})
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		if ref.ID != "" {
+			out = append(out, ref.ID)
+		}
+	}
+	return out
 }
 
 func negativeEvidenceReviewSubjectID(candidate NegativeEvidenceCandidate) string {

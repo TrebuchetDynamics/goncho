@@ -6,6 +6,24 @@ import (
 	"time"
 )
 
+func TestNegativeEvidenceCandidatesOrderEvidenceByFailureTimeline(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "z-first", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "a-second", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+		},
+	})
+	if len(candidates) != 1 {
+		t.Fatalf("candidates = %+v, want one repeated failure", candidates)
+	}
+	if got := strings.Join(candidates[0].EvidenceIDs, ","); got != "z-first,a-second" {
+		t.Fatalf("evidence ids = %q, want chronological failure timeline", got)
+	}
+}
+
 func TestNegativeEvidenceCandidatesMineRepeatedFailuresWithoutRawContent(t *testing.T) {
 	failed := false
 	projection := ProjectSessionEvidence(SessionEvidenceInput{
