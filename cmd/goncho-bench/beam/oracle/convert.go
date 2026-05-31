@@ -222,70 +222,11 @@ func flattenBeamChat(raw json.RawMessage) ([]beamConvertedMessage, error) {
 }
 
 func parseBeamHuggingFaceQuestions(raw json.RawMessage) (map[string][]beamConvertedQuestion, error) {
-	trimmed := shared.TrimJSONRaw(raw)
-	if shared.JSONRawIsEmptyOrNull(trimmed) {
-		return map[string][]beamConvertedQuestion{}, nil
-	}
-	var parsed map[string][]beamConvertedQuestion
-	if trimmed[0] == '"' {
-		var encoded string
-		if err := json.Unmarshal(trimmed, &encoded); err != nil {
-			return nil, err
-		}
-		if !shared.HasNonEmptyTrimmed(encoded) {
-			return map[string][]beamConvertedQuestion{}, nil
-		}
-		candidate := []byte(encoded)
-		if !json.Valid(candidate) {
-			candidate = []byte(pythonLiteralToJSONish(encoded))
-		}
-		if err := json.Unmarshal(candidate, &parsed); err != nil {
-			return nil, err
-		}
-		return normalizeBeamQuestionAbilityMap(parsed), nil
-	}
-	if err := json.Unmarshal(trimmed, &parsed); err != nil {
-		return nil, err
-	}
-	return normalizeBeamQuestionAbilityMap(parsed), nil
-}
-
-func normalizeBeamQuestionAbilityMap(in map[string][]beamConvertedQuestion) map[string][]beamConvertedQuestion {
-	out := map[string][]beamConvertedQuestion{}
-	for ability, questions := range in {
-		ability = shared.NormalizeAbility(ability)
-		if ability != "" {
-			out[ability] = questions
-		}
-	}
-	return out
+	return convertpolicy.ParseQuestions(raw)
 }
 
 func beamQuestionRelevantIDs(question beamConvertedQuestion, memoryIDs []string) ([]string, error) {
-	if len(question.RelevantIDs) > 0 {
-		return append([]string(nil), question.RelevantIDs...), nil
-	}
-	indices := question.RelevantMessageIdxs
-	if len(indices) == 0 {
-		indices = question.EvidenceMessageIdxs
-	}
-	if len(indices) == 0 {
-		indices = question.SourceMessageIdxs
-	}
-	out := make([]string, 0, len(indices))
-	seen := map[string]struct{}{}
-	for _, idx := range indices {
-		if idx < 0 || idx >= len(memoryIDs) {
-			return nil, fmt.Errorf("message index %d out of range 0..%d", idx, len(memoryIDs)-1)
-		}
-		id := memoryIDs[idx]
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		out = append(out, id)
-	}
-	return out, nil
+	return convertpolicy.RelevantIDs(question, memoryIDs)
 }
 
 func writeConvertedBeamJSONL(path string, records []beamJSONLRecord) error {

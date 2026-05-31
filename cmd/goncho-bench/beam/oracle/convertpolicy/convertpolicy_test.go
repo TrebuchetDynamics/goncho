@@ -1,8 +1,10 @@
 package convertpolicy
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/convertcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/jsonlcontract"
 )
 
@@ -26,6 +28,50 @@ func TestPythonLiteralToJSONishConvertsPythonBarewordsAndQuotes(t *testing.T) {
 	want := `{"ok": true, "missing": null, "bad": false, "quote": "a\"b"}`
 	if got != want {
 		t.Fatalf("PythonLiteralToJSONish() = %q, want %q", got, want)
+	}
+}
+
+func TestParseQuestionsAcceptsEncodedPythonLiteralAndNormalizesAbilities(t *testing.T) {
+	encoded, err := json.Marshal(`{'fact': [{'qid': 'q1', 'question': 'What?', 'relevant_message_indices': [0], 'expected_no_answer': False}], ' ': [{'qid': 'ignored'}]}`)
+	if err != nil {
+		t.Fatalf("marshal encoded questions: %v", err)
+	}
+
+	got, err := ParseQuestions(encoded)
+	if err != nil {
+		t.Fatalf("ParseQuestions error = %v", err)
+	}
+	if len(got) != 1 || len(got["FACT"]) != 1 {
+		t.Fatalf("questions = %#v", got)
+	}
+	question := got["FACT"][0]
+	if question.QID != "q1" || question.Question != "What?" || question.ExpectedNoAnswer || len(question.RelevantMessageIdxs) != 1 || question.RelevantMessageIdxs[0] != 0 {
+		t.Fatalf("question = %#v", question)
+	}
+}
+
+func TestRelevantIDsPrefersExplicitIDsAndDeduplicatesIndexedRefs(t *testing.T) {
+	explicit, err := RelevantIDs(convertcontract.Question{RelevantIDs: []string{"m-explicit"}, RelevantMessageIdxs: []int{1}}, []string{"m0", "m1"})
+	if err != nil {
+		t.Fatalf("RelevantIDs explicit error = %v", err)
+	}
+	if len(explicit) != 1 || explicit[0] != "m-explicit" {
+		t.Fatalf("explicit = %#v", explicit)
+	}
+
+	indexed, err := RelevantIDs(convertcontract.Question{EvidenceMessageIdxs: []int{1, 0, 1}}, []string{"m0", "m1"})
+	if err != nil {
+		t.Fatalf("RelevantIDs indexed error = %v", err)
+	}
+	if len(indexed) != 2 || indexed[0] != "m1" || indexed[1] != "m0" {
+		t.Fatalf("indexed = %#v", indexed)
+	}
+}
+
+func TestRelevantIDsRejectsOutOfRangeIndex(t *testing.T) {
+	_, err := RelevantIDs(convertcontract.Question{SourceMessageIdxs: []int{2}}, []string{"m0"})
+	if err == nil {
+		t.Fatal("RelevantIDs expected range error")
 	}
 }
 

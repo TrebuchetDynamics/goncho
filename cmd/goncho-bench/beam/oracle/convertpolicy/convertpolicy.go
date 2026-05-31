@@ -1,11 +1,14 @@
 package convertpolicy
 
 import (
+	"encoding/json"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/convertcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/jsonlcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 )
@@ -53,6 +56,73 @@ func StableIDSegment(value string) string {
 }
 
 var pythonLiteralBarewordPattern = regexp.MustCompile(`\b(True|False|None)\b`)
+
+func ParseQuestions(raw json.RawMessage) (map[string][]convertcontract.Question, error) {
+	trimmed := shared.TrimJSONRaw(raw)
+	if shared.JSONRawIsEmptyOrNull(trimmed) {
+		return map[string][]convertcontract.Question{}, nil
+	}
+	var parsed map[string][]convertcontract.Question
+	if trimmed[0] == '"' {
+		var encoded string
+		if err := json.Unmarshal(trimmed, &encoded); err != nil {
+			return nil, err
+		}
+		if !shared.HasNonEmptyTrimmed(encoded) {
+			return map[string][]convertcontract.Question{}, nil
+		}
+		candidate := []byte(encoded)
+		if !json.Valid(candidate) {
+			candidate = []byte(PythonLiteralToJSONish(encoded))
+		}
+		if err := json.Unmarshal(candidate, &parsed); err != nil {
+			return nil, err
+		}
+		return normalizeQuestionAbilityMap(parsed), nil
+	}
+	if err := json.Unmarshal(trimmed, &parsed); err != nil {
+		return nil, err
+	}
+	return normalizeQuestionAbilityMap(parsed), nil
+}
+
+func normalizeQuestionAbilityMap(in map[string][]convertcontract.Question) map[string][]convertcontract.Question {
+	out := map[string][]convertcontract.Question{}
+	for ability, questions := range in {
+		ability = shared.NormalizeAbility(ability)
+		if ability != "" {
+			out[ability] = questions
+		}
+	}
+	return out
+}
+
+func RelevantIDs(question convertcontract.Question, memoryIDs []string) ([]string, error) {
+	if len(question.RelevantIDs) > 0 {
+		return append([]string(nil), question.RelevantIDs...), nil
+	}
+	indices := question.RelevantMessageIdxs
+	if len(indices) == 0 {
+		indices = question.EvidenceMessageIdxs
+	}
+	if len(indices) == 0 {
+		indices = question.SourceMessageIdxs
+	}
+	out := make([]string, 0, len(indices))
+	seen := map[string]struct{}{}
+	for _, idx := range indices {
+		if idx < 0 || idx >= len(memoryIDs) {
+			return nil, fmt.Errorf("message index %d out of range 0..%d", idx, len(memoryIDs)-1)
+		}
+		id := memoryIDs[idx]
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out, nil
+}
 
 func SummarizeRecords(records []jsonlcontract.Record) Diagnostics {
 	diagnostics := Diagnostics{
