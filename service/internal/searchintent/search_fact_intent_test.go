@@ -27,6 +27,12 @@ func TestDecisionFactIntentKeepsCoordinatedDecisionObject(t *testing.T) {
 	}
 }
 
+func TestVersionFactIntentKeepsDottedVersionAfterQuestionSentence(t *testing.T) {
+	if score := Score("what version is goncho?", "User asked what shipped? Goncho version is v1.2.3."); score != 1 {
+		t.Fatalf("version fact score = %v, want 1 for dotted version after question sentence", score)
+	}
+}
+
 func TestNegationFactIntentKeepsCoordinatedNegativeObject(t *testing.T) {
 	if score := Score("have we ever used kubernetes?", "We never used Docker and Kubernetes."); score != 1 {
 		t.Fatalf("negation fact score = %v, want 1 for coordinated negative object", score)

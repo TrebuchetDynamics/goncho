@@ -22,7 +22,6 @@ var (
 	searchNegationPattern      = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:(?:have|has|had|did)\s+)?(?:never|not)\s+(.+?)\s*$`)
 	searchDecisionPattern      = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:decided to|chose to|opted for|selected|picked|switching to)\s+(.+?)\s*$`)
 	searchSequenceMarkers      = []string{"first", "second", "third", "fourth", "fifth", "finally", "next", "then", "after that"}
-	recallSentencePattern      = regexp.MustCompile(`[^.!?]+[.!?]?`)
 )
 
 func Score(query, content string) float64 {
@@ -60,6 +59,35 @@ func Score(query, content string) float64 {
 		return score
 	}
 	return 0
+}
+
+func factIntentSentences(content string) []string {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return nil
+	}
+	out := []string{}
+	start := 0
+	for i := 0; i < len(content); i++ {
+		switch content[i] {
+		case '.', '!', '?':
+			if content[i] == '.' && factIntentByteIsDigit(content, i-1) && factIntentByteIsDigit(content, i+1) {
+				continue
+			}
+			if sentence := strings.TrimSpace(content[start : i+1]); sentence != "" {
+				out = append(out, sentence)
+			}
+			start = i + 1
+		}
+	}
+	if sentence := strings.TrimSpace(content[start:]); sentence != "" {
+		out = append(out, sentence)
+	}
+	return out
+}
+
+func factIntentByteIsDigit(content string, idx int) bool {
+	return idx >= 0 && idx < len(content) && content[idx] >= '0' && content[idx] <= '9'
 }
 
 func searchSpeakerFactIntentScore(query, content string) float64 {
@@ -103,7 +131,7 @@ func searchOwnerFactIntentScore(query, content string) float64 {
 	if len(queryTokens) == 0 {
 		return 0
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -136,7 +164,7 @@ func searchPreferenceFactIntentScore(query, content string) float64 {
 	if len(subjectTokens) == 0 || len(attributeTokens) == 0 {
 		return 0
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -163,7 +191,7 @@ func searchLocationFactIntentScore(query, content string) float64 {
 	if len(queryTokens) == 0 {
 		return 0
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -208,7 +236,7 @@ func searchTimelineFactIntentScore(query, content string) float64 {
 	if len(queryTokens) == 0 {
 		return 0
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -259,7 +287,7 @@ func searchMetricFactIntentScore(query, content string) float64 {
 			return 1
 		}
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -310,7 +338,7 @@ func searchVersionFactIntentScore(query, content string) float64 {
 			return 1
 		}
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -376,7 +404,7 @@ func searchSequenceFactIntentScore(query, content string) float64 {
 			return 1
 		}
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -505,7 +533,7 @@ func searchNegationFactIntentScore(query, content string) float64 {
 			return 1
 		}
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -555,7 +583,7 @@ func searchDecisionFactIntentScore(query, content string) float64 {
 			return 1
 		}
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
@@ -600,7 +628,7 @@ func searchInstructionFactIntentScore(query, content string) float64 {
 	if len(subjectTokens) == 0 || len(topicTokens) == 0 {
 		return 0
 	}
-	for _, sentence := range recallSentencePattern.FindAllString(content, -1) {
+	for _, sentence := range factIntentSentences(content) {
 		if strings.Contains(sentence, "?") {
 			continue
 		}
