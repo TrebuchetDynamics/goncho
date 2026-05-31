@@ -3,6 +3,8 @@ package pathutil
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 // AbsNonBlank trims value and resolves it to an absolute path.
@@ -55,4 +57,51 @@ func SlashBase(value string) string {
 		return value
 	}
 	return value[idx+1:]
+}
+
+// NormalizeSlashPatterns trims, slash-normalizes, de-duplicates, and drops
+// empty user-facing glob/path patterns while preserving first-seen order.
+func NormalizeSlashPatterns(values []string) []string {
+	return textutil.NormalizeUnique(values, NormalizeSlashPattern, false)
+}
+
+// MatchesAnySlashGlob reports whether rel matches at least one slash-separated
+// glob pattern using Goncho's filesystem watcher matching semantics.
+func MatchesAnySlashGlob(rel string, patterns []string) bool {
+	for _, pattern := range patterns {
+		if MatchSlashGlob(rel, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// MatchSlashGlob matches a slash-separated relative path against a user-facing
+// glob/path pattern. It supports direct path/base matches, *, **, prefix/**,
+// and **/suffix forms in addition to filepath.Match checks.
+func MatchSlashGlob(rel, pattern string) bool {
+	rel = NormalizeSlashPattern(rel)
+	pattern = NormalizeSlashPattern(pattern)
+	base := SlashBase(rel)
+	if pattern == rel || pattern == base || pattern == "**" || pattern == "*" {
+		return true
+	}
+	if strings.HasSuffix(pattern, "/**") {
+		prefix := strings.TrimSuffix(pattern, "/**")
+		return rel == prefix || strings.HasPrefix(rel, prefix+"/")
+	}
+	if strings.HasPrefix(pattern, "**/") {
+		tail := strings.TrimPrefix(pattern, "**/")
+		if ok, _ := filepath.Match(tail, base); ok {
+			return true
+		}
+		return strings.HasSuffix(rel, strings.TrimPrefix(tail, "*"))
+	}
+	if ok, _ := filepath.Match(pattern, rel); ok {
+		return true
+	}
+	if ok, _ := filepath.Match(pattern, base); ok {
+		return true
+	}
+	return false
 }

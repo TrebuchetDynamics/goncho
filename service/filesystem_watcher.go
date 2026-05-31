@@ -156,7 +156,7 @@ func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImpor
 	if !scope.Complete() || session == "" {
 		return FilesystemWatcherImportParams{}, fmt.Errorf("goncho: filesystem watcher workspace_id, peer_id, and session_key are required")
 	}
-	include := normalizeWatcherGlobs(params.IncludeGlobs)
+	include := pathutil.NormalizeSlashPatterns(params.IncludeGlobs)
 	if len(include) == 0 {
 		return FilesystemWatcherImportParams{}, fmt.Errorf("goncho: filesystem watcher include_globs are required")
 	}
@@ -165,7 +165,7 @@ func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImpor
 		changeKind = "file_change"
 	}
 	maxPreview := limitutil.Default(params.MaxPreviewBytes, defaultFilesystemWatcherPreviewBytes)
-	return FilesystemWatcherImportParams{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, PeerID: scope.Peer, SessionKey: session, RootDir: root, Paths: sliceutil.Clone(params.Paths), IncludeGlobs: include, ExcludeGlobs: normalizeWatcherGlobs(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
+	return FilesystemWatcherImportParams{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, PeerID: scope.Peer, SessionKey: session, RootDir: root, Paths: sliceutil.Clone(params.Paths), IncludeGlobs: include, ExcludeGlobs: pathutil.NormalizeSlashPatterns(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
 }
 
 func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportParams) (FilesystemWatcherCandidate, FilesystemWatcherSkipped, error) {
@@ -181,10 +181,10 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 	if rel == "." || rel == "" {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "not_file"}, nil
 	}
-	if matchesAnyWatcherGlob(rel, params.ExcludeGlobs) {
+	if pathutil.MatchesAnySlashGlob(rel, params.ExcludeGlobs) {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "excluded"}, nil
 	}
-	if !matchesAnyWatcherGlob(rel, params.IncludeGlobs) {
+	if !pathutil.MatchesAnySlashGlob(rel, params.IncludeGlobs) {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: absPath, RelativePath: rel, Reason: "not_included"}, nil
 	}
 	info, err := os.Stat(absPath)
@@ -212,46 +212,6 @@ func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportPa
 		truncated = true
 	}
 	return FilesystemWatcherCandidate{Path: absPath, RelativePath: rel, ChangeKind: params.ChangeKind, SizeBytes: info.Size(), Checksum: checksum, Content: content, Truncated: truncated}, FilesystemWatcherSkipped{}, nil
-}
-
-func normalizeWatcherGlobs(values []string) []string {
-	return textutil.NormalizeUnique(values, pathutil.NormalizeSlashPattern, false)
-}
-
-func matchesAnyWatcherGlob(rel string, patterns []string) bool {
-	for _, pattern := range patterns {
-		if matchWatcherGlob(rel, pattern) {
-			return true
-		}
-	}
-	return false
-}
-
-func matchWatcherGlob(rel, pattern string) bool {
-	rel = pathutil.NormalizeSlashPattern(rel)
-	pattern = pathutil.NormalizeSlashPattern(pattern)
-	base := pathutil.SlashBase(rel)
-	if pattern == rel || pattern == base || pattern == "**" || pattern == "*" {
-		return true
-	}
-	if strings.HasSuffix(pattern, "/**") {
-		prefix := strings.TrimSuffix(pattern, "/**")
-		return rel == prefix || strings.HasPrefix(rel, prefix+"/")
-	}
-	if strings.HasPrefix(pattern, "**/") {
-		tail := strings.TrimPrefix(pattern, "**/")
-		if ok, _ := filepath.Match(tail, base); ok {
-			return true
-		}
-		return strings.HasSuffix(rel, strings.TrimPrefix(tail, "*"))
-	}
-	if ok, _ := filepath.Match(pattern, rel); ok {
-		return true
-	}
-	if ok, _ := filepath.Match(pattern, base); ok {
-		return true
-	}
-	return false
 }
 
 func looksBinary(raw []byte) bool {
