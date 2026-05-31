@@ -70,6 +70,22 @@ func TestNegativeEvidenceCandidatesDoNotPromoteReplayedObservationID(t *testing.
 	}
 }
 
+func TestNegativeEvidenceCandidatesIgnoreExplicitlySuccessfulToolErrors(t *testing.T) {
+	succeeded := true
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "contradictory-success", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &succeeded, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "actual-failure", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+		},
+	})
+	if len(candidates) != 0 {
+		t.Fatalf("candidates = %+v, want explicit success=true not to promote contradictory tool_error into repeated-failure evidence", candidates)
+	}
+}
+
 func TestNegativeEvidenceCandidatesOrderEvidenceByFailureTimeline(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
