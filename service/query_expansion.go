@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/queryexpand"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 type expandedQuery = queryexpand.Expanded
@@ -16,7 +17,7 @@ func queryExpansionEvidence(expansion expandedQuery) EvidenceItem {
 	return EvidenceItem{
 		Kind:   "query_expansion",
 		Source: "goncho_query_expansion",
-		ID:     strings.ToLower(strings.TrimSpace(expansion.Original)),
+		ID:     textutil.LowerTrimmed(expansion.Original),
 		Score:  1,
 		Note:   "expanded query with transparent synonyms",
 		Metadata: map[string]string{

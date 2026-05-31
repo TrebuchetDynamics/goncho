@@ -35,7 +35,7 @@ func ContainsEitherSubstringFold(a, b string) bool {
 func ContainsAllSubstringsFold(value string, markers []string) bool {
 	value = strings.ToLower(value)
 	for _, marker := range markers {
-		marker = strings.ToLower(strings.TrimSpace(marker))
+		marker = lowerTrimmed(marker)
 		if marker == "" {
 			continue
 		}

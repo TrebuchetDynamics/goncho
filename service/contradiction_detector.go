@@ -67,7 +67,7 @@ func parseMemoryFact(content string) (memoryFact, bool) {
 }
 
 func normalizeFactText(content string) string {
-	content = strings.ToLower(strings.TrimSpace(content))
+	content = textutil.LowerTrimmed(content)
 	var b strings.Builder
 	lastSpace := false
 	for _, r := range content {

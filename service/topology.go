@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 const DefaultObserverPeerID = "gormes"
@@ -45,7 +47,7 @@ type WorkspaceDecision struct {
 }
 
 func ResolveWorkspace(req WorkspaceRequest) (WorkspaceDecision, error) {
-	strategy := WorkspaceStrategy(strings.ToLower(strings.TrimSpace(string(req.Strategy))))
+	strategy := WorkspaceStrategy(textutil.LowerTrimmed(string(req.Strategy)))
 	switch strategy {
 	case "", WorkspaceStrategyDefault:
 		if strings.TrimSpace(req.WorkspaceID) != "" {
@@ -91,7 +93,7 @@ func ResolvePeerID(meta SessionMetadata) (PeerIdentityDecision, error) {
 		}, nil
 	}
 
-	source := strings.ToLower(strings.TrimSpace(meta.Source))
+	source := textutil.LowerTrimmed(meta.Source)
 	chatID := strings.TrimSpace(meta.ChatID)
 	if source == "" || chatID == "" {
 		return PeerIdentityDecision{}, ErrPeerIdentityRequired
@@ -126,7 +128,7 @@ type ObservationDecision struct {
 }
 
 func DefaultObservation(req ObservationRequest) ObservationDecision {
-	role := PeerRole(strings.ToLower(strings.TrimSpace(string(req.Role))))
+	role := PeerRole(textutil.LowerTrimmed(string(req.Role)))
 	observeMe := true
 	switch role {
 	case PeerRoleGormesAssistant, PeerRoleDeterministicAssistant, PeerRoleTransportBot, PeerRoleImportHelper, PeerRoleParentAgent:
@@ -168,12 +170,12 @@ type SessionBoundaryDecision struct {
 }
 
 func ResolveSessionBoundary(req SessionBoundaryRequest) (SessionBoundaryDecision, error) {
-	kind := SessionBoundaryKind(strings.ToLower(strings.TrimSpace(string(req.Kind))))
+	kind := SessionBoundaryKind(textutil.LowerTrimmed(string(req.Kind)))
 	key := strings.TrimSpace(req.Key)
 	if key == "" {
 		return SessionBoundaryDecision{}, ErrSessionBoundaryRequired
 	}
-	source := strings.ToLower(strings.TrimSpace(req.Source))
+	source := textutil.LowerTrimmed(req.Source)
 
 	switch kind {
 	case SessionBoundaryThread:

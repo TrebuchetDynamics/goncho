@@ -87,7 +87,7 @@ func searchSpeakerFactIntentScore(query, content string) float64 {
 }
 
 func searchSpeakerAttributionQuestion(query string) bool {
-	q := strings.ToLower(strings.TrimSpace(query))
+	q := textutil.LowerTrimmed(query)
 	if q == "" {
 		return false
 	}

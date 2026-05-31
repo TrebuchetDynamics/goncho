@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 // Config controls the minimal Goncho service defaults for a runtime.
@@ -113,7 +115,7 @@ func (c Config) Effective() Config {
 }
 
 func ValidDialecticLevel(level string) bool {
-	switch DialecticLevel(strings.ToLower(strings.TrimSpace(level))) {
+	switch DialecticLevel(textutil.LowerTrimmed(level)) {
 	case DialecticLevelMinimal, DialecticLevelLow, DialecticLevelMedium, DialecticLevelHigh, DialecticLevelMax:
 		return true
 	default:

@@ -330,7 +330,7 @@ func (s *Service) DeleteWorkspace(ctx context.Context) (WorkspaceDeletionResult,
 }
 
 func normalizeReasoningLevel(level string) string {
-	level = strings.ToLower(strings.TrimSpace(level))
+	level = textutil.LowerTrimmed(level)
 	if level == "" {
 		return string(DialecticLevelLow)
 	}
@@ -342,7 +342,7 @@ func normalizeScope(scope string) string {
 }
 
 func normalizeMemoryScope(scope, profileID string) string {
-	scope = strings.ToLower(strings.TrimSpace(scope))
+	scope = textutil.LowerTrimmed(scope)
 	switch scope {
 	case MemoryScopeProfile, MemoryScopeWorkspace, MemoryScopeShared, MemoryScopeSession, MemoryScopeGlobal:
 		return scope
@@ -585,7 +585,7 @@ func buildChatContent(peer, query, reasoningLevel string, card []string, hits []
 }
 
 func makeIdempotencyKey(workspaceID, profileID, observer, peer, sessionKey, conclusion string) string {
-	normalized := strings.ToLower(strings.TrimSpace(conclusion))
+	normalized := textutil.LowerTrimmed(conclusion)
 	seed := strings.Join([]string{
 		workspaceID,
 		profileID,

@@ -316,7 +316,7 @@ func buildSearchLineageIndex(metas []SessionMetadata) searchLineageIndex {
 func normalizeSearchLineageMetadata(meta SessionMetadata) SessionMetadata {
 	meta.SessionID = strings.TrimSpace(meta.SessionID)
 	meta.ParentSessionID = strings.TrimSpace(meta.ParentSessionID)
-	meta.LineageKind = strings.ToLower(strings.TrimSpace(meta.LineageKind))
+	meta.LineageKind = textutil.LowerTrimmed(meta.LineageKind)
 	return meta
 }
 

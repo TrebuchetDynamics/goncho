@@ -2,7 +2,6 @@ package goncho
 
 import (
 	"context"
-	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -73,7 +72,7 @@ func (g graphExpandingRecallGenerator) Generate(ctx context.Context, q RecallQue
 }
 
 func graphRelationIsAccepted(relation GraphRelation) bool {
-	state := strings.ToLower(strings.TrimSpace(relation.State))
+	state := textutil.LowerTrimmed(relation.State)
 	return state == "" || state == GraphRelationAccepted
 }
 
