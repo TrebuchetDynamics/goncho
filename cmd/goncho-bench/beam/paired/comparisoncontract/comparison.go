@@ -1,18 +1,21 @@
 package comparisoncontract
 
-import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/summary"
+import (
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/report"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/summary"
+)
 
 // Report preserves the root comparisoncontract report API while sharing the
-// focused summary.Report contract with lower-level comparison helpers.
-type Report = summary.Report
+// focused report.Report contract with lower-level comparison helpers.
+type Report = report.Report
 
 // Stats preserves the root comparisoncontract ability-stats API while sharing
-// the focused summary.Stats contract.
-type Stats = summary.Stats
+// the focused report.Stats contract.
+type Stats = report.Stats
 
 // Row preserves the root comparisoncontract row API while sharing the focused
-// summary.Row contract.
-type Row = summary.Row
+// report.Row contract.
+type Row = report.Row
 
 // SummarizeRows preserves the root comparisoncontract summary API while
 // delegating to the focused summary contract.
