@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	eventcontract "github.com/TrebuchetDynamics/goncho/internal/webhooks/events"
 	"github.com/TrebuchetDynamics/goncho/internal/webhooks/signing"
 	"github.com/TrebuchetDynamics/goncho/internal/webhooks/urlpolicy"
 )
@@ -47,26 +48,16 @@ type WebhookEndpoint struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-type WebhookEventType string
+type WebhookEventType = eventcontract.Type
 
 const (
-	WebhookEventQueueEmpty WebhookEventType = "queue.empty"
-	WebhookEventTest       WebhookEventType = "test.event"
+	WebhookEventQueueEmpty = eventcontract.QueueEmpty
+	WebhookEventTest       = eventcontract.Test
 )
 
-type WebhookEvent struct {
-	Type        WebhookEventType `json:"type"`
-	WorkspaceID string           `json:"workspace_id"`
-	Data        map[string]any   `json:"data,omitempty"`
-}
+type WebhookEvent = eventcontract.Event
 
-type QueueEmptyWebhookEventParams struct {
-	WorkspaceID string
-	QueueType   string
-	SessionID   string
-	Observer    string
-	Observed    string
-}
+type QueueEmptyWebhookEventParams = eventcontract.QueueEmptyParams
 
 func GetOrCreateEndpoint(ctx context.Context, db *sql.DB, defaultWorkspaceID string, params WebhookEndpointCreateParams) (WebhookEndpointCreateResult, error) {
 	workspaceID := strings.TrimSpace(params.WorkspaceID)
@@ -194,44 +185,19 @@ func DeleteEndpoint(ctx context.Context, db *sql.DB, defaultWorkspaceID, workspa
 }
 
 func NewTestWebhookEvent(workspaceID string) (WebhookEvent, error) {
-	workspaceID = strings.TrimSpace(workspaceID)
-	if workspaceID == "" {
+	event, err := eventcontract.NewTest(workspaceID)
+	if errors.Is(err, eventcontract.ErrWorkspaceRequired) {
 		return WebhookEvent{}, ErrWebhookWorkspaceRequired
 	}
-	return WebhookEvent{
-		Type:        WebhookEventTest,
-		WorkspaceID: workspaceID,
-		Data:        map[string]any{"workspace_id": workspaceID},
-	}, nil
+	return event, err
 }
 
 func NewQueueEmptyWebhookEvent(params QueueEmptyWebhookEventParams) (WebhookEvent, error) {
-	workspaceID := strings.TrimSpace(params.WorkspaceID)
-	if workspaceID == "" {
+	event, err := eventcontract.NewQueueEmpty(params)
+	if errors.Is(err, eventcontract.ErrWorkspaceRequired) {
 		return WebhookEvent{}, ErrWebhookWorkspaceRequired
 	}
-	queueType := strings.TrimSpace(params.QueueType)
-	if queueType == "" {
-		queueType = "default"
-	}
-	data := map[string]any{
-		"workspace_id": workspaceID,
-		"queue_type":   queueType,
-	}
-	if sessionID := strings.TrimSpace(params.SessionID); sessionID != "" {
-		data["session_id"] = sessionID
-	}
-	if observer := strings.TrimSpace(params.Observer); observer != "" {
-		data["observer"] = observer
-	}
-	if observed := strings.TrimSpace(params.Observed); observed != "" {
-		data["observed"] = observed
-	}
-	return WebhookEvent{
-		Type:        WebhookEventQueueEmpty,
-		WorkspaceID: workspaceID,
-		Data:        data,
-	}, nil
+	return event, err
 }
 
 func SignWebhookPayload(payload, secret string) (string, error) {

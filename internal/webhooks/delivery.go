@@ -1,14 +1,13 @@
 package webhooks
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	eventcontract "github.com/TrebuchetDynamics/goncho/internal/webhooks/events"
 	"github.com/TrebuchetDynamics/goncho/internal/webhooks/signing"
 	"github.com/TrebuchetDynamics/goncho/internal/webhooks/urlpolicy"
 )
@@ -328,27 +327,11 @@ func failureDisableReason(result WebhookDeliveryResult) string {
 }
 
 func buildWebhookDeliveryPayload(event WebhookEvent, now time.Time) (string, error) {
-	if strings.TrimSpace(event.WorkspaceID) == "" {
+	payload, err := eventcontract.Payload(event, now)
+	if errors.Is(err, eventcontract.ErrWorkspaceRequired) {
 		return "", ErrWebhookWorkspaceRequired
 	}
-	if event.Type == "" {
-		return "", errors.New("goncho: webhook event type is required")
-	}
-	payload := map[string]any{
-		"type":      string(event.Type),
-		"data":      event.Data,
-		"timestamp": now.UTC().Format(time.RFC3339),
-	}
-	if payload["data"] == nil {
-		payload["data"] = map[string]any{"workspace_id": event.WorkspaceID}
-	}
-	var buf bytes.Buffer
-	encoder := json.NewEncoder(&buf)
-	encoder.SetEscapeHTML(false)
-	if err := encoder.Encode(payload); err != nil {
-		return "", fmt.Errorf("goncho: encode webhook payload: %w", err)
-	}
-	return strings.TrimSuffix(buf.String(), "\n"), nil
+	return payload, err
 }
 
 func redactWebhookEndpointURL(raw string) string {
