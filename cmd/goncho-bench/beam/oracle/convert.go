@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/convertcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/convertpolicy"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
@@ -17,39 +18,11 @@ import (
 
 const beamConvertDefaultPeer = convertpolicy.DefaultPeer
 
-type beamHuggingFaceRecord struct {
-	ConversationID string          `json:"conversation_id"`
-	Scale          string          `json:"scale"`
-	Chat           json.RawMessage `json:"chat"`
-	Plans          json.RawMessage `json:"plans"`
-	Questions      json.RawMessage `json:"probing_questions"`
-}
+type beamHuggingFaceRecord = convertcontract.HuggingFaceRecord
 
-type beamConvertedMessage struct {
-	Role    string
-	Content string
-}
+type beamConvertedMessage = convertcontract.Message
 
-type beamConvertedQuestion struct {
-	ID                    string   `json:"id"`
-	QID                   string   `json:"qid"`
-	Question              string   `json:"question"`
-	Prompt                string   `json:"prompt"`
-	Query                 string   `json:"query"`
-	IdealAnswer           string   `json:"ideal_answer"`
-	IdealResponse         string   `json:"ideal_response"`
-	Answer                string   `json:"answer"`
-	IdealSummary          string   `json:"ideal_summary"`
-	Rubric                []string `json:"rubric"`
-	RelevantIDs           []string `json:"relevant_ids"`
-	RelevantMessageIdxs   []int    `json:"relevant_message_indices"`
-	EvidenceMessageIdxs   []int    `json:"evidence_message_indices"`
-	SourceMessageIdxs     []int    `json:"source_message_indices"`
-	RequiredEvidenceKinds []string `json:"required_evidence_kinds"`
-	ExpectedNoAnswer      bool     `json:"expected_no_answer"`
-	Limit                 int      `json:"limit"`
-	MaxTokens             int      `json:"max_tokens"`
-}
+type beamConvertedQuestion = convertcontract.Question
 
 type beamConversionDiagnostics = convertpolicy.Diagnostics
 
