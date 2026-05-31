@@ -9,6 +9,26 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
+func TestRecallCurrentTruthIntentTokenization(t *testing.T) {
+	tests := []struct {
+		name  string
+		query string
+		want  bool
+	}{
+		{name: "leading now", query: "Now, who owns component A-17?", want: true},
+		{name: "trailing now", query: "Who owns component A-17 now?", want: true},
+		{name: "latest", query: "What is the latest owner for component A-17?", want: true},
+		{name: "not substring", query: "What knowledge exists for component A-17?", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := recallQueryAsksCurrentTruth(tt.query); got != tt.want {
+				t.Fatalf("recallQueryAsksCurrentTruth(%q) = %v, want %v", tt.query, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{

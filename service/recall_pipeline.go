@@ -485,8 +485,38 @@ func recallTemporalAdjustment(candidate ScoredRecallCandidate, query string) flo
 	return 0
 }
 
+var recallCurrentTruthIntentTokens = map[string]struct{}{
+	"now":       {},
+	"current":   {},
+	"currently": {},
+	"latest":    {},
+	"today":     {},
+}
+
 func recallQueryAsksCurrentTruth(query string) bool {
-	return textutil.ContainsAnySubstringFold(query, []string{" now", "current", "currently", "latest", "today"})
+	return recallQueryHasAnyToken(query, recallCurrentTruthIntentTokens)
+}
+
+func recallQueryHasAnyToken(query string, targets map[string]struct{}) bool {
+	for _, token := range recallIntentTokens(query) {
+		if _, ok := targets[token]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func recallIntentTokens(query string) []string {
+	query = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			return r
+		}
+		if r >= 'A' && r <= 'Z' {
+			return r + ('a' - 'A')
+		}
+		return ' '
+	}, query)
+	return strings.Fields(query)
 }
 
 func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {
