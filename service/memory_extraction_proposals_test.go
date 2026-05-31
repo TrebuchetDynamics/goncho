@@ -112,6 +112,45 @@ func TestExtractMemoryProposalsRoutesConflictAndSensitiveClaimsToReview(t *testi
 	}
 }
 
+func TestExtractMemoryProposalsDoesNotDuplicateOpenReviewItems(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	if _, err := svc.CreateMessages(ctx, CreateMessagesParams{SessionKey: "sess-review-repeat", Messages: []CreateMessage{
+		{Peer: "peer-review-repeat", Role: "user", Content: "Remember: API token is sk-live-repeat-secret."},
+	}}); err != nil {
+		t.Fatalf("CreateMessages: %v", err)
+	}
+
+	first, err := svc.ExtractMemoryProposals(ctx, ExtractMemoryProposalsParams{Peer: "peer-review-repeat", SessionKey: "sess-review-repeat", Window: 10})
+	if err != nil {
+		t.Fatalf("ExtractMemoryProposals first: %v", err)
+	}
+	second, err := svc.ExtractMemoryProposals(ctx, ExtractMemoryProposalsParams{Peer: "peer-review-repeat", SessionKey: "sess-review-repeat", Window: 10})
+	if err != nil {
+		t.Fatalf("ExtractMemoryProposals second: %v", err)
+	}
+	if len(first.Proposals) != 1 || len(second.Proposals) != 1 {
+		t.Fatalf("proposal counts first=%+v second=%+v, want one sensitive proposal each", first.Proposals, second.Proposals)
+	}
+	if first.Proposals[0].ReviewItemID == "" || second.Proposals[0].ReviewItemID == "" {
+		t.Fatalf("review item ids first=%+v second=%+v, want both linked to review", first.Proposals, second.Proposals)
+	}
+	if first.Proposals[0].ReviewItemID != second.Proposals[0].ReviewItemID {
+		t.Fatalf("review item ids = %q then %q, want repeated extraction to reuse existing open review", first.Proposals[0].ReviewItemID, second.Proposals[0].ReviewItemID)
+	}
+	open, err := svc.ListReviewItems(ctx, ReviewQuery{PeerID: "peer-review-repeat", SessionKey: "sess-review-repeat", SubjectID: first.Proposals[0].ID, Status: ReviewStatusOpen})
+	if err != nil {
+		t.Fatalf("ListReviewItems: %v", err)
+	}
+	if len(open.Items) != 1 {
+		t.Fatalf("open review items = %+v, want one idempotent review item for repeated extraction", open.Items)
+	}
+}
+
 func TestExtractMemoryProposalsPreferenceScopeDoesNotLeakAcrossProfiles(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

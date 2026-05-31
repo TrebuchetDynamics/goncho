@@ -130,15 +130,11 @@ func (s *Service) ExtractMemoryProposals(ctx context.Context, params ExtractMemo
 			continue
 		}
 		if proposal.Status == MemoryProposalReviewRequired {
-			item, err := s.CreateReviewItem(ctx, ReviewItemCreateParams{
-				Kind:        ReviewKindConflict,
+			item, err := s.ensureMemoryProposalReviewItem(ctx, memoryProposalReviewItemParams{
 				WorkspaceID: workspaceID,
-				PeerID:      peer,
+				Peer:        peer,
 				SessionKey:  sessionKey,
-				SubjectID:   proposal.ID,
-				RelatedID:   sliceutil.First(proposal.RelatedIDs),
-				Reason:      proposal.ReviewReason,
-				EvidenceIDs: proposal.EvidenceIDs,
+				Proposal:    proposal,
 			})
 			if err != nil {
 				return ExtractMemoryProposalsResult{}, err
@@ -148,6 +144,34 @@ func (s *Service) ExtractMemoryProposals(ctx context.Context, params ExtractMemo
 		result.Proposals = append(result.Proposals, proposal)
 	}
 	return result, nil
+}
+
+type memoryProposalReviewItemParams struct {
+	WorkspaceID string
+	Peer        string
+	SessionKey  string
+	Proposal    MemoryProposal
+}
+
+func (s *Service) ensureMemoryProposalReviewItem(ctx context.Context, params memoryProposalReviewItemParams) (ReviewItem, error) {
+	proposal := params.Proposal
+	existing, err := s.ListReviewItems(ctx, ReviewQuery{WorkspaceID: params.WorkspaceID, PeerID: params.Peer, SessionKey: params.SessionKey, SubjectID: proposal.ID, Status: ReviewStatusOpen, Limit: 1})
+	if err != nil {
+		return ReviewItem{}, err
+	}
+	if len(existing.Items) > 0 {
+		return existing.Items[0], nil
+	}
+	return s.CreateReviewItem(ctx, ReviewItemCreateParams{
+		Kind:        ReviewKindConflict,
+		WorkspaceID: params.WorkspaceID,
+		PeerID:      params.Peer,
+		SessionKey:  params.SessionKey,
+		SubjectID:   proposal.ID,
+		RelatedID:   sliceutil.First(proposal.RelatedIDs),
+		Reason:      proposal.ReviewReason,
+		EvidenceIDs: proposal.EvidenceIDs,
+	})
 }
 
 func (s *Service) memoryProposalFromMessage(ctx context.Context, scope ExtractMemoryProposalsResult, msg MessageRecord) (MemoryProposal, bool) {
