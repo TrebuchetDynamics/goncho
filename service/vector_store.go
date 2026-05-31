@@ -141,7 +141,7 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 		return candidate.MemoryID, strings.TrimSpace(candidate.MemoryID) != ""
 	})
 	for _, hit := range vectorHitsByScoreDesc(hits) {
-		if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(q.Sources, hit.SourceType) {
+		if strings.TrimSpace(hit.Content) == "" || !vectorHitAllowedBySources(q.Sources, hit) {
 			continue
 		}
 		candidate := recallCandidateFromVectorHit(hit, r.observer, scopeID)
@@ -222,6 +222,10 @@ func vectorHitsByScoreDesc(hits []VectorSearchHit) []VectorSearchHit {
 		return out[i].Score > out[j].Score
 	})
 	return out
+}
+
+func vectorHitAllowedBySources(sources []string, hit VectorSearchHit) bool {
+	return vectorSourceAllowed(sources, vectorHitSourceType(hit))
 }
 
 func vectorSourceAllowed(sources []string, sourceType string) bool {

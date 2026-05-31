@@ -297,7 +297,7 @@ type vectorSearchMergeDecision struct {
 }
 
 func vectorSearchMergeDecisionFor(hit VectorSearchHit, vectorSources []string, index map[string]int) vectorSearchMergeDecision {
-	if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(vectorSources, hit.SourceType) {
+	if strings.TrimSpace(hit.Content) == "" || !vectorHitAllowedBySources(vectorSources, hit) {
 		return vectorSearchMergeDecision{Skip: true}
 	}
 	searchHit := searchHitFromVectorHit(hit)

@@ -309,6 +309,29 @@ func TestServiceRecallSourceVectorRunsSemanticLaneWithoutConclusions(t *testing.
 	}
 }
 
+func TestServiceRecallSourceConclusionRejectsUntypedVectorHit(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	vectorStore := &fakeVectorStore{hits: []VectorSearchHit{{
+		MemoryID: "recall-untyped-vector",
+		Content:  "untyped vector recall content should not satisfy conclusion source",
+		Score:    0.99,
+	}}}
+	svc.vectorStore = vectorStore
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+
+	trace, err := svc.Recall(context.Background(), RecallQuery{Peer: "peer-recall-untyped-vector-source", Query: "untyped source", Sources: []string{"conclusion"}, Limit: 1})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	if len(vectorStore.queries) != 1 {
+		t.Fatalf("vector queries = %d, want conclusion source to query conclusion vector lane", len(vectorStore.queries))
+	}
+	if got := selectedRecallIDs(trace); len(got) != 0 {
+		t.Fatalf("selected IDs = %v, want untyped vector hit treated as source=vector, not conclusion", got)
+	}
+}
+
 func TestServiceRecallDeduplicatesVectorHitsByMemoryID(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

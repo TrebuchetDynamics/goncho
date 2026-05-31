@@ -25,6 +25,30 @@ func TestSearchUsesOptionalVectorStoreForSemanticLane(t *testing.T) {
 	}
 }
 
+func TestSearchAndRecallSemanticLaneTolerateNilProviderRegistry(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	vectorStore := &fakeVectorStore{hits: []VectorSearchHit{{MemoryID: "semantic-nil-provider", SourceType: "conclusion", Content: "semantic lane survives a missing provider registry", Score: 0.91}}}
+	svc.vectorStore = vectorStore
+	svc.providerRegistry = nil
+
+	search, err := svc.Search(context.Background(), SearchParams{Peer: "peer-nil-provider-search", Query: "missing provider registry", Limit: 3})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(search.Results) != 1 || search.Results[0].Content != "semantic lane survives a missing provider registry" {
+		t.Fatalf("semantic Search results = %+v, want nil registry to use default provider policy", search.Results)
+	}
+
+	trace, err := svc.Recall(context.Background(), RecallQuery{Peer: "peer-nil-provider-recall", Query: "missing provider registry", Limit: 1})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	if got := selectedRecallIDs(trace); len(got) != 1 || got[0] != "semantic-nil-provider" {
+		t.Fatalf("selected Recall IDs = %v, want semantic-nil-provider", got)
+	}
+}
+
 func TestSearchSourceVectorRunsSemanticLaneWithoutConclusions(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
@@ -68,6 +92,25 @@ func TestSearchSourceFilterSuppressesConclusionVectorLane(t *testing.T) {
 	}
 	if len(got.Results) != 0 {
 		t.Fatalf("Search results = %+v, want no conclusion vector hits for source=turn", got.Results)
+	}
+}
+
+func TestSearchSourceConclusionRejectsUntypedVectorHit(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	vectorStore := &fakeVectorStore{hits: []VectorSearchHit{{MemoryID: "untyped-vector", Content: "untyped vector content should not satisfy conclusion source", Score: 0.91}}}
+	svc.vectorStore = vectorStore
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+
+	got, err := svc.Search(context.Background(), SearchParams{Peer: "peer-untyped-vector-source", Query: "untyped source", Sources: []string{"conclusion"}, Limit: 3})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(vectorStore.queries) != 1 {
+		t.Fatalf("vector queries = %d, want conclusion source to query conclusion vector lane", len(vectorStore.queries))
+	}
+	if len(got.Results) != 0 {
+		t.Fatalf("Search results = %+v, want untyped vector hit treated as source=vector, not conclusion", got.Results)
 	}
 }
 
