@@ -213,6 +213,92 @@ func TestCognitiveMapSuppressesLowActivationGraphBranches(t *testing.T) {
 	}
 }
 
+func TestGraphRecallExpandsMultiHopRelationsIndependentOfRelationOrder(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 15, 0, 0, time.UTC)
+	base := staticRecallGenerator{candidates: []RecallCandidate{{
+		MemoryID:   "mem-auth-service",
+		SourceType: "conclusion",
+		Content:    "The authentication service stores credentials in LoginDB.",
+		ScopeID:    "team",
+		CreatedAt:  now.Add(-2 * time.Hour),
+		Importance: 0.80,
+		Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.92, Note: "matched authentication service"}},
+	}}}
+	index := GraphExpansionIndex{
+		Memories: map[string]RecallCandidate{
+			"mem-login-db": {
+				MemoryID:   "mem-login-db",
+				SourceType: "conclusion",
+				Content:    "LoginDB stores authentication credentials.",
+				ScopeID:    "team",
+				CreatedAt:  now.Add(-90 * time.Minute),
+				Importance: 0.80,
+			},
+			"mem-login-db-owner": {
+				MemoryID:   "mem-login-db-owner",
+				SourceType: "conclusion",
+				Content:    "Mira owns LoginDB.",
+				ScopeID:    "team",
+				CreatedAt:  now.Add(-80 * time.Minute),
+				Importance: 0.90,
+			},
+		},
+		Relations: []GraphRelation{
+			// Child relation deliberately appears before the relation that activates its source.
+			{
+				FromMemoryID: "mem-login-db",
+				ToMemoryID:   "mem-login-db-owner",
+				Relation:     "owned_by",
+				QueryTerms:   []string{"owner"},
+				EvidenceID:   "edge-login-db-owned-by-mira",
+				Score:        0.96,
+			},
+			{
+				FromMemoryID: "mem-auth-service",
+				ToMemoryID:   "mem-login-db",
+				Relation:     "stores_in",
+				QueryTerms:   []string{"authentication", "owner"},
+				EvidenceID:   "edge-auth-service-stores-in-login-db",
+				Score:        0.92,
+			},
+		},
+	}
+	engine := newRecallPipelineEngine(
+		newGraphExpandingRecallGenerator(base, index),
+		recallPipelineOptions{
+			pipelineVersion: "graph-order-test-v1",
+			scoringConfig: RecallScoringConfig{
+				Version:     "graph-order-test-v1",
+				Weights:     map[string]float64{"keyword": 0.20, "graph": 0.70, "scope": 0.10},
+				RRFK:        60,
+				MMRLambda:   0.70,
+				TokenBudget: 160,
+			},
+			now: func() time.Time { return now },
+		},
+	)
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "Who is the owner for authentication credentials?",
+		ScopeID:     "team",
+		Limit:       3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, ok := selectedRecallCandidate(trace, "mem-login-db-owner")
+	if !ok {
+		t.Fatalf("selected IDs = %v candidates=%+v rejected=%+v, want order-independent multi-hop owner", selectedRecallIDs(trace), trace.Candidates, trace.Rejected)
+	}
+	for _, edgeID := range []string{"edge-auth-service-stores-in-login-db", "edge-login-db-owned-by-mira"} {
+		if !recallCandidateHasGraphProvenance(owner, edgeID) {
+			t.Fatalf("owner provenance = %+v, want multi-hop graph edge %s", owner.Provenance, edgeID)
+		}
+	}
+}
+
 func TestGraphRecallConnectsOwnerThroughServiceRelation(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := staticRecallGenerator{candidates: []RecallCandidate{
