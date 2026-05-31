@@ -246,6 +246,30 @@ func TestLimitHitsByTokensKeepsFirstOversizedCandidateForCompatibility(t *testin
 	}
 }
 
+func TestPlanSearchHitsWithinTokenBudgetExposesReplayableAccounting(t *testing.T) {
+	hits := []SearchHit{
+		{Content: "alpha beta", SessionKey: "fits-first"},
+		{Content: "one two three four five six seven", SessionKey: "too-large-middle"},
+		{Content: "gamma", SessionKey: "fits-after-oversized"},
+	}
+
+	selected, decisions := planSearchHitsWithinTokenBudget(hits, 3)
+	if gotKeys := searchHitSessionKeys(selected); !slices.Equal(gotKeys, []string{"fits-first", "fits-after-oversized"}) {
+		t.Fatalf("selected keys = %v, want oversized middle skipped without truncating later fits", gotKeys)
+	}
+	if got := len(decisions); got != 3 {
+		t.Fatalf("decision count = %d, want one per candidate: %+v", got, decisions)
+	}
+	want := []searchHitTokenDecision{
+		{Index: 0, SessionKey: "fits-first", TokenCost: 2, UsedBefore: 0, UsedAfter: 2, Selected: true},
+		{Index: 1, SessionKey: "too-large-middle", TokenCost: 7, UsedBefore: 2, UsedAfter: 2, RejectCause: "token_budget_exceeded"},
+		{Index: 2, SessionKey: "fits-after-oversized", TokenCost: 1, UsedBefore: 2, UsedAfter: 3, Selected: true},
+	}
+	if !slices.Equal(decisions, want) {
+		t.Fatalf("decisions = %+v, want replayable token accounting %+v", decisions, want)
+	}
+}
+
 func searchHitSessionKeys(hits []SearchHit) []string {
 	out := make([]string, 0, len(hits))
 	for _, hit := range hits {

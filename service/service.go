@@ -609,15 +609,46 @@ func limitHitsByTokens(hits []SearchHit, maxTokens int) []SearchHit {
 }
 
 func selectSearchHitsWithinTokenBudget(hits []SearchHit, maxTokens int) []SearchHit {
+	selected, _ := planSearchHitsWithinTokenBudget(hits, maxTokens)
+	return selected
+}
+
+type searchHitTokenDecision struct {
+	Index       int
+	SessionKey  string
+	TokenCost   int
+	UsedBefore  int
+	UsedAfter   int
+	Selected    bool
+	RejectCause string
+}
+
+func planSearchHitsWithinTokenBudget(hits []SearchHit, maxTokens int) ([]SearchHit, []searchHitTokenDecision) {
+	if maxTokens <= 0 || len(hits) == 0 {
+		return hits, nil
+	}
 	used := 0
 	out := make([]SearchHit, 0, len(hits))
-	for _, hit := range hits {
+	decisions := make([]searchHitTokenDecision, 0, len(hits))
+	for i, hit := range hits {
 		cost := textutil.ApproxTokens(hit.Content)
+		decision := searchHitTokenDecision{
+			Index:      i,
+			SessionKey: hit.SessionKey,
+			TokenCost:  cost,
+			UsedBefore: used,
+			UsedAfter:  used,
+		}
 		if !textutil.FitsTokenBudget(used, cost, maxTokens, true) {
+			decision.RejectCause = "token_budget_exceeded"
+			decisions = append(decisions, decision)
 			continue
 		}
 		out = append(out, hit)
 		used += cost
+		decision.Selected = true
+		decision.UsedAfter = used
+		decisions = append(decisions, decision)
 	}
-	return out
+	return out, decisions
 }
