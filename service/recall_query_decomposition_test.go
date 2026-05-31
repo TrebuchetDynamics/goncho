@@ -77,6 +77,20 @@ func TestRecallQueryDecompositionRetrievesEachSubQuestionFact(t *testing.T) {
 	}
 }
 
+func TestRecallQueryDecompositionSkipsTrimEquivalentSubqueries(t *testing.T) {
+	base := &recordingRecallGenerator{}
+	_, err := newQueryDecomposingRecallGenerator(base, fixedRecallSubqueries(
+		"authentication owner",
+		"  authentication owner  ",
+	)).Generate(context.Background(), RecallQuery{Query: " authentication owner ", ScopeID: "team"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(base.queries, []string{" authentication owner "}) {
+		t.Fatalf("generated queries = %q, want only original query when subqueries are trim-equivalent", base.queries)
+	}
+}
+
 func TestRecallQueryDecompositionDeduplicatesStableMemoryIDs(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{
@@ -108,6 +122,18 @@ func TestRecallQueryDecompositionDeduplicatesStableMemoryIDs(t *testing.T) {
 
 type queryKeyedRecallGenerator struct {
 	candidatesByQuery map[string][]RecallCandidate
+}
+
+type recordingRecallGenerator struct {
+	queries []string
+}
+
+func (g *recordingRecallGenerator) Generate(ctx context.Context, q RecallQuery) ([]RecallCandidate, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	g.queries = append(g.queries, q.Query)
+	return nil, nil
 }
 
 func (g queryKeyedRecallGenerator) Generate(ctx context.Context, q RecallQuery) ([]RecallCandidate, error) {
