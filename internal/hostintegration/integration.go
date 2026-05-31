@@ -1,10 +1,11 @@
 package hostintegration
 
 import (
-	"fmt"
 	"strings"
 
+	configpatch "github.com/TrebuchetDynamics/goncho/internal/hostintegration/config"
 	"github.com/TrebuchetDynamics/goncho/internal/hostintegration/contracts"
+	"github.com/TrebuchetDynamics/goncho/internal/hostintegration/policy"
 )
 
 type Input = contracts.Input
@@ -15,34 +16,27 @@ type ConfigDocument = contracts.ConfigDocument
 type RuntimeConfig = contracts.RuntimeConfig
 type ConfigPatch = contracts.ConfigPatch
 
-type hostDefaults struct {
-	workspace       string
-	aiPeer          string
-	sessionStrategy string
-	recallMode      string
-}
-
 // Map translates host config concepts to the current internal
 // Goncho service contract. Unsupported fields are returned as diagnostics
 // instead of being silently widened or accepted.
 func Map(input Input) Mapping {
-	host := normalizeHost(input.Host)
-	defaults, ok := defaultsForHost(host)
+	host := contracts.NormalizeHost(input.Host)
+	defaults, ok := policy.DefaultsForHost(host)
 	if !ok {
-		defaults = hostDefaults{
-			workspace:       "default",
-			aiPeer:          "gormes",
-			sessionStrategy: "per-session",
-			recallMode:      "hybrid",
+		defaults = policy.HostDefaults{
+			Workspace:       "default",
+			AIPeer:          "gormes",
+			SessionStrategy: "per-session",
+			RecallMode:      "hybrid",
 		}
 	}
 
 	compat := HonchoExternalCompatibility()
 	out := Mapping{
 		Host:              host,
-		WorkspaceID:       firstNonBlank(input.Workspace, defaults.workspace, "default"),
+		WorkspaceID:       contracts.FirstNonBlank(input.Workspace, defaults.Workspace, "default"),
 		UserPeerID:        strings.TrimSpace(input.PeerName),
-		AIPeerID:          firstNonBlank(input.AIPeer, defaults.aiPeer, "gormes"),
+		AIPeerID:          contracts.FirstNonBlank(input.AIPeer, defaults.AIPeer, "gormes"),
 		InternalService:   compat.InternalService,
 		ExternalToolNames: append([]string(nil), compat.ExternalToolNames...),
 	}
@@ -61,10 +55,10 @@ func Map(input Input) Mapping {
 		})
 	}
 
-	out.SessionStrategy = normalizeSessionStrategy(firstNonBlank(input.SessionStrategy, defaults.sessionStrategy))
-	out.SessionKey = sessionKeyForStrategy(host, out.SessionStrategy, input, &out.Unsupported)
+	out.SessionStrategy = policy.NormalizeSessionStrategy(contracts.FirstNonBlank(input.SessionStrategy, defaults.SessionStrategy))
+	out.SessionKey = policy.SessionKeyForStrategy(host, out.SessionStrategy, input, &out.Unsupported)
 
-	recallMode, ok := normalizeRecallMode(firstNonBlank(input.RecallMode, defaults.recallMode))
+	recallMode, ok := policy.NormalizeRecallMode(contracts.FirstNonBlank(input.RecallMode, defaults.RecallMode))
 	if !ok {
 		out.Unsupported = append(out.Unsupported, UnsupportedMapping{
 			Field:  "recall_mode",
@@ -83,174 +77,11 @@ func Map(input Input) Mapping {
 // ApplyConfigPatch applies host-scoped config writes without mutating the
 // input document or sibling host entries.
 func ApplyConfigPatch(doc ConfigDocument, host string, patch ConfigPatch) (ConfigDocument, error) {
-	host = normalizeHost(host)
-	if host == "" {
-		return ConfigDocument{}, fmt.Errorf("goncho: host is required")
-	}
-
-	out := doc
-	out.Hosts = make(map[string]RuntimeConfig, len(doc.Hosts)+1)
-	for key, value := range doc.Hosts {
-		out.Hosts[normalizeHost(key)] = value
-	}
-
-	cfg := out.Hosts[host]
-	if patch.Workspace != nil {
-		cfg.Workspace = strings.TrimSpace(*patch.Workspace)
-	}
-	if patch.AIPeer != nil {
-		cfg.AIPeer = strings.TrimSpace(*patch.AIPeer)
-	}
-	if patch.PeerName != nil {
-		cfg.PeerName = strings.TrimSpace(*patch.PeerName)
-	}
-	if patch.RecallMode != nil {
-		cfg.RecallMode = strings.TrimSpace(*patch.RecallMode)
-	}
-	if patch.ObservationMode != nil {
-		cfg.ObservationMode = strings.TrimSpace(*patch.ObservationMode)
-	}
-	if patch.SessionStrategy != nil {
-		cfg.SessionStrategy = strings.TrimSpace(*patch.SessionStrategy)
-	}
-	out.Hosts[host] = cfg
-	return out, nil
+	return configpatch.ApplyPatch(doc, host, patch)
 }
 
 // HonchoExternalCompatibility returns the current public Honcho-compatible
 // tool names while keeping the implementation service named Goncho.
 func HonchoExternalCompatibility() ExternalCompatibility {
 	return contracts.HonchoExternalCompatibility()
-}
-
-func defaultsForHost(host string) (hostDefaults, bool) {
-	switch host {
-	case "hermes":
-		return hostDefaults{
-			workspace:       "hermes",
-			aiPeer:          "hermes",
-			sessionStrategy: "per-directory",
-			recallMode:      "hybrid",
-		}, true
-	case "opencode":
-		return hostDefaults{
-			workspace:       "opencode",
-			aiPeer:          "opencode",
-			sessionStrategy: "per-directory",
-			recallMode:      "hybrid",
-		}, true
-	case "sillytavern":
-		return hostDefaults{
-			workspace:       "sillytavern",
-			aiPeer:          "sillytavern",
-			sessionStrategy: "chat-instance",
-			recallMode:      "hybrid",
-		}, true
-	default:
-		return hostDefaults{}, false
-	}
-}
-
-func sessionKeyForStrategy(host, strategy string, input Input, unsupported *[]UnsupportedMapping) string {
-	switch strategy {
-	case "per-directory":
-		value := strings.TrimSpace(input.WorkingDirectory)
-		if value == "" {
-			addUnsupported(unsupported, "session_strategy", strategy, "per-directory requires working_directory")
-			return ""
-		}
-		return host + ":dir:" + value
-	case "per-repo":
-		value := strings.TrimSpace(input.Repository)
-		if value == "" {
-			addUnsupported(unsupported, "session_strategy", strategy, "per-repo requires repository")
-			return ""
-		}
-		return host + ":repo:" + value
-	case "git-branch":
-		repo := strings.TrimSpace(input.Repository)
-		branch := strings.TrimSpace(input.Branch)
-		if repo == "" || branch == "" {
-			addUnsupported(unsupported, "session_strategy", strategy, "git-branch requires repository and branch")
-			return ""
-		}
-		return host + ":branch:" + repo + ":" + branch
-	case "per-session":
-		value := firstNonBlank(input.HostSessionID, input.CharacterName)
-		if value == "" {
-			addUnsupported(unsupported, "session_strategy", strategy, "per-session requires host_session_id")
-			return ""
-		}
-		return host + ":session:" + value
-	case "chat-instance":
-		value := strings.TrimSpace(input.ChatInstanceID)
-		if value == "" {
-			addUnsupported(unsupported, "session_strategy", strategy, "chat-instance requires chat_instance_id")
-			return ""
-		}
-		return host + ":chat:" + value
-	case "global":
-		return host + ":global"
-	default:
-		addUnsupported(unsupported, "session_strategy", strategy, "unsupported session strategy")
-		return ""
-	}
-}
-
-func addUnsupported(items *[]UnsupportedMapping, field, value, reason string) {
-	*items = append(*items, UnsupportedMapping{
-		Field:  field,
-		Value:  value,
-		Reason: reason,
-	})
-}
-
-func normalizeHost(host string) string {
-	host = strings.ToLower(strings.TrimSpace(host))
-	host = strings.ReplaceAll(host, "-", "_")
-	switch host {
-	case "silly_tavern":
-		return "sillytavern"
-	default:
-		return host
-	}
-}
-
-func normalizeSessionStrategy(strategy string) string {
-	switch strings.ToLower(strings.TrimSpace(strategy)) {
-	case "directory", "per_directory":
-		return "per-directory"
-	case "repo", "per_repo":
-		return "per-repo"
-	case "branch", "git_branch":
-		return "git-branch"
-	case "session", "per_session", "custom", "per-character", "per_character":
-		return "per-session"
-	case "chat", "per-chat", "per_chat", "chat_instance", "auto":
-		return "chat-instance"
-	default:
-		return strings.ToLower(strings.TrimSpace(strategy))
-	}
-}
-
-func normalizeRecallMode(mode string) (string, bool) {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
-	case "", "hybrid", "reasoning":
-		return "hybrid", true
-	case "context", "context-only", "context_only":
-		return "context", true
-	case "tools", "tool", "tool-only", "tool_only", "tool-call", "tool_call":
-		return "tools", true
-	default:
-		return "", false
-	}
-}
-
-func firstNonBlank(values ...string) string {
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
 }

@@ -2,6 +2,8 @@
 // adapters and the root compatibility facade.
 package contracts
 
+import "strings"
+
 // Input is the host-facing compatibility fixture input. It models the shared
 // Honcho concepts used by current hosts without importing or running those
 // hosts' plugins.
@@ -42,6 +44,37 @@ type UnsupportedMapping struct {
 	Field  string
 	Value  string
 	Reason string
+}
+
+// AddUnsupported appends a structured unsupported-field diagnostic to a mapping.
+func AddUnsupported(items *[]UnsupportedMapping, field, value, reason string) {
+	*items = append(*items, UnsupportedMapping{
+		Field:  field,
+		Value:  value,
+		Reason: reason,
+	})
+}
+
+// NormalizeHost canonicalizes host identifiers used in config and session keys.
+func NormalizeHost(host string) string {
+	host = strings.ToLower(strings.TrimSpace(host))
+	host = strings.ReplaceAll(host, "-", "_")
+	switch host {
+	case "silly_tavern":
+		return "sillytavern"
+	default:
+		return host
+	}
+}
+
+// FirstNonBlank returns the first non-empty trimmed value from values.
+func FirstNonBlank(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 // ExternalCompatibility records the internal/external naming contract.

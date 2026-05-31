@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/internal/hostintegration/contracts"
+	"github.com/TrebuchetDynamics/goncho/internal/hostintegration/policy"
 )
 
 type SillyTavernInput = contracts.SillyTavernInput
@@ -12,11 +13,11 @@ type SillyTavernMapping = contracts.SillyTavernMapping
 // MapSillyTavern maps the SillyTavern-specific Honcho integration
 // controls into Goncho's host compatibility fixture surface.
 func MapSillyTavern(input SillyTavernInput) SillyTavernMapping {
-	defaults, _ := defaultsForHost("sillytavern")
+	defaults, _ := policy.DefaultsForHost("sillytavern")
 	compat := HonchoExternalCompatibility()
 
 	out := SillyTavernMapping{
-		WorkspaceID:       firstNonBlank(input.Workspace, defaults.workspace, "sillytavern"),
+		WorkspaceID:       contracts.FirstNonBlank(input.Workspace, defaults.Workspace, "sillytavern"),
 		ExternalToolNames: append([]string(nil), compat.ExternalToolNames...),
 	}
 	out.UserPeerID = sillyTavernUserPeerID(input, &out.Unsupported)
@@ -32,7 +33,7 @@ func MapSillyTavern(input SillyTavernInput) SillyTavernMapping {
 		if knob == "" {
 			continue
 		}
-		addUnsupported(&out.Unsupported, "sillytavern_panel_knob", knob, "panel knob is not mapped by Goncho host fixtures")
+		contracts.AddUnsupported(&out.Unsupported, "sillytavern_panel_knob", knob, "panel knob is not mapped by Goncho host fixtures")
 	}
 
 	return out
@@ -41,7 +42,7 @@ func MapSillyTavern(input SillyTavernInput) SillyTavernMapping {
 func sillyTavernUserPeerID(input SillyTavernInput, unsupported *[]UnsupportedMapping) string {
 	peer := strings.TrimSpace(input.PeerName)
 	if peer == "" {
-		addUnsupported(unsupported, "peer_name", "", "SillyTavern peer mapping requires Your peer name")
+		contracts.AddUnsupported(unsupported, "peer_name", "", "SillyTavern peer mapping requires Your peer name")
 		return ""
 	}
 
@@ -51,12 +52,12 @@ func sillyTavernUserPeerID(input SillyTavernInput, unsupported *[]UnsupportedMap
 	case "separate peer per persona", "separate", "per persona", "per-persona":
 		persona := slugSillyTavernID(input.PersonaName)
 		if persona == "" {
-			addUnsupported(unsupported, "persona_name", "", "separate peer per persona requires a SillyTavern persona name")
+			contracts.AddUnsupported(unsupported, "persona_name", "", "separate peer per persona requires a SillyTavern persona name")
 			return ""
 		}
 		return peer + ":persona:" + persona
 	default:
-		addUnsupported(unsupported, "peer_mode", strings.TrimSpace(input.PeerMode), "supported peer modes are single peer for all personas and separate peer per persona")
+		contracts.AddUnsupported(unsupported, "peer_mode", strings.TrimSpace(input.PeerMode), "supported peer modes are single peer for all personas and separate peer per persona")
 		return ""
 	}
 }
@@ -68,31 +69,31 @@ func sillyTavernSessionKey(input SillyTavernInput, unsupported *[]UnsupportedMap
 	}
 	if input.ResetActiveSession {
 		if existing == "" {
-			addUnsupported(unsupported, "active_session", "", "reset requires an active session key to orphan")
+			contracts.AddUnsupported(unsupported, "active_session", "", "reset requires an active session key to orphan")
 		}
 	}
 
 	switch normalizeSillyTavernLabel(input.SessionNaming) {
 	case "", "auto", "per chat", "per-chat", "chat":
-		return sessionKeyForStrategy("sillytavern", "chat-instance", Input{
+		return policy.SessionKeyForStrategy("sillytavern", "chat-instance", Input{
 			ChatInstanceID: input.ChatInstanceID,
 		}, unsupported)
 	case "per character", "per-character", "character":
 		character := slugSillyTavernID(input.CharacterName)
 		if character == "" {
-			addUnsupported(unsupported, "session_strategy", "per-character", "per-character session naming requires character_name")
+			contracts.AddUnsupported(unsupported, "session_strategy", "per-character", "per-character session naming requires character_name")
 			return ""
 		}
 		return "sillytavern:session:character:" + character
 	case "custom":
 		custom := slugSillyTavernID(input.CustomSessionName)
 		if custom == "" {
-			addUnsupported(unsupported, "session_strategy", "custom", "custom session naming requires custom_session_name")
+			contracts.AddUnsupported(unsupported, "session_strategy", "custom", "custom session naming requires custom_session_name")
 			return ""
 		}
 		return "sillytavern:session:custom:" + custom
 	default:
-		addUnsupported(unsupported, "session_naming", strings.TrimSpace(input.SessionNaming), "supported session naming modes are auto, per character, and custom")
+		contracts.AddUnsupported(unsupported, "session_naming", strings.TrimSpace(input.SessionNaming), "supported session naming modes are auto, per character, and custom")
 		return ""
 	}
 }
@@ -140,7 +141,7 @@ func sillyTavernEnrichment(mode string, out *SillyTavernMapping) {
 		out.InjectContext = true
 		out.ExposeTools = true
 	default:
-		addUnsupported(&out.Unsupported, "enrichment_mode", strings.TrimSpace(mode), "supported enrichment modes are context only, reasoning, and tool call")
+		contracts.AddUnsupported(&out.Unsupported, "enrichment_mode", strings.TrimSpace(mode), "supported enrichment modes are context only, reasoning, and tool call")
 	}
 }
 
