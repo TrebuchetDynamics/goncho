@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -427,31 +426,21 @@ func writeBeamPairedComparisonJSON(jsonOut, markdownOut string, report beamPaire
 	if jsonOut == "" && markdownOut != "" {
 		return nil
 	}
-	raw, err := json.MarshalIndent(report, "", "  ")
+	raw, err := shared.MarshalIndentedJSON(report)
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode BEAM paired comparison: %w", err)
 	}
-	raw = append(raw, '\n')
 	if jsonOut == "" || jsonOut == "-" {
 		_, err = os.Stdout.Write(raw)
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(jsonOut), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM paired comparison JSON dir: %w", err)
-	}
-	if err := os.WriteFile(jsonOut, raw, 0o644); err != nil {
-		return fmt.Errorf("goncho-bench: write BEAM paired comparison JSON: %w", err)
-	}
-	return nil
+	return shared.WriteFileWithParents(jsonOut, raw, "goncho-bench: create BEAM paired comparison JSON dir", "goncho-bench: write BEAM paired comparison JSON")
 }
 
 func writeBeamPairedComparisonMarkdown(path, jsonPath string, report beamPairedComparisonReport) error {
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM paired comparison Markdown dir: %w", err)
 	}
 	var b strings.Builder
 	b.WriteString("# BEAM Paired Outcome Comparison\n\n")
@@ -475,7 +464,7 @@ func writeBeamPairedComparisonMarkdown(path, jsonPath string, report beamPairedC
 	}
 	b.WriteString("\n## Interpretation\n\n")
 	b.WriteString("Use this report as the BEAM arm-comparison oracle: a positive Δ means the candidate config scored higher on the same paired questions. Treat CIs crossing zero as inconclusive and inspect per-ability rows before claiming superiority.\n")
-	return os.WriteFile(path, []byte(b.String()), 0o644)
+	return shared.WriteFileWithParents(path, []byte(b.String()), "goncho-bench: create BEAM paired comparison Markdown dir", "goncho-bench: write BEAM paired comparison Markdown")
 }
 
 func sortedBeamPairedAbilities(byAbility map[string]beamPairedComparisonStats) []string {

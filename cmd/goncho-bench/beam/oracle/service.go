@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -170,24 +169,17 @@ func normalizeBeamServiceConfigID(configID string) string {
 
 func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) error {
 	results := buildBeamServiceResults(report, configID, runStartedAt, conversionDiagnostics, leakageChecks, judgments)
-	raw, err := json.MarshalIndent(results, "", "  ")
+	raw, err := shared.MarshalIndentedJSON(results)
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode BEAM service results: %w", err)
 	}
-	raw = append(raw, '\n')
 	if path == "-" {
 		if _, err := os.Stdout.Write(raw); err != nil {
 			return err
 		}
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM service results dir: %w", err)
-	}
-	if err := os.WriteFile(path, raw, 0o644); err != nil {
-		return fmt.Errorf("goncho-bench: write BEAM service results: %w", err)
-	}
-	return nil
+	return shared.WriteFileWithParents(path, raw, "goncho-bench: create BEAM service results dir", "goncho-bench: write BEAM service results")
 }
 
 func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) beamServiceResultsFile {
@@ -354,18 +346,11 @@ func beamServiceCaseAssessment(c goncho.RecallBenchmarkCaseReport, score float64
 
 func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) error {
 	summary := buildBeamServiceSummary(report, configID, runStartedAt, judgments)
-	raw, err := json.MarshalIndent(summary, "", "  ")
+	raw, err := shared.MarshalIndentedJSON(summary)
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode BEAM service summary: %w", err)
 	}
-	raw = append(raw, '\n')
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM service summary dir: %w", err)
-	}
-	if err := os.WriteFile(path, raw, 0o644); err != nil {
-		return fmt.Errorf("goncho-bench: write BEAM service summary: %w", err)
-	}
-	return nil
+	return shared.WriteFileWithParents(path, raw, "goncho-bench: create BEAM service summary dir", "goncho-bench: write BEAM service summary")
 }
 
 func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) beamServiceSummaryFile {
@@ -422,12 +407,9 @@ func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID strin
 }
 
 func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM service paired-outcomes dir: %w", err)
-	}
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	file, err := shared.AppendFileWithParents(path, "goncho-bench: create BEAM service paired-outcomes dir", "goncho-bench: open BEAM service paired outcomes")
 	if err != nil {
-		return fmt.Errorf("goncho-bench: open BEAM service paired outcomes: %w", err)
+		return err
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)
@@ -460,12 +442,9 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 }
 
 func writeBeamServiceFailureAudit(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM service failure audit dir: %w", err)
-	}
-	file, err := os.Create(path)
+	file, err := shared.CreateFileWithParents(path, "goncho-bench: create BEAM service failure audit dir", "goncho-bench: create BEAM service failure audit")
 	if err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM service failure audit: %w", err)
+		return err
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)

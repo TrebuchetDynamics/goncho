@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -365,12 +364,9 @@ func writeConvertedBeamJSONL(path string, records []beamJSONLRecord) error {
 	if path == "-" {
 		return encodeBeamJSONL(os.Stdout, records)
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create converted BEAM JSONL dir: %w", err)
-	}
-	file, err := os.Create(path)
+	file, err := shared.CreateFileWithParents(path, "goncho-bench: create converted BEAM JSONL dir", "goncho-bench: create converted BEAM JSONL")
 	if err != nil {
-		return fmt.Errorf("goncho-bench: create converted BEAM JSONL: %w", err)
+		return err
 	}
 	defer file.Close()
 	return encodeBeamJSONL(file, records)

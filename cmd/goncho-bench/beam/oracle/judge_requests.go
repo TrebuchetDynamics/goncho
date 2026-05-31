@@ -3,11 +3,10 @@ package oracle
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -51,12 +50,9 @@ type beamServiceJudgePrompt struct {
 }
 
 func writeBeamServiceJudgeRequests(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM judge request dir: %w", err)
-	}
-	file, err := os.Create(path)
+	file, err := shared.CreateFileWithParents(path, "goncho-bench: create BEAM judge request dir", "goncho-bench: create BEAM judge requests")
 	if err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM judge requests: %w", err)
+		return err
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)

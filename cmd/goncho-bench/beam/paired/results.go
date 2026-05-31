@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -54,12 +53,9 @@ func AppendPairedOutcomesFromResults(cfg Config) error {
 	if len(rows) == 0 {
 		return fmt.Errorf("goncho-bench: BEAM paired results contained no question results")
 	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return fmt.Errorf("goncho-bench: create BEAM paired results output dir: %w", err)
-	}
-	file, err := os.OpenFile(outPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	file, err := shared.AppendFileWithParents(outPath, "goncho-bench: create BEAM paired results output dir", "goncho-bench: open BEAM paired results output")
 	if err != nil {
-		return fmt.Errorf("goncho-bench: open BEAM paired results output: %w", err)
+		return err
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)

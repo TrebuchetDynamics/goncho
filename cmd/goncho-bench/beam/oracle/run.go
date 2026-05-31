@@ -2,13 +2,13 @@ package oracle
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/memory"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
@@ -82,21 +82,17 @@ func runServiceBenchmarkCases(ctx context.Context, cfg ServiceConfig, cases []go
 		}
 	}
 	if outPath := strings.TrimSpace(cfg.ServiceOut); outPath != "" {
-		raw, err := json.MarshalIndent(report, "", "  ")
+		raw, err := shared.MarshalIndentedJSON(report)
 		if err != nil {
 			return fmt.Errorf("goncho-bench: encode BEAM service report: %w", err)
 		}
-		raw = append(raw, '\n')
 		if outPath == "-" {
 			if _, err := os.Stdout.Write(raw); err != nil {
 				return err
 			}
 		} else {
-			if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-				return fmt.Errorf("goncho-bench: create BEAM service report dir: %w", err)
-			}
-			if err := os.WriteFile(outPath, raw, 0o644); err != nil {
-				return fmt.Errorf("goncho-bench: write BEAM service report: %w", err)
+			if err := shared.WriteFileWithParents(outPath, raw, "goncho-bench: create BEAM service report dir", "goncho-bench: write BEAM service report"); err != nil {
+				return err
 			}
 		}
 	}
