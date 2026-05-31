@@ -621,6 +621,18 @@ func TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion(t *testing.T) {
 	}
 }
 
+func TestRecallCoverageBonusTrimsGraphPathProvenance(t *testing.T) {
+	selected := []ScoredRecallCandidate{{Candidate: RecallCandidate{MemoryID: "mem-auth-service"}}}
+	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
+		MemoryID: "mem-auth-owner",
+		Provenance: []EvidenceItem{{Kind: "graph", Note: "  mem-auth-service -> owned_by -> mem-auth-owner  "}},
+	}}
+
+	if got := recallCoverageBonus(candidate, selected); got != recallGraphCoverageBonus {
+		t.Fatalf("coverage bonus = %.6f, want %.6f for whitespace-padded relation path provenance", got, recallGraphCoverageBonus)
+	}
+}
+
 func TestRecallPipelineSelectedReasonsReportAdjustedFinalScore(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{{

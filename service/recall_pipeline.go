@@ -886,12 +886,23 @@ func recallCoverageBonus(candidate ScoredRecallCandidate, selected []ScoredRecal
 			if item.Candidate.MemoryID == "" || item.Candidate.MemoryID == candidate.Candidate.MemoryID {
 				continue
 			}
-			if evidence.Source == item.Candidate.MemoryID || strings.HasPrefix(evidence.Note, item.Candidate.MemoryID+" -> ") {
+			if recallGraphEvidenceLinksSelectedMemory(evidence, item.Candidate.MemoryID) {
 				return recallGraphCoverageBonus
 			}
 		}
 	}
 	return 0
+}
+
+func recallGraphEvidenceLinksSelectedMemory(evidence EvidenceItem, selectedMemoryID string) bool {
+	selectedMemoryID = strings.TrimSpace(selectedMemoryID)
+	if selectedMemoryID == "" {
+		return false
+	}
+	if strings.TrimSpace(evidence.Source) == selectedMemoryID {
+		return true
+	}
+	return strings.HasPrefix(strings.TrimSpace(evidence.Note), selectedMemoryID+" -> ")
 }
 
 func recallDiversityPenalty(candidate ScoredRecallCandidate, selected []ScoredRecallCandidate, config RecallScoringConfig) float64 {
