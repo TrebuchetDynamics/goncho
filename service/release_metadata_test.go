@@ -568,8 +568,29 @@ func TestBenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout(t *testing.T) {
 	}
 }
 
+func TestBenchmarkPlanDocumentsLocomoSharedBenchmarkContract(t *testing.T) {
+	const path = "docs/superpowers/plans/locomo/shared/benchmark-contract.md"
+	wantMarkers := []string{
+		"# LOCOMO benchmark contract",
+		"stable inserted `memory_id`",
+		"Use no answer hints, no LLM judges, no answer-text scoring",
+		"Preserve frozen LOCOMO artifacts",
+		"Prove each recall or evaluation change with a focused failing test",
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile %s: %v", path, err)
+	}
+	text := string(raw)
+	for _, marker := range wantMarkers {
+		if !strings.Contains(text, marker) {
+			t.Fatalf("%s does not document shared LOCOMO benchmark contract marker %q", path, marker)
+		}
+	}
+}
+
 func TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation(t *testing.T) {
-	const path = "docs/superpowers/plans/locomo/2026-05-22-failure-driven-evaluation.md"
+	const path = "docs/superpowers/plans/locomo/evaluation/2026-05-22-failure-driven-evaluation.md"
 	wantMarkers := []string{
 		"# LOCOMO Failure-Driven Evaluation Implementation Plan",
 		"TestLocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets",
@@ -595,7 +616,7 @@ func TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation(t *testing.T) {
 }
 
 func TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall(t *testing.T) {
-	const path = "docs/superpowers/plans/locomo/2026-05-22-graph-assisted-multihop-recall.md"
+	const path = "docs/superpowers/plans/locomo/recall/2026-05-22-graph-assisted-multihop-recall.md"
 	wantMarkers := []string{
 		"# Graph-Assisted LOCOMO Multi-Hop Recall Implementation Plan",
 		"Use superpowers:executing-plans",
@@ -621,7 +642,7 @@ func TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall(t *testing.T) {
 }
 
 func TestBenchmarkPlanDocumentsLocomoQueryDecompositionRecall(t *testing.T) {
-	const path = "docs/superpowers/plans/locomo/2026-05-22-query-decomposition-recall.md"
+	const path = "docs/superpowers/plans/locomo/recall/2026-05-22-query-decomposition-recall.md"
 	wantMarkers := []string{
 		"# LOCOMO Query Decomposition Recall Implementation Plan",
 		"TestRecallQueryDecompositionRetrievesEachSubQuestionFact",
@@ -645,7 +666,7 @@ func TestBenchmarkPlanDocumentsLocomoQueryDecompositionRecall(t *testing.T) {
 }
 
 func TestBenchmarkPlanDocumentsLocomoTemporalSpeakerRoutingRecall(t *testing.T) {
-	const path = "docs/superpowers/plans/locomo/2026-05-22-temporal-speaker-routing-recall.md"
+	const path = "docs/superpowers/plans/locomo/recall/2026-05-22-temporal-speaker-routing-recall.md"
 	wantMarkers := []string{
 		"# LOCOMO Temporal and Speaker Routing Recall Implementation Plan",
 		"TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence",
