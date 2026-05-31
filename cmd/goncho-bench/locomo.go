@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	benchlocomo "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/locomo"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/retrieval"
 	"github.com/TrebuchetDynamics/goncho/memory"
 	"github.com/TrebuchetDynamics/goncho/service"
@@ -903,60 +903,15 @@ func scoreLocomoQuestion(q locomoQuestionRow, retrieved []string) locomoQuestion
 }
 
 func locomoRecallAny(retrieved, gold []string, k int) float64 {
-	seen := map[string]struct{}{}
-	for _, id := range retrieved[:min(k, len(retrieved))] {
-		seen[id] = struct{}{}
-	}
-	for _, id := range gold {
-		if _, ok := seen[id]; ok {
-			return 1
-		}
-	}
-	return 0
+	return benchlocomo.RecallAny(retrieved, gold, k)
 }
 
 func locomoStrictRecall(retrieved, gold []string, k int) float64 {
-	seen := map[string]struct{}{}
-	for _, id := range retrieved[:min(k, len(retrieved))] {
-		seen[id] = struct{}{}
-	}
-	for _, id := range gold {
-		if _, ok := seen[id]; !ok {
-			return 0
-		}
-	}
-	return 1
+	return benchlocomo.StrictRecall(retrieved, gold, k)
 }
 
 func locomoNDCG(retrieved, gold []string, k int) float64 {
-	if k <= 0 || len(gold) == 0 {
-		return 0
-	}
-	goldSet := map[string]struct{}{}
-	for _, id := range gold {
-		goldSet[id] = struct{}{}
-	}
-	seenRelevant := map[string]struct{}{}
-	dcg := 0.0
-	for i, id := range retrieved[:min(k, len(retrieved))] {
-		if _, ok := goldSet[id]; !ok {
-			continue
-		}
-		if _, ok := seenRelevant[id]; ok {
-			continue
-		}
-		seenRelevant[id] = struct{}{}
-		dcg += 1 / math.Log2(float64(i+2))
-	}
-	idealCount := min(k, len(goldSet))
-	idcg := 0.0
-	for i := 0; i < idealCount; i++ {
-		idcg += 1 / math.Log2(float64(i+2))
-	}
-	if idcg == 0 {
-		return 0
-	}
-	return roundMetric(dcg / idcg)
+	return benchlocomo.NDCG(retrieved, gold, k)
 }
 
 func summarizeLocomoSystem(system string, results []locomoQuestionResult) locomoSystemReport {
