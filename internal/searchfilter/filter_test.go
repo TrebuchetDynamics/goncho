@@ -293,6 +293,29 @@ func TestCompilerTracksDenyAllWithoutReservedValueCollision(t *testing.T) {
 	}
 }
 
+func TestCompilerIntersectsWildcardWithConcreteConstraints(t *testing.T) {
+	compiled, err := searchfilter.Compile(mustParse(t, map[string]any{
+		"AND": []any{
+			map[string]any{"session_id": map[string]any{"in": []any{"*", "sess-a"}}},
+			map[string]any{"session_id": "sess-b"},
+			map[string]any{"source": map[string]any{"in": []any{"*", "discord"}}},
+			map[string]any{"source": "slack"},
+		},
+	}), "user-juan")
+	if err != nil {
+		t.Fatalf("Compile wildcard intersections: %v", err)
+	}
+	if !slices.Equal(compiled.SessionIDs, []string{"sess-b"}) {
+		t.Fatalf("SessionIDs = %#v, want concrete right-hand constraint", compiled.SessionIDs)
+	}
+	if !slices.Equal(compiled.Sources, []string{"slack"}) {
+		t.Fatalf("Sources = %#v, want concrete right-hand constraint", compiled.Sources)
+	}
+	if compiled.DenyAll {
+		t.Fatal("DenyAll = true for wildcard intersected with concrete constraints")
+	}
+}
+
 func TestNormalizeLimitDefaultsToTenAndClampsAtHonchoMaximum(t *testing.T) {
 	tests := []struct {
 		raw  int
