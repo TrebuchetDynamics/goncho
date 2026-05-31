@@ -86,18 +86,24 @@ func plannedRecallQueries(q RecallQuery, planner recallSubqueryPlanner) []Recall
 
 func appendMergedRecallCandidates(out []RecallCandidate, indexByMemoryID map[string]int, items []RecallCandidate) []RecallCandidate {
 	for _, item := range items {
-		if item.MemoryID == "" {
+		memoryID, stable := recallCandidateStableMemoryID(item)
+		if !stable {
 			out = append(out, item)
 			continue
 		}
-		if idx, ok := indexByMemoryID[item.MemoryID]; ok {
+		if idx, ok := indexByMemoryID[memoryID]; ok {
 			out[idx] = mergeRecallCandidateEvidence(out[idx], item)
 			continue
 		}
-		indexByMemoryID[item.MemoryID] = len(out)
+		indexByMemoryID[memoryID] = len(out)
 		out = append(out, item)
 	}
 	return out
+}
+
+func recallCandidateStableMemoryID(candidate RecallCandidate) (string, bool) {
+	memoryID := strings.TrimSpace(candidate.MemoryID)
+	return memoryID, memoryID != ""
 }
 
 func recallCandidateEvidenceKey(evidence EvidenceItem) string {

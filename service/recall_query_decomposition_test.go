@@ -140,6 +140,26 @@ func TestPlannedRecallQueriesDeduplicatesWildcardSourceVariants(t *testing.T) {
 	}
 }
 
+func TestRecallQueryDecompositionTreatsBlankMemoryIDsAsUnstable(t *testing.T) {
+	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{
+		"authentication owner incident": {
+			{MemoryID: "   ", Content: "first anonymous hit", Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.90}}},
+		},
+		"authentication owner": {
+			{MemoryID: "   ", Content: "second anonymous hit", Provenance: []EvidenceItem{{Kind: "fact", Score: 1.00}}},
+		},
+	}}
+	items, err := newQueryDecomposingRecallGenerator(base, fixedRecallSubqueries(
+		"authentication owner",
+	)).Generate(context.Background(), RecallQuery{Query: "authentication owner incident", ScopeID: "team"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(items); got != 2 {
+		t.Fatalf("candidate count = %d, want blank memory IDs kept as separate unstable candidates: %+v", got, items)
+	}
+}
+
 func TestRecallQueryDecompositionDeduplicatesStableMemoryIDs(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{

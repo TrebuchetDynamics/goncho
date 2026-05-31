@@ -137,9 +137,7 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 		return base, nil
 	}
 	out := sliceutil.Clone(base)
-	indexByID := sliceutil.IndexBy(out, func(candidate RecallCandidate) (string, bool) {
-		return candidate.MemoryID, strings.TrimSpace(candidate.MemoryID) != ""
-	})
+	indexByID := sliceutil.IndexBy(out, recallCandidateStableMemoryID)
 	for _, hit := range vectorHitsByScoreDesc(hits) {
 		if strings.TrimSpace(hit.Content) == "" || !vectorHitAllowedBySources(q.Sources, hit) {
 			continue
