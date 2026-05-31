@@ -133,6 +133,63 @@ func TestRecallPipelineTokenBudgetSkipsOversizedBestCandidate(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineSingleNameSpeakerTargetMatchesFullSpeakerIdentity(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-juan-perez",
+			SourceType: "turn",
+			Content:    "Juan Perez explained the deployment rollback window.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{
+				{Kind: "keyword", Score: 0.50},
+				{Kind: "speaker", Source: "Juan Perez"},
+			},
+		},
+		{
+			MemoryID:   "mem-maria",
+			SourceType: "turn",
+			Content:    "Maria repeated deployment rollback notes from Juan.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{
+				{Kind: "keyword", Score: 0.51},
+				{Kind: "speaker", Source: "Maria"},
+			},
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "single-name-speaker-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "single-name-speaker-test-v1",
+			Weights:     map[string]float64{"keyword": 1},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 80,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "what did Juan say about deployments?",
+		ScopeID:     "team",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(selectedRecallIDs(trace), []string{"mem-juan-perez"}) {
+		t.Fatalf("selected IDs = %v, want single-name target to match full speaker identity", selectedRecallIDs(trace))
+	}
+	if !strings.Contains(strings.Join(trace.Selected[0].Score.WhySelected, "\n"), "speaker_adjustment=0.120000") {
+		t.Fatalf("why selected = %v, want speaker adjustment evidence", trace.Selected[0].Score.WhySelected)
+	}
+}
+
 func TestRecallPipelineMultiWordSpeakerTargetGetsSpeakerBonus(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{

@@ -602,14 +602,32 @@ func recallSpeakerAdjustment(candidate ScoredRecallCandidate, query string) floa
 func recallQueryMatchesSpeaker(query, speaker string) bool {
 	targets := recallQuerySpeakerTargets(query)
 	if len(targets) > 0 {
-		for _, target := range targets {
-			if target == speaker {
-				return true
-			}
-		}
-		return false
+		return recallAnySpeakerTargetMatchesSpeaker(targets, speaker)
 	}
 	return recallQueryMentionsSpeaker(query, speaker)
+}
+
+func recallAnySpeakerTargetMatchesSpeaker(targets []string, speaker string) bool {
+	for _, target := range targets {
+		if recallSpeakerTargetMatchesSpeaker(target, speaker) {
+			return true
+		}
+	}
+	return false
+}
+
+func recallSpeakerTargetMatchesSpeaker(target, speaker string) bool {
+	targetTokens := recallQueryTokens(target)
+	speakerTokens := recallQueryTokens(speaker)
+	if len(targetTokens) == 0 || len(speakerTokens) == 0 || len(targetTokens) > len(speakerTokens) {
+		return false
+	}
+	for i := range targetTokens {
+		if targetTokens[i] != speakerTokens[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func recallQueryMentionsSpeaker(query, speaker string) bool {

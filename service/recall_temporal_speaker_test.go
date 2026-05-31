@@ -101,6 +101,27 @@ func TestRecallSpeakerRoutingDoesNotTreatSpeakerAsSubstring(t *testing.T) {
 	}
 }
 
+func TestRecallSpeakerTargetMatchesFullIdentityPrefixOnly(t *testing.T) {
+	tests := []struct {
+		name    string
+		target  string
+		speaker string
+		want    bool
+	}{
+		{name: "exact", target: "juan perez", speaker: "juan perez", want: true},
+		{name: "first name full identity", target: "juan", speaker: "juan perez", want: true},
+		{name: "not substring", target: "ann", speaker: "annette", want: false},
+		{name: "not suffix", target: "code", speaker: "claude-code", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := recallSpeakerTargetMatchesSpeaker(tt.target, tt.speaker); got != tt.want {
+				t.Fatalf("recallSpeakerTargetMatchesSpeaker(%q, %q) = %v, want %v", tt.target, tt.speaker, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRecallSpeakerRoutingMatchesMultiTokenSpeakerTarget(t *testing.T) {
 	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
 		MemoryID:   "mem-claude-code",
