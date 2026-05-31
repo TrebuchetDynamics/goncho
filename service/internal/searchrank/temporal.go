@@ -21,7 +21,7 @@ type TemporalFeatures struct {
 }
 
 func TemporalIntent(query string) TemporalFeatures {
-	q := strings.ToLower(query)
+	q := normalizeTemporalQuery(query)
 	features := TemporalFeatures{Markers: TemporalMarkers(q), Temporal: TemporalQuery(q)}
 	if textutil.ContainsAnySubstring(q, []string{"first", "earliest", "initial", "original", "started first"}) {
 		features.Direction = TemporalOlder
@@ -36,21 +36,29 @@ func TemporalIntent(query string) TemporalFeatures {
 
 func TemporalQuery(query string) bool {
 	needles := []string{"when", "first", "earliest", "initial", "original", "latest", "current", "currently", "recent", "today", "yesterday", "tomorrow", "last ", "this ", "past ", "how many days", "how many weeks", "how many months", "how many years", "how long", "order of"}
-	return textutil.ContainsAnySubstring(query, needles)
+	return textutil.ContainsAnySubstring(normalizeTemporalQuery(query), needles)
 }
 
 func TemporalMarkers(query string) []string {
-	candidates := []string{
-		"today", "yesterday", "tomorrow", "most recently", "this weekend", "this week", "this month", "this year", "past few months", "past three months", "last week", "last month", "last year", "last friday", "last saturday", "last sunday",
-		"january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
-	}
+	q := normalizeTemporalQuery(query)
 	markers := []string{}
-	for _, candidate := range candidates {
-		if strings.Contains(query, candidate) {
+	for _, candidate := range temporalMarkerCandidates() {
+		if strings.Contains(q, candidate) {
 			markers = append(markers, candidate)
 		}
 	}
 	return markers
+}
+
+func normalizeTemporalQuery(query string) string {
+	return strings.ToLower(query)
+}
+
+func temporalMarkerCandidates() []string {
+	return []string{
+		"today", "yesterday", "tomorrow", "most recently", "this weekend", "this week", "this month", "this year", "past few months", "past three months", "last week", "last month", "last year", "last friday", "last saturday", "last sunday",
+		"january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+	}
 }
 
 func TemporalRerankBonus(features TemporalFeatures, content string, index, total int, score, maxScore float64) float64 {
