@@ -36,6 +36,7 @@ func TestRecallTemporalRoutingDoesNotWarnOnNegatedSupersededMarker(t *testing.T)
 	}{
 		{name: "underscore", note: "current_fact valid_now not_superseded"},
 		{name: "separate words", note: "current_fact valid_now not superseded"},
+		{name: "spaced assignment", note: "current_fact valid_now not superseded_by = mem-old"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -51,6 +52,20 @@ func TestRecallTemporalRoutingDoesNotWarnOnNegatedSupersededMarker(t *testing.T)
 				t.Fatalf("recallHasSupersededEvidence() = true, want false for negated superseded marker")
 			}
 		})
+	}
+}
+
+func TestRecallTemporalRoutingParsesSpacedSupersededByField(t *testing.T) {
+	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
+		MemoryID:   "mem-old",
+		Provenance: []EvidenceItem{{Kind: "temporal", Note: "current_fact superseded_by = mem-current"}},
+	}}
+
+	if got := recallTemporalAdjustment(candidate, "who owns component A-17 now?"); got != -recallTemporalSupersededPenalty {
+		t.Fatalf("recallTemporalAdjustment() = %v, want superseded penalty for spaced superseded_by field", got)
+	}
+	if !recallHasSupersededEvidence([]ScoredRecallCandidate{candidate}) {
+		t.Fatalf("recallHasSupersededEvidence() = false, want spaced superseded_by field observed")
 	}
 }
 
@@ -168,6 +183,7 @@ func TestRecallSpeakerRoutingParsesSpeakerFieldWithoutTrailingMetadata(t *testin
 		{name: "leading speaker", note: "speaker=Mira source=turn-17"},
 		{name: "speaker after provenance metadata", note: "source=turn-17 speaker=Mira"},
 		{name: "parenthesized speaker field", note: "source=turn-17 (speaker=Mira)"},
+		{name: "spaced speaker assignment", note: "source=turn-17 speaker = Mira"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
