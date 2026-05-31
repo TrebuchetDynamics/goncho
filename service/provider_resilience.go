@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/providerpolicy"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
@@ -40,9 +41,9 @@ const (
 var ErrProviderCircuitOpen = errors.New("goncho: provider circuit open")
 
 const (
-	defaultProviderFailureThreshold = 3
-	defaultProviderCooldown         = 30 * time.Second
-	defaultProviderTimeout          = 5 * time.Second
+	defaultProviderFailureThreshold = providerpolicy.DefaultFailureThreshold
+	defaultProviderCooldown         = providerpolicy.DefaultCooldown
+	defaultProviderTimeout          = providerpolicy.DefaultTimeout
 )
 
 type ProviderResilienceConfig struct {
@@ -211,26 +212,26 @@ func NewProviderHealthRegistry(cfg ProviderResilienceConfig, vectorStore VectorS
 }
 
 func normalizeProviderResilienceConfig(cfg ProviderResilienceConfig) ProviderResilienceConfig {
-	cfg.FailureThreshold = defaultProviderThreshold(cfg.FailureThreshold)
-	cfg.Cooldown = defaultProviderCooldownDuration(cfg.Cooldown)
-	if cfg.Timeout <= 0 {
-		cfg.Timeout = defaultProviderTimeout
+	normalized := providerpolicy.Normalize(providerpolicy.Config{
+		FailureThreshold: cfg.FailureThreshold,
+		Cooldown:         cfg.Cooldown,
+		Timeout:          cfg.Timeout,
+		MaxPayloadBytes:  cfg.MaxPayloadBytes,
+	})
+	return ProviderResilienceConfig{
+		FailureThreshold: normalized.FailureThreshold,
+		Cooldown:         normalized.Cooldown,
+		Timeout:          normalized.Timeout,
+		MaxPayloadBytes:  normalized.MaxPayloadBytes,
 	}
-	return cfg
 }
 
 func defaultProviderThreshold(threshold int) int {
-	if threshold <= 0 {
-		return defaultProviderFailureThreshold
-	}
-	return threshold
+	return providerpolicy.FailureThreshold(threshold)
 }
 
 func defaultProviderCooldownDuration(cooldown time.Duration) time.Duration {
-	if cooldown <= 0 {
-		return defaultProviderCooldown
-	}
-	return cooldown
+	return providerpolicy.Cooldown(cooldown)
 }
 
 func providerResilienceConfigFromServiceConfig(cfg Config) ProviderResilienceConfig {

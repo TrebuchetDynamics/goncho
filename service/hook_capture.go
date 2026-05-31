@@ -3,12 +3,11 @@ package goncho
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/TrebuchetDynamics/goncho/service/internal/sensitive"
+	"github.com/TrebuchetDynamics/goncho/service/internal/hookcapture"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -221,75 +220,43 @@ func (s *Service) CaptureHostHook(ctx context.Context, event HostHookEvent) (Hoo
 	return result, nil
 }
 
-var hostHookRedactionRules = []struct {
-	kind string
-	re   *regexp.Regexp
-}{
-	{kind: "private", re: regexp.MustCompile(`(?is)<private>.*?</private>`)},
-	{kind: "pem_private_key", re: regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----`)},
-	{kind: "authorization", re: regexp.MustCompile(`(?i)Authorization:\s*Bearer\s+[^\s\r\n]+`)},
-	{kind: "json_secret", re: regexp.MustCompile(`(?i)"([^"]*(?:secret|token|password|api_key|private_key|authorization)[^"]*)"\s*:\s*"[^"]*"`)},
-	{kind: "env_secret", re: regexp.MustCompile(`(?im)\b[A-Z0-9_]*(?:SECRET|TOKEN|PASSWORD|API_KEY|PRIVATE_KEY)[A-Z0-9_]*\s*=\s*[^\s\r\n]+`)},
-	{kind: "api_key", re: regexp.MustCompile(`\b(?:sk-[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b`)},
-}
-
 func filterHostHookEvent(event HostHookEvent) hostHookFilterResult {
-	out := hostHookFilterResult{Event: event}
-	var filtered string
-	filtered, out = filterHostHookString(event.Content, out)
-	out.Event.Content = filtered
-	filtered, out = filterHostHookString(event.Input, out)
-	out.Event.Input = filtered
-	filtered, out = filterHostHookString(event.Output, out)
-	out.Event.Output = filtered
-	filtered, out = filterHostHookString(event.Error, out)
-	out.Event.Error = filtered
-	filtered, out = filterHostHookString(event.Summary, out)
-	out.Event.Summary = filtered
-	if event.Metadata != nil {
-		out.Event.Metadata = cloneStringMap(event.Metadata)
-		for key, value := range out.Event.Metadata {
-			filteredValue, next := filterHostHookString(value, out)
-			out = next
-			if hostHookSensitiveKey(key) && filteredValue == value && textutil.NonBlank(value) {
-				filteredValue = "[REDACTED:metadata_secret]"
-				out.Redacted = true
-				out.RedactionCount++
-			}
-			out.Event.Metadata[key] = filteredValue
-		}
+	filtered := hookcapture.Filter(hookcapture.Payload{
+		Content:  event.Content,
+		Input:    event.Input,
+		Output:   event.Output,
+		Error:    event.Error,
+		Summary:  event.Summary,
+		Metadata: event.Metadata,
+	}, hostHookPayloadMaxBytes)
+	event.Content = filtered.Payload.Content
+	event.Input = filtered.Payload.Input
+	event.Output = filtered.Payload.Output
+	event.Error = filtered.Payload.Error
+	event.Summary = filtered.Payload.Summary
+	event.Metadata = filtered.Payload.Metadata
+	return hostHookFilterResult{
+		Event:          event,
+		Redacted:       filtered.Redacted,
+		RedactionCount: filtered.RedactionCount,
+		Truncated:      filtered.Truncated,
 	}
-	return out
 }
 
 func filterHostHookString(value string, state hostHookFilterResult) (string, hostHookFilterResult) {
-	value = strings.ToValidUTF8(value, "\uFFFD")
-	for _, rule := range hostHookRedactionRules {
-		count := 0
-		value = rule.re.ReplaceAllStringFunc(value, func(match string) string {
-			count++
-			if rule.kind == "json_secret" {
-				parts := strings.SplitN(match, ":", 2)
-				if len(parts) == 2 {
-					return parts[0] + `:"[REDACTED:json_secret]"`
-				}
-			}
-			return "[REDACTED:" + rule.kind + "]"
-		})
-		if count > 0 {
-			state.Redacted = true
-			state.RedactionCount += count
-		}
-	}
-	if len([]byte(value)) > hostHookPayloadMaxBytes {
-		value = textutil.TruncateUTF8Bytes(value, hostHookPayloadMaxBytes)
-		state.Truncated = true
-	}
-	return value, state
+	filtered, result := hookcapture.FilterString(value, hookcapture.Result{
+		Redacted:       state.Redacted,
+		RedactionCount: state.RedactionCount,
+		Truncated:      state.Truncated,
+	}, hostHookPayloadMaxBytes)
+	state.Redacted = result.Redacted
+	state.RedactionCount = result.RedactionCount
+	state.Truncated = result.Truncated
+	return filtered, state
 }
 
 func hostHookSensitiveKey(key string) bool {
-	return sensitive.MetadataKeySecretLike(key)
+	return hookcapture.SensitiveMetadataKey(key)
 }
 
 func observationKindForHostHook(event HostHookEvent) (ObservationKind, error) {

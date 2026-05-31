@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/benchmarkscore"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -498,80 +498,18 @@ func recallBenchmarkCaseRecallAtK(candidateIDs, selectedIDs, relevantIDs []strin
 }
 
 func recallAtK(candidateIDs, relevantIDs []string, k int) float64 {
-	if len(relevantIDs) == 0 || k <= 0 {
-		return 0
-	}
-	relevant := textutil.TrimmedSet(relevantIDs)
-	if len(relevant) == 0 {
-		return 0
-	}
-	limit := k
-	if len(candidateIDs) < limit {
-		limit = len(candidateIDs)
-	}
-	found := make(map[string]struct{}, len(relevant))
-	for _, id := range candidateIDs[:limit] {
-		if _, ok := relevant[id]; ok {
-			found[id] = struct{}{}
-		}
-	}
-	return roundRecallFloat(float64(len(found)) / float64(len(relevant)))
+	return benchmarkscore.RecallAtK(candidateIDs, relevantIDs, k)
 }
 
 func recallBenchmarkRubricContextCoverage(trace RecallTrace, rubric []string) (float64, []string) {
-	if len(rubric) == 0 {
-		return 0, nil
-	}
-	contextTokens := map[string]struct{}{}
-	for _, item := range trace.Selected {
-		for _, token := range recallBenchmarkRubricTokens(item.Candidate.Content) {
-			contextTokens[token] = struct{}{}
-		}
-	}
-	matched := []string{}
-	denom := 0
-	for _, item := range rubric {
-		item = strings.TrimSpace(item)
-		if item == "" {
-			continue
-		}
-		tokens := recallBenchmarkRubricTokens(item)
-		if len(tokens) == 0 {
-			continue
-		}
-		denom++
-		allPresent := true
-		for _, token := range tokens {
-			if _, ok := contextTokens[token]; !ok {
-				allPresent = false
-				break
-			}
-		}
-		if allPresent {
-			matched = append(matched, item)
-		}
-	}
-	if denom == 0 {
-		return 0, nil
-	}
-	return roundRecallFloat(float64(len(matched)) / float64(denom)), matched
+	contexts := sliceutil.Map(trace.Selected, func(item ScoredRecallCandidate) string {
+		return item.Candidate.Content
+	})
+	return benchmarkscore.RubricCoverage(contexts, rubric)
 }
 
 func recallBenchmarkRubricTokens(text string) []string {
-	stop := map[string]struct{}{
-		"about": {}, "answer": {}, "contain": {}, "contains": {}, "correct": {}, "correctly": {}, "from": {}, "identify": {}, "identifies": {}, "include": {}, "includes": {}, "mention": {}, "mentions": {}, "name": {}, "names": {}, "note": {}, "project": {}, "say": {}, "says": {}, "state": {}, "states": {}, "that": {}, "the": {}, "with": {},
-	}
-	tokens := strings.FieldsFunc(strings.ToLower(text), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
-	return textutil.NormalizeUnique(tokens, func(token string) string {
-		token = strings.TrimSpace(token)
-		if len(token) < 2 {
-			return ""
-		}
-		if _, skip := stop[token]; skip {
-			return ""
-		}
-		return token
-	}, false)
+	return benchmarkscore.RubricTokens(text)
 }
 
 func recallBenchmarkSelectedContext(trace RecallTrace) string {
