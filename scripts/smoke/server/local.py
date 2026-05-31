@@ -12,14 +12,15 @@ import socket
 import subprocess
 import sys
 import tempfile
-import time
 import urllib.parse
 from pathlib import Path
 
 try:
     from shared.http_json import post_json_url, read_json_url
+    from smoke.shared.polling import wait_for_json_status_ok
 except ModuleNotFoundError:  # pragma: no cover - package import path
     from scripts.shared.http_json import post_json_url, read_json_url
+    from scripts.smoke.shared.polling import wait_for_json_status_ok
 
 
 WORKSPACE = "server-smoke-workspace"
@@ -104,19 +105,19 @@ def free_loopback_port() -> int:
 
 
 def wait_for_health(base_url: str, proc: subprocess.Popen[str]) -> None:
-    deadline = time.monotonic() + 20
-    last_error: Exception | None = None
-    while time.monotonic() < deadline:
+    def require_running() -> None:
         if proc.poll() is not None:
             raise RuntimeError(f"goncho-server exited early with {proc.returncode}: {collect_output(proc)}")
-        try:
-            health = get_json(f"{base_url}/health", timeout=1)
-            if health.get("status") == "ok":
-                return
-        except Exception as exc:  # noqa: BLE001 - retry transient startup failures
-            last_error = exc
-            time.sleep(0.1)
-    raise RuntimeError(f"timed out waiting for /health: {last_error}; {collect_output(proc)}")
+
+    wait_for_json_status_ok(
+        f"{base_url}/health",
+        timeout_seconds=20.0,
+        request_timeout=1.0,
+        interval_seconds=0.1,
+        before_attempt=require_running,
+        failure_context=lambda: collect_output(proc),
+        failure_message=lambda last_error, context: f"timed out waiting for /health: {last_error}; {context}",
+    )
 
 
 def get_json(url: str, timeout: float = 5) -> dict:

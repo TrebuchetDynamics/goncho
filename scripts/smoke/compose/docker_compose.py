@@ -18,9 +18,9 @@ import textwrap
 from pathlib import Path
 
 try:
-    from smoke.shared.health import wait_for_json_status_ok
+    from smoke.shared.polling import wait_for_json_status_ok
 except ModuleNotFoundError:  # pragma: no cover - package import path
-    from scripts.smoke.shared.health import wait_for_json_status_ok
+    from scripts.smoke.shared.polling import wait_for_json_status_ok
 
 
 def run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
