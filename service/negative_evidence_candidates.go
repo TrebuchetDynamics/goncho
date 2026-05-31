@@ -3,6 +3,7 @@ package goncho
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -109,29 +110,10 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 		if !negativeEvidenceFailureObservation(obs) {
 			continue
 		}
-		toolName := strings.TrimSpace(obs.Metadata["tool_name"])
-		if toolName == "" {
-			toolName = strings.TrimSpace(obs.Metadata["custom_kind"])
-		}
-		if toolName == "" {
-			toolName = string(obs.Kind)
-		}
-		workspaceID := strings.TrimSpace(obs.WorkspaceID)
-		if workspaceID == "" {
-			workspaceID = input.Projection.WorkspaceID
-		}
-		key := strings.Join([]string{workspaceID, strings.TrimSpace(obs.ProfileID), strings.TrimSpace(obs.PeerID), strings.TrimSpace(obs.SessionKey), toolName}, "\x00")
+		key, seed := negativeEvidenceCandidateSeed(input.Projection, obs)
 		b := buckets[key]
 		if b == nil {
-			b = &bucket{candidate: NegativeEvidenceCandidate{
-				Kind:        NegativeEvidenceRepeatedToolFailure,
-				WorkspaceID: workspaceID,
-				ProfileID:   strings.TrimSpace(obs.ProfileID),
-				PeerID:      strings.TrimSpace(obs.PeerID),
-				SessionKey:  strings.TrimSpace(obs.SessionKey),
-				ToolName:    toolName,
-				EvidenceIDs: []string{},
-			}}
+			b = &bucket{candidate: seed}
 			buckets[key] = b
 		}
 		b.candidate.FailureCount++
@@ -165,6 +147,33 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 		return out[i].String() < out[j].String()
 	})
 	return out
+}
+
+func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Observation) (string, NegativeEvidenceCandidate) {
+	toolName := strings.TrimSpace(obs.Metadata["tool_name"])
+	if toolName == "" {
+		toolName = strings.TrimSpace(obs.Metadata["custom_kind"])
+	}
+	if toolName == "" {
+		toolName = string(obs.Kind)
+	}
+	workspaceID := strings.TrimSpace(obs.WorkspaceID)
+	if workspaceID == "" {
+		workspaceID = projection.WorkspaceID
+	}
+	profileID := strings.TrimSpace(obs.ProfileID)
+	peerID := strings.TrimSpace(obs.PeerID)
+	sessionKey := strings.TrimSpace(obs.SessionKey)
+	key := strings.Join([]string{workspaceID, profileID, peerID, sessionKey, toolName}, "\x00")
+	return key, NegativeEvidenceCandidate{
+		Kind:        NegativeEvidenceRepeatedToolFailure,
+		WorkspaceID: workspaceID,
+		ProfileID:   profileID,
+		PeerID:      peerID,
+		SessionKey:  sessionKey,
+		ToolName:    toolName,
+		EvidenceIDs: []string{},
+	}
 }
 
 func negativeEvidenceFailureObservation(obs Observation) bool {
@@ -203,7 +212,7 @@ func negativeEvidenceSubjectToken(part string) string {
 	if part == "" {
 		return "unknown"
 	}
-	return part
+	return url.QueryEscape(part)
 }
 
 func negativeEvidenceRecommendation(candidate NegativeEvidenceCandidate) string {

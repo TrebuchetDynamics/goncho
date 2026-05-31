@@ -49,6 +49,31 @@ func TestNegativeEvidenceReviewsDoNotCollapseDistinctProfiles(t *testing.T) {
 	}
 }
 
+func TestNegativeEvidenceReviewSubjectIDEscapesDelimiterBearingDimensions(t *testing.T) {
+	left := negativeEvidenceReviewSubjectID(NegativeEvidenceCandidate{
+		Kind:        NegativeEvidenceRepeatedToolFailure,
+		WorkspaceID: "default",
+		ProfileID:   "a:peer-b",
+		PeerID:      "c",
+		SessionKey:  "sess-review",
+		ToolName:    "bash",
+	})
+	right := negativeEvidenceReviewSubjectID(NegativeEvidenceCandidate{
+		Kind:        NegativeEvidenceRepeatedToolFailure,
+		WorkspaceID: "default",
+		ProfileID:   "a",
+		PeerID:      "b:peer-c",
+		SessionKey:  "sess-review",
+		ToolName:    "bash",
+	})
+	if left == right {
+		t.Fatalf("subject ids collapsed delimiter-bearing dimensions: %q", left)
+	}
+	if strings.Contains(left, "a:peer-b") || strings.Contains(right, "b:peer-c") {
+		t.Fatalf("subject ids expose raw delimiter-bearing dimensions: left=%q right=%q", left, right)
+	}
+}
+
 func TestAcceptNegativeEvidenceCandidatesCreatesFormalReviewItems(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
