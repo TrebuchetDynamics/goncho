@@ -2,19 +2,24 @@ package goncho
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 type NegativeEvidenceCandidateKind string
 
 const (
 	NegativeEvidenceRepeatedToolFailure NegativeEvidenceCandidateKind = "repeated_tool_failure"
+
+	// negativeEvidenceObservationScanLimit is a pre-candidate scan guard. It must be
+	// larger than the review-item limit because candidate grouping happens after
+	// observations are fetched.
+	negativeEvidenceObservationScanLimit = 5000
 )
 
 type NegativeEvidenceCandidateInput struct {
@@ -51,12 +56,12 @@ func (s *Service) NegativeEvidenceCandidates(ctx context.Context, q ObservationQ
 		return nil, ErrObservationInvalid
 	}
 	q = negativeEvidenceObservationQuery(q)
-	list, err := s.ListObservations(ctx, q)
+	observations, err := s.listNegativeEvidenceObservations(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 	projection := ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: serviceObservationWorkspace(s.workspaceID, q.WorkspaceID)})
-	return GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{Projection: projection, Observations: list.Observations, MinFailures: 2}), nil
+	return GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{Projection: projection, Observations: observations, MinFailures: 2}), nil
 }
 
 func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req NegativeEvidenceReviewRequest) ([]ReviewItem, error) {
@@ -115,7 +120,9 @@ func negativeEvidenceReviewWorkspaceID(requestWorkspaceID string, candidate Nega
 }
 
 func negativeEvidenceObservationQuery(q ObservationQuery) ObservationQuery {
-	q.Limit = limitutil.Default(q.Limit, 500)
+	if q.Limit <= 0 {
+		q.Limit = negativeEvidenceObservationScanLimit
+	}
 	if len(q.Kinds) == 0 {
 		q.Kinds = negativeEvidenceFailureCapableKinds()
 	}
@@ -129,6 +136,74 @@ func negativeEvidenceFailureCapableKinds() []ObservationKind {
 		ObservationKindCustom,
 		ObservationKindToolCall,
 	}
+}
+
+func (s *Service) listNegativeEvidenceObservations(ctx context.Context, q ObservationQuery) ([]Observation, error) {
+	query := "SELECT id, kind, workspace_id, profile_id, peer_id, session_key, context_id, input, output, success, metadata_json, input_truncated, output_truncated, input_original_bytes, output_original_bytes, redacted, redaction_count, checksum, observed_at FROM goncho_observations WHERE 1=1"
+	args := []any{}
+	if workspaceID := strings.TrimSpace(q.WorkspaceID); workspaceID != "" && workspaceID != "*" {
+		query += " AND workspace_id = ?"
+		args = append(args, workspaceID)
+	}
+	if profileID := strings.TrimSpace(q.ProfileID); profileID != "" {
+		query += " AND profile_id = ?"
+		args = append(args, profileID)
+	}
+	if peerID := strings.TrimSpace(q.PeerID); peerID != "" {
+		query += " AND peer_id = ?"
+		args = append(args, peerID)
+	}
+	if sessionKey := strings.TrimSpace(q.SessionKey); sessionKey != "" {
+		query += " AND session_key = ?"
+		args = append(args, sessionKey)
+	}
+	if len(q.Kinds) > 0 {
+		placeholders := make([]string, 0, len(q.Kinds))
+		for _, kind := range q.Kinds {
+			placeholders = append(placeholders, "?")
+			args = append(args, string(kind))
+		}
+		query += " AND kind IN (" + strings.Join(placeholders, ",") + ")"
+	}
+	query += " ORDER BY observed_at ASC, id ASC LIMIT ?"
+	args = append(args, q.Limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Observation{}
+	for rows.Next() {
+		obs, err := scanNegativeEvidenceObservation(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, obs)
+	}
+	return out, rows.Err()
+}
+
+func scanNegativeEvidenceObservation(rows *sql.Rows) (Observation, error) {
+	var obs Observation
+	var kind string
+	var success sql.NullInt64
+	var metadata string
+	var observedAt int64
+	if err := rows.Scan(&obs.ID, &kind, &obs.WorkspaceID, &obs.ProfileID, &obs.PeerID, &obs.SessionKey, &obs.ContextID, &obs.Input, &obs.Output, &success, &metadata, &obs.InputTruncated, &obs.OutputTruncated, &obs.InputOriginalBytes, &obs.OutputOriginalBytes, &obs.Redacted, &obs.RedactionCount, &obs.Checksum, &observedAt); err != nil {
+		return Observation{}, err
+	}
+	obs.Kind = ObservationKind(kind)
+	if success.Valid {
+		value := success.Int64 != 0
+		obs.Success = &value
+	}
+	obs.Metadata = map[string]string{}
+	if strings.TrimSpace(metadata) != "" {
+		_ = json.Unmarshal([]byte(metadata), &obs.Metadata)
+	}
+	obs.ObservedAt = time.Unix(0, observedAt).UTC()
+	return obs, nil
 }
 
 func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []NegativeEvidenceCandidate {
