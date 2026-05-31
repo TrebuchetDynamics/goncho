@@ -25,6 +25,17 @@ func ChecksumBytesSHA256(raw []byte) string {
 	return checksum.SHA256Bytes(raw)
 }
 
+// FirstNonEmptyTrimmed returns the first argument with non-empty trimmed content.
+func FirstNonEmptyTrimmed(values ...string) string {
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
 // FormatArtifactTimestamp returns the shared BEAM UTC RFC3339 timestamp format.
 func FormatArtifactTimestamp(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)

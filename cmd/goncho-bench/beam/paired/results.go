@@ -62,17 +62,8 @@ func AppendPairedOutcomesFromResults(cfg Config) error {
 }
 
 func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfigID, sourcePath, sourceSHA256 string) ([]servicePairedOutcome, error) {
-	configID := strings.TrimSpace(overrideConfigID)
-	if configID == "" {
-		configID = strings.TrimSpace(results.Metadata.ConfigID)
-	}
-	if configID == "" {
-		configID = beamPairedResultsDefaultConfigID
-	}
-	runStartedAt := strings.TrimSpace(results.Metadata.RunStartedAt)
-	if runStartedAt == "" {
-		runStartedAt = strings.TrimSpace(results.Metadata.Date)
-	}
+	configID := shared.FirstNonEmptyTrimmed(overrideConfigID, results.Metadata.ConfigID, beamPairedResultsDefaultConfigID)
+	runStartedAt := shared.FirstNonEmptyTrimmed(results.Metadata.RunStartedAt, results.Metadata.Date)
 	if runStartedAt == "" {
 		runStartedAt = shared.FormatArtifactTimestamp(time.Now())
 	}

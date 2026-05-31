@@ -158,13 +158,7 @@ func beamJSONLQuestionFromRecord(record beamJSONLRecord, defaultScale string, li
 	if query == "" {
 		return beamJSONLQuestion{}, fmt.Errorf("goncho-bench: BEAM question %q missing query", id)
 	}
-	scale := strings.TrimSpace(record.Scale)
-	if scale == "" {
-		scale = strings.TrimSpace(defaultScale)
-	}
-	if scale == "" {
-		scale = beamServiceScale
-	}
+	scale := shared.FirstNonEmptyTrimmed(record.Scale, defaultScale, beamServiceScale)
 	return beamJSONLQuestion{
 		ID:                    id,
 		Scale:                 scale,
@@ -185,11 +179,7 @@ func beamJSONLQuestionFromRecord(record beamJSONLRecord, defaultScale string, li
 }
 
 func normalizeBeamJSONLConversationID(conversationID string) string {
-	conversationID = strings.TrimSpace(conversationID)
-	if conversationID == "" {
-		return beamServiceConversationID
-	}
-	return conversationID
+	return shared.FirstNonEmptyTrimmed(conversationID, beamServiceConversationID)
 }
 
 func beamJSONLScoringConfig(question beamJSONLQuestion) goncho.RecallScoringConfig {

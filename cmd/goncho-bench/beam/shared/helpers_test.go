@@ -11,6 +11,15 @@ func TestNormalizeAbilityTrimsAndUppercases(t *testing.T) {
 	}
 }
 
+func TestFirstNonEmptyTrimmedReturnsFirstTrimmedValue(t *testing.T) {
+	if got := FirstNonEmptyTrimmed("", "  ", " candidate ", "fallback"); got != "candidate" {
+		t.Fatalf("FirstNonEmptyTrimmed() = %q, want candidate", got)
+	}
+	if got := FirstNonEmptyTrimmed("", "  "); got != "" {
+		t.Fatalf("FirstNonEmptyTrimmed() with blanks = %q, want empty", got)
+	}
+}
+
 func TestPairedOutcomeCorrectUsesSharedThreshold(t *testing.T) {
 	for _, tc := range []struct {
 		name  string

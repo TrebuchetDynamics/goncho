@@ -105,10 +105,7 @@ func loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale string) ([]be
 	defer file.Close()
 	sourceHasher := sha256.New()
 
-	fallbackScale = strings.TrimSpace(fallbackScale)
-	if fallbackScale == "" {
-		fallbackScale = beamServiceScale
-	}
+	fallbackScale = shared.FirstNonEmptyTrimmed(fallbackScale, beamServiceScale)
 	out := []beamJSONLRecord{{Type: "meta", Dataset: "beam-huggingface-converted", Scale: fallbackScale}}
 	scanner := shared.NewJSONLScanner(io.TeeReader(file, sourceHasher))
 	if err := shared.ForEachNonEmptyJSONLLine(scanner, "goncho-bench: read HuggingFace BEAM JSONL", func(lineNo int, line string) error {
@@ -139,14 +136,8 @@ func loadBeamHuggingFaceRecordsWithDiagnostics(path, fallbackScale string) ([]be
 }
 
 func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fallbackScale string) ([]beamJSONLRecord, error) {
-	conversationID := strings.TrimSpace(record.ConversationID)
-	if conversationID == "" {
-		conversationID = fmt.Sprintf("beam-conversation-%06d", lineNo)
-	}
-	scale := strings.TrimSpace(record.Scale)
-	if scale == "" {
-		scale = fallbackScale
-	}
+	conversationID := shared.FirstNonEmptyTrimmed(record.ConversationID, fmt.Sprintf("beam-conversation-%06d", lineNo))
+	scale := shared.FirstNonEmptyTrimmed(record.Scale, fallbackScale)
 	messages, err := beamHuggingFaceMessages(record)
 	if err != nil {
 		return nil, fmt.Errorf("goncho-bench: convert BEAM conversation %q messages: %w", conversationID, err)
@@ -443,11 +434,7 @@ func stableBeamIDSegment(value string) string {
 			lastDash = true
 		}
 	}
-	out := strings.Trim(b.String(), "-")
-	if out == "" {
-		return "conversation"
-	}
-	return out
+	return shared.FirstNonEmptyTrimmed(strings.Trim(b.String(), "-"), "conversation")
 }
 
 var pythonLiteralBarewordPattern = regexp.MustCompile(`\b(True|False|None)\b`)

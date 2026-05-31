@@ -135,26 +135,11 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 	comparisonRows := make([]beamPairedComparisonRow, 0, len(matchedRows))
 	for _, matched := range matchedRows {
 		base, cand := matched.baseline, matched.candidate
-		ability := shared.NormalizeAbility(cand.Ability)
-		if ability == "" {
-			ability = shared.NormalizeAbility(base.Ability)
-		}
-		question := strings.TrimSpace(cand.Question)
-		if question == "" {
-			question = strings.TrimSpace(base.Question)
-		}
-		scale := strings.TrimSpace(cand.Scale)
-		if scale == "" {
-			scale = strings.TrimSpace(base.Scale)
-		}
-		conversationID := strings.TrimSpace(cand.ConversationID)
-		if conversationID == "" {
-			conversationID = strings.TrimSpace(base.ConversationID)
-		}
-		qid := strings.TrimSpace(cand.QID)
-		if qid == "" {
-			qid = strings.TrimSpace(base.QID)
-		}
+		ability := shared.FirstNonEmptyTrimmed(shared.NormalizeAbility(cand.Ability), shared.NormalizeAbility(base.Ability))
+		question := shared.FirstNonEmptyTrimmed(cand.Question, base.Question)
+		scale := shared.FirstNonEmptyTrimmed(cand.Scale, base.Scale)
+		conversationID := shared.FirstNonEmptyTrimmed(cand.ConversationID, base.ConversationID)
+		qid := shared.FirstNonEmptyTrimmed(cand.QID, base.QID)
 		delta := shared.RoundSignedMetric(cand.Score - base.Score)
 		comparisonRows = append(comparisonRows, beamPairedComparisonRow{
 			Scale:                 scale,

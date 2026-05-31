@@ -158,11 +158,7 @@ func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cf
 }
 
 func normalizeBeamServiceConfigID(configID string) string {
-	configID = strings.TrimSpace(configID)
-	if configID == "" {
-		return beamServiceDefaultConfigID
-	}
-	return configID
+	return shared.FirstNonEmptyTrimmed(configID, beamServiceDefaultConfigID)
 }
 
 func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) error {
@@ -529,19 +525,11 @@ func beamServiceFailureMode(c goncho.RecallBenchmarkCaseReport, score float64) s
 }
 
 func beamServiceCaseScale(c goncho.RecallBenchmarkCaseReport) string {
-	scale := strings.TrimSpace(c.Scale)
-	if scale == "" {
-		return beamServiceScale
-	}
-	return scale
+	return shared.FirstNonEmptyTrimmed(c.Scale, beamServiceScale)
 }
 
 func beamServiceCaseConversationID(c goncho.RecallBenchmarkCaseReport) string {
-	conversationID := strings.TrimSpace(c.ConversationID)
-	if conversationID == "" {
-		return beamServiceConversationID
-	}
-	return conversationID
+	return shared.FirstNonEmptyTrimmed(c.ConversationID, beamServiceConversationID)
 }
 
 func beamServiceArtifactScore(c goncho.RecallBenchmarkCaseReport, judgments *beamServiceJudgmentSet) float64 {
