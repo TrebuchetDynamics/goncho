@@ -178,25 +178,19 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 		Rows:             append([]beamPairedComparisonRow(nil), rows...),
 	}
 	abilityRows := map[string][]beamPairedComparisonRow{}
-	var baselineTally, candidateTally shared.ScoreTally
+	var summary comparisoncontract.ScoreSummary
 	diffs := make([]float64, 0, len(rows))
 	for _, row := range rows {
-		baselineTally.Add(row.BaselineScore)
-		candidateTally.Add(row.CandidateScore)
+		summary.Add(row.BaselineScore, row.CandidateScore, row.Winner)
 		diffs = append(diffs, row.CandidateScore-row.BaselineScore)
-		switch row.Winner {
-		case "candidate":
-			report.CandidateWins++
-		case "baseline":
-			report.BaselineWins++
-		default:
-			report.Ties++
-		}
 		abilityRows[row.Ability] = append(abilityRows[row.Ability], row)
 	}
-	report.BaselineAvgScore = baselineTally.Average()
-	report.CandidateAvgScore = candidateTally.Average()
-	report.ScoreDelta = shared.RoundSignedMetric(report.CandidateAvgScore - report.BaselineAvgScore)
+	report.BaselineAvgScore = summary.BaselineAvgScore
+	report.CandidateAvgScore = summary.CandidateAvgScore
+	report.ScoreDelta = summary.ScoreDelta
+	report.CandidateWins = summary.CandidateWins
+	report.BaselineWins = summary.BaselineWins
+	report.Ties = summary.Ties
 	report.ScoreDeltaCI95 = comparisoncontract.BootstrapMeanCI(diffs, bootstrapSamples, beamPairedComparisonBootstrapSeed)
 	report.Conclusion, report.ConclusionReason = comparisoncontract.Conclusion(report.ScoreDeltaCI95, report.EffectSizeFloor)
 	for ability, rows := range abilityRows {
@@ -206,23 +200,19 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 }
 
 func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow, effectSizeFloor float64) beamPairedComparisonStats {
-	stats := beamPairedComparisonStats{PairedCount: len(rows)}
-	var baselineTally, candidateTally shared.ScoreTally
+	var summary comparisoncontract.ScoreSummary
 	for _, row := range rows {
-		baselineTally.Add(row.BaselineScore)
-		candidateTally.Add(row.CandidateScore)
-		switch row.Winner {
-		case "candidate":
-			stats.CandidateWins++
-		case "baseline":
-			stats.BaselineWins++
-		default:
-			stats.Ties++
-		}
+		summary.Add(row.BaselineScore, row.CandidateScore, row.Winner)
 	}
-	stats.BaselineAvgScore = baselineTally.Average()
-	stats.CandidateAvgScore = candidateTally.Average()
-	stats.ScoreDelta = shared.RoundSignedMetric(stats.CandidateAvgScore - stats.BaselineAvgScore)
+	stats := beamPairedComparisonStats{
+		PairedCount:       summary.PairedCount,
+		BaselineAvgScore:  summary.BaselineAvgScore,
+		CandidateAvgScore: summary.CandidateAvgScore,
+		ScoreDelta:        summary.ScoreDelta,
+		BaselineWins:      summary.BaselineWins,
+		CandidateWins:     summary.CandidateWins,
+		Ties:              summary.Ties,
+	}
 	stats.Conclusion, stats.ConclusionReason = comparisoncontract.PointConclusion(stats.ScoreDelta, effectSizeFloor)
 	return stats
 }

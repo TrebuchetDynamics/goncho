@@ -12,6 +12,39 @@ type CI struct {
 	Upper float64 `json:"upper"`
 }
 
+type ScoreSummary struct {
+	PairedCount       int
+	BaselineAvgScore  float64
+	CandidateAvgScore float64
+	ScoreDelta        float64
+	BaselineWins      int
+	CandidateWins     int
+	Ties              int
+	baselineTally     shared.ScoreTally
+	candidateTally    shared.ScoreTally
+}
+
+func (s *ScoreSummary) Add(baselineScore, candidateScore float64, winner string) {
+	s.PairedCount++
+	s.baselineTally.Add(baselineScore)
+	s.candidateTally.Add(candidateScore)
+	s.BaselineAvgScore = s.baselineTally.Average()
+	s.CandidateAvgScore = s.candidateTally.Average()
+	s.ScoreDelta = shared.RoundSignedMetric(s.CandidateAvgScore - s.BaselineAvgScore)
+	s.AddWinner(winner)
+}
+
+func (s *ScoreSummary) AddWinner(winner string) {
+	switch winner {
+	case "candidate":
+		s.CandidateWins++
+	case "baseline":
+		s.BaselineWins++
+	default:
+		s.Ties++
+	}
+}
+
 func Winner(baseScore, candidateScore float64) string {
 	switch {
 	case candidateScore > baseScore:
