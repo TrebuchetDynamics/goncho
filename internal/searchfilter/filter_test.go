@@ -106,6 +106,24 @@ func TestGrammarRejectsUnknownFieldsAndOperators(t *testing.T) {
 	}
 }
 
+func TestGrammarReportsFirstUnknownOperatorDeterministically(t *testing.T) {
+	for i := 0; i < 50; i++ {
+		_, err := searchfilter.Parse(map[string]any{
+			"created_at": map[string]any{
+				"regex": "2024",
+				"glob":  "2024*",
+			},
+		})
+		var unsupported *searchfilter.UnsupportedFilterError
+		if !errors.As(err, &unsupported) {
+			t.Fatalf("Parse err = %T %[1]v, want UnsupportedFilterError", err)
+		}
+		if unsupported.Operator != "glob" {
+			t.Fatalf("iteration %d unsupported operator = %q, want deterministic lexicographic first operator glob", i, unsupported.Operator)
+		}
+	}
+}
+
 func TestCompilerSupportsSessionSourcePeerAndRejectsMetadata(t *testing.T) {
 	supported, err := searchfilter.Compile(mustParse(t, map[string]any{
 		"AND": []any{

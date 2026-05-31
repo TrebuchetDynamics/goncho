@@ -194,24 +194,7 @@ func parseMetadataMap(raw map[string]any, path []string) (Expression, error) {
 
 func parseFieldCondition(field string, value any) (Expression, error) {
 	if rawOps, ok := value.(map[string]any); ok {
-		children := make([]Expression, 0, len(rawOps))
-		for rawOp, rawValue := range rawOps {
-			op, ok := parseFilterOperator(rawOp)
-			if !ok {
-				return Expression{}, unsupportedFilter(field, rawOp, "unknown filter operator")
-			}
-			values, err := filterValues(rawValue, op)
-			if err != nil {
-				return Expression{}, unsupportedFilter(field, rawOp, err.Error())
-			}
-			children = append(children, Expression{
-				Kind:     KindComparison,
-				Field:    field,
-				Operator: op,
-				Values:   values,
-			})
-		}
-		return collapseImplicitAnd(children), nil
+		return parseOperatorConditions(field, rawOps)
 	}
 
 	values, err := filterValues(value, OpEQ)
@@ -236,6 +219,28 @@ var supportedFilterOperators = map[string]Operator{
 	string(OpIn):        OpIn,
 	string(OpContains):  OpContains,
 	string(OpIContains): OpIContains,
+}
+
+func parseOperatorConditions(field string, rawOps map[string]any) (Expression, error) {
+	children := make([]Expression, 0, len(rawOps))
+	for _, rawOp := range sortedMapKeys(rawOps) {
+		rawValue := rawOps[rawOp]
+		op, ok := parseFilterOperator(rawOp)
+		if !ok {
+			return Expression{}, unsupportedFilter(field, rawOp, "unknown filter operator")
+		}
+		values, err := filterValues(rawValue, op)
+		if err != nil {
+			return Expression{}, unsupportedFilter(field, rawOp, err.Error())
+		}
+		children = append(children, Expression{
+			Kind:     KindComparison,
+			Field:    field,
+			Operator: op,
+			Values:   values,
+		})
+	}
+	return collapseImplicitAnd(children), nil
 }
 
 func parseFilterOperator(op string) (Operator, bool) {
@@ -303,15 +308,9 @@ func classifyOperatorMap(raw map[string]any) operatorMapClassification {
 		return operatorMapClassification{}
 	}
 
-	keys := make([]string, 0, len(raw))
-	for key := range raw {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-
 	knownOperators := 0
 	unknownOperator := ""
-	for _, key := range keys {
+	for _, key := range sortedMapKeys(raw) {
 		if _, ok := parseFilterOperator(key); ok {
 			knownOperators++
 			continue
@@ -320,13 +319,22 @@ func classifyOperatorMap(raw map[string]any) operatorMapClassification {
 			unknownOperator = key
 		}
 	}
-	if knownOperators == len(keys) {
+	if knownOperators == len(raw) {
 		return operatorMapClassification{Valid: true}
 	}
 	if knownOperators > 0 {
 		return operatorMapClassification{Mixed: true, UnknownOperator: unknownOperator}
 	}
 	return operatorMapClassification{}
+}
+
+func sortedMapKeys(raw map[string]any) []string {
+	keys := make([]string, 0, len(raw))
+	for key := range raw {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	return keys
 }
 
 func unsupportedFilter(field, operator, reason string) *UnsupportedFilterError {
