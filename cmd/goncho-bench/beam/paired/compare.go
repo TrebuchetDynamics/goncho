@@ -186,7 +186,7 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 		effectSizeFloor = 0.02
 	}
 	report := summarizeBeamPairedComparison(comparisonRows, bootstrapSamples, effectSizeFloor)
-	report.GeneratedAt = time.Now().UTC().Format(time.RFC3339)
+	report.GeneratedAt = shared.FormatArtifactTimestamp(time.Now())
 	report.SourcePath = path
 	report.BaselineConfigID = baselineID
 	report.CandidateConfigID = candidateID

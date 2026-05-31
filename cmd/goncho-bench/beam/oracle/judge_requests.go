@@ -59,7 +59,7 @@ func writeBeamServiceJudgeRequests(path string, report goncho.RecallBenchmarkRep
 
 func buildBeamServiceJudgeRequestRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceJudgeRequestRow {
 	out := make([]beamServiceJudgeRequestRow, 0, len(report.Cases))
-	started := runStartedAt.UTC().Format(beamServicePairedDateTimeFormat)
+	started := shared.FormatArtifactTimestamp(runStartedAt)
 	for _, c := range report.Cases {
 		question := strings.TrimSpace(c.Question)
 		context := strings.TrimSpace(c.SelectedContext)

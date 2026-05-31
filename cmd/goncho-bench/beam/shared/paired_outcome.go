@@ -14,3 +14,8 @@ type PairedOutcome struct {
 	Score          float64 `json:"score"`
 	Correct        bool    `json:"correct"`
 }
+
+// PairedOutcomeCorrect reports the shared BEAM paired-outcome correctness contract.
+func PairedOutcomeCorrect(score float64) bool {
+	return score >= 0.5
+}

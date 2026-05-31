@@ -12,13 +12,12 @@ import (
 )
 
 const (
-	beamServiceDefaultConfigID      = "goncho-service-beam-v1"
-	beamServiceScale                = "100K"
-	beamServiceConversationID       = "goncho-service-memoria-fixtures"
-	beamServiceModelName            = "goncho-service-recall"
-	beamServiceJudgeModelName       = "none"
-	beamServiceSummaryDateFormat    = time.RFC3339
-	beamServicePairedDateTimeFormat = time.RFC3339
+	beamServiceDefaultConfigID   = "goncho-service-beam-v1"
+	beamServiceScale             = "100K"
+	beamServiceConversationID    = "goncho-service-memoria-fixtures"
+	beamServiceModelName         = "goncho-service-recall"
+	beamServiceJudgeModelName    = "none"
+	beamServiceSummaryDateFormat = time.RFC3339
 )
 
 type beamServiceSummaryFile struct {
@@ -249,7 +248,7 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 		scaleList = append(scaleList, scale)
 	}
 	sort.Strings(scaleList)
-	started := runStartedAt.UTC().Format(beamServicePairedDateTimeFormat)
+	started := shared.FormatArtifactTimestamp(runStartedAt)
 	return beamServiceResultsFile{
 		Metadata: beamServiceResultsMetadata{
 			Date:               time.Now().UTC().Format(beamServiceSummaryDateFormat),
@@ -416,7 +415,7 @@ func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkR
 
 func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) []beamServicePairedOutcome {
 	out := make([]beamServicePairedOutcome, 0, len(report.Cases))
-	started := runStartedAt.UTC().Format(beamServicePairedDateTimeFormat)
+	started := shared.FormatArtifactTimestamp(runStartedAt)
 	for _, c := range report.Cases {
 		score := beamServiceArtifactScore(c, judgments)
 		out = append(out, beamServicePairedOutcome{
@@ -428,7 +427,7 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 			Ability:        shared.NormalizeAbility(c.Ability),
 			Question:       strings.TrimSpace(c.Question),
 			Score:          score,
-			Correct:        score >= 0.5,
+			Correct:        shared.PairedOutcomeCorrect(score),
 		})
 	}
 	return out
@@ -445,7 +444,7 @@ func writeBeamServiceFailureAudit(path string, report goncho.RecallBenchmarkRepo
 
 func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceFailureAuditRow {
 	out := []beamServiceFailureAuditRow{}
-	started := runStartedAt.UTC().Format(beamServicePairedDateTimeFormat)
+	started := shared.FormatArtifactTimestamp(runStartedAt)
 	for _, c := range report.Cases {
 		score := beamServiceCaseScore(c)
 		if score >= 1 {

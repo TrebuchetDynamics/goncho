@@ -2,6 +2,7 @@ package shared
 
 import (
 	"strings"
+	"time"
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/checksum"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
@@ -22,6 +23,11 @@ func TopN(values []string, n int) []string {
 
 func ChecksumBytesSHA256(raw []byte) string {
 	return checksum.SHA256Bytes(raw)
+}
+
+// FormatArtifactTimestamp returns the shared BEAM UTC RFC3339 timestamp format.
+func FormatArtifactTimestamp(t time.Time) string {
+	return t.UTC().Format(time.RFC3339)
 }
 
 // NormalizeAbility returns the canonical BEAM ability code used in artifacts and match keys.

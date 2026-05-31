@@ -74,7 +74,7 @@ func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfig
 		runStartedAt = strings.TrimSpace(results.Metadata.Date)
 	}
 	if runStartedAt == "" {
-		runStartedAt = time.Now().UTC().Format(time.RFC3339)
+		runStartedAt = shared.FormatArtifactTimestamp(time.Now())
 	}
 	out := []servicePairedOutcome{}
 	for conversationIndex, conv := range results.Results {
@@ -97,7 +97,7 @@ func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfig
 				SourcePath:     strings.TrimSpace(sourcePath),
 				SourceSHA256:   strings.TrimSpace(sourceSHA256),
 				Score:          score,
-				Correct:        score >= 0.5,
+				Correct:        shared.PairedOutcomeCorrect(score),
 			})
 		}
 	}
