@@ -593,19 +593,23 @@ func recallSpeakerAdjustment(candidate ScoredRecallCandidate, query string) floa
 	if speaker == "" {
 		return 0
 	}
+	if recallQueryMatchesSpeaker(query, speaker) {
+		return recallSpeakerMatchBonus
+	}
+	return 0
+}
+
+func recallQueryMatchesSpeaker(query, speaker string) bool {
 	targets := recallQuerySpeakerTargets(query)
 	if len(targets) > 0 {
 		for _, target := range targets {
 			if target == speaker {
-				return recallSpeakerMatchBonus
+				return true
 			}
 		}
-		return 0
+		return false
 	}
-	if recallQueryMentionsSpeaker(query, speaker) {
-		return recallSpeakerMatchBonus
-	}
-	return 0
+	return recallQueryMentionsSpeaker(query, speaker)
 }
 
 func recallQueryMentionsSpeaker(query, speaker string) bool {
