@@ -215,6 +215,20 @@ func TestMergeRecallCandidateEvidenceKeepsStrongestImportance(t *testing.T) {
 	}
 }
 
+func TestMergeRecallCandidateEvidenceOwnsAppendedEvidenceMetadata(t *testing.T) {
+	incomingMetadata := map[string]string{"subquery": "owner"}
+	merged := mergeRecallCandidateEvidence(
+		RecallCandidate{MemoryID: "mem-auth-owner", Provenance: []EvidenceItem{{Kind: "keyword", Source: "fts", ID: "kw-owner", Score: 0.80}}},
+		RecallCandidate{MemoryID: "mem-auth-owner", Provenance: []EvidenceItem{{Kind: "fact", Source: "annotations", ID: "ann-owner", Score: 1.00, Metadata: incomingMetadata}}},
+	)
+
+	incomingMetadata["subquery"] = "mutated-after-merge"
+
+	if got := merged.Provenance[1].Metadata["subquery"]; got != "owner" {
+		t.Fatalf("appended evidence metadata = %q, want merge-owned snapshot", got)
+	}
+}
+
 func TestRecallQueryDecompositionMergesProvenanceForDuplicateMemoryIDs(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{

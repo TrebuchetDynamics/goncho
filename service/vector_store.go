@@ -164,11 +164,13 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 
 func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCandidate {
 	existing = mergeRecallCandidateFields(existing, incoming)
+	existing.Provenance = cloneRecallEvidenceItems(existing.Provenance)
 	indexByEvidence := make(map[string]int, len(existing.Provenance)+len(incoming.Provenance))
 	for i, evidence := range existing.Provenance {
 		indexByEvidence[recallCandidateEvidenceKey(evidence)] = i
 	}
 	for _, evidence := range incoming.Provenance {
+		evidence = cloneRecallEvidenceItem(evidence)
 		key := recallCandidateEvidenceKey(evidence)
 		if idx, ok := indexByEvidence[key]; ok {
 			existing.Provenance[idx] = mergeRecallEvidenceItem(existing.Provenance[idx], evidence)
@@ -178,6 +180,22 @@ func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCand
 		existing.Provenance = append(existing.Provenance, evidence)
 	}
 	return existing
+}
+
+func cloneRecallEvidenceItems(items []EvidenceItem) []EvidenceItem {
+	if len(items) == 0 {
+		return nil
+	}
+	out := make([]EvidenceItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, cloneRecallEvidenceItem(item))
+	}
+	return out
+}
+
+func cloneRecallEvidenceItem(item EvidenceItem) EvidenceItem {
+	item.Metadata = maputil.CloneStringStringNilIfEmpty(item.Metadata)
+	return item
 }
 
 func mergeRecallCandidateFields(existing, incoming RecallCandidate) RecallCandidate {
