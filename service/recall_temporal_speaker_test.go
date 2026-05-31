@@ -149,6 +149,26 @@ func TestRecallSpeakerRoutingMatchesMultiTokenSpeakerTarget(t *testing.T) {
 	}
 }
 
+func TestRecallSpeakerRoutingPrefersExplicitSpeakerNoteOverOpaqueSource(t *testing.T) {
+	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
+		MemoryID: "mem-mira",
+		Content:  "Mira summarized the migration risk.",
+		Provenance: []EvidenceItem{{
+			Kind:   "speaker",
+			Source: "turn-17",
+			Score:  1,
+			Note:   "speaker=Mira",
+		}},
+	}}
+
+	if got := recallCandidateSpeaker(candidate.Candidate); got != "mira" {
+		t.Fatalf("recallCandidateSpeaker() = %q, want explicit speaker note mira", got)
+	}
+	if got := recallSpeakerAdjustment(candidate, "What did Mira say about migration risk?"); got != recallSpeakerMatchBonus {
+		t.Fatalf("recallSpeakerAdjustment() = %v, want speaker bonus %v", got, recallSpeakerMatchBonus)
+	}
+}
+
 func TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{

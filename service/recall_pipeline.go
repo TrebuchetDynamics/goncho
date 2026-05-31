@@ -694,18 +694,26 @@ func recallCandidateSpeaker(candidate RecallCandidate) string {
 		if evidence.Kind != "speaker" {
 			continue
 		}
-		speaker := textutil.LowerTrimmed(evidence.Source)
-		if speaker == "" {
-			note := textutil.LowerTrimmed(evidence.Note)
-			if strings.HasPrefix(note, "speaker=") {
-				speaker = strings.TrimSpace(strings.TrimPrefix(note, "speaker="))
-			}
-		}
-		if speaker != "" {
+		if speaker := recallSpeakerEvidenceIdentity(evidence); speaker != "" {
 			return speaker
 		}
 	}
 	return textutil.LowerTrimmed(candidate.AgentID)
+}
+
+func recallSpeakerEvidenceIdentity(evidence EvidenceItem) string {
+	if speaker := recallSpeakerIdentityFromNote(evidence.Note); speaker != "" {
+		return speaker
+	}
+	return textutil.LowerTrimmed(evidence.Source)
+}
+
+func recallSpeakerIdentityFromNote(note string) string {
+	note = textutil.LowerTrimmed(note)
+	if !strings.HasPrefix(note, "speaker=") {
+		return ""
+	}
+	return strings.TrimSpace(strings.TrimPrefix(note, "speaker="))
 }
 
 func recallQuerySpeakerTargets(query string) []string {
