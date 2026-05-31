@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/utf8limit"
 )
 
 // Words applies Goncho's whitespace-tokenization policy.
@@ -74,5 +75,5 @@ func Compact(value string, limit int, empty string) string {
 	if limit <= 0 || len(value) <= limit {
 		return value
 	}
-	return trimmed.Space(value[:limit])
+	return trimmed.Space(utf8limit.TruncateBytes(value, limit))
 }

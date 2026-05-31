@@ -1,6 +1,9 @@
 package wordspace
 
-import "testing"
+import (
+	"testing"
+	"unicode/utf8"
+)
 
 func TestCollapseFirstWordsAndCompactContracts(t *testing.T) {
 	words := Words("  alpha\n\tbeta   gamma  ")
@@ -21,6 +24,16 @@ func TestCollapseFirstWordsAndCompactContracts(t *testing.T) {
 	}
 	if got := Compact(" \n\t ", 11, "empty"); got != "empty" {
 		t.Fatalf("Compact empty = %q", got)
+	}
+}
+
+func TestCompactDoesNotSplitUTF8Runes(t *testing.T) {
+	got := Compact("alpha 🙂 beta", 8, "empty")
+	if !utf8.ValidString(got) {
+		t.Fatalf("Compact returned invalid UTF-8 bytes: % x", []byte(got))
+	}
+	if got != "alpha" {
+		t.Fatalf("Compact = %q, want safely truncated text before split emoji", got)
 	}
 }
 
