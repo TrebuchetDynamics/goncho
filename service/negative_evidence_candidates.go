@@ -50,7 +50,7 @@ func (s *Service) NegativeEvidenceCandidates(ctx context.Context, q ObservationQ
 	if s == nil {
 		return nil, ErrObservationInvalid
 	}
-	q.Limit = limitutil.Default(q.Limit, 500)
+	q = negativeEvidenceObservationQuery(q)
 	list, err := s.ListObservations(ctx, q)
 	if err != nil {
 		return nil, err
@@ -98,11 +98,28 @@ func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req Neg
 }
 
 func negativeEvidenceReviewObservationQuery(workspaceID string, req NegativeEvidenceReviewRequest) ObservationQuery {
-	return ObservationQuery{
+	return negativeEvidenceObservationQuery(ObservationQuery{
 		WorkspaceID: workspaceID,
 		ProfileID:   req.ProfileID,
 		PeerID:      req.PeerID,
 		SessionKey:  req.SessionKey,
+	})
+}
+
+func negativeEvidenceObservationQuery(q ObservationQuery) ObservationQuery {
+	q.Limit = limitutil.Default(q.Limit, 500)
+	if len(q.Kinds) == 0 {
+		q.Kinds = negativeEvidenceFailureCapableKinds()
+	}
+	return q
+}
+
+func negativeEvidenceFailureCapableKinds() []ObservationKind {
+	return []ObservationKind{
+		ObservationKindToolError,
+		ObservationKindToolResult,
+		ObservationKindCustom,
+		ObservationKindToolCall,
 	}
 }
 

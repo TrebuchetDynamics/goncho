@@ -98,6 +98,39 @@ func TestNegativeEvidenceReviewSubjectIDEscapesAmbiguousDimensions(t *testing.T)
 	}
 }
 
+func TestNegativeEvidenceReviewsFilterObservationScanBeforeDefaultLimit(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	failed := false
+	for i := 1; i <= 2; i++ {
+		id := "old-bash-fail-" + strconv.Itoa(i)
+		if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, ProfileID: "mineru", PeerID: "peer-review-scan", SessionKey: "sess-review-scan", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(int64(i), 0).UTC()}); err != nil {
+			t.Fatalf("Observe %s: %v", id, err)
+		}
+	}
+	for i := 1; i <= 500; i++ {
+		id := "new-prompt-" + strconv.Itoa(i)
+		if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindUserPrompt, ProfileID: "mineru", PeerID: "peer-review-scan", SessionKey: "sess-review-scan", Input: "unrelated prompt", ObservedAt: time.Unix(int64(1000+i), 0).UTC()}); err != nil {
+			t.Fatalf("Observe %s: %v", id, err)
+		}
+	}
+
+	created, err := svc.CreateNegativeEvidenceReviewItems(ctx, NegativeEvidenceReviewRequest{PeerID: "peer-review-scan", SessionKey: "sess-review-scan", CreatedAt: time.Unix(2000, 0).UTC()})
+	if err != nil {
+		t.Fatalf("CreateNegativeEvidenceReviewItems: %v", err)
+	}
+	if len(created) != 1 {
+		t.Fatalf("created = %+v, want older repeated failure not dropped by newer non-failure observations", created)
+	}
+	if got := strings.Join(created[0].EvidenceIDs, ","); got != "old-bash-fail-1,old-bash-fail-2" {
+		t.Fatalf("evidence ids = %q, want older repeated failures", got)
+	}
+}
+
 func TestNegativeEvidenceReviewLimitAppliesAfterCandidateGeneration(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
