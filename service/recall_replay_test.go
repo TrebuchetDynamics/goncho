@@ -14,7 +14,7 @@ func TestRecallReplayBuildsDeterministicTimelineFromTrace(t *testing.T) {
 		ScoringConfig:   RecallScoringConfig{Version: "replay-v1", Weights: map[string]float64{"keyword": 0.6, "semantic": 0.4}, RRFK: 60, MMRLambda: 0.7, TokenBudget: 64},
 		Candidates: []ScoredRecallCandidate{
 			{
-				Candidate: RecallCandidate{MemoryID: "mem-auth", SourceType: "conclusion", Content: "JWT auth uses jose middleware.", SessionID: "sess-auth", ScopeID: "team"},
+				Candidate: RecallCandidate{MemoryID: "mem-auth", SourceType: "conclusion", Content: "JWT auth uses jose middleware.", SessionID: "sess-auth", AgentID: "agent-auth", ScopeID: "team"},
 				Score: RecallScore{
 					KeywordScore:  0.8,
 					SemanticScore: 0.9,
@@ -34,7 +34,7 @@ func TestRecallReplayBuildsDeterministicTimelineFromTrace(t *testing.T) {
 			},
 		},
 		Selected: []ScoredRecallCandidate{{
-			Candidate: RecallCandidate{MemoryID: "mem-auth", SourceType: "conclusion", Content: "JWT auth uses jose middleware.", SessionID: "sess-auth", ScopeID: "team"},
+			Candidate: RecallCandidate{MemoryID: "mem-auth", SourceType: "conclusion", Content: "JWT auth uses jose middleware.", SessionID: "sess-auth", AgentID: "agent-auth", ScopeID: "team"},
 			Score:     RecallScore{KeywordScore: 0.8, SemanticScore: 0.9, FinalScore: 0.82, WhySelected: []string{"final_score=0.820000", "scoring_config=replay-v1"}},
 		}},
 		Rejected: []RejectedRecallCandidate{{
@@ -104,6 +104,7 @@ func TestRecallReplayBuildsDeterministicTimelineFromTrace(t *testing.T) {
 		"trace_id: trace-replay",
 		"events: 7",
 		"candidate_scored memory_id=mem-auth",
+		"agent=agent-auth",
 		"selected memory_id=mem-auth",
 		"rejected memory_id=mem-rate reason=not_selected",
 		"warning code=token_budget_truncated",

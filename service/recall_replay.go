@@ -134,33 +134,11 @@ func FormatRecallReplay(replay RecallReplay) string {
 	}
 	for _, event := range replay.Events {
 		fmt.Fprintf(&b, "  %d. %s", event.Index, event.Kind)
-		if event.MemoryID != "" {
-			fmt.Fprintf(&b, " memory_id=%s", event.MemoryID)
-		}
-		if event.Reason != "" {
-			fmt.Fprintf(&b, " reason=%s", event.Reason)
+		for _, field := range recallReplayEventFields(event) {
+			fmt.Fprintf(&b, " %s", field)
 		}
 		if event.WarningCode != "" {
 			warnings++
-			fmt.Fprintf(&b, " code=%s", event.WarningCode)
-		}
-		if event.FinalScore != 0 {
-			fmt.Fprintf(&b, " final=%.6f", event.FinalScore)
-		}
-		if event.SourceType != "" {
-			fmt.Fprintf(&b, " source=%s", event.SourceType)
-		}
-		if event.SessionID != "" {
-			fmt.Fprintf(&b, " session=%s", event.SessionID)
-		}
-		if event.ScopeID != "" {
-			fmt.Fprintf(&b, " scope=%s", event.ScopeID)
-		}
-		if event.Severity != "" {
-			fmt.Fprintf(&b, " severity=%s", event.Severity)
-		}
-		if len(event.Details) > 0 {
-			fmt.Fprintf(&b, " %s", strings.Join(event.Details, " "))
 		}
 		fmt.Fprintln(&b)
 	}
@@ -168,6 +146,39 @@ func FormatRecallReplay(replay RecallReplay) string {
 		fmt.Fprintln(&b, "\nwarnings: none")
 	}
 	return b.String()
+}
+
+func recallReplayEventFields(event RecallReplayEvent) []string {
+	fields := make([]string, 0, 10+len(event.Details))
+	if event.MemoryID != "" {
+		fields = append(fields, "memory_id="+event.MemoryID)
+	}
+	if event.Reason != "" {
+		fields = append(fields, "reason="+event.Reason)
+	}
+	if event.WarningCode != "" {
+		fields = append(fields, "code="+event.WarningCode)
+	}
+	if event.FinalScore != 0 {
+		fields = append(fields, fmt.Sprintf("final=%.6f", event.FinalScore))
+	}
+	if event.SourceType != "" {
+		fields = append(fields, "source="+event.SourceType)
+	}
+	if event.SessionID != "" {
+		fields = append(fields, "session="+event.SessionID)
+	}
+	if event.AgentID != "" {
+		fields = append(fields, "agent="+event.AgentID)
+	}
+	if event.ScopeID != "" {
+		fields = append(fields, "scope="+event.ScopeID)
+	}
+	if event.Severity != "" {
+		fields = append(fields, "severity="+event.Severity)
+	}
+	fields = append(fields, event.Details...)
+	return fields
 }
 
 func recallReplayCandidateEvent(stage string, kind string, item ScoredRecallCandidate) RecallReplayEvent {
