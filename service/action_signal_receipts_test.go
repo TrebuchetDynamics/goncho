@@ -38,6 +38,42 @@ func TestActionSignalReadReceiptAuthorizedSameWorkspaceProfile(t *testing.T) {
 	}
 }
 
+func TestActionSignalReadReceiptUpsertReturnsStableReceiptID(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := svc.UpsertAction(ctx, ActionParams{Peer: "peer-signal-id", ActionID: "review", Title: "Review receipt identity"}); err != nil {
+		t.Fatalf("UpsertAction: %v", err)
+	}
+	signal, err := svc.SignalAction(ctx, ActionSignalParams{Peer: "peer-signal-id", ActionID: "review", Signal: "ready", Actor: "agent:a"})
+	if err != nil {
+		t.Fatalf("SignalAction: %v", err)
+	}
+
+	first, err := svc.RecordActionSignalReceipt(ctx, ActionSignalReceiptParams{Peer: "peer-signal-id", ActionID: "review", SignalID: signal.ID, Actor: "agent:b"})
+	if err != nil {
+		t.Fatalf("RecordActionSignalReceipt first: %v", err)
+	}
+	other, err := svc.RecordActionSignalReceipt(ctx, ActionSignalReceiptParams{Peer: "peer-signal-id", ActionID: "review", SignalID: signal.ID, Actor: "agent:c"})
+	if err != nil {
+		t.Fatalf("RecordActionSignalReceipt other: %v", err)
+	}
+	if first.Receipt.ID == 0 || other.Receipt.ID == 0 || first.Receipt.ID == other.Receipt.ID {
+		t.Fatalf("receipt ids first=%d other=%d, want distinct non-zero ids", first.Receipt.ID, other.Receipt.ID)
+	}
+
+	again, err := svc.RecordActionSignalReceipt(ctx, ActionSignalReceiptParams{Peer: "peer-signal-id", ActionID: "review", SignalID: signal.ID, Actor: "agent:b"})
+	if err != nil {
+		t.Fatalf("RecordActionSignalReceipt again: %v", err)
+	}
+	if again.Receipt.ID != first.Receipt.ID {
+		t.Fatalf("updated receipt id = %d, want original id %d (not last inserted id %d)", again.Receipt.ID, first.Receipt.ID, other.Receipt.ID)
+	}
+}
+
 func TestActionSignalReadReceiptDeniesCrossProfileAndAudits(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

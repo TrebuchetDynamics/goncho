@@ -140,18 +140,17 @@ func (s *Service) RecordActionSignalReceipt(ctx context.Context, params ActionSi
 		return ActionSignalReceiptResult{}, err
 	}
 	now := time.Now().UnixNano()
-	res, err := s.db.ExecContext(ctx, `
+	if _, err := s.db.ExecContext(ctx, `
 		INSERT INTO goncho_action_signal_receipts(workspace_id, profile_id, peer_id, action_id, signal_id, actor, read_at)
 		VALUES(?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(workspace_id, profile_id, peer_id, action_id, signal_id, actor)
 		DO UPDATE SET read_at = excluded.read_at
-	`, norm.WorkspaceID, norm.ProfileID, norm.Peer, norm.ActionID, norm.SignalID, norm.Actor, now)
-	if err != nil {
+	`, norm.WorkspaceID, norm.ProfileID, norm.Peer, norm.ActionID, norm.SignalID, norm.Actor, now); err != nil {
 		return ActionSignalReceiptResult{}, fmt.Errorf("goncho: record action signal receipt: %w", err)
 	}
-	id, _ := res.LastInsertId()
-	if id == 0 {
-		id = lookupActionSignalReceiptID(ctx, s.db, norm)
+	id, err := resolveActionSignalReceiptID(ctx, s.db, norm)
+	if err != nil {
+		return ActionSignalReceiptResult{}, err
 	}
 	receipt := ActionSignalReceipt{ID: id, WorkspaceID: norm.WorkspaceID, ProfileID: norm.ProfileID, Peer: norm.Peer, ActionID: norm.ActionID, SignalID: norm.SignalID, Actor: norm.Actor, ReadAt: now}
 	auditID, err := s.insertActionSignalReceiptAudit(ctx, norm, actorScope.WorkspaceID, actorScope.ProfileID, ActionSignalReceiptDecisionAllowed, "read receipt recorded")
@@ -259,10 +258,13 @@ func ensureActionSignalExists(ctx context.Context, db *sql.DB, receipt ActionSig
 	return nil
 }
 
-func lookupActionSignalReceiptID(ctx context.Context, db *sql.DB, receipt ActionSignalReceipt) int64 {
+func resolveActionSignalReceiptID(ctx context.Context, db *sql.DB, receipt ActionSignalReceipt) (int64, error) {
 	var id int64
-	_ = db.QueryRowContext(ctx, `SELECT id FROM goncho_action_signal_receipts WHERE workspace_id = ? AND profile_id = ? AND peer_id = ? AND action_id = ? AND signal_id = ? AND actor = ?`, receipt.WorkspaceID, receipt.ProfileID, receipt.Peer, receipt.ActionID, receipt.SignalID, receipt.Actor).Scan(&id)
-	return id
+	err := db.QueryRowContext(ctx, `SELECT id FROM goncho_action_signal_receipts WHERE workspace_id = ? AND profile_id = ? AND peer_id = ? AND action_id = ? AND signal_id = ? AND actor = ?`, receipt.WorkspaceID, receipt.ProfileID, receipt.Peer, receipt.ActionID, receipt.SignalID, receipt.Actor).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("goncho: resolve action signal receipt id after upsert: %w", err)
+	}
+	return id, nil
 }
 
 func listActionSignalReceiptsBySignal(ctx context.Context, db *sql.DB, workspaceID, profileID, peer, actionID string, signalID int64) ([]ActionSignalReceipt, error) {
