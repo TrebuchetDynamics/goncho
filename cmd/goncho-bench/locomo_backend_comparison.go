@@ -566,41 +566,23 @@ func (b *gonchoBackend) Insert(ctx context.Context, id, content string, metadata
 	return nil
 }
 func (b *gonchoBackend) Search(ctx context.Context, question string, topK int) ([]BackendResult, error) {
-	if topK <= 0 {
-		return nil, nil
-	}
-	result, err := b.svc.Search(ctx, goncho.SearchParams{Peer: "locomo", Query: question, Limit: topK, MaxTokens: 100_000})
-	if err != nil {
-		return nil, err
-	}
-	var out []BackendResult
-	seen := map[string]struct{}{}
-	for rank, hit := range result.Results {
-		for _, id := range b.contentIDs[contentIDKey("locomo", hit.Content)] {
-			if _, ok := seen[id]; ok {
-				continue
-			}
-			seen[id] = struct{}{}
-			out = append(out, BackendResult{MemoryID: id, Score: float64(topK - rank)})
-			if len(out) >= topK {
-				return out, nil
-			}
-		}
-	}
-	return out, nil
+	return b.searchPeer(ctx, "locomo", question, topK)
 }
 func (b *gonchoBackend) SearchScoped(ctx context.Context, conversationID, question string, topK int) ([]BackendResult, error) {
+	return b.searchPeer(ctx, conversationID, question, topK)
+}
+func (b *gonchoBackend) searchPeer(ctx context.Context, peer, question string, topK int) ([]BackendResult, error) {
 	if topK <= 0 {
 		return nil, nil
 	}
-	result, err := b.svc.Search(ctx, goncho.SearchParams{Peer: conversationID, Query: question, Limit: topK, MaxTokens: 100_000})
+	result, err := b.svc.Search(ctx, goncho.SearchParams{Peer: peer, Query: question, Limit: topK, MaxTokens: 100_000})
 	if err != nil {
 		return nil, err
 	}
 	var out []BackendResult
 	seen := map[string]struct{}{}
 	for rank, hit := range result.Results {
-		for _, id := range b.contentIDs[contentIDKey(conversationID, hit.Content)] {
+		for _, id := range locomoStableIDsForContents(peer, []string{hit.Content}, b.contentIDs, 0) {
 			if _, ok := seen[id]; ok {
 				continue
 			}

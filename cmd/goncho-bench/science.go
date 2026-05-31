@@ -42,17 +42,11 @@ func retrieveGoncho(ctx context.Context, svc *goncho.Service, q QuestionRecord, 
 	if err != nil {
 		return nil, err
 	}
-	retrievedIDs := make([]string, 0, len(result.Results))
-	seen := map[string]struct{}{}
+	contents := make([]string, 0, len(result.Results))
 	for _, hit := range result.Results {
-		for _, id := range contentIDs[contentIDKey(q.Peer, hit.Content)] {
-			if _, ok := seen[id]; !ok {
-				retrievedIDs = append(retrievedIDs, id)
-				seen[id] = struct{}{}
-			}
-		}
+		contents = append(contents, hit.Content)
 	}
-	return retrievedIDs, nil
+	return retrieval.StableIDsForContents(q.Peer, contents, contentIDs, 0), nil
 }
 
 func contentIDKey(peer, content string) string { return retrieval.ContentKey(peer, content) }

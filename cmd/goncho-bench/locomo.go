@@ -587,20 +587,7 @@ func retrieveLocomoRecallTrace(ctx context.Context, svc *goncho.Service, q locom
 }
 
 func locomoStableIDsForContents(conversationID string, contents []string, contentIDs map[string][]string, limit int) []string {
-	out := []string{}
-	seen := map[string]struct{}{}
-	for _, content := range contents {
-		for _, id := range contentIDs[contentIDKey(conversationID, content)] {
-			if _, ok := seen[id]; !ok {
-				seen[id] = struct{}{}
-				out = append(out, id)
-				if limit > 0 && len(out) >= limit {
-					return out
-				}
-			}
-		}
-	}
-	return out
+	return retrieval.StableIDsForContents(conversationID, contents, contentIDs, limit)
 }
 
 func locomoRecallDiagnosticsFromTrace(q locomoQuestionRow, trace goncho.RecallTrace, contentIDs map[string][]string) locomoRecallDiagnostics {

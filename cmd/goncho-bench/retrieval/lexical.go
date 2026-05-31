@@ -18,6 +18,24 @@ func ContentKey(peer, content string) string {
 	return strings.TrimSpace(peer) + "\x1f" + content
 }
 
+func StableIDsForContents(peer string, contents []string, contentIDs map[string][]string, limit int) []string {
+	out := []string{}
+	seen := map[string]struct{}{}
+	for _, content := range contents {
+		for _, id := range contentIDs[ContentKey(peer, content)] {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			out = append(out, id)
+			if limit > 0 && len(out) >= limit {
+				return out
+			}
+		}
+	}
+	return out
+}
+
 var tokenPattern = regexp.MustCompile(`[a-z0-9]+`)
 
 func RawTokenCount(value string) int {
