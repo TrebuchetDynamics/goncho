@@ -52,6 +52,30 @@ func TestNegativeEvidenceCandidatesDoNotCollapseDelimiterBearingDimensions(t *te
 	}
 }
 
+func TestNegativeEvidenceCandidatesBuildFailureSignalFromCustomKindFallback(t *testing.T) {
+	failed := false
+	observedAt := time.Unix(10, 0).UTC()
+	signal, ok := negativeEvidenceFailureSignalFrom(
+		ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: " gormes "}),
+		Observation{
+			ID:         " custom-fail ",
+			Kind:       ObservationKindCustom,
+			ProfileID:  " mineru ",
+			PeerID:     " peer ",
+			SessionKey: " sess ",
+			Success:    &failed,
+			Metadata:   map[string]string{"custom_kind": " Retrieval Planner "},
+			ObservedAt: observedAt,
+		},
+	)
+	if !ok {
+		t.Fatalf("failure signal not built for replayable custom failure")
+	}
+	if signal.EvidenceID != "custom-fail" || signal.Scope.WorkspaceID != "gormes" || signal.Scope.ProfileID != "mineru" || signal.Scope.PeerID != "peer" || signal.Scope.SessionKey != "sess" || signal.Scope.ToolName != "retrieval planner" || !signal.ObservedAt.Equal(observedAt) {
+		t.Fatalf("signal = %+v, want replay id, normalized scope, custom_kind fallback, and observed time", signal)
+	}
+}
+
 func TestNegativeEvidenceCandidatesTreatReplayIDsPerCandidateScope(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{

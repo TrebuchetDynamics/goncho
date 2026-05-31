@@ -177,28 +177,45 @@ type negativeEvidenceBucket struct {
 }
 
 func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]*negativeEvidenceBucket, projection SessionEvidenceProjection, obs Observation) {
-	evidenceID, ok := negativeEvidenceReplayableFailureObservation(obs)
+	signal, ok := negativeEvidenceFailureSignalFrom(projection, obs)
 	if !ok {
 		return
 	}
-	scope := negativeEvidenceObservationScopeFrom(projection, obs)
-	key := scope.key()
+	key := signal.Scope.key()
 	b := buckets[key]
 	if b == nil {
-		b = &negativeEvidenceBucket{candidate: scope.candidate(), observationIDs: map[string]struct{}{}}
+		b = &negativeEvidenceBucket{candidate: signal.Scope.candidate(), observationIDs: map[string]struct{}{}}
 		buckets[key] = b
 	}
-	if !negativeEvidenceRecordObservation(b.observationIDs, evidenceID) {
+	if !negativeEvidenceRecordObservation(b.observationIDs, signal.EvidenceID) {
 		return
 	}
 	b.candidate.FailureCount++
-	b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: evidenceID, ObservedAt: obs.ObservedAt})
-	if !obs.ObservedAt.IsZero() && (b.candidate.FirstObservedAt.IsZero() || obs.ObservedAt.Before(b.candidate.FirstObservedAt)) {
-		b.candidate.FirstObservedAt = obs.ObservedAt
+	b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: signal.EvidenceID, ObservedAt: signal.ObservedAt})
+	if !signal.ObservedAt.IsZero() && (b.candidate.FirstObservedAt.IsZero() || signal.ObservedAt.Before(b.candidate.FirstObservedAt)) {
+		b.candidate.FirstObservedAt = signal.ObservedAt
 	}
-	if !obs.ObservedAt.IsZero() && obs.ObservedAt.After(b.candidate.LastObservedAt) {
-		b.candidate.LastObservedAt = obs.ObservedAt
+	if !signal.ObservedAt.IsZero() && signal.ObservedAt.After(b.candidate.LastObservedAt) {
+		b.candidate.LastObservedAt = signal.ObservedAt
 	}
+}
+
+type negativeEvidenceFailureSignal struct {
+	EvidenceID string
+	Scope      negativeEvidenceObservationScope
+	ObservedAt time.Time
+}
+
+func negativeEvidenceFailureSignalFrom(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceFailureSignal, bool) {
+	evidenceID, ok := negativeEvidenceReplayableFailureObservation(obs)
+	if !ok {
+		return negativeEvidenceFailureSignal{}, false
+	}
+	return negativeEvidenceFailureSignal{
+		EvidenceID: evidenceID,
+		Scope:      negativeEvidenceObservationScopeFrom(projection, obs),
+		ObservedAt: obs.ObservedAt,
+	}, true
 }
 
 type negativeEvidenceObservationScope struct {
