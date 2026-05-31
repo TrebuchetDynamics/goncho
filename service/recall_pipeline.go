@@ -394,11 +394,7 @@ func recallWarningsFromGenerator(generator recallCandidateGenerator) []RecallWar
 	if !ok {
 		return []RecallWarning{}
 	}
-	warnings := reporter.RecallWarnings()
-	if warnings == nil {
-		return []RecallWarning{}
-	}
-	return warnings
+	return cloneRecallWarnings(reporter.RecallWarnings())
 }
 
 func appendRecallWarnings(existing []RecallWarning, warnings ...RecallWarning) []RecallWarning {
@@ -413,7 +409,7 @@ func appendRecallWarnings(existing []RecallWarning, warnings ...RecallWarning) [
 			continue
 		}
 		seen[key] = struct{}{}
-		out = append(out, warning)
+		out = append(out, cloneRecallWarning(warning))
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Stage != out[j].Stage {
@@ -422,6 +418,24 @@ func appendRecallWarnings(existing []RecallWarning, warnings ...RecallWarning) [
 		return out[i].Code < out[j].Code
 	})
 	return out
+}
+
+func cloneRecallWarnings(warnings []RecallWarning) []RecallWarning {
+	if warnings == nil {
+		return []RecallWarning{}
+	}
+	out := make([]RecallWarning, len(warnings))
+	for i, warning := range warnings {
+		out[i] = cloneRecallWarning(warning)
+	}
+	return out
+}
+
+func cloneRecallWarning(warning RecallWarning) RecallWarning {
+	if warning.Evidence != nil {
+		warning.Evidence = maputil.CloneStringString(warning.Evidence)
+	}
+	return warning
 }
 
 func recallWarningDedupKey(warning RecallWarning) string {

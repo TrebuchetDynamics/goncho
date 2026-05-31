@@ -95,6 +95,32 @@ func TestAppendRecallWarningsPreservesDistinctReplayEvidence(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineWarningsAreTraceOwned(t *testing.T) {
+	engine := newRecallPipelineEngine(staticRecallGenerator{
+		warnings: []RecallWarning{{
+			Code:     RecallWarningSemanticUnavailable,
+			Stage:    RecallStageGenerate,
+			Severity: RecallWarningDegraded,
+			Message:  "semantic generator unavailable",
+			Evidence: map[string]string{"generator": "vector", "error": "timeout"},
+		}},
+	}, recallPipelineOptions{})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "auth", Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	trace.Warnings[0].Evidence["generator"] = "corrupted-by-caller"
+
+	again, err := engine.Run(context.Background(), RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "auth", Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := again.Warnings[0].Evidence["generator"]; got != "vector" {
+		t.Fatalf("warning evidence generator = %q, want engine-owned vector evidence", got)
+	}
+}
+
 func TestRecallSelectionActionMakesTokenBudgetDecisionReplayable(t *testing.T) {
 	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{MemoryID: "mem-action", Content: "one two three"}}
 	policy := recallSelectionPolicy{Limit: 2, TokenBudget: 5}
@@ -624,7 +650,7 @@ func TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion(t *testing.T) {
 func TestRecallCoverageBonusTrimsGraphPathProvenance(t *testing.T) {
 	selected := []ScoredRecallCandidate{{Candidate: RecallCandidate{MemoryID: "mem-auth-service"}}}
 	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
-		MemoryID: "mem-auth-owner",
+		MemoryID:   "mem-auth-owner",
 		Provenance: []EvidenceItem{{Kind: "graph", Note: "  mem-auth-service -> owned_by -> mem-auth-owner  "}},
 	}}
 
