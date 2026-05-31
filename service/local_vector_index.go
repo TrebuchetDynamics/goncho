@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/jsonutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/vectorcalc"
 )
 
@@ -252,7 +254,7 @@ func (i *LocalVectorIndex) saveLocked(ctx context.Context) error {
 		return err
 	}
 	file := localVectorIndexFile{Version: "goncho-local-vector-index-v1", Dimensions: i.dimensions, Entries: i.entries, UpdatedAt: time.Now().UTC()}
-	raw, err := json.MarshalIndent(file, "", "  ")
+	raw, err := jsonutil.StableIndented(file)
 	if err != nil {
 		return fmt.Errorf("goncho: encode local vector index: %w", err)
 	}
@@ -260,7 +262,7 @@ func (i *LocalVectorIndex) saveLocked(ctx context.Context) error {
 		return fmt.Errorf("goncho: create local vector index dir: %w", err)
 	}
 	tmp := i.path + ".tmp"
-	if err := os.WriteFile(tmp, append(raw, '\n'), 0o600); err != nil {
+	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
 		return fmt.Errorf("goncho: write local vector index temp: %w", err)
 	}
 	if err := os.Rename(tmp, i.path); err != nil {
@@ -287,22 +289,12 @@ func normalizeLocalVectorMemory(memory LocalVectorMemory) LocalVectorMemory {
 }
 
 func localVectorEntryMatches(query VectorSearchQuery, entry localVectorEntry) bool {
-	if strings.TrimSpace(query.WorkspaceID) != "" && entry.WorkspaceID != strings.TrimSpace(query.WorkspaceID) {
-		return false
-	}
-	if strings.TrimSpace(query.ProfileID) != "" && entry.ProfileID != strings.TrimSpace(query.ProfileID) {
-		return false
-	}
-	if strings.TrimSpace(query.Peer) != "" && entry.Peer != strings.TrimSpace(query.Peer) {
-		return false
-	}
-	if strings.TrimSpace(query.SessionKey) != "" && entry.SessionID != "" && entry.SessionID != strings.TrimSpace(query.SessionKey) {
-		return false
-	}
-	if strings.TrimSpace(query.ScopeID) != "" && entry.ScopeID != "" && entry.ScopeID != strings.TrimSpace(query.ScopeID) {
-		return false
-	}
-	return vectorSourceAllowed(query.Sources, entry.SourceType)
+	return textutil.MatchesOptionalTrimmed(entry.WorkspaceID, query.WorkspaceID) &&
+		textutil.MatchesOptionalTrimmed(entry.ProfileID, query.ProfileID) &&
+		textutil.MatchesOptionalTrimmed(entry.Peer, query.Peer) &&
+		textutil.MatchesOptionalTrimmedOrEmpty(entry.SessionID, query.SessionKey) &&
+		textutil.MatchesOptionalTrimmedOrEmpty(entry.ScopeID, query.ScopeID) &&
+		vectorSourceAllowed(query.Sources, entry.SourceType)
 }
 
 func localVectorIndexChecksum(dimensions int, entries []localVectorEntry) string {
