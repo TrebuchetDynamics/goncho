@@ -182,16 +182,37 @@ func (f *recallSelectionFlow) addTemporalWarnings() {
 func (f *recallSelectionFlow) selectNextCandidate() {
 	bestIdx := recallBestSelectionIndex(f.remaining, f.selected, f.query.Query, f.config)
 	chosen := applyRecallSelectionAdjustment(f.remaining[bestIdx], recallSelectionAdjustmentFor(f.remaining[bestIdx], f.selected, f.query.Query, f.config), true)
-	tokenCost := estimateRecallTokens(chosen.Candidate.Content)
-	if !f.policy.FitsTokenBudget(f.usedTokens, tokenCost) {
-		f.rejected = append(f.rejected, recallRejectedCandidate(chosen, RecallRejectTokenBudget, f.policy.TokenBudgetRejectionReasons(f.usedTokens, tokenCost)))
-		f.warnings = appendRecallWarnings(f.warnings, f.policy.TokenBudgetWarning())
+	action := recallSelectionActionFor(chosen, f.usedTokens, f.policy)
+	if action.RejectReason != "" {
+		f.rejected = append(f.rejected, recallRejectedCandidate(action.Candidate, action.RejectReason, action.RejectWhy))
+		if action.Warning.Code != "" {
+			f.warnings = appendRecallWarnings(f.warnings, action.Warning)
+		}
 		f.dropRemaining(bestIdx)
 		return
 	}
-	f.usedTokens += tokenCost
-	f.selected = append(f.selected, chosen)
+	f.usedTokens += action.TokenCost
+	f.selected = append(f.selected, action.Candidate)
 	f.dropRemaining(bestIdx)
+}
+
+type recallSelectionAction struct {
+	Candidate    ScoredRecallCandidate
+	TokenCost    int
+	RejectReason string
+	RejectWhy    []string
+	Warning      RecallWarning
+}
+
+func recallSelectionActionFor(chosen ScoredRecallCandidate, usedTokens int, policy recallSelectionPolicy) recallSelectionAction {
+	tokenCost := estimateRecallTokens(chosen.Candidate.Content)
+	action := recallSelectionAction{Candidate: chosen, TokenCost: tokenCost}
+	if !policy.FitsTokenBudget(usedTokens, tokenCost) {
+		action.RejectReason = RecallRejectTokenBudget
+		action.RejectWhy = policy.TokenBudgetRejectionReasons(usedTokens, tokenCost)
+		action.Warning = policy.TokenBudgetWarning()
+	}
+	return action
 }
 
 func (f *recallSelectionFlow) dropRemaining(idx int) {

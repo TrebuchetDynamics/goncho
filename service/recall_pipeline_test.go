@@ -95,6 +95,86 @@ func TestAppendRecallWarningsPreservesDistinctReplayEvidence(t *testing.T) {
 	}
 }
 
+func TestRecallSelectionActionMakesTokenBudgetDecisionReplayable(t *testing.T) {
+	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{MemoryID: "mem-action", Content: "one two three"}}
+	policy := recallSelectionPolicy{Limit: 2, TokenBudget: 5}
+
+	fits := recallSelectionActionFor(candidate, 2, policy)
+	if fits.RejectReason != "" || fits.TokenCost != 3 || fits.Warning.Code != "" {
+		t.Fatalf("fits action = %+v, want exact-budget candidate selected without warning", fits)
+	}
+
+	over := recallSelectionActionFor(candidate, 3, policy)
+	if over.RejectReason != RecallRejectTokenBudget || over.TokenCost != 3 || over.Warning.Code != RecallWarningTokenBudgetTruncated {
+		t.Fatalf("over-budget action = %+v, want token-budget rejection with replayable warning", over)
+	}
+	if !slices.Equal(over.RejectWhy, []string{"used_tokens=3", "candidate_tokens=3", "token_budget=5"}) {
+		t.Fatalf("over-budget why = %v, want replayable token accounting", over.RejectWhy)
+	}
+}
+
+func TestRecallSelectionFlowAccountsForEveryEligibleCandidate(t *testing.T) {
+	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-too-large-1",
+			SourceType: "turn",
+			Content:    "auth deployment runbook with many extra words beyond budget",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 1}},
+		},
+		{
+			MemoryID:   "mem-too-large-2",
+			SourceType: "turn",
+			Content:    "auth rollback checklist with many extra words beyond budget",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.9}},
+		},
+		{
+			MemoryID:   "mem-small",
+			SourceType: "turn",
+			Content:    "fallback",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.8}},
+		},
+		{
+			MemoryID:   "mem-other-scope",
+			SourceType: "turn",
+			Content:    "auth other scope",
+			ScopeID:    "other",
+			CreatedAt:  now,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.7}},
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "selection-accounting-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "selection-accounting-test-v1",
+			Weights:     map[string]float64{"keyword": 1},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 2,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "auth", ScopeID: "team", Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := selectedRecallIDs(trace); !slices.Equal(got, []string{"mem-small"}) {
+		t.Fatalf("selected IDs = %v, want small fallback after oversized candidates are rejected", got)
+	}
+	if got := rejectedRecallIDs(trace); !slices.Equal(got, []string{"mem-other-scope", "mem-too-large-1", "mem-too-large-2"}) {
+		t.Fatalf("rejected IDs = %v, want every non-selected candidate accounted for", got)
+	}
+	if len(trace.Selected)+len(trace.Rejected) != len(trace.Candidates) {
+		t.Fatalf("selection accounting mismatch: selected=%d rejected=%d candidates=%d", len(trace.Selected), len(trace.Rejected), len(trace.Candidates))
+	}
+}
+
 func TestRecallPipelineTokenBudgetSkipsOversizedBestCandidate(t *testing.T) {
 	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
