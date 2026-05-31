@@ -169,6 +169,22 @@ func TestRecallQueryDecompositionDeduplicatesStableMemoryIDs(t *testing.T) {
 	}
 }
 
+func TestMergeRecallCandidateEvidenceKeepsMetadataWhenScoreImproves(t *testing.T) {
+	merged := mergeRecallCandidateEvidence(
+		RecallCandidate{MemoryID: "mem-auth-owner", Provenance: []EvidenceItem{{Kind: "fact", Source: "annotations", ID: "ann-owner", Note: "owner fact", Score: 0.40, Metadata: map[string]string{"fact_type": "ownership"}}}},
+		RecallCandidate{MemoryID: "mem-auth-owner", Provenance: []EvidenceItem{{Kind: "fact", Source: "annotations", ID: "ann-owner", Note: "owner fact", Score: 0.95}}},
+	)
+	if len(merged.Provenance) != 1 {
+		t.Fatalf("merged provenance count = %d, want one evidence item", len(merged.Provenance))
+	}
+	if got := merged.Provenance[0].Score; got != 0.95 {
+		t.Fatalf("merged evidence score = %v, want improved score", got)
+	}
+	if got := merged.Provenance[0].Metadata["fact_type"]; got != "ownership" {
+		t.Fatalf("merged evidence metadata = %+v, want existing provenance metadata preserved", merged.Provenance[0].Metadata)
+	}
+}
+
 func TestRecallQueryDecompositionMergesProvenanceForDuplicateMemoryIDs(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{

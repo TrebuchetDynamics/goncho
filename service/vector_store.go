@@ -183,15 +183,36 @@ func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCand
 	for _, evidence := range incoming.Provenance {
 		key := recallCandidateEvidenceKey(evidence)
 		if idx, ok := indexByEvidence[key]; ok {
-			if evidence.Score > existing.Provenance[idx].Score {
-				existing.Provenance[idx] = evidence
-			}
+			existing.Provenance[idx] = mergeRecallEvidenceItem(existing.Provenance[idx], evidence)
 			continue
 		}
 		indexByEvidence[key] = len(existing.Provenance)
 		existing.Provenance = append(existing.Provenance, evidence)
 	}
 	return existing
+}
+
+func mergeRecallEvidenceItem(existing, incoming EvidenceItem) EvidenceItem {
+	merged := existing
+	if incoming.Score > existing.Score {
+		merged = incoming
+	}
+	merged.Metadata = mergeEvidenceMetadata(existing.Metadata, incoming.Metadata)
+	return merged
+}
+
+func mergeEvidenceMetadata(existing, incoming map[string]string) map[string]string {
+	if len(existing) == 0 && len(incoming) == 0 {
+		return nil
+	}
+	merged := make(map[string]string, len(existing)+len(incoming))
+	for key, value := range existing {
+		merged[key] = value
+	}
+	for key, value := range incoming {
+		merged[key] = value
+	}
+	return merged
 }
 
 func vectorSourceAllowed(sources []string, sourceType string) bool {
