@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 )
 
 type NegativeEvidenceCandidateKind string
@@ -47,9 +49,7 @@ func (s *Service) NegativeEvidenceCandidates(ctx context.Context, q ObservationQ
 	if s == nil {
 		return nil, ErrObservationInvalid
 	}
-	if q.Limit <= 0 {
-		q.Limit = 500
-	}
+	q.Limit = limitutil.Default(q.Limit, 500)
 	list, err := s.ListObservations(ctx, q)
 	if err != nil {
 		return nil, err

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -78,10 +79,7 @@ func (r retrievalModule) Generate(ctx context.Context, q RecallQuery) ([]RecallC
 }
 
 func recallCandidateSearchLimit(selectionLimit int) int {
-	limit := selectionLimit * 5
-	if selectionLimit <= 0 {
-		limit = 25
-	}
+	limit := limitutil.Default(selectionLimit*5, 25)
 	if limit < 10 {
 		limit = 10
 	}
