@@ -63,15 +63,16 @@ func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req Neg
 	if s == nil {
 		return nil, ErrObservationInvalid
 	}
-	workspaceID := serviceObservationWorkspace(s.workspaceID, req.WorkspaceID)
-	candidates, err := s.NegativeEvidenceCandidates(ctx, negativeEvidenceReviewObservationQuery(workspaceID, req))
+	requestWorkspaceID := serviceObservationWorkspace(s.workspaceID, req.WorkspaceID)
+	candidates, err := s.NegativeEvidenceCandidates(ctx, negativeEvidenceReviewObservationQuery(req))
 	if err != nil {
 		return nil, err
 	}
 	created := []ReviewItem{}
 	for _, candidate := range limitNegativeEvidenceCandidates(candidates, req.Limit) {
+		reviewWorkspaceID := negativeEvidenceReviewWorkspaceID(requestWorkspaceID, candidate)
 		subjectID := negativeEvidenceReviewSubjectID(candidate)
-		existing, err := s.ListReviewItems(ctx, ReviewQuery{WorkspaceID: workspaceID, PeerID: candidate.PeerID, SessionKey: candidate.SessionKey, SubjectID: subjectID, Status: ReviewStatusOpen, Limit: 1})
+		existing, err := s.ListReviewItems(ctx, ReviewQuery{WorkspaceID: reviewWorkspaceID, PeerID: candidate.PeerID, SessionKey: candidate.SessionKey, SubjectID: subjectID, Status: ReviewStatusOpen, Limit: 1})
 		if err != nil {
 			return nil, err
 		}
@@ -81,7 +82,7 @@ func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req Neg
 		kind := ReviewKindStale
 		item, err := s.CreateReviewItem(ctx, ReviewItemCreateParams{
 			Kind:        kind,
-			WorkspaceID: workspaceID,
+			WorkspaceID: reviewWorkspaceID,
 			PeerID:      candidate.PeerID,
 			SessionKey:  candidate.SessionKey,
 			SubjectID:   subjectID,
@@ -97,13 +98,20 @@ func (s *Service) CreateNegativeEvidenceReviewItems(ctx context.Context, req Neg
 	return created, nil
 }
 
-func negativeEvidenceReviewObservationQuery(workspaceID string, req NegativeEvidenceReviewRequest) ObservationQuery {
+func negativeEvidenceReviewObservationQuery(req NegativeEvidenceReviewRequest) ObservationQuery {
 	return negativeEvidenceObservationQuery(ObservationQuery{
-		WorkspaceID: workspaceID,
+		WorkspaceID: req.WorkspaceID,
 		ProfileID:   req.ProfileID,
 		PeerID:      req.PeerID,
 		SessionKey:  req.SessionKey,
 	})
+}
+
+func negativeEvidenceReviewWorkspaceID(requestWorkspaceID string, candidate NegativeEvidenceCandidate) string {
+	if workspaceID := strings.TrimSpace(candidate.WorkspaceID); workspaceID != "" {
+		return workspaceID
+	}
+	return requestWorkspaceID
 }
 
 func negativeEvidenceObservationQuery(q ObservationQuery) ObservationQuery {

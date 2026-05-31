@@ -131,6 +131,35 @@ func TestNegativeEvidenceReviewsFilterObservationScanBeforeDefaultLimit(t *testi
 	}
 }
 
+func TestNegativeEvidenceReviewsCreatedFromWildcardScanUseCandidateWorkspace(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	failed := false
+	for _, id := range []string{"wildcard-fail-1", "wildcard-fail-2"} {
+		if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, WorkspaceID: "workspace-negative", ProfileID: "mineru", PeerID: "peer-review-wildcard", SessionKey: "sess-review-wildcard", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()}); err != nil {
+			t.Fatalf("Observe %s: %v", id, err)
+		}
+	}
+
+	created, err := svc.CreateNegativeEvidenceReviewItems(ctx, NegativeEvidenceReviewRequest{WorkspaceID: "*", PeerID: "peer-review-wildcard", SessionKey: "sess-review-wildcard", CreatedAt: time.Unix(20, 0).UTC()})
+	if err != nil {
+		t.Fatalf("CreateNegativeEvidenceReviewItems: %v", err)
+	}
+	if len(created) != 1 {
+		t.Fatalf("created = %+v, want one review item from wildcard scan", created)
+	}
+	if created[0].WorkspaceID != "workspace-negative" {
+		t.Fatalf("workspace_id = %q, want candidate observation workspace", created[0].WorkspaceID)
+	}
+	if !strings.Contains(created[0].SubjectID, "workspace-workspace-negative") {
+		t.Fatalf("subject_id = %q, want candidate workspace provenance", created[0].SubjectID)
+	}
+}
+
 func TestNegativeEvidenceReviewLimitAppliesAfterCandidateGeneration(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
