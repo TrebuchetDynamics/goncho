@@ -205,6 +205,33 @@ func TestRecallPipelineWarningsAreTraceOwned(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineTraceSnapshotsAreOwned(t *testing.T) {
+	query := RecallQuery{WorkspaceID: "default", Peer: "user-juan", Query: "auth", Sources: []string{"turns"}, Limit: 1}
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{{
+		MemoryID:   "mem-owned",
+		Content:    "auth fact",
+		Provenance: []EvidenceItem{{Kind: "keyword", Score: 1, Metadata: map[string]string{"generator": "fts"}}},
+	}}}, recallPipelineOptions{})
+
+	trace, err := engine.Run(context.Background(), query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query.Sources[0] = "corrupted-by-caller"
+	trace.Candidates[0].Candidate.Provenance[0].Metadata["generator"] = "corrupted-by-trace-caller"
+
+	if got := trace.Query.Sources[0]; got != "turns" {
+		t.Fatalf("trace query source = %q, want engine-owned query snapshot", got)
+	}
+	again, err := engine.Run(context.Background(), query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := again.Candidates[0].Candidate.Provenance[0].Metadata["generator"]; got != "fts" {
+		t.Fatalf("candidate metadata generator = %q, want trace-owned candidate metadata", got)
+	}
+}
+
 func TestRecallSelectionActionMakesTokenBudgetDecisionReplayable(t *testing.T) {
 	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{MemoryID: "mem-action", Content: "one two three"}}
 	policy := recallSelectionPolicy{Limit: 2, TokenBudget: 5}

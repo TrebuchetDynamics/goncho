@@ -83,7 +83,7 @@ func (e *recallPipelineEngine) Run(ctx context.Context, q RecallQuery) (RecallTr
 	trace := RecallTrace{
 		PipelineVersion:  e.opts.pipelineVersion,
 		CreatedAt:        e.opts.now().UTC(),
-		Query:            q,
+		Query:            cloneRecallQuery(q),
 		ScoringConfig:    cloneRecallScoringConfig(e.opts.scoringConfig),
 		VoiceDiagnostics: buildRecallVoiceDiagnostics(scored, selected, e.opts.scoringConfig),
 		Candidates:       scored,
@@ -110,7 +110,7 @@ func (e *recallPipelineEngine) score(q RecallQuery, candidates []RecallCandidate
 		}
 		score.RRFScore = roundRecallFloat(0)
 		score.FinalScore = roundRecallFloat(weightedRecallScore(score, e.opts.scoringConfig.Weights))
-		out = append(out, ScoredRecallCandidate{Candidate: candidate, Score: score})
+		out = append(out, ScoredRecallCandidate{Candidate: cloneRecallCandidate(candidate), Score: score})
 	}
 	addRecallRRF(out, e.opts.scoringConfig)
 	for i := range out {
@@ -387,6 +387,33 @@ func cloneRecallScoringConfig(config RecallScoringConfig) RecallScoringConfig {
 		config.DiversityKeys = sliceutil.Clone(config.DiversityKeys)
 	}
 	return config
+}
+
+func cloneRecallQuery(query RecallQuery) RecallQuery {
+	query.Sources = sliceutil.Clone(query.Sources)
+	return query
+}
+
+func cloneRecallCandidate(candidate RecallCandidate) RecallCandidate {
+	if candidate.Provenance != nil {
+		candidate.Provenance = cloneEvidenceItems(candidate.Provenance)
+	}
+	return candidate
+}
+
+func cloneEvidenceItems(items []EvidenceItem) []EvidenceItem {
+	out := make([]EvidenceItem, len(items))
+	for i, item := range items {
+		out[i] = cloneEvidenceItem(item)
+	}
+	return out
+}
+
+func cloneEvidenceItem(item EvidenceItem) EvidenceItem {
+	if item.Metadata != nil {
+		item.Metadata = maputil.CloneStringString(item.Metadata)
+	}
+	return item
 }
 
 func recallWarningsFromGenerator(generator recallCandidateGenerator) []RecallWarning {

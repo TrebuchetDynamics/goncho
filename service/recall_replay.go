@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/recalldiag"
-	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 const (
@@ -116,8 +115,7 @@ func BuildRecallReplay(trace RecallTrace) RecallReplay {
 }
 
 func snapshotRecallReplayQuery(query RecallQuery) RecallQuery {
-	query.Sources = sliceutil.Clone(query.Sources)
-	return query
+	return cloneRecallQuery(query)
 }
 
 func FormatRecallReplay(replay RecallReplay) string {
