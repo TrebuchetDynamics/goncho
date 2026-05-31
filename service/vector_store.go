@@ -117,6 +117,29 @@ func semanticMemoryID(hit VectorSearchHit) string {
 	return "vector:" + hashutil.SHA256HexStringPrefix(seed, 8)
 }
 
+func mergeVectorRecallCandidates(base []RecallCandidate, hits []VectorSearchHit, observer, scopeID string, sources []string) []RecallCandidate {
+	out := sliceutil.Clone(base)
+	indexByID := sliceutil.IndexBy(out, recallCandidateStableMemoryID)
+	for _, hit := range vectorHitsByScoreDesc(hits) {
+		if strings.TrimSpace(hit.Content) == "" || !vectorHitAllowedBySources(sources, hit) {
+			continue
+		}
+		candidate := recallCandidateFromVectorHit(hit, observer, scopeID)
+		memoryID, stable := recallCandidateStableMemoryID(candidate)
+		if !stable {
+			out = append(out, candidate)
+			continue
+		}
+		if idx, ok := indexByID[memoryID]; ok {
+			out[idx] = mergeRecallCandidateEvidence(out[idx], candidate)
+			continue
+		}
+		indexByID[memoryID] = len(out)
+		out = append(out, candidate)
+	}
+	return out
+}
+
 func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, workspaceID, profileID, peer, scopeID string, base []RecallCandidate) ([]RecallCandidate, error) {
 	if r.vectorStore == nil || strings.TrimSpace(q.Query) == "" {
 		return base, nil
@@ -136,21 +159,7 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 		r.recallWarnings.append(RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Message: "optional semantic provider unavailable; lexical/graph recall fallback remained active", Evidence: map[string]string{"provider": string(ProviderKindEmbedding), "error": err.Error()}})
 		return base, nil
 	}
-	out := sliceutil.Clone(base)
-	indexByID := sliceutil.IndexBy(out, recallCandidateStableMemoryID)
-	for _, hit := range vectorHitsByScoreDesc(hits) {
-		if strings.TrimSpace(hit.Content) == "" || !vectorHitAllowedBySources(q.Sources, hit) {
-			continue
-		}
-		candidate := recallCandidateFromVectorHit(hit, r.observer, scopeID)
-		if idx, ok := indexByID[candidate.MemoryID]; ok {
-			out[idx] = mergeRecallCandidateEvidence(out[idx], candidate)
-			continue
-		}
-		indexByID[candidate.MemoryID] = len(out)
-		out = append(out, candidate)
-	}
-	return out, nil
+	return mergeVectorRecallCandidates(base, hits, r.observer, scopeID, q.Sources), nil
 }
 
 func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCandidate {
@@ -198,22 +207,26 @@ func mergeRecallCandidateFields(existing, incoming RecallCandidate) RecallCandid
 
 func mergeRecallEvidenceItem(existing, incoming EvidenceItem) EvidenceItem {
 	merged := existing
+	preferredMetadata := existing.Metadata
+	fallbackMetadata := incoming.Metadata
 	if incoming.Score > existing.Score {
 		merged = incoming
+		preferredMetadata = incoming.Metadata
+		fallbackMetadata = existing.Metadata
 	}
-	merged.Metadata = mergeEvidenceMetadata(existing.Metadata, incoming.Metadata)
+	merged.Metadata = mergeEvidenceMetadata(preferredMetadata, fallbackMetadata)
 	return merged
 }
 
-func mergeEvidenceMetadata(existing, incoming map[string]string) map[string]string {
-	if len(existing) == 0 && len(incoming) == 0 {
+func mergeEvidenceMetadata(preferred, fallback map[string]string) map[string]string {
+	if len(preferred) == 0 && len(fallback) == 0 {
 		return nil
 	}
-	merged := make(map[string]string, len(existing)+len(incoming))
-	for key, value := range existing {
+	merged := make(map[string]string, len(preferred)+len(fallback))
+	for key, value := range fallback {
 		merged[key] = value
 	}
-	for key, value := range incoming {
+	for key, value := range preferred {
 		merged[key] = value
 	}
 	return merged
