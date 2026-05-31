@@ -140,6 +140,16 @@ func TestGrammarReportsFirstUnknownOperatorDeterministically(t *testing.T) {
 	}
 }
 
+func TestGrammarAcceptsTypedGoSlicesForInOperator(t *testing.T) {
+	expr := mustParse(t, map[string]any{
+		"session_id": map[string]any{"in": []string{"sess-discord", "sess-slack"}},
+	})
+
+	if got := comparisonValues(t, expr, "session_id", searchfilter.OpIn); !slices.Equal(got, []string{"sess-discord", "sess-slack"}) {
+		t.Fatalf("session_id in values = %#v, want typed Go slice values preserved", got)
+	}
+}
+
 func TestCompilerSupportsSessionSourcePeerAndRejectsMetadata(t *testing.T) {
 	supported, err := searchfilter.Compile(mustParse(t, map[string]any{
 		"AND": []any{

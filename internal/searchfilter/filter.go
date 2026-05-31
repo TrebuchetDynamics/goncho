@@ -1,7 +1,6 @@
 package searchfilter
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 )
@@ -248,25 +247,6 @@ func parseOperatorConditions(field string, rawOps map[string]any) (Expression, e
 func parseFilterOperator(op string) (Operator, bool) {
 	parsed, ok := supportedFilterOperators[op]
 	return parsed, ok
-}
-
-func filterValues(value any, op Operator) ([]string, error) {
-	if op == OpIn {
-		items, ok := value.([]any)
-		if !ok {
-			return nil, fmt.Errorf("in operator value must be a list")
-		}
-		out := make([]string, 0, len(items))
-		for _, item := range items {
-			out = append(out, filterScalar(item))
-		}
-		return out, nil
-	}
-	return []string{filterScalar(value)}, nil
-}
-
-func filterScalar(value any) string {
-	return strings.TrimSpace(fmt.Sprint(value))
 }
 
 func collapseImplicitAnd(children []Expression) Expression {
