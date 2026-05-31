@@ -17,6 +17,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/vectorcalc"
 )
 
@@ -114,7 +115,7 @@ func (i *LocalVectorIndex) Upsert(ctx context.Context, memory LocalVectorMemory)
 	if err := vectorcalc.ValidateEmbedding(vector); err != nil {
 		return err
 	}
-	entry := localVectorEntry{LocalVectorMemory: memory, Vector: sliceutil.Clone(vector), ContentChecksum: contentChecksum(memory.Content), IndexedAt: time.Now().UTC()}
+	entry := localVectorEntry{LocalVectorMemory: memory, Vector: sliceutil.Clone(vector), ContentChecksum: contentChecksum(memory.Content), IndexedAt: timeutil.NowUTC()}
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if i.dimensions == 0 {
@@ -253,7 +254,7 @@ func (i *LocalVectorIndex) saveLocked(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	file := localVectorIndexFile{Version: "goncho-local-vector-index-v1", Dimensions: i.dimensions, Entries: i.entries, UpdatedAt: time.Now().UTC()}
+	file := localVectorIndexFile{Version: "goncho-local-vector-index-v1", Dimensions: i.dimensions, Entries: i.entries, UpdatedAt: timeutil.NowUTC()}
 	raw, err := jsonutil.StableIndented(file)
 	if err != nil {
 		return fmt.Errorf("goncho: encode local vector index: %w", err)

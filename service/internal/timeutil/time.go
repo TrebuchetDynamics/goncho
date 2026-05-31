@@ -2,6 +2,11 @@ package timeutil
 
 import "time"
 
+// NowUTC returns the current clock time normalized to UTC.
+func NowUTC() time.Time {
+	return time.Now().UTC()
+}
+
 // UnixUTC converts a Unix timestamp in seconds to UTC. Non-positive values
 // return the zero time so callers can preserve optional timestamp semantics.
 func UnixUTC(seconds int64) time.Time {

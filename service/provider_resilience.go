@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -80,7 +79,7 @@ type ProviderHealth struct {
 type ProviderHealthDiagnostics []ProviderHealth
 
 func (d ProviderHealthDiagnostics) ByName(name string) ProviderHealth {
-	name = strings.TrimSpace(name)
+	name = providerpolicy.Name(name)
 	for _, health := range d {
 		if health.Name == name {
 			return health
@@ -105,7 +104,7 @@ type ProviderCircuitBreaker struct {
 }
 
 func NewProviderCircuitBreaker(cfg ProviderCircuitBreakerConfig) *ProviderCircuitBreaker {
-	name := strings.TrimSpace(cfg.Name)
+	name := providerpolicy.Name(cfg.Name)
 	if name == "" {
 		name = string(cfg.Kind)
 	}
@@ -276,7 +275,7 @@ func (r *ProviderHealthRegistry) Diagnostics() ProviderHealthDiagnostics {
 func (r *ProviderHealthRegistry) breaker(name string) *ProviderCircuitBreaker {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.breakers[strings.TrimSpace(name)]
+	return r.breakers[providerpolicy.Name(name)]
 }
 
 func defaultProviderHealthDiagnostics(breakers map[string]*ProviderCircuitBreaker) ProviderHealthDiagnostics {

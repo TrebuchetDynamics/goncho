@@ -1,6 +1,9 @@
 package providerpolicy
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	DefaultFailureThreshold = 3
@@ -36,4 +39,8 @@ func Cooldown(cooldown time.Duration) time.Duration {
 		return DefaultCooldown
 	}
 	return cooldown
+}
+
+func Name(name string) string {
+	return strings.TrimSpace(name)
 }

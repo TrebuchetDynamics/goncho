@@ -18,3 +18,9 @@ func TestNormalizePreservesExplicitProviderResilienceValues(t *testing.T) {
 		t.Fatalf("Normalize(explicit) = %+v, want explicit values", got)
 	}
 }
+
+func TestNameTrimsProviderLookupKeys(t *testing.T) {
+	if got := Name(" embedding \n"); got != "embedding" {
+		t.Fatalf("Name() = %q, want trimmed provider name", got)
+	}
+}

@@ -5,6 +5,18 @@ import (
 	"time"
 )
 
+func TestNowUTCReturnsCurrentTimeInUTC(t *testing.T) {
+	before := time.Now().UTC()
+	got := NowUTC()
+	after := time.Now().UTC()
+	if got.Location() != time.UTC {
+		t.Fatalf("NowUTC() location = %v, want UTC", got.Location())
+	}
+	if got.Before(before) || got.After(after) {
+		t.Fatalf("NowUTC() = %v, want between %v and %v", got, before, after)
+	}
+}
+
 func TestUnixUTCReturnsZeroForNonPositiveTimestamps(t *testing.T) {
 	if !UnixUTC(0).IsZero() {
 		t.Fatal("zero timestamp should remain an unset time")
