@@ -88,6 +88,19 @@ func TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence(t *
 	}
 }
 
+func TestRecallSpeakerRoutingDoesNotTreatSpeakerAsSubstring(t *testing.T) {
+	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
+		MemoryID:   "mem-ann",
+		Content:    "Ann described the deployment plan.",
+		AgentID:    "ann",
+		Provenance: []EvidenceItem{{Kind: "speaker", Source: "ann", Score: 1, Note: "speaker=ann"}},
+	}}
+
+	if got := recallSpeakerAdjustment(candidate, "What is the planning status?"); got != 0 {
+		t.Fatalf("recallSpeakerAdjustment() = %v, want no substring speaker bonus", got)
+	}
+}
+
 func TestRecallSpeakerRoutingKeepsWhoSaidWhatInBranch(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{

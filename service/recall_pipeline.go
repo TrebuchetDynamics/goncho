@@ -552,10 +552,31 @@ func recallSpeakerAdjustment(candidate ScoredRecallCandidate, query string) floa
 		}
 		return 0
 	}
-	if strings.Contains(query, speaker) {
+	if recallQueryMentionsSpeaker(query, speaker) {
 		return recallSpeakerMatchBonus
 	}
 	return 0
+}
+
+func recallQueryMentionsSpeaker(query, speaker string) bool {
+	queryTokens := recallQueryTokens(query)
+	speakerTokens := recallQueryTokens(speaker)
+	if len(queryTokens) == 0 || len(speakerTokens) == 0 || len(speakerTokens) > len(queryTokens) {
+		return false
+	}
+	for i := 0; i+len(speakerTokens) <= len(queryTokens); i++ {
+		matched := true
+		for j := range speakerTokens {
+			if queryTokens[i+j] != speakerTokens[j] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func recallCandidateSpeaker(candidate RecallCandidate) string {
