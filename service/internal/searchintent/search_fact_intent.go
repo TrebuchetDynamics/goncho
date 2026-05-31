@@ -96,6 +96,38 @@ func factIntentByteIsDigit(content string, idx int) bool {
 	return idx >= 0 && idx < len(content) && content[idx] >= '0' && content[idx] <= '9'
 }
 
+type factAnswerCandidate struct {
+	Text   string
+	Source string
+}
+
+func factAnswerCandidates(content string) []factAnswerCandidate {
+	candidates := []factAnswerCandidate{}
+	trimmed := strings.TrimSpace(content)
+	if trimmed == "" {
+		return nil
+	}
+	if !strings.Contains(trimmed, "?") {
+		candidates = append(candidates, factAnswerCandidate{Text: trimmed, Source: "content"})
+	}
+	for _, sentence := range factIntentSentences(trimmed) {
+		if strings.Contains(sentence, "?") {
+			continue
+		}
+		candidates = append(candidates, factAnswerCandidate{Text: sentence, Source: "sentence"})
+	}
+	return candidates
+}
+
+func scoreFactAnswerCandidates(content string, matches func(string) bool) float64 {
+	for _, candidate := range factAnswerCandidates(content) {
+		if matches(candidate.Text) {
+			return 1
+		}
+	}
+	return 0
+}
+
 func searchSpeakerFactIntentScore(query, content string) float64 {
 	if !searchSpeakerAttributionQuestion(query) {
 		return 0
@@ -307,25 +339,10 @@ func searchMetricFactIntentScore(query, content string) float64 {
 	if len(queryTokens) == 0 {
 		return 0
 	}
-	if !strings.Contains(content, "?") {
-		key, value, ok := searchMetricAnswerParts(content)
-		if ok && searchMetricValueLooksAssertive(value) && searchRankTokenCoverage(queryTokens, key) >= 0.80 {
-			return 1
-		}
-	}
-	for _, sentence := range factIntentSentences(content) {
-		if strings.Contains(sentence, "?") {
-			continue
-		}
-		key, value, ok := searchMetricAnswerParts(sentence)
-		if !ok || !searchMetricValueLooksAssertive(value) {
-			continue
-		}
-		if searchRankTokenCoverage(queryTokens, key) >= 0.80 {
-			return 1
-		}
-	}
-	return 0
+	return scoreFactAnswerCandidates(content, func(candidate string) bool {
+		key, value, ok := searchMetricAnswerParts(candidate)
+		return ok && searchMetricValueLooksAssertive(value) && searchRankTokenCoverage(queryTokens, key) >= 0.80
+	})
 }
 
 func searchMetricQuestionKey(query string) (string, bool) {
@@ -358,25 +375,10 @@ func searchVersionFactIntentScore(query, content string) float64 {
 	if len(queryTokens) == 0 {
 		return 0
 	}
-	if !strings.Contains(content, "?") {
-		subject, version, ok := searchVersionAnswerParts(content)
-		if ok && searchVersionValueLooksAssertive(version) && searchRankTokenCoverage(queryTokens, subject) >= 0.80 {
-			return 1
-		}
-	}
-	for _, sentence := range factIntentSentences(content) {
-		if strings.Contains(sentence, "?") {
-			continue
-		}
-		subject, version, ok := searchVersionAnswerParts(sentence)
-		if !ok || !searchVersionValueLooksAssertive(version) {
-			continue
-		}
-		if searchRankTokenCoverage(queryTokens, subject) >= 0.80 {
-			return 1
-		}
-	}
-	return 0
+	return scoreFactAnswerCandidates(content, func(candidate string) bool {
+		subject, version, ok := searchVersionAnswerParts(candidate)
+		return ok && searchVersionValueLooksAssertive(version) && searchRankTokenCoverage(queryTokens, subject) >= 0.80
+	})
 }
 
 func searchVersionQuestionSubject(query string) (string, bool) {
@@ -424,25 +426,10 @@ func searchSequenceFactIntentScore(query, content string) float64 {
 	if len(queryTokens) == 0 {
 		return 0
 	}
-	if !strings.Contains(content, "?") {
-		subject, steps, ok := searchSequenceAnswerParts(content)
-		if ok && searchSequenceValueLooksAssertive(steps) && searchRankTokenCoverage(queryTokens, subject) >= 0.80 {
-			return 1
-		}
-	}
-	for _, sentence := range factIntentSentences(content) {
-		if strings.Contains(sentence, "?") {
-			continue
-		}
-		subject, steps, ok := searchSequenceAnswerParts(sentence)
-		if !ok || !searchSequenceValueLooksAssertive(steps) {
-			continue
-		}
-		if searchRankTokenCoverage(queryTokens, subject) >= 0.80 {
-			return 1
-		}
-	}
-	return 0
+	return scoreFactAnswerCandidates(content, func(candidate string) bool {
+		subject, steps, ok := searchSequenceAnswerParts(candidate)
+		return ok && searchSequenceValueLooksAssertive(steps) && searchRankTokenCoverage(queryTokens, subject) >= 0.80
+	})
 }
 
 func searchSequenceQuestionSubject(query string) (string, bool) {
@@ -553,25 +540,10 @@ func searchNegationFactIntentScore(query, content string) float64 {
 	if len(queryTokens) == 0 {
 		return 0
 	}
-	if !strings.Contains(content, "?") {
-		object, ok := searchNegationAnswerParts(content)
-		if ok && searchRankTokenCoverage(queryTokens, object) >= 0.80 {
-			return 1
-		}
-	}
-	for _, sentence := range factIntentSentences(content) {
-		if strings.Contains(sentence, "?") {
-			continue
-		}
-		object, ok := searchNegationAnswerParts(sentence)
-		if !ok {
-			continue
-		}
-		if searchRankTokenCoverage(queryTokens, object) >= 0.80 {
-			return 1
-		}
-	}
-	return 0
+	return scoreFactAnswerCandidates(content, func(candidate string) bool {
+		object, ok := searchNegationAnswerParts(candidate)
+		return ok && searchRankTokenCoverage(queryTokens, object) >= 0.80
+	})
 }
 
 func searchNegationQuestionObject(query string) (string, bool) {
@@ -603,25 +575,10 @@ func searchDecisionFactIntentScore(query, content string) float64 {
 	if len(queryTokens) == 0 {
 		return 0
 	}
-	if !strings.Contains(content, "?") {
-		decision, ok := searchDecisionAnswerParts(content)
-		if ok && searchRankTokenCoverage(queryTokens, decision) >= 0.80 {
-			return 1
-		}
-	}
-	for _, sentence := range factIntentSentences(content) {
-		if strings.Contains(sentence, "?") {
-			continue
-		}
-		decision, ok := searchDecisionAnswerParts(sentence)
-		if !ok {
-			continue
-		}
-		if searchRankTokenCoverage(queryTokens, decision) >= 0.80 {
-			return 1
-		}
-	}
-	return 0
+	return scoreFactAnswerCandidates(content, func(candidate string) bool {
+		decision, ok := searchDecisionAnswerParts(candidate)
+		return ok && searchRankTokenCoverage(queryTokens, decision) >= 0.80
+	})
 }
 
 func searchDecisionQuestionTopic(query string) (string, bool) {

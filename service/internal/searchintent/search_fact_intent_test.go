@@ -19,6 +19,34 @@ func TestOwnerFactIntentIgnoresTemporalAdverbAfterObject(t *testing.T) {
 	}
 }
 
+func TestFactAnswerCandidatesExposeContentAndSentenceFlow(t *testing.T) {
+	got := factAnswerCandidates("Latency is 120 ms. Throughput is 5 rows")
+	want := []factAnswerCandidate{
+		{Text: "Latency is 120 ms. Throughput is 5 rows", Source: "content"},
+		{Text: "Latency is 120 ms.", Source: "sentence"},
+		{Text: "Throughput is 5 rows", Source: "sentence"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("candidates = %+v, want %+v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("candidate[%d] = %+v, want %+v (all candidates %+v)", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestFactAnswerCandidatesSkipQuestionCandidatesButKeepLaterAnswers(t *testing.T) {
+	got := factAnswerCandidates("What changed? Goncho version is v1.2.3.")
+	want := []factAnswerCandidate{{Text: "Goncho version is v1.2.3.", Source: "sentence"}}
+	if len(got) != len(want) {
+		t.Fatalf("candidates = %+v, want %+v", got, want)
+	}
+	if got[0] != want[0] {
+		t.Fatalf("candidate = %+v, want %+v", got[0], want[0])
+	}
+}
+
 func TestSequenceAnswerPartsCountsRepeatedMarkers(t *testing.T) {
 	subject, steps, ok := SequenceAnswerParts("Deployment order is build, then test, then deploy.")
 	if !ok {
