@@ -91,6 +91,33 @@ func TestRecallQueryDecompositionSkipsTrimEquivalentSubqueries(t *testing.T) {
 	}
 }
 
+func TestPlannedRecallQueriesKeepsRetrievalDistinctVariants(t *testing.T) {
+	queries := plannedRecallQueries(
+		RecallQuery{Query: "authentication owner", ScopeID: "team", Sources: []string{"memory"}},
+		func(q RecallQuery) []RecallQuery {
+			return []RecallQuery{{Query: " authentication owner ", ScopeID: "team", Sources: []string{"session"}}}
+		},
+	)
+	if got := len(queries); got != 2 {
+		t.Fatalf("planned query count = %d, want original plus retrieval-distinct same-text subquery: %+v", got, queries)
+	}
+	if !slices.Equal(queries[0].Sources, []string{"memory"}) || !slices.Equal(queries[1].Sources, []string{"session"}) {
+		t.Fatalf("planned query sources = %v then %v, want both source filters retained", queries[0].Sources, queries[1].Sources)
+	}
+}
+
+func TestPlannedRecallQueriesDeduplicatesWildcardSourceVariants(t *testing.T) {
+	queries := plannedRecallQueries(
+		RecallQuery{Query: "authentication owner"},
+		func(q RecallQuery) []RecallQuery {
+			return []RecallQuery{{Query: " authentication owner ", Sources: []string{"*"}}}
+		},
+	)
+	if got := len(queries); got != 1 {
+		t.Fatalf("planned query count = %d, want empty and wildcard source filters treated as equivalent: %+v", got, queries)
+	}
+}
+
 func TestRecallQueryDecompositionDeduplicatesStableMemoryIDs(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{

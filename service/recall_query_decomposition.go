@@ -2,6 +2,8 @@ package goncho
 
 import (
 	"context"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
@@ -99,9 +101,48 @@ func recallCandidateEvidenceKey(evidence EvidenceItem) string {
 }
 
 func recallQueryKey(q RecallQuery) string {
-	return recallQueryStringKey(q.Query)
+	query := recallQueryStringKey(q.Query)
+	if query == "" {
+		return ""
+	}
+	parts := []string{
+		query,
+		recallQueryKeyText(q.WorkspaceID),
+		recallQueryKeyText(q.Peer),
+		recallQueryKeyText(q.SessionKey),
+		recallQueryKeyText(q.ScopeID),
+		recallQuerySourcesKey(q.Sources),
+		strconv.Itoa(q.Limit),
+		strconv.Itoa(q.MaxTokens),
+	}
+	return strings.Join(parts, "\x00")
 }
 
 func recallQueryStringKey(query string) string {
-	return strings.ToLower(strings.Join(strings.Fields(query), " "))
+	return recallQueryKeyText(query)
+}
+
+func recallQueryKeyText(value string) string {
+	return strings.ToLower(strings.Join(strings.Fields(value), " "))
+}
+
+func recallQuerySourcesKey(sources []string) string {
+	if len(sources) == 0 {
+		return "*"
+	}
+	out := make([]string, 0, len(sources))
+	seen := map[string]struct{}{}
+	for _, source := range sources {
+		key := recallQueryKeyText(source)
+		if key == "" || key == "*" {
+			return "*"
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, key)
+	}
+	sort.Strings(out)
+	return strings.Join(out, ",")
 }
