@@ -158,6 +158,47 @@ func TestActionLeaseRenewRejectsOverflowingTTLWithoutShorteningLease(t *testing.
 	}
 }
 
+func TestActionLeaseAcquiredAtPreservesOnlyActiveSameOwnerLease(t *testing.T) {
+	existing := ActionLease{Owner: "agent:a", AcquiredAt: 10, ExpiresAt: 50}
+	if got := actionLeaseAcquiredAt(20, existing, true, "agent:a"); got != 10 {
+		t.Fatalf("active same-owner acquired_at = %d, want preserved 10", got)
+	}
+	if got := actionLeaseAcquiredAt(60, existing, true, "agent:a"); got != 60 {
+		t.Fatalf("expired same-owner acquired_at = %d, want new acquisition time 60", got)
+	}
+	if got := actionLeaseAcquiredAt(20, existing, true, "agent:b"); got != 20 {
+		t.Fatalf("different-owner acquired_at = %d, want new acquisition time 20", got)
+	}
+}
+
+func TestActionLeaseSameOwnerReacquireExpiredLeaseStartsNewAcquisition(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := svc.UpsertAction(ctx, ActionParams{Peer: "peer-reacquire-expired", ActionID: "smoke", Title: "Reacquire expired lease"}); err != nil {
+		t.Fatalf("upsert action: %v", err)
+	}
+	first, err := svc.AcquireActionLease(ctx, ActionLeaseParams{Peer: "peer-reacquire-expired", ActionID: "smoke", Owner: "agent:a", TTL: time.Millisecond})
+	if err != nil {
+		t.Fatalf("AcquireActionLease first: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+
+	second, err := svc.AcquireActionLease(ctx, ActionLeaseParams{Peer: "peer-reacquire-expired", ActionID: "smoke", Owner: "agent:a", TTL: time.Hour})
+	if err != nil {
+		t.Fatalf("AcquireActionLease second: %v", err)
+	}
+	if !second.Acquired || second.Decision != ActionLeaseDecisionAcquired {
+		t.Fatalf("second lease = %+v, want acquired", second)
+	}
+	if second.Lease.AcquiredAt <= first.Lease.ExpiresAt {
+		t.Fatalf("second acquired_at = %d, first expires_at = %d; want a new acquisition after expiry", second.Lease.AcquiredAt, first.Lease.ExpiresAt)
+	}
+}
+
 func TestActionLeaseExpirationAllowsAnotherOwner(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

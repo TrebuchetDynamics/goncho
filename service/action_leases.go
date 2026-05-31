@@ -147,9 +147,15 @@ func (s *Service) AcquireActionLease(ctx context.Context, params ActionLeasePara
 		}
 		return ActionLeaseResult{Decision: ActionLeaseDecisionHeldByOther, Lease: existing, Reason: reason, AuditID: auditID}, nil
 	}
-	lease := ActionLease{WorkspaceID: norm.WorkspaceID, ProfileID: norm.ProfileID, Peer: norm.Peer, ActionID: norm.ActionID, Owner: norm.Owner, AcquiredAt: now, RenewedAt: now, ExpiresAt: expiresAt}
-	if found && existing.Owner == norm.Owner && existing.AcquiredAt > 0 {
-		lease.AcquiredAt = existing.AcquiredAt
+	lease := ActionLease{
+		WorkspaceID: norm.WorkspaceID,
+		ProfileID:   norm.ProfileID,
+		Peer:        norm.Peer,
+		ActionID:    norm.ActionID,
+		Owner:       norm.Owner,
+		AcquiredAt:  actionLeaseAcquiredAt(now, existing, found, norm.Owner),
+		RenewedAt:   now,
+		ExpiresAt:   expiresAt,
 	}
 	if err := upsertActionLeaseTx(ctx, tx, lease); err != nil {
 		return ActionLeaseResult{}, err
@@ -298,6 +304,13 @@ func (s *Service) normalizeActionLeaseParams(params ActionLeaseParams) (ActionLe
 		return ActionLease{}, fmt.Errorf("goncho: action lease ttl must be positive")
 	}
 	return ActionLease{WorkspaceID: action.WorkspaceID, ProfileID: action.ProfileID, Peer: action.Peer, ActionID: action.ActionID, Owner: owner}, nil
+}
+
+func actionLeaseAcquiredAt(now int64, existing ActionLease, found bool, owner string) int64 {
+	if found && existing.Owner == owner && existing.ExpiresAt > now && existing.AcquiredAt > 0 {
+		return existing.AcquiredAt
+	}
+	return now
 }
 
 func actionLeaseExpiresAt(now int64, ttl time.Duration) (int64, error) {
