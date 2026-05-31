@@ -92,10 +92,9 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 		return base, nil
 	}
 	out := sliceutil.Clone(base)
-	indexByID := make(map[string]int, len(out))
-	for i, candidate := range out {
-		indexByID[candidate.MemoryID] = i
-	}
+	indexByID := sliceutil.IndexBy(out, func(candidate RecallCandidate) (string, bool) {
+		return candidate.MemoryID, true
+	})
 	for _, source := range base {
 		for _, evidence := range source.Provenance {
 			if evidence.Kind != "fact" || evidence.Source != "goncho_memory_annotations" {
@@ -279,15 +278,7 @@ func (r retrievalModule) findAnnotationGraphOwnerTargets(ctx context.Context, q 
 		if !ok || !annotationGraphEntityMatches(entity, owned) {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    content,
-			SessionID:  sessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, fact)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, fact, content, sessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphOwnerTarget{Candidate: candidate, Fact: fact})
 	}
 	if err := rows.Err(); err != nil {
@@ -311,15 +302,7 @@ func (r retrievalModule) findAnnotationGraphTimelineTargets(ctx context.Context,
 		if !ok || !annotationGraphEntityMatches(entity, event) {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    timelineFact.Content,
-			SessionID:  timelineFact.SessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, timelineFact.memoryFactAnnotation)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, timelineFact.memoryFactAnnotation, timelineFact.Content, timelineFact.SessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphTimelineTarget{Candidate: candidate, TimelineFact: timelineFact.memoryFactAnnotation, Entity: event})
 	}
 	return out, nil
@@ -340,15 +323,7 @@ func (r retrievalModule) findAnnotationGraphLocationTargets(ctx context.Context,
 		if !ok || !annotationGraphEntityMatches(entity, object) {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    locationFact.Content,
-			SessionID:  locationFact.SessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, locationFact.memoryFactAnnotation)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, locationFact.memoryFactAnnotation, locationFact.Content, locationFact.SessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphLocationTarget{Candidate: candidate, LocationFact: locationFact.memoryFactAnnotation, Entity: object})
 	}
 	return out, nil
@@ -374,15 +349,7 @@ func (r retrievalModule) findAnnotationGraphPreferenceTargets(ctx context.Contex
 		if attributeOK && len(attributeTokens) > 0 && searchRankTokenCoverage(attributeTokens, attribute) < 0.80 {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    preferenceFact.Content,
-			SessionID:  preferenceFact.SessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, preferenceFact.memoryFactAnnotation)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, preferenceFact.memoryFactAnnotation, preferenceFact.Content, preferenceFact.SessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphPreferenceTarget{Candidate: candidate, PreferenceFact: preferenceFact.memoryFactAnnotation, Entity: subject, Attribute: attribute})
 	}
 	return out, nil
@@ -408,15 +375,7 @@ func (r retrievalModule) findAnnotationGraphInstructionTargets(ctx context.Conte
 		if topicOK && len(topicTokens) > 0 && searchRankTokenCoverage(topicTokens, instruction) < 0.80 {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    instructionFact.Content,
-			SessionID:  instructionFact.SessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, instructionFact.memoryFactAnnotation)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, instructionFact.memoryFactAnnotation, instructionFact.Content, instructionFact.SessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphInstructionTarget{Candidate: candidate, InstructionFact: instructionFact.memoryFactAnnotation, Entity: subject})
 	}
 	return out, nil
@@ -437,15 +396,7 @@ func (r retrievalModule) findAnnotationGraphSequenceTargets(ctx context.Context,
 		if !ok || !annotationGraphEntityMentionedInFact(entity, subject) {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    sequenceFact.Content,
-			SessionID:  sequenceFact.SessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, sequenceFact.memoryFactAnnotation)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, sequenceFact.memoryFactAnnotation, sequenceFact.Content, sequenceFact.SessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphSequenceTarget{Candidate: candidate, SequenceFact: sequenceFact.memoryFactAnnotation, Entity: subject})
 	}
 	return out, nil
@@ -466,15 +417,7 @@ func (r retrievalModule) findAnnotationGraphDecisionTargets(ctx context.Context,
 		if !ok || !annotationGraphEntityMentionedInFact(entity, decision) {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    decisionFact.Content,
-			SessionID:  decisionFact.SessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, decisionFact.memoryFactAnnotation)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, decisionFact.memoryFactAnnotation, decisionFact.Content, decisionFact.SessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphDecisionTarget{Candidate: candidate, DecisionFact: decisionFact.memoryFactAnnotation})
 	}
 	return out, nil
@@ -495,15 +438,7 @@ func (r retrievalModule) findAnnotationGraphNegationTargets(ctx context.Context,
 		if !ok || !annotationGraphEntityMentionedInFact(entity, object) {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    negationFact.Content,
-			SessionID:  negationFact.SessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, negationFact.memoryFactAnnotation)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, negationFact.memoryFactAnnotation, negationFact.Content, negationFact.SessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphNegationTarget{Candidate: candidate, NegationFact: negationFact.memoryFactAnnotation})
 	}
 	return out, nil
@@ -524,15 +459,7 @@ func (r retrievalModule) findAnnotationGraphMetricTargets(ctx context.Context, q
 		if !ok || !annotationGraphEntityMentionedInFact(entity, key) {
 			continue
 		}
-		candidate := RecallCandidate{
-			MemoryID:   memoryID,
-			SourceType: memoryAnnotationSourceConclusion,
-			Content:    metricFact.Content,
-			SessionID:  metricFact.SessionKey,
-			AgentID:    r.observer,
-			ScopeID:    normalizeMemoryScope(memoryScope, ""),
-			Provenance: []EvidenceItem{annotationFactEvidence(q.Query, metricFact.memoryFactAnnotation)},
-		}
+		candidate := annotationGraphCandidateFromFact(q, metricFact.memoryFactAnnotation, metricFact.Content, metricFact.SessionKey, r.observer, memoryScope)
 		out = append(out, annotationGraphMetricTarget{Candidate: candidate, MetricFact: metricFact.memoryFactAnnotation, Entity: key})
 	}
 	return out, nil
@@ -558,15 +485,7 @@ func (r retrievalModule) findAnnotationGraphVersionTargets(ctx context.Context, 
 			if !ok || !annotationGraphEntityMatches(nextEntity, versionSubject) {
 				continue
 			}
-			candidate := RecallCandidate{
-				MemoryID:   idutil.Decimal(versionFact.MemoryID),
-				SourceType: memoryAnnotationSourceConclusion,
-				Content:    versionFact.Content,
-				SessionID:  versionFact.SessionKey,
-				AgentID:    r.observer,
-				ScopeID:    normalizeMemoryScope(memoryScope, ""),
-				Provenance: []EvidenceItem{annotationFactEvidence(q.Query, versionFact.memoryFactAnnotation)},
-			}
+			candidate := annotationGraphCandidateFromFact(q, versionFact.memoryFactAnnotation, versionFact.Content, versionFact.SessionKey, r.observer, memoryScope)
 			out = append(out, annotationGraphVersionTarget{Candidate: candidate, RelationFact: relationFact.memoryFactAnnotation, VersionFact: versionFact.memoryFactAnnotation, Relation: relation, Entity: versionSubject})
 		}
 	}
@@ -577,6 +496,18 @@ type annotationGraphFactRow struct {
 	memoryFactAnnotation
 	Content    string
 	SessionKey string
+}
+
+func annotationGraphCandidateFromFact(q RecallQuery, fact memoryFactAnnotation, content, sessionKey, observer, memoryScope string) RecallCandidate {
+	return RecallCandidate{
+		MemoryID:   idutil.Decimal(fact.MemoryID),
+		SourceType: memoryAnnotationSourceConclusion,
+		Content:    content,
+		SessionID:  sessionKey,
+		AgentID:    observer,
+		ScopeID:    normalizeMemoryScope(memoryScope, ""),
+		Provenance: []EvidenceItem{annotationFactEvidence(q.Query, fact)},
+	}
 }
 
 func (r retrievalModule) queryAnnotationGraphFacts(ctx context.Context, workspaceID, peer, memoryScope, sessionKey string) ([]annotationGraphFactRow, error) {

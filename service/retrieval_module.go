@@ -235,10 +235,9 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 		return base, nil
 	}
 	out := sliceutil.Clone(base)
-	index := map[string]int{}
-	for i, hit := range out {
-		index[searchHitVectorMergeKey(hit)] = i
-	}
+	index := sliceutil.IndexBy(out, func(hit SearchHit) (string, bool) {
+		return searchHitVectorMergeKey(hit), true
+	})
 	sort.SliceStable(hits, func(i, j int) bool {
 		return hits[i].Score > hits[j].Score
 	})
