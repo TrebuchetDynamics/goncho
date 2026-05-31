@@ -9,15 +9,15 @@ import (
 
 func TestConnectorDocsCoverSupportedAndDeferredIntegrations(t *testing.T) {
 	want := map[string]string{
-		"gormes.md":             "supported-plan",
-		"codex.md":              "supported-plan",
-		"pi.md":                 "supported-plan",
-		"generic-mcp.md":        "supported-local",
-		"filesystem-watcher.md": "supported-plan",
-		"hermes.md":             "deferred",
-		"cursor.md":             "deferred",
-		"claude-code.md":        "deferred",
-		"opencode.md":           "deferred",
+		"first-party/gormes.md":       "supported-plan",
+		"agent-hosts/codex.md":        "supported-plan",
+		"agent-hosts/pi.md":           "supported-plan",
+		"local/generic-mcp.md":         "supported-local",
+		"local/filesystem-watcher.md":  "supported-plan",
+		"deferred/hermes.md":           "deferred",
+		"deferred/cursor.md":           "deferred",
+		"deferred/claude-code.md":      "deferred",
+		"deferred/opencode.md":         "deferred",
 	}
 	for file, status := range want {
 		path := filepath.Join("docs", "integrations", file)

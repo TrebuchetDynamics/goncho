@@ -2,6 +2,8 @@
 
 Status: plan-after-server-acl
 
+Shared contract: [Local-First Preview Connector Contract](../contracts/local-first-preview.md).
+
 Slack and Discord support is intentionally planned after server-mode ACLs and retention are explicit. Team chats can contain sensitive multi-user data, so connector work must wait for workspace/profile authorization, role-aware audit, and retention previews.
 
 ## Scope

@@ -2,6 +2,8 @@
 
 Status: supported-plan
 
+Shared contract: [Local-First Preview Connector Contract](../contracts/local-first-preview.md).
+
 The filesystem watcher connector is local-first and preview-first. It turns changed project docs/code into scoped Goncho observations through public service APIs; it does not mutate source files, install daemons, or broaden recall scope automatically.
 
 ## Plan command

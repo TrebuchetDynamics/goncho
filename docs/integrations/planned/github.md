@@ -2,6 +2,8 @@
 
 Status: plan
 
+Shared contract: [Local-First Preview Connector Contract](../contracts/local-first-preview.md).
+
 A future GitHub connector should import issues, pull requests, discussions, review comments, and issue comments as scoped observations. It must be preview-first and local-first: no repository writes, no webhook registration, and no token storage until an operator explicitly applies a reviewed plan.
 
 ## Scope
