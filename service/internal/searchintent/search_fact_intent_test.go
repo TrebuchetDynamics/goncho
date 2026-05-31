@@ -56,6 +56,12 @@ func TestNegationFactIntentKeepsCoordinatedNegativeObject(t *testing.T) {
 	}
 }
 
+func TestTimelineFactIntentRecognizesPastTenseDate(t *testing.T) {
+	if score := Score("when was Release Orion?", "Release Orion was on 2026-06-01."); score != 1 {
+		t.Fatalf("timeline fact score = %v, want 1 for past-tense date answer", score)
+	}
+}
+
 func TestMetricFactIntentKeepsCommaGroupedMetricValue(t *testing.T) {
 	if score := Score("how many queue rows?", "Queue rows is 1,024 rows."); score != 1 {
 		t.Fatalf("metric fact score = %v, want 1 for comma-grouped metric value", score)

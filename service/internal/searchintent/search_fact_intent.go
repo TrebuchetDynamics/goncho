@@ -16,16 +16,18 @@ const (
 )
 
 var (
-	searchOwnerQuestionPattern = regexp.MustCompile(`(?i)\bwho\s+(?:currently\s+|now\s+)?owns?\s+([^?!.]+)`)
-	searchOwnerAnswerPattern   = regexp.MustCompile(`(?i)^\s*([a-z][a-z0-9 _.'-]{0,80}?)\s+(?:currently\s+|now\s+)?owns?\s+(.+?)\s*$`)
-	searchMetricValuePattern   = regexp.MustCompile(`(?i)^` + searchMetricValuePatternText + `\s*$`)
-	searchMetricAnswerPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+(?:is|was|=)\s+(` + searchMetricValuePatternText + `)\s*$`)
-	searchVersionValuePattern  = regexp.MustCompile(`(?i)^v?\d+\.\d+(?:\.\d+)?\s*$`)
-	searchVersionIsPattern     = regexp.MustCompile(`(?i)^\s*(.+?)\s+version\s+(?:is|was|=)\s+(v?\d+\.\d+(?:\.\d+)?)\s*$`)
-	searchVersionShortPattern  = regexp.MustCompile(`(?i)^\s*(.+?)\s+v(\d+\.\d+(?:\.\d+)?)\s*$`)
-	searchNegationPattern      = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:(?:have|has|had|did)\s+)?(?:never|not)\s+(.+?)\s*$`)
-	searchDecisionPattern      = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:decided to|chose to|opted for|selected|picked|switching to)\s+(.+?)\s*$`)
-	searchSequenceMarkers      = []string{"first", "second", "third", "fourth", "fifth", "finally", "next", "then", "after that"}
+	searchOwnerQuestionPattern     = regexp.MustCompile(`(?i)\bwho\s+(?:currently\s+|now\s+)?owns?\s+([^?!.]+)`)
+	searchOwnerAnswerPattern       = regexp.MustCompile(`(?i)^\s*([a-z][a-z0-9 _.'-]{0,80}?)\s+(?:currently\s+|now\s+)?owns?\s+(.+?)\s*$`)
+	searchMetricValuePattern       = regexp.MustCompile(`(?i)^` + searchMetricValuePatternText + `\s*$`)
+	searchMetricAnswerPattern      = regexp.MustCompile(`(?i)^\s*(.+?)\s+(?:is|was|=)\s+(` + searchMetricValuePatternText + `)\s*$`)
+	searchVersionValuePattern      = regexp.MustCompile(`(?i)^v?\d+\.\d+(?:\.\d+)?\s*$`)
+	searchVersionIsPattern         = regexp.MustCompile(`(?i)^\s*(.+?)\s+version\s+(?:is|was|=)\s+(v?\d+\.\d+(?:\.\d+)?)\s*$`)
+	searchVersionShortPattern      = regexp.MustCompile(`(?i)^\s*(.+?)\s+v(\d+\.\d+(?:\.\d+)?)\s*$`)
+	searchNegationPattern          = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:(?:have|has|had|did)\s+)?(?:never|not)\s+(.+?)\s*$`)
+	searchDecisionPattern          = regexp.MustCompile(`(?i)^\s*(?:project note:\s*)?(?:i|we|user)\s+(?:decided to|chose to|opted for|selected|picked|switching to)\s+(.+?)\s*$`)
+	searchTimelineQuestionPrefixes = []string{"when is ", "when are ", "when was ", "when were "}
+	searchTimelineAnswerMarkers    = []string{" occurs on ", " is scheduled for ", " was scheduled for ", " deadline is ", " deadline was ", " is on ", " was on "}
+	searchSequenceMarkers          = []string{"first", "second", "third", "fourth", "fifth", "finally", "next", "then", "after that"}
 )
 
 func Score(query, content string) float64 {
@@ -277,7 +279,7 @@ func searchTimelineFactIntentScore(query, content string) float64 {
 
 func searchTimelineQuestionEvent(query string) (string, bool) {
 	query = textutil.TrimQuestionPunctuation(query)
-	tail, ok := textutil.CutAnyPrefixFold(query, []string{"when is ", "when are "})
+	tail, ok := textutil.CutAnyPrefixFold(query, searchTimelineQuestionPrefixes)
 	if !ok {
 		return "", false
 	}
@@ -287,7 +289,7 @@ func searchTimelineQuestionEvent(query string) (string, bool) {
 
 func searchTimelineAnswerParts(sentence string) (event, date string, ok bool) {
 	sentence = textutil.TrimSentenceBoundary(sentence)
-	before, after, ok := textutil.CutAroundAnySubstringFold(sentence, []string{" occurs on ", " is scheduled for ", " deadline is ", " is on "})
+	before, after, ok := textutil.CutAroundAnySubstringFold(sentence, searchTimelineAnswerMarkers)
 	if !ok || before == "" {
 		return "", "", false
 	}
