@@ -1,13 +1,9 @@
-"""Shared checksum helpers for dataset preparation scripts."""
+"""Compatibility facade for shared checksum helpers."""
 from __future__ import annotations
 
-import hashlib
-from pathlib import Path
+try:
+    from shared.io.checksums import sha256
+except ModuleNotFoundError:  # pragma: no cover - package import path
+    from scripts.shared.io.checksums import sha256
 
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+__all__ = ["sha256"]

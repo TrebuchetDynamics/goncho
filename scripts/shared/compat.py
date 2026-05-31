@@ -1,12 +1,9 @@
-"""Compatibility-wrapper helpers for moved script modules."""
+"""Compatibility facade for moved script path helpers."""
 from __future__ import annotations
 
-import sys
-from pathlib import Path
+try:
+    from shared.compatibility.path import add_scripts_root
+except ModuleNotFoundError:  # pragma: no cover - package import path
+    from scripts.shared.compatibility.path import add_scripts_root
 
-
-def add_scripts_root(anchor: str) -> None:
-    """Ensure subpackages under scripts/ are importable from legacy wrappers."""
-    scripts_root = str(Path(anchor).resolve().parent)
-    if scripts_root not in sys.path:
-        sys.path.insert(0, scripts_root)
+__all__ = ["add_scripts_root"]

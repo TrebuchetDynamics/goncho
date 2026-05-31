@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from shared.jsonl import load_jsonl
-from shared.locomo import content_collision_report
+from shared.locomo import content_collision_report, duplicate_content_fixture_report
 
 BACKEND = "mem0"
 REASON_PACKAGE_MISSING = "not comparable: Python package mem0/mem0ai is not installed in this environment"
@@ -94,12 +94,7 @@ def write_not_comparable(out: Path | None, memories: Path | None = None, questio
 
 
 def smoke() -> int:
-    fixture = [
-        {"memory_id": "m1", "conversation_id": "c1", "content": "duplicate text"},
-        {"memory_id": "m2", "conversation_id": "c2", "content": "duplicate text"},
-        {"memory_id": "m3", "conversation_id": "c1", "content": "unique text"},
-    ]
-    report = content_collision_report(fixture)
+    report = duplicate_content_fixture_report()
     metadata_hit = {"id": "backend-raw", "metadata": {"memory_id": "m1"}}
     ok = report["collision_safe_content_only"] is False and extract_memory_id_from_hit(metadata_hit) == "m1"
     print(json.dumps({"backend": BACKEND, "smoke": ok, "comparable": False, "reason": capability()["reason"], "collision_check": report, "package": package_status()}, indent=2, sort_keys=True))

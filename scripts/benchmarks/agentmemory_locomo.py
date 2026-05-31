@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from shared.jsonl import load_jsonl
-from shared.locomo import content_collision_report
+from shared.locomo import content_collision_report, duplicate_content_fixture_report
 
 BACKEND = "agentmemory"
 PR_COMMIT = "9b18a80c9d2839b025279978d3f4b5e1f9bc6e74"
@@ -183,12 +183,7 @@ def run_agentmemory_adapter(source: Path, memories: Path, questions: Path, out: 
 
 
 def smoke(source: Path | None) -> int:
-    fixture = [
-        {"memory_id": "m1", "conversation_id": "c1", "content": "duplicate text"},
-        {"memory_id": "m2", "conversation_id": "c2", "content": "duplicate text"},
-        {"memory_id": "m3", "conversation_id": "c1", "content": "unique text"},
-    ]
-    report = content_collision_report(fixture)
+    report = duplicate_content_fixture_report()
     ok = report["collision_safe_content_only"] is False and report["collision_safe_conversation_content"] is True
     if source and (source / "src/mcp/standalone.ts").exists() and (source / "node_modules/.bin/tsx").exists():
         with tempfile.TemporaryDirectory() as td:
