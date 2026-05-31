@@ -115,6 +115,29 @@ func TestSearchSourceConclusionRejectsUntypedVectorHit(t *testing.T) {
 	}
 }
 
+func TestSearchMergesPrefixedVectorMemoryIDWithLexicalHit(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+	conclusion, err := svc.Conclude(ctx, ConcludeParams{Peer: "peer-semantic-prefixed-id", Conclusion: "orchid prefixed id lexical candidate", Scope: "benchmark"})
+	if err != nil {
+		t.Fatalf("conclude: %v", err)
+	}
+	svc.vectorStore = &fakeVectorStore{hits: []VectorSearchHit{{MemoryID: "id:" + strconv.FormatInt(conclusion.ID, 10), SourceType: "conclusion", Content: "orchid prefixed id lexical candidate", Score: 0.97}}}
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+
+	got, err := svc.Search(ctx, SearchParams{Peer: "peer-semantic-prefixed-id", Query: "orchid prefixed", Limit: 5})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("Search results len = %d, want lexical and semantic hits for same prefixed id merged: %+v", len(got.Results), got.Results)
+	}
+	if !searchHitHasEvidenceKind(got.Results[0], "semantic") {
+		t.Fatalf("merged Search provenance = %+v, want semantic evidence from vector hit", got.Results[0].Provenance)
+	}
+}
+
 func TestSearchDeduplicatesVectorHitsByMemoryID(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

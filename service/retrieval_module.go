@@ -322,7 +322,7 @@ func trimSearchHits(hits []SearchHit, limit int) []SearchHit {
 
 func searchHitFromVectorHit(hit VectorSearchHit) SearchHit {
 	memoryID := vectorHitMemoryID(hit)
-	id, _ := idutil.ParseDecimal(memoryID)
+	id, _ := vectorHitNumericMemoryID(memoryID)
 	return SearchHit{
 		ID:         id,
 		Source:     vectorHitSourceType(hit),
@@ -330,6 +330,16 @@ func searchHitFromVectorHit(hit VectorSearchHit) SearchHit {
 		SessionKey: hit.SessionID,
 		Provenance: []EvidenceItem{semanticVectorEvidence(hit, memoryID)},
 	}
+}
+
+func vectorHitNumericMemoryID(memoryID string) (int64, bool) {
+	if id, err := idutil.ParseDecimal(memoryID); err == nil {
+		return id, true
+	}
+	if id, err := idutil.ParsePrefixed(memoryID, "id:"); err == nil {
+		return id, true
+	}
+	return 0, false
 }
 
 func searchHitVectorMergeKey(hit SearchHit) string {
