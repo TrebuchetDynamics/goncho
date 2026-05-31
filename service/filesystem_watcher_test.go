@@ -116,6 +116,31 @@ func TestFilesystemWatcherRequiresExplicitIncludeRules(t *testing.T) {
 	}
 }
 
+func TestFilesystemWatcherPreviewDedupesRepeatedPathInputs(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	root := t.TempDir()
+	path := filepath.Join(root, "docs/plan.md")
+	writeWatcherFixture(t, root, "docs/plan.md", "# Plan\n")
+
+	preview, err := svc.PreviewFilesystemWatcherImport(context.Background(), FilesystemWatcherImportParams{
+		RootDir:      root,
+		Paths:        []string{path, " " + path + " ", path},
+		IncludeGlobs: []string{"**/*.md"},
+		PeerID:       "fs-watcher-dupe",
+		SessionKey:   "fs-session-dupe",
+	})
+	if err != nil {
+		t.Fatalf("PreviewFilesystemWatcherImport: %v", err)
+	}
+	if preview.ImportableCount != 1 || preview.SkippedCount != 0 || len(preview.Candidates) != 1 {
+		t.Fatalf("preview = %+v, want repeated path input to produce one importable candidate without replay inflation", preview)
+	}
+	if got := preview.Candidates[0].RelativePath; got != "docs/plan.md" {
+		t.Fatalf("candidate relative path = %q, want docs/plan.md", got)
+	}
+}
+
 func TestFilesystemWatcherImportDoesNotReplayDistinctChangeKinds(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

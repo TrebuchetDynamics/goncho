@@ -83,21 +83,15 @@ func (s *Service) PreviewFilesystemWatcherImport(ctx context.Context, params Fil
 	if err != nil {
 		return FilesystemWatcherPreview{}, err
 	}
-	preview := FilesystemWatcherPreview{Mutates: false, RootDir: norm.RootDir, IncludeGlobs: sliceutil.Clone(norm.IncludeGlobs), ExcludeGlobs: sliceutil.Clone(norm.ExcludeGlobs), Candidates: []FilesystemWatcherCandidate{}, Skipped: []FilesystemWatcherSkipped{}}
+	batch := newFilesystemWatcherPreviewBatch(norm)
 	for _, rawPath := range norm.Paths {
 		candidate, skipped, err := filesystemWatcherCandidate(rawPath, norm)
 		if err != nil {
 			return FilesystemWatcherPreview{}, err
 		}
-		if skipped.Reason != "" {
-			preview.Skipped = append(preview.Skipped, skipped)
-			continue
-		}
-		preview.Candidates = append(preview.Candidates, candidate)
+		batch.Add(candidate, skipped)
 	}
-	preview.ImportableCount = len(preview.Candidates)
-	preview.SkippedCount = len(preview.Skipped)
-	return preview, nil
+	return batch.Preview(), nil
 }
 
 func (s *Service) ImportFilesystemWatcherChanges(ctx context.Context, params FilesystemWatcherImportParams) (FilesystemWatcherImportResult, error) {
@@ -166,6 +160,52 @@ func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImpor
 	}
 	maxPreview := limitutil.Default(params.MaxPreviewBytes, defaultFilesystemWatcherPreviewBytes)
 	return FilesystemWatcherImportParams{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, PeerID: scope.Peer, SessionKey: session, RootDir: root, Paths: sliceutil.Clone(params.Paths), IncludeGlobs: include, ExcludeGlobs: pathutil.NormalizeSlashPatterns(params.ExcludeGlobs), ChangeKind: changeKind, MaxPreviewBytes: maxPreview, AllowBinary: params.AllowBinary}, nil
+}
+
+type filesystemWatcherPreviewBatch struct {
+	preview            FilesystemWatcherPreview
+	seenCandidatePaths map[string]struct{}
+}
+
+func newFilesystemWatcherPreviewBatch(params FilesystemWatcherImportParams) filesystemWatcherPreviewBatch {
+	return filesystemWatcherPreviewBatch{
+		preview: FilesystemWatcherPreview{
+			Mutates:      false,
+			RootDir:      params.RootDir,
+			IncludeGlobs: sliceutil.Clone(params.IncludeGlobs),
+			ExcludeGlobs: sliceutil.Clone(params.ExcludeGlobs),
+			Candidates:   []FilesystemWatcherCandidate{},
+			Skipped:      []FilesystemWatcherSkipped{},
+		},
+		seenCandidatePaths: map[string]struct{}{},
+	}
+}
+
+func (b *filesystemWatcherPreviewBatch) Add(candidate FilesystemWatcherCandidate, skipped FilesystemWatcherSkipped) {
+	if skipped.Reason != "" {
+		b.preview.Skipped = append(b.preview.Skipped, skipped)
+		return
+	}
+	key := filesystemWatcherCandidateBatchKey(candidate)
+	if key == "" {
+		return
+	}
+	if _, exists := b.seenCandidatePaths[key]; exists {
+		return
+	}
+	b.seenCandidatePaths[key] = struct{}{}
+	b.preview.Candidates = append(b.preview.Candidates, candidate)
+}
+
+func (b filesystemWatcherPreviewBatch) Preview() FilesystemWatcherPreview {
+	preview := b.preview
+	preview.ImportableCount = len(preview.Candidates)
+	preview.SkippedCount = len(preview.Skipped)
+	return preview
+}
+
+func filesystemWatcherCandidateBatchKey(candidate FilesystemWatcherCandidate) string {
+	return strings.TrimSpace(candidate.RelativePath)
 }
 
 func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportParams) (FilesystemWatcherCandidate, FilesystemWatcherSkipped, error) {
