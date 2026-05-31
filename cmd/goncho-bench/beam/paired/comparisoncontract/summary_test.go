@@ -15,3 +15,27 @@ func TestScoreSummaryAddsRoundedAveragesDeltaAndWins(t *testing.T) {
 		t.Fatalf("summary scores = baseline %.4f candidate %.4f delta %.4f, want rounded averages and signed delta", summary.BaselineAvgScore, summary.CandidateAvgScore, summary.ScoreDelta)
 	}
 }
+
+func TestSummarizeRowsBuildsOverallAndAbilityStats(t *testing.T) {
+	report := SummarizeRows([]Row{
+		{Ability: "IE", BaselineScore: 0.5, CandidateScore: 1.0, Winner: "candidate"},
+		{Ability: "IE", BaselineScore: 1.0, CandidateScore: 0.0, Winner: "baseline"},
+		{Ability: "MR", BaselineScore: 0.0, CandidateScore: 1.0, Winner: "candidate"},
+	}, 200, 42, 0.02)
+
+	if report.PairedCount != 3 || report.BaselineWins != 1 || report.CandidateWins != 2 || report.Ties != 0 {
+		t.Fatalf("report counts = %+v, want overall win counts from rows", report)
+	}
+	if report.BaselineAvgScore != 0.5 || report.CandidateAvgScore != 0.6667 || report.ScoreDelta != 0.1667 {
+		t.Fatalf("report scores = baseline %.4f candidate %.4f delta %.4f, want rounded overall scores", report.BaselineAvgScore, report.CandidateAvgScore, report.ScoreDelta)
+	}
+	if report.BootstrapSamples != 200 || report.BootstrapSeed != 42 || report.ScoreDeltaCI95 == (CI{}) {
+		t.Fatalf("report bootstrap = samples %d seed %d ci %+v, want deterministic non-empty CI", report.BootstrapSamples, report.BootstrapSeed, report.ScoreDeltaCI95)
+	}
+	if got := report.ByAbility["MR"]; got.PairedCount != 1 || got.ScoreDelta != 1 || got.Conclusion != "candidate_superior" {
+		t.Fatalf("MR stats = %+v, want candidate-superior single-row ability stats", got)
+	}
+	if len(report.Rows) != 3 || report.Rows[0].Ability != "IE" {
+		t.Fatalf("report rows = %+v, want preserved row copy", report.Rows)
+	}
+}
