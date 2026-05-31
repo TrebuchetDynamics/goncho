@@ -3,7 +3,6 @@ package oracle
 import (
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -239,11 +238,7 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 			Results:        acc.results,
 		})
 	}
-	scaleList := make([]string, 0, len(scales))
-	for scale := range scales {
-		scaleList = append(scaleList, scale)
-	}
-	sort.Strings(scaleList)
+	scaleList := shared.SortedStringMapKeys(scales)
 	started := shared.FormatArtifactTimestamp(runStartedAt)
 	return beamServiceResultsFile{
 		Metadata: beamServiceResultsMetadata{
@@ -307,7 +302,7 @@ func beamServiceCaseRecallProvenance(c goncho.RecallBenchmarkCaseReport) beamSer
 func beamServiceVoiceMap(kinds []string) map[string]float64 {
 	out := map[string]float64{}
 	for _, kind := range kinds {
-		kind = strings.ToLower(strings.TrimSpace(kind))
+		kind = shared.NormalizeEvidenceKind(kind)
 		if kind != "" {
 			out[kind]++
 		}
@@ -317,7 +312,7 @@ func beamServiceVoiceMap(kinds []string) map[string]float64 {
 
 func beamServiceTopResultTier(kinds []string) string {
 	for _, kind := range kinds {
-		switch strings.ToLower(strings.TrimSpace(kind)) {
+		switch shared.NormalizeEvidenceKind(kind) {
 		case "graph", "fact":
 			return "structured"
 		}

@@ -77,7 +77,7 @@ func beamServiceCasesFromJSONLRecords(records []beamJSONLRecord) ([]goncho.Recal
 	questions := []beamJSONLQuestion{}
 	for i, record := range records {
 		lineNo := i + 1
-		switch strings.ToLower(strings.TrimSpace(record.Type)) {
+		switch shared.NormalizeRecordType(record.Type) {
 		case "meta":
 			if scale := strings.TrimSpace(record.Scale); scale != "" {
 				defaultScale = scale
@@ -185,7 +185,7 @@ func normalizeBeamJSONLConversationID(conversationID string) string {
 func beamJSONLScoringConfig(question beamJSONLQuestion) goncho.RecallScoringConfig {
 	version := "beam-jsonl-" + strings.ToLower(strings.TrimSpace(question.Ability)) + "-v1"
 	for _, kind := range question.RequiredEvidenceKinds {
-		if strings.EqualFold(strings.TrimSpace(kind), "graph") {
+		if shared.NormalizeEvidenceKind(kind) == "graph" {
 			return goncho.RecallScoringConfig{
 				Version:     version,
 				Weights:     map[string]float64{"keyword": 0.05, "fact": 0.10, "graph": 0.80, "scope": 0.05},

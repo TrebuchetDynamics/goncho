@@ -442,10 +442,5 @@ func writeBeamPairedComparisonMarkdown(path, jsonPath string, report beamPairedC
 }
 
 func sortedBeamPairedAbilities(byAbility map[string]beamPairedComparisonStats) []string {
-	keys := make([]string, 0, len(byAbility))
-	for key := range byAbility {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
+	return shared.SortedStringMapKeys(byAbility)
 }

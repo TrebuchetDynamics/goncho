@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -171,12 +170,7 @@ func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fall
 			Content:        content,
 		})
 	}
-	abilities := make([]string, 0, len(questionsByAbility))
-	for ability := range questionsByAbility {
-		abilities = append(abilities, ability)
-	}
-	sort.Strings(abilities)
-	for _, ability := range abilities {
+	for _, ability := range shared.SortedStringMapKeys(questionsByAbility) {
 		questions := questionsByAbility[ability]
 		for i, question := range questions {
 			query := stringutil.FirstNonEmpty(question.Question, question.Query, question.Prompt)
@@ -376,7 +370,7 @@ func summarizeBeamConversionRecords(records []beamJSONLRecord) beamConversionDia
 	}
 	conversations := map[string]struct{}{}
 	for _, record := range records {
-		switch strings.ToLower(strings.TrimSpace(record.Type)) {
+		switch shared.NormalizeRecordType(record.Type) {
 		case "memory":
 			diagnostics.MemoryCount++
 			conversationID := normalizeBeamJSONLConversationID(record.ConversationID)

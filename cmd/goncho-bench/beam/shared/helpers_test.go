@@ -11,6 +11,18 @@ func TestNormalizeAbilityTrimsAndUppercases(t *testing.T) {
 	}
 }
 
+func TestNormalizeRecordTypeTrimsAndLowercases(t *testing.T) {
+	if got := NormalizeRecordType(" Question "); got != "question" {
+		t.Fatalf("NormalizeRecordType() = %q, want question", got)
+	}
+}
+
+func TestNormalizeEvidenceKindTrimsAndLowercases(t *testing.T) {
+	if got := NormalizeEvidenceKind(" Graph "); got != "graph" {
+		t.Fatalf("NormalizeEvidenceKind() = %q, want graph", got)
+	}
+}
+
 func TestFirstNonEmptyTrimmedReturnsFirstTrimmedValue(t *testing.T) {
 	if got := FirstNonEmptyTrimmed("", "  ", " candidate ", "fallback"); got != "candidate" {
 		t.Fatalf("FirstNonEmptyTrimmed() = %q, want candidate", got)
@@ -26,6 +38,19 @@ func TestHasNonEmptyTrimmed(t *testing.T) {
 	}
 	if !HasNonEmptyTrimmed(" value ") {
 		t.Fatal("HasNonEmptyTrimmed(value) = false, want true")
+	}
+}
+
+func TestSortedStringMapKeysReturnsStableOrder(t *testing.T) {
+	got := SortedStringMapKeys(map[string]int{"charlie": 3, "alpha": 1, "bravo": 2})
+	want := []string{"alpha", "bravo", "charlie"}
+	if len(got) != len(want) {
+		t.Fatalf("SortedStringMapKeys() len = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("SortedStringMapKeys()[%d] = %q, want %q (all: %v)", i, got[i], want[i], got)
+		}
 	}
 }
 

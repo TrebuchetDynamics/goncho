@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"sort"
 	"strings"
 	"time"
 
@@ -19,6 +20,16 @@ func RoundSignedMetric(v float64) float64 {
 
 func TopN(values []string, n int) []string {
 	return ranking.TopN(values, n)
+}
+
+// SortedStringMapKeys returns map keys in stable lexical order.
+func SortedStringMapKeys[V any](values map[string]V) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func ChecksumBytesSHA256(raw []byte) string {
@@ -49,6 +60,16 @@ func FormatArtifactTimestamp(t time.Time) string {
 // NormalizeAbility returns the canonical BEAM ability code used in artifacts and match keys.
 func NormalizeAbility(ability string) string {
 	return strings.ToUpper(strings.TrimSpace(ability))
+}
+
+// NormalizeRecordType returns the canonical BEAM JSONL record type.
+func NormalizeRecordType(recordType string) string {
+	return strings.ToLower(strings.TrimSpace(recordType))
+}
+
+// NormalizeEvidenceKind returns the canonical BEAM evidence-kind token.
+func NormalizeEvidenceKind(kind string) string {
+	return strings.ToLower(strings.TrimSpace(kind))
 }
 
 // NormalizeQuestionText returns the canonical question text used for BEAM question-key matching.
