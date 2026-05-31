@@ -424,7 +424,7 @@ func summarizeRecallBenchmarkAbilities(cases []RecallBenchmarkCaseReport) []Reca
 }
 
 func normalizeRecallBenchmarkAbility(ability string) string {
-	return strings.ToUpper(strings.TrimSpace(ability))
+	return textutil.UpperTrimmed(ability)
 }
 
 func normalizeRecallBenchmarkEvidenceKinds(kinds []string) []string {

@@ -12,6 +12,11 @@ func NonBlank(value string) bool {
 	return !IsBlank(value)
 }
 
+// UpperTrimmed trims surrounding whitespace and converts the value to upper case.
+func UpperTrimmed(value string) string {
+	return strings.ToUpper(strings.TrimSpace(value))
+}
+
 // TrimSentenceBoundary removes the sentence punctuation policy used by recall
 // fact classifiers, then trims surrounding whitespace. It intentionally keeps
 // punctuation inside the value unchanged.

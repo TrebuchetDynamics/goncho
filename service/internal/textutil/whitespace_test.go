@@ -39,6 +39,21 @@ func TestCompactWhitespaceCollapsesLimitsAndHandlesEmpty(t *testing.T) {
 	}
 }
 
+func TestFitsTokenBudget(t *testing.T) {
+	if !FitsTokenBudget(2, 3, 5, false) {
+		t.Fatal("expected exact budget to fit")
+	}
+	if FitsTokenBudget(3, 3, 5, false) {
+		t.Fatal("expected over-budget item not to fit")
+	}
+	if !FitsTokenBudget(0, 10, 5, true) {
+		t.Fatal("expected first item to fit when first-over-budget is allowed")
+	}
+	if FitsTokenBudget(0, 1, 0, true) {
+		t.Fatal("expected disabled budget not to fit")
+	}
+}
+
 func TestWordCountCountsWhitespaceDelimitedWords(t *testing.T) {
 	if got := WordCount(" alpha\n\tbeta  gamma "); got != 3 {
 		t.Fatalf("WordCount = %d, want 3", got)

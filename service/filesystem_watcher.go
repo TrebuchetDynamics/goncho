@@ -148,8 +148,8 @@ func (s *Service) ImportFilesystemWatcherChanges(ctx context.Context, params Fil
 
 func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImportParams) (FilesystemWatcherImportParams, error) {
 	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.PeerID)
-	root, err := filepath.Abs(strings.TrimSpace(params.RootDir))
-	if err != nil || strings.TrimSpace(params.RootDir) == "" {
+	root, ok, err := pathutil.AbsNonBlank(params.RootDir)
+	if err != nil || !ok {
 		return FilesystemWatcherImportParams{}, fmt.Errorf("goncho: filesystem watcher root_dir is required")
 	}
 	session := strings.TrimSpace(params.SessionKey)
@@ -169,8 +169,8 @@ func (s *Service) normalizeFilesystemWatcherParams(params FilesystemWatcherImpor
 }
 
 func filesystemWatcherCandidate(rawPath string, params FilesystemWatcherImportParams) (FilesystemWatcherCandidate, FilesystemWatcherSkipped, error) {
-	absPath, err := filepath.Abs(strings.TrimSpace(rawPath))
-	if err != nil || strings.TrimSpace(rawPath) == "" {
+	absPath, ok, err := pathutil.AbsNonBlank(rawPath)
+	if err != nil || !ok {
 		return FilesystemWatcherCandidate{}, FilesystemWatcherSkipped{Path: rawPath, Reason: "invalid_path"}, nil
 	}
 	rel, err := filepath.Rel(params.RootDir, absPath)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 // HonchoSDKCompatibilityHarness is a hermetic adapter for proving Honcho SDK
@@ -249,7 +250,7 @@ func UnsupportedHonchoSDKFlow(method, endpoint string, fields ...string) HonchoS
 	}
 	return HonchoSDKUnsupportedFlow{
 		Code:     "sdk_flow_unsupported",
-		Method:   strings.ToUpper(strings.TrimSpace(method)),
+		Method:   textutil.UpperTrimmed(method),
 		Endpoint: strings.TrimSpace(endpoint),
 		Fields:   copiedFields,
 	}

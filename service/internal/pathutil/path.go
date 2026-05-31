@@ -5,6 +5,19 @@ import (
 	"strings"
 )
 
+// AbsNonBlank trims value and resolves it to an absolute path.
+func AbsNonBlank(value string) (string, bool, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return "", false, nil
+	}
+	abs, err := filepath.Abs(trimmed)
+	if err != nil {
+		return "", false, err
+	}
+	return abs, true, nil
+}
+
 // CleanRelative returns a cleaned, non-empty relative path and rejects paths
 // that would escape their root. It intentionally mirrors the service's
 // conservative historical check where any cleaned ".." prefix is unsafe.

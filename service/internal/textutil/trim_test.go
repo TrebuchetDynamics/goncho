@@ -17,6 +17,12 @@ func TestBlankPredicates(t *testing.T) {
 	}
 }
 
+func TestUpperTrimmed(t *testing.T) {
+	if got := UpperTrimmed(" get "); got != "GET" {
+		t.Fatalf("UpperTrimmed() = %q, want GET", got)
+	}
+}
+
 func TestTrimSentenceBoundary(t *testing.T) {
 	tests := []struct {
 		name  string

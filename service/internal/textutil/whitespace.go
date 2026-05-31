@@ -43,6 +43,19 @@ func ApproxTokens(content string) int {
 	return 1
 }
 
+// FitsTokenBudget reports whether an item with cost can be added after used.
+// When allowFirstOverBudget is true, the first item is admitted even when it
+// exceeds the budget so callers can return at least one relevant result.
+func FitsTokenBudget(used, cost, budget int, allowFirstOverBudget bool) bool {
+	if budget <= 0 {
+		return false
+	}
+	if allowFirstOverBudget && used == 0 {
+		return true
+	}
+	return used+cost <= budget
+}
+
 // CompactWhitespace collapses whitespace and limits the result to limit bytes,
 // trimming a partial trailing word/space boundary the same way existing preview
 // callers historically did.

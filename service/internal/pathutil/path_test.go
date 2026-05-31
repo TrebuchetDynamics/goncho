@@ -1,6 +1,23 @@
 package pathutil
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
+
+func TestAbsNonBlank(t *testing.T) {
+	got, ok, err := AbsNonBlank(" . ")
+	if err != nil {
+		t.Fatalf("AbsNonBlank() error = %v", err)
+	}
+	if !ok || !filepath.IsAbs(got) {
+		t.Fatalf("AbsNonBlank() = %q, %v; want absolute path", got, ok)
+	}
+	got, ok, err = AbsNonBlank(" \t ")
+	if err != nil || ok || got != "" {
+		t.Fatalf("AbsNonBlank(blank) = %q, %v, %v; want empty false nil", got, ok, err)
+	}
+}
 
 func TestCleanRelativeRejectsEscapesAndEmpty(t *testing.T) {
 	tests := []struct {

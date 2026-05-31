@@ -676,7 +676,7 @@ func recentTurnsByTokenBudget(ctx context.Context, db *sql.DB, sessionKey string
 			return nil, fmt.Errorf("goncho: scan recent turn by token budget: %w", err)
 		}
 		cost := textutil.ApproxTokens(msg.Content)
-		if used+cost > tokenBudget {
+		if !textutil.FitsTokenBudget(used, cost, tokenBudget, false) {
 			break
 		}
 		reverse = append(reverse, msg)
