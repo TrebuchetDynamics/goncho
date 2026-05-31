@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
-	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 )
 
 type ActionLeaseDecision string
@@ -284,32 +283,34 @@ func (s *Service) ListActionLeaseAudit(ctx context.Context, query ActionLeaseAud
 }
 
 func (s *Service) normalizeActionLeaseParams(params ActionLeaseParams) (ActionLease, error) {
-	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.Peer)
-	actionID := strings.TrimSpace(params.ActionID)
+	action, err := s.normalizeScopedAction(params.WorkspaceID, params.ProfileID, params.Peer, params.ActionID, "action lease workspace_id, peer, action_id, and owner are required", true)
+	if err != nil {
+		return ActionLease{}, err
+	}
 	owner := strings.TrimSpace(params.Owner)
-	if !scope.Complete() || actionID == "" || owner == "" {
+	if owner == "" {
 		return ActionLease{}, fmt.Errorf("goncho: action lease workspace_id, peer, action_id, and owner are required")
 	}
 	if params.TTL <= 0 {
 		return ActionLease{}, fmt.Errorf("goncho: action lease ttl must be positive")
 	}
-	return ActionLease{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: actionID, Owner: owner}, nil
+	return ActionLease{WorkspaceID: action.WorkspaceID, ProfileID: action.ProfileID, Peer: action.Peer, ActionID: action.ActionID, Owner: owner}, nil
 }
 
 func (s *Service) normalizeActionLeaseExpireParams(params ActionLeaseExpireParams) (ActionLease, error) {
-	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.Peer)
-	if !scope.Complete() {
-		return ActionLease{}, fmt.Errorf("goncho: action lease expiry workspace_id and peer are required")
+	action, err := s.normalizeScopedAction(params.WorkspaceID, params.ProfileID, params.Peer, params.ActionID, "action lease expiry workspace_id and peer are required", false)
+	if err != nil {
+		return ActionLease{}, err
 	}
-	return ActionLease{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: strings.TrimSpace(params.ActionID)}, nil
+	return ActionLease{WorkspaceID: action.WorkspaceID, ProfileID: action.ProfileID, Peer: action.Peer, ActionID: action.ActionID}, nil
 }
 
 func (s *Service) normalizeActionLeaseAuditQuery(query ActionLeaseAuditQuery) (ActionLease, error) {
-	scope := scopekey.Normalize(s.workspaceID, query.WorkspaceID, query.ProfileID, query.Peer)
-	if !scope.Complete() {
-		return ActionLease{}, fmt.Errorf("goncho: action lease audit workspace_id and peer are required")
+	action, err := s.normalizeScopedAction(query.WorkspaceID, query.ProfileID, query.Peer, query.ActionID, "action lease audit workspace_id and peer are required", false)
+	if err != nil {
+		return ActionLease{}, err
 	}
-	return ActionLease{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: strings.TrimSpace(query.ActionID)}, nil
+	return ActionLease{WorkspaceID: action.WorkspaceID, ProfileID: action.ProfileID, Peer: action.Peer, ActionID: action.ActionID}, nil
 }
 
 func ensureActionExistsTx(ctx context.Context, tx *sql.Tx, lease ActionLease) error {
