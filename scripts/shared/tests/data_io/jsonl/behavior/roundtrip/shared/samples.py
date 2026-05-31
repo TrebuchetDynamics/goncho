@@ -1,8 +1,6 @@
-"""Shared sample payloads for JSONL round-trip behavior tests."""
+"""Compatibility exports for JSONL round-trip sample payloads."""
 from __future__ import annotations
 
-from typing import Any
-
-ROUNDTRIP_ROWS: list[dict[str, Any]] = [{"text": "café"}, {"n": 2}]
+from data_io.jsonl.behavior.roundtrip.shared.payloads.fixtures import ROUNDTRIP_ROWS
 
 __all__ = ["ROUNDTRIP_ROWS"]
