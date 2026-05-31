@@ -88,6 +88,23 @@ func TestRankConclusionHitsFiltersSingleUnrelatedHitLikeMultiHitRanking(t *testi
 	}
 }
 
+func TestSearchRankCandidateDecisionKeepsFactAnnotationWithoutLexicalContent(t *testing.T) {
+	hit := SearchHit{
+		Content: "Mira stores aquarium filters in the blue cabinet.",
+		factAnnotations: []memoryFactAnnotation{{
+			Value: "rare orchid retrieval marker is in the archive cabinet",
+		}},
+	}
+	decision := searchRankCandidateDecisionFor("Where is the rare orchid retrieval marker?", expandSearchQuery("Where is the rare orchid retrieval marker?"), searchTemporalFeatures{}, hit, 0, 1, 0, 0)
+
+	if !decision.keep {
+		t.Fatalf("decision.keep = false, want fact annotation to keep zero-lexical candidate: %+v", decision)
+	}
+	if decision.score <= 0 {
+		t.Fatalf("decision.score = %v, want positive fact score", decision.score)
+	}
+}
+
 func TestRankConclusionHitsTemporalDoesNotPenalizePersonalMemoryWithGenericAside(t *testing.T) {
 	hits := []SearchHit{
 		{Content: "user: What shampoo should I buy? assistant: I don't have personal experience, but here is a generic list of shampoo brands."},

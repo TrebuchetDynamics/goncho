@@ -19,6 +19,20 @@ const (
 
 type searchTemporalFeatures = searchrank.TemporalFeatures
 
+type searchRankScoredHit struct {
+	hit       SearchHit
+	score     float64
+	baseScore float64
+	index     int
+}
+
+type searchRankCandidateDecision struct {
+	hit       SearchHit
+	score     float64
+	baseScore float64
+	keep      bool
+}
+
 func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []SearchHit {
 	expansion := expandSearchQuery(query)
 	queryTokens := searchRankTokenSet(expansion.Expanded)
@@ -49,12 +63,6 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 	if len(hits) > 0 && totalLength > 0 {
 		avgLength = float64(totalLength) / float64(len(hits))
 	}
-	type scoredHit struct {
-		hit       SearchHit
-		score     float64
-		baseScore float64
-		index     int
-	}
 	baseScores := make([]float64, len(hits))
 	maxScore := 0.0
 	for i := range hits {
@@ -64,21 +72,15 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 		}
 	}
 	temporal := searchTemporalIntent(query)
-	scored := make([]scoredHit, 0, len(hits))
+	scored := make([]searchRankScoredHit, 0, len(hits))
 	for i, hit := range hits {
-		score := baseScores[i]
-		factScore := searchHitFactIntentScore(query, hit)
-		if score == 0 && factScore == 0 {
+		decision := searchRankCandidateDecisionFor(query, expansion, temporal, hit, i, len(hits), baseScores[i], maxScore)
+		if !decision.keep {
 			continue
 		}
-		score += searchFactIntentBonus(factScore, maxScore)
-		score += searchTemporalRerankBonus(temporal, hit.Content, i, len(hits), score, maxScore)
-		if searchHitExpansionImproves(expansion, hit) {
-			hit.Provenance = appendSearchHitQueryExpansionEvidence(hit.Provenance, expansion)
-		}
-		scored = append(scored, scoredHit{hit: hit, score: score, baseScore: baseScores[i], index: i})
+		scored = append(scored, searchRankScoredHit{hit: decision.hit, score: decision.score, baseScore: decision.baseScore, index: i})
 	}
-	slices.SortStableFunc(scored, func(a, b scoredHit) int {
+	slices.SortStableFunc(scored, func(a, b searchRankScoredHit) int {
 		if a.score > b.score {
 			return -1
 		}
@@ -93,9 +95,24 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 		}
 		return 0
 	})
-	return sliceutil.Map(scored, func(item scoredHit) SearchHit {
+	return sliceutil.Map(scored, func(item searchRankScoredHit) SearchHit {
 		return item.hit
 	})
+}
+
+func searchRankCandidateDecisionFor(query string, expansion expandedQuery, temporal searchTemporalFeatures, hit SearchHit, index, total int, baseScore, maxScore float64) searchRankCandidateDecision {
+	decision := searchRankCandidateDecision{hit: hit, score: baseScore, baseScore: baseScore}
+	factScore := searchHitFactIntentScore(query, hit)
+	if baseScore == 0 && factScore == 0 {
+		return decision
+	}
+	decision.score += searchFactIntentBonus(factScore, maxScore)
+	decision.score += searchTemporalRerankBonus(temporal, hit.Content, index, total, decision.score, maxScore)
+	if searchHitExpansionImproves(expansion, hit) {
+		decision.hit.Provenance = appendSearchHitQueryExpansionEvidence(hit.Provenance, expansion)
+	}
+	decision.keep = true
+	return decision
 }
 
 func searchHitExpansionImproves(expansion expandedQuery, hit SearchHit) bool {
