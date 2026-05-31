@@ -141,6 +141,39 @@ func TestNegativeEvidenceReviewsScanBeyondDefaultLimitBeforeCandidateGrouping(t 
 	}
 }
 
+func TestNegativeEvidenceReviewsPreferRecentFailuresWhenScanWindowIsFull(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	failed := false
+	for i := 1; i <= negativeEvidenceObservationScanLimit; i++ {
+		id := "old-curl-window-fill-" + strconv.Itoa(i)
+		if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, ProfileID: "mineru", PeerID: "peer-review-recent-window", SessionKey: "sess-review-recent-window", Success: &failed, Metadata: map[string]string{"tool_name": "curl"}, ObservedAt: time.Unix(int64(i), 0).UTC()}); err != nil {
+			t.Fatalf("Observe %s: %v", id, err)
+		}
+	}
+	for i := 1; i <= 2; i++ {
+		id := "recent-bash-window-fail-" + strconv.Itoa(i)
+		if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, ProfileID: "mineru", PeerID: "peer-review-recent-window", SessionKey: "sess-review-recent-window", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(int64(10000+i), 0).UTC()}); err != nil {
+			t.Fatalf("Observe %s: %v", id, err)
+		}
+	}
+
+	created, err := svc.CreateNegativeEvidenceReviewItems(ctx, NegativeEvidenceReviewRequest{PeerID: "peer-review-recent-window", SessionKey: "sess-review-recent-window", CreatedAt: time.Unix(20000, 0).UTC()})
+	if err != nil {
+		t.Fatalf("CreateNegativeEvidenceReviewItems: %v", err)
+	}
+	if len(created) < 1 {
+		t.Fatalf("created = %+v, want at least one repeated-failure candidate", created)
+	}
+	if got := negativeEvidenceReviewEvidenceByTool(created, "bash"); got != "recent-bash-window-fail-1,recent-bash-window-fail-2" {
+		t.Fatalf("bash evidence ids = %q, want recent repeated failures not dropped by full scan window", got)
+	}
+}
+
 func TestNegativeEvidenceReviewsFilterObservationScanBeforeDefaultLimit(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

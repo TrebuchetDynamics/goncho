@@ -18,9 +18,14 @@ const (
 
 	// negativeEvidenceObservationScanLimit is a pre-candidate scan guard. It must be
 	// larger than the review-item limit because candidate grouping happens after
-	// observations are fetched.
+	// observations are fetched. The scan is intentionally newest-first so a full
+	// history cannot hide the failures most likely to be repeated now.
 	negativeEvidenceObservationScanLimit = 5000
 )
+
+func negativeEvidenceObservationScanOrderSQL() string {
+	return " ORDER BY observed_at DESC, id DESC LIMIT ?"
+}
 
 type NegativeEvidenceCandidateInput struct {
 	Projection   SessionEvidenceProjection `json:"projection"`
@@ -165,7 +170,7 @@ func (s *Service) listNegativeEvidenceObservations(ctx context.Context, q Observ
 		}
 		query += " AND kind IN (" + strings.Join(placeholders, ",") + ")"
 	}
-	query += " ORDER BY observed_at ASC, id ASC LIMIT ?"
+	query += negativeEvidenceObservationScanOrderSQL()
 	args = append(args, q.Limit)
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
