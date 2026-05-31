@@ -57,6 +57,10 @@ func (g queryDecomposingRecallGenerator) Generate(ctx context.Context, q RecallQ
 	return out, nil
 }
 
+func (g queryDecomposingRecallGenerator) RecallWarnings() []RecallWarning {
+	return recallWarningsFromGenerator(g.base)
+}
+
 func plannedRecallQueries(q RecallQuery, planner recallSubqueryPlanner) []RecallQuery {
 	queries := []RecallQuery{}
 	seen := map[string]struct{}{}

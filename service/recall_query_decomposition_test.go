@@ -7,6 +7,28 @@ import (
 	"time"
 )
 
+func TestRecallQueryDecompositionPropagatesBaseGeneratorWarnings(t *testing.T) {
+	engine := newRecallPipelineEngine(
+		newQueryDecomposingRecallGenerator(staticRecallGenerator{
+			warnings: []RecallWarning{{
+				Code:     RecallWarningSemanticUnavailable,
+				Stage:    RecallStageGenerate,
+				Severity: RecallWarningDegraded,
+				Message:  "semantic provider unavailable during decomposed recall",
+			}},
+		}, fixedRecallSubqueries("authentication owner")),
+		recallPipelineOptions{scoringConfig: RecallScoringConfig{Version: "warning-propagation-test-v1"}},
+	)
+
+	trace, err := engine.Run(context.Background(), RecallQuery{Query: "authentication incident", ScopeID: "team"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !recallTraceHasWarning(trace, RecallWarningSemanticUnavailable) {
+		t.Fatalf("trace warnings = %+v, want wrapped base generator warning", trace.Warnings)
+	}
+}
+
 func TestRecallQueryDecompositionRetrievesEachSubQuestionFact(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{
