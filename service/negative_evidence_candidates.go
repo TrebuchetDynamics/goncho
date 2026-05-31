@@ -129,8 +129,9 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 		minFailures = 2
 	}
 	type bucket struct {
-		candidate  NegativeEvidenceCandidate
-		evidenceID []negativeEvidenceEvidenceRef
+		candidate      NegativeEvidenceCandidate
+		evidenceID     []negativeEvidenceEvidenceRef
+		observationIDs map[string]struct{}
 	}
 	buckets := map[negativeEvidenceCandidateKey]*bucket{}
 	for _, obs := range input.Observations {
@@ -140,12 +141,15 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 		key, seed := negativeEvidenceCandidateSeed(input.Projection, obs)
 		b := buckets[key]
 		if b == nil {
-			b = &bucket{candidate: seed}
+			b = &bucket{candidate: seed, observationIDs: map[string]struct{}{}}
 			buckets[key] = b
 		}
+		if !negativeEvidenceRecordObservation(b.observationIDs, obs.ID) {
+			continue
+		}
 		b.candidate.FailureCount++
-		if strings.TrimSpace(obs.ID) != "" {
-			b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: strings.TrimSpace(obs.ID), ObservedAt: obs.ObservedAt})
+		if id := negativeEvidenceObservationID(obs.ID); id != "" {
+			b.evidenceID = append(b.evidenceID, negativeEvidenceEvidenceRef{ID: id, ObservedAt: obs.ObservedAt})
 		}
 		if !obs.ObservedAt.IsZero() && (b.candidate.FirstObservedAt.IsZero() || obs.ObservedAt.Before(b.candidate.FirstObservedAt)) {
 			b.candidate.FirstObservedAt = obs.ObservedAt
@@ -219,6 +223,22 @@ func negativeEvidenceFailureObservation(obs Observation) bool {
 		return obs.Kind == ObservationKindToolResult || obs.Kind == ObservationKindCustom || obs.Kind == ObservationKindToolCall
 	}
 	return false
+}
+
+func negativeEvidenceRecordObservation(seen map[string]struct{}, rawID string) bool {
+	id := negativeEvidenceObservationID(rawID)
+	if id == "" {
+		return true
+	}
+	if _, ok := seen[id]; ok {
+		return false
+	}
+	seen[id] = struct{}{}
+	return true
+}
+
+func negativeEvidenceObservationID(rawID string) string {
+	return strings.TrimSpace(rawID)
 }
 
 type negativeEvidenceEvidenceRef struct {

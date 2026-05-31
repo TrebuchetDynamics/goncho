@@ -33,6 +33,21 @@ func TestNegativeEvidenceCandidatesDoNotCollapseDelimiterBearingDimensions(t *te
 	}
 }
 
+func TestNegativeEvidenceCandidatesDoNotPromoteReplayedObservationID(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "replayed-fail", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "replayed-fail", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+		},
+	})
+	if len(candidates) != 0 {
+		t.Fatalf("candidates = %+v, want duplicate observation id not to become repeated-failure evidence", candidates)
+	}
+}
+
 func TestNegativeEvidenceCandidatesOrderEvidenceByFailureTimeline(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
