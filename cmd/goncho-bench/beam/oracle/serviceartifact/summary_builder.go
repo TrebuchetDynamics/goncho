@@ -5,6 +5,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/casecontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -21,8 +22,8 @@ type SummaryOptions struct {
 // BuildSummary projects a recall report into the BEAM service summary artifact contract.
 func BuildSummary(report goncho.RecallBenchmarkReport, opts SummaryOptions) SummaryFile {
 	type scaleStats struct {
-		abilityTallies map[string]*shared.ScoreTally
-		overallTally   shared.ScoreTally
+		abilityTallies map[string]*sharedscore.ScoreTally
+		overallTally   sharedscore.ScoreTally
 	}
 	stats := map[string]*scaleStats{}
 	for _, c := range report.Cases {
@@ -33,12 +34,12 @@ func BuildSummary(report goncho.RecallBenchmarkReport, opts SummaryOptions) Summ
 		scale := casecontract.Scale(c)
 		acc := stats[scale]
 		if acc == nil {
-			acc = &scaleStats{abilityTallies: map[string]*shared.ScoreTally{}}
+			acc = &scaleStats{abilityTallies: map[string]*sharedscore.ScoreTally{}}
 			stats[scale] = acc
 		}
 		tally := acc.abilityTallies[ability]
 		if tally == nil {
-			tally = &shared.ScoreTally{}
+			tally = &sharedscore.ScoreTally{}
 			acc.abilityTallies[ability] = tally
 		}
 		score := opts.Score(c)

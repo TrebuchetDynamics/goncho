@@ -1,6 +1,6 @@
 package score
 
-import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+import sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 
 const (
 	WinnerCandidate = "candidate"
@@ -16,8 +16,8 @@ type Summary struct {
 	BaselineWins      int
 	CandidateWins     int
 	Ties              int
-	baselineTally     shared.ScoreTally
-	candidateTally    shared.ScoreTally
+	baselineTally     sharedscore.ScoreTally
+	candidateTally    sharedscore.ScoreTally
 }
 
 func (s *Summary) Add(baselineScore, candidateScore float64, winner string) {
@@ -26,7 +26,7 @@ func (s *Summary) Add(baselineScore, candidateScore float64, winner string) {
 	s.candidateTally.Add(candidateScore)
 	s.BaselineAvgScore = s.baselineTally.Average()
 	s.CandidateAvgScore = s.candidateTally.Average()
-	s.ScoreDelta = shared.RoundSignedMetric(s.CandidateAvgScore - s.BaselineAvgScore)
+	s.ScoreDelta = sharedscore.RoundSignedMetric(s.CandidateAvgScore - s.BaselineAvgScore)
 	s.AddWinner(winner)
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/casecontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -170,7 +171,7 @@ func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, confi
 
 func beamServiceArtifactScore(c goncho.RecallBenchmarkCaseReport, judgments *beamServiceJudgmentSet) float64 {
 	if row, ok := judgments.Find(c); ok {
-		return shared.RoundMetric(row.Score)
+		return sharedscore.RoundMetric(row.Score)
 	}
 	return beamServiceCaseScore(c)
 }

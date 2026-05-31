@@ -8,6 +8,8 @@ import (
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/matchcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/collection"
+	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 )
 
 const bootstrapSeed int64 = 42
@@ -77,7 +79,7 @@ func Build(cfg Config) (comparisoncontract.Report, error) {
 		scale := shared.FirstNonEmptyTrimmed(cand.Scale, base.Scale)
 		conversationID := shared.FirstNonEmptyTrimmed(cand.ConversationID, base.ConversationID)
 		qid := shared.FirstNonEmptyTrimmed(cand.QID, base.QID)
-		delta := shared.RoundSignedMetric(cand.Score - base.Score)
+		delta := sharedscore.RoundSignedMetric(cand.Score - base.Score)
 		comparisonRows = append(comparisonRows, comparisoncontract.Row{
 			Scale:                 scale,
 			ConversationID:        conversationID,
@@ -91,8 +93,8 @@ func Build(cfg Config) (comparisoncontract.Report, error) {
 			MatchKey:              matched.MatchKey,
 			Ability:               ability,
 			Question:              question,
-			BaselineScore:         shared.RoundMetric(base.Score),
-			CandidateScore:        shared.RoundMetric(cand.Score),
+			BaselineScore:         sharedscore.RoundMetric(base.Score),
+			CandidateScore:        sharedscore.RoundMetric(cand.Score),
 			ScoreDelta:            delta,
 			BaselineCorrect:       base.Correct,
 			CandidateCorrect:      cand.Correct,
@@ -171,5 +173,5 @@ func WriteMarkdown(path, jsonPath string, report comparisoncontract.Report) erro
 }
 
 func SortedAbilities(byAbility map[string]comparisoncontract.Stats) []string {
-	return shared.SortedStringMapKeys(byAbility)
+	return collection.SortedStringMapKeys(byAbility)
 }

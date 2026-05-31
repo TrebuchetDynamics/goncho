@@ -4,13 +4,13 @@ import (
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/bootstrap"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/score"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/verdict"
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 )
 
 func SummarizeRows(rows []Row, bootstrapSamples int, bootstrapSeed int64, effectSizeFloor float64) Report {
 	report := Report{
 		PairedCount:      len(rows),
-		EffectSizeFloor:  shared.RoundMetric(effectSizeFloor),
+		EffectSizeFloor:  sharedscore.RoundMetric(effectSizeFloor),
 		BootstrapSamples: bootstrapSamples,
 		BootstrapSeed:    bootstrapSeed,
 		ByAbility:        map[string]Stats{},

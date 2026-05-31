@@ -6,6 +6,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/artifactcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/casecontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/collection"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -61,7 +62,7 @@ func BuildFailureAuditRows(report goncho.RecallBenchmarkReport, configID string,
 			ExpectedNoAnswer:      c.ExpectedNoAnswer,
 			CandidateMemoryIDs:    fields.CandidateMemoryIDs,
 			SelectedMemoryIDs:     fields.SelectedMemoryIDs,
-			RetrievedTop10:        shared.TopN(c.CandidateMemoryIDs, 10),
+			RetrievedTop10:        collection.TopN(c.CandidateMemoryIDs, 10),
 			SelectedEvidenceKinds: append([]string(nil), c.SelectedEvidenceKinds...),
 			TopEvidenceKinds:      append([]string(nil), c.TopEvidenceKinds...),
 			RecallAt5:             c.RecallAt5,

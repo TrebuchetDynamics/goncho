@@ -13,6 +13,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/convertcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/convertpolicy"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/collection"
 	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
 )
 
@@ -121,7 +122,7 @@ func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fall
 			Content:        content,
 		})
 	}
-	for _, ability := range shared.SortedStringMapKeys(questionsByAbility) {
+	for _, ability := range collection.SortedStringMapKeys(questionsByAbility) {
 		questions := questionsByAbility[ability]
 		for i, question := range questions {
 			query := stringutil.FirstNonEmpty(question.Question, question.Query, question.Prompt)

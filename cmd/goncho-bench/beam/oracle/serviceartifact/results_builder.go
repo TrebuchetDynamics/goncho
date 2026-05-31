@@ -7,6 +7,8 @@ import (
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/artifactcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/casecontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/collection"
+	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -65,7 +67,7 @@ func BuildResults(report goncho.RecallBenchmarkReport, opts ResultsOptions) Resu
 		answerTimeMS := 0.0
 		judgeTimeMS := 0.0
 		if judgment.Has {
-			score = shared.RoundMetric(judgment.Score)
+			score = sharedscore.RoundMetric(judgment.Score)
 			aiAnswer = strings.TrimSpace(judgment.AIAnswer)
 			nuggets = append([]string(nil), judgment.Nuggets...)
 			assessment = strings.TrimSpace(judgment.Assessment)
@@ -109,7 +111,7 @@ func BuildResults(report goncho.RecallBenchmarkReport, opts ResultsOptions) Resu
 			JudgeModel:         opts.JudgeModel,
 			TopK:               5,
 			SampleSize:         len(conversationResults),
-			Scales:             shared.SortedStringMapKeys(scales),
+			Scales:             collection.SortedStringMapKeys(scales),
 			TotalConversations: len(conversationResults),
 			PureRecall:         opts.PureRecall,
 			Config: map[string]any{

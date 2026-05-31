@@ -5,7 +5,7 @@ import (
 	"sort"
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/paired/comparisoncontract/verdict"
-	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 )
 
 func MeanCI(values []float64, samples int, seed int64) verdict.CI {
@@ -27,5 +27,5 @@ func MeanCI(values []float64, samples int, seed int64) verdict.CI {
 	if upperIndex >= len(means) {
 		upperIndex = len(means) - 1
 	}
-	return verdict.CI{Lower: shared.RoundSignedMetric(means[lowerIndex]), Upper: shared.RoundSignedMetric(means[upperIndex])}
+	return verdict.CI{Lower: sharedscore.RoundSignedMetric(means[lowerIndex]), Upper: sharedscore.RoundSignedMetric(means[upperIndex])}
 }

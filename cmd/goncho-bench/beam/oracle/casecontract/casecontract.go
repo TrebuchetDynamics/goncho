@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -34,7 +35,7 @@ func Score(c goncho.RecallBenchmarkCaseReport) float64 {
 	if len(c.RequiredEvidenceKinds) > 0 && !c.ProvenanceSatisfied {
 		return 0
 	}
-	return shared.RoundMetric(c.RecallAt5)
+	return sharedscore.RoundMetric(c.RecallAt5)
 }
 
 func FirstRelevantRank(candidateIDs, relevantIDs []string) int {

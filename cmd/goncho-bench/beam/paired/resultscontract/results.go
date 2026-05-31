@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
+	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 )
 
 const DefaultConfigID = "beam-results"
@@ -43,7 +44,7 @@ func OutcomesFromResults(results File, overrideConfigID, sourcePath, sourceSHA25
 			if qid == "" {
 				return nil, fmt.Errorf("goncho-bench: BEAM paired result conversation %d result %d missing qid", conversationIndex+1, resultIndex+1)
 			}
-			score := shared.RoundMetric(result.Score)
+			score := sharedscore.RoundMetric(result.Score)
 			out = append(out, shared.PairedOutcome{
 				ConfigID:       configID,
 				RunStartedAt:   runStartedAt,
