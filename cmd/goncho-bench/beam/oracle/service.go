@@ -172,8 +172,9 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 	conversationOrder := []string{}
 	scales := map[string]struct{}{}
 	for _, c := range report.Cases {
-		conversationID := beamServiceCaseConversationID(c)
-		scale := beamServiceCaseScale(c)
+		fields := artifactcontract.BuildCaseFields(c)
+		conversationID := fields.ConversationID
+		scale := fields.Scale
 		key := scale + "\x00" + conversationID
 		acc := byConversation[key]
 		if acc == nil {
@@ -198,13 +199,13 @@ func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID strin
 			judgeTimeMS = judgment.JudgeTimeMS
 		}
 		acc.results = append(acc.results, beamServiceQuestionResult{
-			QID:                  c.ID,
-			Ability:              shared.NormalizeAbility(c.Ability),
-			Question:             strings.TrimSpace(c.Question),
+			QID:                  fields.QID,
+			Ability:              fields.Ability,
+			Question:             fields.Question,
 			IdealAnswer:          strings.TrimSpace(c.IdealAnswer),
 			Rubric:               append([]string(nil), c.Rubric...),
 			RubricContextScore:   c.RubricContextScore,
-			RubricContextMatches: append([]string(nil), c.RubricContextMatches...),
+			RubricContextMatches: fields.RubricContextMatches,
 			AIAnswer:             aiAnswer,
 			RecallProvenance:     beamServiceCaseRecallProvenance(c),
 			Score:                score,
@@ -353,15 +354,16 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 	out := make([]beamServicePairedOutcome, 0, len(report.Cases))
 	started := shared.FormatArtifactTimestamp(runStartedAt)
 	for _, c := range report.Cases {
+		fields := artifactcontract.BuildCaseFields(c)
 		score := beamServiceArtifactScore(c, judgments)
 		out = append(out, beamServicePairedOutcome{
 			ConfigID:       configID,
 			RunStartedAt:   started,
-			Scale:          beamServiceCaseScale(c),
-			ConversationID: beamServiceCaseConversationID(c),
-			QID:            c.ID,
-			Ability:        shared.NormalizeAbility(c.Ability),
-			Question:       strings.TrimSpace(c.Question),
+			Scale:          fields.Scale,
+			ConversationID: fields.ConversationID,
+			QID:            fields.QID,
+			Ability:        fields.Ability,
+			Question:       fields.Question,
 			Score:          score,
 			Correct:        shared.PairedOutcomeCorrect(score),
 		})
@@ -381,22 +383,23 @@ func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, confi
 		if score >= 1 {
 			continue
 		}
+		fields := artifactcontract.BuildCaseFields(c)
 		out = append(out, beamServiceFailureAuditRow{
 			ConfigID:              configID,
 			RunStartedAt:          started,
-			Scale:                 beamServiceCaseScale(c),
-			ConversationID:        beamServiceCaseConversationID(c),
-			QID:                   c.ID,
-			Ability:               shared.NormalizeAbility(c.Ability),
-			Question:              strings.TrimSpace(c.Question),
+			Scale:                 fields.Scale,
+			ConversationID:        fields.ConversationID,
+			QID:                   fields.QID,
+			Ability:               fields.Ability,
+			Question:              fields.Question,
 			Score:                 score,
 			FailureMode:           beamServiceFailureMode(c, score),
 			Rank:                  beamServiceFirstRelevantRank(c.CandidateMemoryIDs, c.RelevantIDs),
 			RelevantIDs:           append([]string(nil), c.RelevantIDs...),
 			RequiredEvidenceKinds: append([]string(nil), c.RequiredEvidenceKinds...),
 			ExpectedNoAnswer:      c.ExpectedNoAnswer,
-			CandidateMemoryIDs:    append([]string(nil), c.CandidateMemoryIDs...),
-			SelectedMemoryIDs:     append([]string(nil), c.SelectedMemoryIDs...),
+			CandidateMemoryIDs:    fields.CandidateMemoryIDs,
+			SelectedMemoryIDs:     fields.SelectedMemoryIDs,
 			RetrievedTop10:        shared.TopN(c.CandidateMemoryIDs, 10),
 			SelectedEvidenceKinds: append([]string(nil), c.SelectedEvidenceKinds...),
 			TopEvidenceKinds:      append([]string(nil), c.TopEvidenceKinds...),

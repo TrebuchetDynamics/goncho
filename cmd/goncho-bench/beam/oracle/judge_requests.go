@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/artifactcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/judgeprompt"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
@@ -45,24 +46,24 @@ func buildBeamServiceJudgeRequestRows(report goncho.RecallBenchmarkReport, confi
 	out := make([]beamServiceJudgeRequestRow, 0, len(report.Cases))
 	started := shared.FormatArtifactTimestamp(runStartedAt)
 	for _, c := range report.Cases {
-		question := strings.TrimSpace(c.Question)
+		fields := artifactcontract.BuildCaseFields(c)
 		context := strings.TrimSpace(c.SelectedContext)
 		out = append(out, beamServiceJudgeRequestRow{
 			ConfigID:             configID,
 			RunStartedAt:         started,
-			Scale:                beamServiceCaseScale(c),
-			ConversationID:       beamServiceCaseConversationID(c),
-			QID:                  c.ID,
-			Ability:              shared.NormalizeAbility(c.Ability),
-			Question:             question,
+			Scale:                fields.Scale,
+			ConversationID:       fields.ConversationID,
+			QID:                  fields.QID,
+			Ability:              fields.Ability,
+			Question:             fields.Question,
 			PureRecall:           true,
-			AnswerRequest:        buildBeamServiceAnswerRequest(question, context),
-			JudgeRequest:         buildBeamServiceJudgePrompt(question, c.IdealAnswer, c.Rubric),
+			AnswerRequest:        buildBeamServiceAnswerRequest(fields.Question, context),
+			JudgeRequest:         buildBeamServiceJudgePrompt(fields.Question, c.IdealAnswer, c.Rubric),
 			RecallProvenance:     beamServiceCaseRecallProvenance(c),
-			CandidateMemoryIDs:   append([]string(nil), c.CandidateMemoryIDs...),
-			SelectedMemoryIDs:    append([]string(nil), c.SelectedMemoryIDs...),
-			RubricContextScore:   c.RubricContextScore,
-			RubricContextMatches: append([]string(nil), c.RubricContextMatches...),
+			CandidateMemoryIDs:   fields.CandidateMemoryIDs,
+			SelectedMemoryIDs:    fields.SelectedMemoryIDs,
+			RubricContextScore:   fields.RubricContextScore,
+			RubricContextMatches: fields.RubricContextMatches,
 		})
 	}
 	return out
