@@ -122,6 +122,9 @@ func TestVerifyRejectsWrongSecretAndExpiredToken(t *testing.T) {
 	if _, err := scopedkey.Verify(got.Key, "wrong", now); !errors.Is(err, scopedkey.ErrInvalid) {
 		t.Fatalf("wrong-secret err = %v, want ErrInvalid", err)
 	}
+	if _, err := scopedkey.Verify(got.Key, "secret", now.Add(time.Minute)); !errors.Is(err, scopedkey.ErrExpired) {
+		t.Fatalf("exact-expiration err = %v, want ErrExpired", err)
+	}
 	if _, err := scopedkey.Verify(got.Key, "secret", now.Add(2*time.Minute)); !errors.Is(err, scopedkey.ErrExpired) {
 		t.Fatalf("expired err = %v, want ErrExpired", err)
 	}

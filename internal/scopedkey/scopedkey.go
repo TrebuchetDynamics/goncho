@@ -95,19 +95,32 @@ func Verify(token, secret string, now time.Time) (Claims, error) {
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return Claims{}, fmt.Errorf("%w: decode claims", ErrInvalid)
 	}
-	if claims.ExpiresAt != "" {
-		exp, err := time.Parse(time.RFC3339, claims.ExpiresAt)
-		if err != nil {
-			return Claims{}, fmt.Errorf("%w: invalid expiration", ErrInvalid)
-		}
-		if now.IsZero() {
-			now = time.Now().UTC()
-		}
-		if exp.Before(now.UTC()) {
-			return Claims{}, ErrExpired
-		}
+	if err := verifyExpiration(claims.ExpiresAt, now); err != nil {
+		return Claims{}, err
 	}
 	return claims, nil
+}
+
+func verifyExpiration(rawExp string, now time.Time) error {
+	if rawExp == "" {
+		return nil
+	}
+	exp, err := time.Parse(time.RFC3339, rawExp)
+	if err != nil {
+		return fmt.Errorf("%w: invalid expiration", ErrInvalid)
+	}
+	if isExpired(exp, now) {
+		return ErrExpired
+	}
+	return nil
+}
+
+func isExpired(exp, now time.Time) bool {
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	// JWT exp is exclusive: a token must not be accepted at or after exp.
+	return !now.UTC().Before(exp.UTC())
 }
 
 func sign(claims Claims, secret string) (string, error) {
