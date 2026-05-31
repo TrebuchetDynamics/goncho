@@ -85,94 +85,25 @@ func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, c
 }
 
 func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) beamServiceResultsFile {
-	type conversationAccumulator struct {
-		conversationID string
-		scale          string
-		results        []beamServiceQuestionResult
-	}
-	byConversation := map[string]*conversationAccumulator{}
-	conversationOrder := []string{}
-	scales := map[string]struct{}{}
-	for _, c := range report.Cases {
-		fields := artifactcontract.BuildCaseFields(c)
-		conversationID := fields.ConversationID
-		scale := fields.Scale
-		key := scale + "\x00" + conversationID
-		acc := byConversation[key]
-		if acc == nil {
-			acc = &conversationAccumulator{conversationID: conversationID, scale: scale}
-			byConversation[key] = acc
-			conversationOrder = append(conversationOrder, key)
-		}
-		scales[scale] = struct{}{}
-		judgment, hasJudgment := judgments.Find(c)
-		score := beamServiceCaseScore(c)
-		aiAnswer := ""
-		nuggets := []string{}
-		assessment := beamServiceCaseAssessment(c, score)
-		answerTimeMS := 0.0
-		judgeTimeMS := 0.0
-		if hasJudgment {
-			score = shared.RoundMetric(judgment.Score)
-			aiAnswer = strings.TrimSpace(judgment.AIAnswer)
-			nuggets = append([]string(nil), judgment.Nuggets...)
-			assessment = strings.TrimSpace(judgment.Assessment)
-			answerTimeMS = judgment.AnswerTimeMS
-			judgeTimeMS = judgment.JudgeTimeMS
-		}
-		acc.results = append(acc.results, beamServiceQuestionResult{
-			QID:                  fields.QID,
-			Ability:              fields.Ability,
-			Question:             fields.Question,
-			IdealAnswer:          strings.TrimSpace(c.IdealAnswer),
-			Rubric:               append([]string(nil), c.Rubric...),
-			RubricContextScore:   c.RubricContextScore,
-			RubricContextMatches: fields.RubricContextMatches,
-			AIAnswer:             aiAnswer,
-			RecallProvenance:     beamServiceCaseRecallProvenance(c),
-			Score:                score,
-			Nuggets:              nuggets,
-			Assessment:           assessment,
-			AnswerTimeMS:         answerTimeMS,
-			JudgeTimeMS:          judgeTimeMS,
-		})
-	}
-	conversationResults := make([]beamServiceConversationResults, 0, len(conversationOrder))
-	for _, key := range conversationOrder {
-		acc := byConversation[key]
-		conversationResults = append(conversationResults, beamServiceConversationResults{
-			ConversationID: acc.conversationID,
-			Scale:          acc.scale,
-			NumQuestions:   len(acc.results),
-			NumEvaluated:   len(acc.results),
-			Results:        acc.results,
-		})
-	}
-	scaleList := shared.SortedStringMapKeys(scales)
-	started := shared.FormatArtifactTimestamp(runStartedAt)
-	return beamServiceResultsFile{
-		Metadata: beamServiceResultsMetadata{
-			Date:               time.Now().UTC().Format(beamServiceSummaryDateFormat),
-			RunStartedAt:       started,
-			ConfigID:           configID,
-			Model:              beamServiceModelName,
-			JudgeModel:         beamServiceJudgeModel(judgments),
-			TopK:               5,
-			SampleSize:         len(conversationResults),
-			Scales:             scaleList,
-			TotalConversations: len(conversationResults),
-			PureRecall:         judgments == nil,
-			Config: map[string]any{
-				"pure_recall":           judgments == nil,
-				"external_judgments":    judgments != nil,
-				"allow_harness_oracles": false,
-				"full_context":          false,
-				"use_cloud":             false,
-			},
-			Diagnostics: beamServiceResultsDiagnostics(report, conversionDiagnostics, leakageChecks, judgments),
+	return serviceartifact.BuildResults(report, serviceartifact.ResultsOptions{
+		ConfigID:    configID,
+		RunStarted:  runStartedAt,
+		JudgeModel:  beamServiceJudgeModel(judgments),
+		PureRecall:  judgments == nil,
+		Diagnostics: beamServiceResultsDiagnostics(report, conversionDiagnostics, leakageChecks, judgments),
+		Judgment: func(c goncho.RecallBenchmarkCaseReport) serviceartifact.CaseJudgment {
+			judgment, ok := judgments.Find(c)
+			return serviceartifact.CaseJudgment{
+				Has:          ok,
+				Score:        judgment.Score,
+				AIAnswer:     judgment.AIAnswer,
+				Nuggets:      judgment.Nuggets,
+				Assessment:   judgment.Assessment,
+				AnswerTimeMS: judgment.AnswerTimeMS,
+				JudgeTimeMS:  judgment.JudgeTimeMS,
+			}
 		},
-		Results: conversationResults,
-	}
+	})
 }
 
 func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) map[string]interface{} {
@@ -197,14 +128,6 @@ func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversi
 	return diagnostics
 }
 
-func beamServiceCaseRecallProvenance(c goncho.RecallBenchmarkCaseReport) beamServiceRecallProvenance {
-	return artifactcontract.BuildRecallProvenance(c)
-}
-
-func beamServiceCaseAssessment(c goncho.RecallBenchmarkCaseReport, score float64) string {
-	return casecontract.Assessment(c, score)
-}
-
 func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) error {
 	summary := buildBeamServiceSummary(report, configID, runStartedAt, judgments)
 	raw, err := shared.MarshalIndentedJSON(summary)
@@ -215,57 +138,16 @@ func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, c
 }
 
 func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) beamServiceSummaryFile {
-	type scaleStats struct {
-		abilityTallies map[string]*shared.ScoreTally
-		overallTally   shared.ScoreTally
-	}
-	stats := map[string]*scaleStats{}
-	for _, c := range report.Cases {
-		ability := shared.NormalizeAbility(c.Ability)
-		if ability == "" {
-			continue
-		}
-		scale := beamServiceCaseScale(c)
-		acc := stats[scale]
-		if acc == nil {
-			acc = &scaleStats{abilityTallies: map[string]*shared.ScoreTally{}}
-			stats[scale] = acc
-		}
-		tally := acc.abilityTallies[ability]
-		if tally == nil {
-			tally = &shared.ScoreTally{}
-			acc.abilityTallies[ability] = tally
-		}
-		score := beamServiceArtifactScore(c, judgments)
-		tally.Add(score)
-		acc.overallTally.Add(score)
-	}
-	abilitySummary := map[string]map[string]beamAbilityStats{}
-	for scale, acc := range stats {
-		byAbility := map[string]beamAbilityStats{}
-		for ability, tally := range acc.abilityTallies {
-			byAbility[ability] = beamAbilityStats{AvgScore: tally.Average(), Count: tally.Count()}
-		}
-		if acc.overallTally.Count() > 0 {
-			byAbility["OVERALL"] = beamAbilityStats{AvgScore: acc.overallTally.Average(), Count: acc.overallTally.Count()}
-		}
-		abilitySummary[scale] = byAbility
-	}
-	return beamServiceSummaryFile{
-		Date: runStartedAt.UTC().Format(beamServiceSummaryDateFormat),
-		Metadata: beamServiceSummaryMetadata{
-			Model:       beamServiceModelName,
-			SampleSize:  report.CaseCount,
-			JudgeModel:  beamServiceJudgeModel(judgments),
-			ConfigID:    configID,
-			PureRecall:  judgments == nil,
-			Service:     report.Service,
-			Corpus:      report.CorpusVersion,
-			CaseCount:   report.CaseCount,
-			Description: beamServiceSummaryDescription(judgments),
+	return serviceartifact.BuildSummary(report, serviceartifact.SummaryOptions{
+		ConfigID:    configID,
+		RunStarted:  runStartedAt,
+		JudgeModel:  beamServiceJudgeModel(judgments),
+		Description: beamServiceSummaryDescription(judgments),
+		PureRecall:  judgments == nil,
+		Score: func(c goncho.RecallBenchmarkCaseReport) float64 {
+			return beamServiceArtifactScore(c, judgments)
 		},
-		AbilitySummary: abilitySummary,
-	}
+	})
 }
 
 func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) error {
@@ -273,24 +155,9 @@ func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkR
 }
 
 func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) []beamServicePairedOutcome {
-	out := make([]beamServicePairedOutcome, 0, len(report.Cases))
-	started := shared.FormatArtifactTimestamp(runStartedAt)
-	for _, c := range report.Cases {
-		fields := artifactcontract.BuildCaseFields(c)
-		score := beamServiceArtifactScore(c, judgments)
-		out = append(out, beamServicePairedOutcome{
-			ConfigID:       configID,
-			RunStartedAt:   started,
-			Scale:          fields.Scale,
-			ConversationID: fields.ConversationID,
-			QID:            fields.QID,
-			Ability:        fields.Ability,
-			Question:       fields.Question,
-			Score:          score,
-			Correct:        shared.PairedOutcomeCorrect(score),
-		})
-	}
-	return out
+	return serviceartifact.BuildPairedOutcomes(report, configID, runStartedAt, func(c goncho.RecallBenchmarkCaseReport) float64 {
+		return beamServiceArtifactScore(c, judgments)
+	})
 }
 
 func writeBeamServiceFailureAudit(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
@@ -298,58 +165,7 @@ func writeBeamServiceFailureAudit(path string, report goncho.RecallBenchmarkRepo
 }
 
 func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceFailureAuditRow {
-	out := []beamServiceFailureAuditRow{}
-	started := shared.FormatArtifactTimestamp(runStartedAt)
-	for _, c := range report.Cases {
-		score := beamServiceCaseScore(c)
-		if score >= 1 {
-			continue
-		}
-		fields := artifactcontract.BuildCaseFields(c)
-		out = append(out, beamServiceFailureAuditRow{
-			ConfigID:              configID,
-			RunStartedAt:          started,
-			Scale:                 fields.Scale,
-			ConversationID:        fields.ConversationID,
-			QID:                   fields.QID,
-			Ability:               fields.Ability,
-			Question:              fields.Question,
-			Score:                 score,
-			FailureMode:           beamServiceFailureMode(c, score),
-			Rank:                  beamServiceFirstRelevantRank(c.CandidateMemoryIDs, c.RelevantIDs),
-			RelevantIDs:           append([]string(nil), c.RelevantIDs...),
-			RequiredEvidenceKinds: append([]string(nil), c.RequiredEvidenceKinds...),
-			ExpectedNoAnswer:      c.ExpectedNoAnswer,
-			CandidateMemoryIDs:    fields.CandidateMemoryIDs,
-			SelectedMemoryIDs:     fields.SelectedMemoryIDs,
-			RetrievedTop10:        shared.TopN(c.CandidateMemoryIDs, 10),
-			SelectedEvidenceKinds: append([]string(nil), c.SelectedEvidenceKinds...),
-			TopEvidenceKinds:      append([]string(nil), c.TopEvidenceKinds...),
-			RecallAt5:             c.RecallAt5,
-			RecallAt10:            c.RecallAt10,
-			ContextSatisfied:      c.ContextSatisfied,
-			ProvenanceSatisfied:   c.ProvenanceSatisfied,
-			TokenBudgetWithin:     c.TokenBudgetWithin,
-			WarningCodes:          append([]string(nil), c.WarningCodes...),
-		})
-	}
-	return out
-}
-
-func beamServiceFirstRelevantRank(candidateIDs, relevantIDs []string) int {
-	return casecontract.FirstRelevantRank(candidateIDs, relevantIDs)
-}
-
-func beamServiceFailureMode(c goncho.RecallBenchmarkCaseReport, score float64) string {
-	return casecontract.FailureMode(c, score)
-}
-
-func beamServiceCaseScale(c goncho.RecallBenchmarkCaseReport) string {
-	return casecontract.Scale(c)
-}
-
-func beamServiceCaseConversationID(c goncho.RecallBenchmarkCaseReport) string {
-	return casecontract.ConversationID(c)
+	return serviceartifact.BuildFailureAuditRows(report, configID, runStartedAt)
 }
 
 func beamServiceArtifactScore(c goncho.RecallBenchmarkCaseReport, judgments *beamServiceJudgmentSet) float64 {
