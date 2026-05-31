@@ -98,6 +98,67 @@ func TestMemoryFacadeAddSearchUpdateDeleteHistoryWithStableIDs(t *testing.T) {
 	}
 }
 
+func TestMemoryFacadeSearchScansPastInitialNonMatchingSlots(t *testing.T) {
+	ctx := context.Background()
+	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := NewService(store.DB(), Config{WorkspaceID: "facade-workspace", ObserverPeerID: "agent-alpha"}, nil)
+	facade := NewMemoryFacade(svc)
+
+	for _, id := range []string{"a-decoy-1", "a-decoy-2", "a-decoy-3", "a-decoy-4"} {
+		if _, err := facade.Add(ctx, MemoryAddParams{ID: id, UserID: "user-1", ProfileID: "mineru", Content: "Maya likes blue archive clues.", Metadata: map[string]string{"topic": "decoy"}}); err != nil {
+			t.Fatalf("Add decoy %s: %v", id, err)
+		}
+	}
+	if _, err := facade.Add(ctx, MemoryAddParams{ID: "z-target", UserID: "user-1", ProfileID: "mineru", Content: "Maya likes blue archive clues.", Metadata: map[string]string{"topic": "vault"}}); err != nil {
+		t.Fatalf("Add target: %v", err)
+	}
+
+	got, err := facade.Search(ctx, MemorySearchParams{UserID: "user-1", ProfileID: "mineru", Query: "blue archive", Metadata: map[string]string{"topic": "vault"}, Limit: 1})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].ID != "z-target" {
+		t.Fatalf("search items = %+v, want target after initial nonmatching slots", got.Items)
+	}
+}
+
+func TestMemoryFacadeHistoryScansPastInitialNonMatchingObservations(t *testing.T) {
+	ctx := context.Background()
+	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := NewService(store.DB(), Config{WorkspaceID: "facade-workspace", ObserverPeerID: "agent-alpha"}, nil)
+	facade := NewMemoryFacade(svc)
+	if _, err := facade.Add(ctx, MemoryAddParams{ID: "target", UserID: "user-1", ProfileID: "mineru", Content: "Maya likes blue vault archive clues."}); err != nil {
+		t.Fatalf("Add target: %v", err)
+	}
+	for _, id := range []string{"newer-1", "newer-2", "newer-3", "newer-4"} {
+		if _, err := facade.Add(ctx, MemoryAddParams{ID: id, UserID: "user-1", ProfileID: "mineru", Content: "Maya likes green archive clues."}); err != nil {
+			t.Fatalf("Add newer %s: %v", id, err)
+		}
+	}
+
+	got, err := facade.History(ctx, MemoryHistoryParams{ID: "target", UserID: "user-1", ProfileID: "mineru", Limit: 1})
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if len(got.Events) != 1 || got.Events[0].MemoryID != "target" || got.Events[0].Action != "add" {
+		t.Fatalf("history events = %+v, want target event after initial nonmatching observations", got.Events)
+	}
+}
+
 func historyActions(events []MemoryHistoryEvent) []string {
 	return sliceutil.Map(events, func(event MemoryHistoryEvent) string { return event.Action })
 }

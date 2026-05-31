@@ -234,7 +234,7 @@ func (f *MemoryFacade) Search(ctx context.Context, p MemorySearchParams) (Memory
 		return MemorySearchResult{}, err
 	}
 	limit := limitutil.Default(p.Limit, 10)
-	list, err := f.svc.ListMemorySlots(ctx, MemorySlotQuery{WorkspaceID: p.WorkspaceID, ProfileID: p.ProfileID, Peer: p.UserID, Scope: normalizeMemoryScope("", p.ProfileID), Limit: max(limit*4, limit)})
+	list, err := f.svc.ListMemorySlots(ctx, MemorySlotQuery{WorkspaceID: p.WorkspaceID, ProfileID: p.ProfileID, Peer: p.UserID, Scope: normalizeMemoryScope("", p.ProfileID), Limit: memoryFacadeCandidateScanLimit})
 	if err != nil {
 		return MemorySearchResult{}, err
 	}
@@ -259,7 +259,7 @@ func (f *MemoryFacade) History(ctx context.Context, p MemoryHistoryParams) (Memo
 		return MemoryHistoryResult{}, err
 	}
 	limit := limitutil.Default(p.Limit, 50)
-	list, err := f.svc.ListObservations(ctx, ObservationQuery{WorkspaceID: p.WorkspaceID, ProfileID: p.ProfileID, PeerID: p.UserID, Kinds: []ObservationKind{ObservationKindCustom}, Limit: max(limit*4, limit)})
+	list, err := f.svc.ListObservations(ctx, ObservationQuery{WorkspaceID: p.WorkspaceID, ProfileID: p.ProfileID, PeerID: p.UserID, Kinds: []ObservationKind{ObservationKindCustom}, Limit: memoryFacadeCandidateScanLimit})
 	if err != nil {
 		return MemoryHistoryResult{}, err
 	}
@@ -349,6 +349,10 @@ func decodeMemoryFacadeEnvelope(value string) (memoryFacadeEnvelope, error) {
 	}
 	return env, nil
 }
+
+// memoryFacadeCandidateScanLimit keeps facade filtering from applying the public
+// result limit before envelope/metadata/history predicates have run.
+const memoryFacadeCandidateScanLimit = 1 << 20
 
 func memoryFacadeEnvelopeMatches(env memoryFacadeEnvelope, p MemorySearchParams) bool {
 	if strings.TrimSpace(p.AgentID) != "" && env.AgentID != strings.TrimSpace(p.AgentID) {
