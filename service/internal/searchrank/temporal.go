@@ -1,129 +1,29 @@
 package searchrank
 
-import (
-	"strings"
+import "github.com/TrebuchetDynamics/goncho/service/internal/searchrank/temporal"
 
-	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
-)
-
-type TemporalDirection int
+type TemporalDirection = temporal.Direction
 
 const (
-	TemporalNone TemporalDirection = iota
-	TemporalNewer
-	TemporalOlder
+	TemporalNone  = temporal.DirectionNone
+	TemporalNewer = temporal.DirectionNewer
+	TemporalOlder = temporal.DirectionOlder
 )
 
-type TemporalFeatures struct {
-	Direction TemporalDirection
-	Markers   []string
-	Temporal  bool
-}
+type TemporalFeatures = temporal.Features
 
 func TemporalIntent(query string) TemporalFeatures {
-	q := normalizeTemporalQuery(query)
-	features := TemporalFeatures{Markers: TemporalMarkers(q), Temporal: TemporalQuery(q)}
-	if textutil.ContainsAnySubstring(q, []string{"first", "earliest", "initial", "original", "started first"}) {
-		features.Direction = TemporalOlder
-		return features
-	}
-	if textutil.ContainsAnySubstring(q, []string{"latest", "current", "currently", "most recently"}) {
-		features.Direction = TemporalNewer
-		return features
-	}
-	return features
+	return temporal.Intent(query)
 }
 
 func TemporalQuery(query string) bool {
-	needles := []string{"when", "first", "earliest", "initial", "original", "latest", "current", "currently", "recent", "today", "yesterday", "tomorrow", "last ", "this ", "past ", "how many days", "how many weeks", "how many months", "how many years", "how long", "order of"}
-	return textutil.ContainsAnySubstring(normalizeTemporalQuery(query), needles)
+	return temporal.Query(query)
 }
 
 func TemporalMarkers(query string) []string {
-	q := normalizeTemporalQuery(query)
-	markers := []string{}
-	for _, candidate := range temporalMarkerCandidates() {
-		if containsTemporalMarker(q, candidate) {
-			markers = append(markers, candidate)
-		}
-	}
-	return markers
-}
-
-func containsTemporalMarker(query, marker string) bool {
-	if marker == "" {
-		return false
-	}
-	for offset := 0; offset <= len(query); {
-		idx := strings.Index(query[offset:], marker)
-		if idx < 0 {
-			return false
-		}
-		start := offset + idx
-		end := start + len(marker)
-		if temporalMarkerBoundary(query, start-1) && temporalMarkerBoundary(query, end) {
-			return true
-		}
-		offset = start + 1
-	}
-	return false
-}
-
-func temporalMarkerBoundary(value string, index int) bool {
-	if index < 0 || index >= len(value) {
-		return true
-	}
-	ch := value[index]
-	return !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9'))
-}
-
-func normalizeTemporalQuery(query string) string {
-	return strings.ToLower(query)
-}
-
-func temporalMarkerCandidates() []string {
-	return []string{
-		"today", "yesterday", "tomorrow", "most recently", "this weekend", "this week", "this month", "this year", "past few months", "past three months", "last week", "last month", "last year", "last friday", "last saturday", "last sunday",
-		"january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
-	}
+	return temporal.Markers(query)
 }
 
 func TemporalRerankBonus(features TemporalFeatures, content string, index, total int, score, maxScore float64) float64 {
-	if total < 2 || maxScore <= 0 {
-		return 0
-	}
-	if features.Temporal && GenericAssistantAnswer(content) && PersonalSignalCount(content) < 12 && score >= maxScore*0.70 {
-		return -maxScore * 0.30
-	}
-	if features.Direction == TemporalNone || score < maxScore*0.78 {
-		return 0
-	}
-	contentLower := strings.ToLower(content)
-	markerMatches := 0
-	for _, marker := range features.Markers {
-		if strings.Contains(contentLower, marker) {
-			markerMatches++
-		}
-	}
-	alignment := float64(markerMatches)
-	switch features.Direction {
-	case TemporalNewer:
-		// Newer/current phrasing is common in distractors (for example "new products"),
-		// so only exact query temporal marker matches contribute positive evidence.
-	case TemporalOlder:
-		if textutil.ContainsAnySubstring(contentLower, []string{"first", "initial", "original", "earliest", "started", "began"}) {
-			alignment += 0.5
-		}
-	}
-	if alignment == 0 {
-		return 0
-	}
-	position := 0.0
-	if total > 1 {
-		position = float64(total-1-index) / float64(total-1)
-		if features.Direction == TemporalOlder {
-			position = float64(index) / float64(total-1)
-		}
-	}
-	return maxScore * 0.08 * alignment * (0.5 + 0.5*position)
+	return temporal.RerankBonus(features, content, index, total, score, maxScore)
 }
