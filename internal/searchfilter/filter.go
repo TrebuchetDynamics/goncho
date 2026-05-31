@@ -169,13 +169,19 @@ func parseMetadataMap(raw map[string]any, path []string) (Expression, error) {
 	children := make([]Expression, 0, len(raw))
 	for key, value := range raw {
 		fieldPath := appendPath(path, key)
-		if nested, ok := value.(map[string]any); ok && !isOperatorMap(nested) {
-			child, err := parseMetadataMap(nested, fieldPath)
-			if err != nil {
-				return Expression{}, err
+		if nested, ok := value.(map[string]any); ok {
+			classification := classifyOperatorMap(nested)
+			if classification.Mixed {
+				return Expression{}, unsupportedFilter(strings.Join(fieldPath, "."), classification.UnknownOperator, "unknown filter operator")
 			}
-			children = append(children, child)
-			continue
+			if !classification.Valid {
+				child, err := parseMetadataMap(nested, fieldPath)
+				if err != nil {
+					return Expression{}, err
+				}
+				children = append(children, child)
+				continue
+			}
 		}
 		child, err := parseFieldCondition(strings.Join(fieldPath, "."), value)
 		if err != nil {
@@ -282,16 +288,45 @@ func isSupportedTopLevelFilterField(field string) bool {
 	}
 }
 
+type operatorMapClassification struct {
+	Valid           bool
+	Mixed           bool
+	UnknownOperator string
+}
+
 func isOperatorMap(raw map[string]any) bool {
+	return classifyOperatorMap(raw).Valid
+}
+
+func classifyOperatorMap(raw map[string]any) operatorMapClassification {
 	if len(raw) == 0 {
-		return false
+		return operatorMapClassification{}
 	}
+
+	keys := make([]string, 0, len(raw))
 	for key := range raw {
-		if _, ok := parseFilterOperator(key); !ok {
-			return false
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+
+	knownOperators := 0
+	unknownOperator := ""
+	for _, key := range keys {
+		if _, ok := parseFilterOperator(key); ok {
+			knownOperators++
+			continue
+		}
+		if unknownOperator == "" {
+			unknownOperator = key
 		}
 	}
-	return true
+	if knownOperators == len(keys) {
+		return operatorMapClassification{Valid: true}
+	}
+	if knownOperators > 0 {
+		return operatorMapClassification{Mixed: true, UnknownOperator: unknownOperator}
+	}
+	return operatorMapClassification{}
 }
 
 func unsupportedFilter(field, operator, reason string) *UnsupportedFilterError {

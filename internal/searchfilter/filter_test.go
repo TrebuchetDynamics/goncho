@@ -76,6 +76,14 @@ func TestGrammarRejectsUnknownFieldsAndOperators(t *testing.T) {
 			wantField: "created_at",
 			wantOp:    "regex",
 		},
+		{
+			name: "mixed metadata operator map",
+			filter: map[string]any{"metadata": map[string]any{
+				"score": map[string]any{"gt": 0.8, "regex": "^0\\."},
+			}},
+			wantField: "metadata.score",
+			wantOp:    "regex",
+		},
 	}
 
 	for _, tt := range tests {
