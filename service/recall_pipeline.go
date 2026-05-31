@@ -964,19 +964,18 @@ func recallEvidenceInlineScalarValue(fields []string, idx int, field, key string
 	}
 	value = recallNormalizeEvidenceNoteField(value)
 	if value != "" {
-		return value, true
+		return recallEvidenceScalarSpanValue(fields, idx+1, value)
 	}
 	if idx+1 >= len(fields) {
 		return "", false
 	}
 	if value, ok := recallEvidenceLeadingEqualsValue(fields[idx+1]); ok {
-		return value, true
+		return recallEvidenceScalarSpanValue(fields, idx+2, value)
 	}
 	if recallEvidenceFieldStartsAssignment(fields, idx+1) {
 		return "", false
 	}
-	value = recallNormalizeEvidenceNoteField(fields[idx+1])
-	return value, value != ""
+	return recallEvidenceScalarSpanValue(fields, idx+1, "")
 }
 
 func recallEvidenceSpacedScalarValue(fields []string, idx int, field, key string) (string, bool) {
@@ -984,10 +983,12 @@ func recallEvidenceSpacedScalarValue(fields []string, idx int, field, key string
 		return "", false
 	}
 	if fields[idx+1] == "=" && idx+2 < len(fields) {
-		value := recallNormalizeEvidenceNoteField(fields[idx+2])
-		return value, value != ""
+		return recallEvidenceScalarSpanValue(fields, idx+2, "")
 	}
-	return recallEvidenceLeadingEqualsValue(fields[idx+1])
+	if value, ok := recallEvidenceLeadingEqualsValue(fields[idx+1]); ok {
+		return recallEvidenceScalarSpanValue(fields, idx+2, value)
+	}
+	return "", false
 }
 
 func recallEvidenceLeadingEqualsValue(field string) (string, bool) {
@@ -997,6 +998,40 @@ func recallEvidenceLeadingEqualsValue(field string) (string, bool) {
 	}
 	value = recallNormalizeEvidenceNoteField(value)
 	return value, value != ""
+}
+
+func recallEvidenceScalarSpanValue(fields []string, start int, first string) (string, bool) {
+	parts := make([]string, 0, 1)
+	if first = recallNormalizeEvidenceNoteField(first); first != "" {
+		parts = append(parts, first)
+	}
+	spanUntilNextAssignment := recallEvidenceHasAssignmentAtOrAfter(fields, start)
+	for i := start; i < len(fields); i++ {
+		if recallEvidenceFieldStartsAssignment(fields, i) {
+			break
+		}
+		if len(parts) > 0 && !spanUntilNextAssignment {
+			break
+		}
+		field := recallNormalizeEvidenceNoteField(fields[i])
+		if field == "" {
+			continue
+		}
+		parts = append(parts, field)
+	}
+	if len(parts) == 0 {
+		return "", false
+	}
+	return strings.Join(parts, " "), true
+}
+
+func recallEvidenceHasAssignmentAtOrAfter(fields []string, start int) bool {
+	for i := start; i < len(fields); i++ {
+		if recallEvidenceFieldStartsAssignment(fields, i) {
+			return true
+		}
+	}
+	return false
 }
 
 func recallEvidenceFieldStartsAssignment(fields []string, idx int) bool {
