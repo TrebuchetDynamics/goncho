@@ -221,13 +221,25 @@ func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Obs
 }
 
 func negativeEvidenceFailureObservation(obs Observation) bool {
+	if obs.Success != nil && *obs.Success {
+		return false
+	}
 	if obs.Kind == ObservationKindToolError {
 		return true
 	}
 	if obs.Success != nil && !*obs.Success {
-		return obs.Kind == ObservationKindToolResult || obs.Kind == ObservationKindCustom || obs.Kind == ObservationKindToolCall
+		return negativeEvidenceFailureCapableKind(obs.Kind)
 	}
 	return false
+}
+
+func negativeEvidenceFailureCapableKind(kind ObservationKind) bool {
+	switch kind {
+	case ObservationKindToolResult, ObservationKindCustom, ObservationKindToolCall:
+		return true
+	default:
+		return false
+	}
 }
 
 func negativeEvidenceRecordObservation(seen map[string]struct{}, rawID string) bool {

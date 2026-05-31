@@ -86,6 +86,21 @@ func TestNegativeEvidenceCandidatesIgnoreExplicitlySuccessfulToolErrors(t *testi
 	}
 }
 
+func TestNegativeEvidenceCandidatesStillTreatImplicitToolErrorsAsFailures(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "implicit-error", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "explicit-failure", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", SessionKey: "sess-a", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+		},
+	})
+	if len(candidates) != 1 || candidates[0].FailureCount != 2 {
+		t.Fatalf("candidates = %+v, want implicit tool_error compatibility preserved", candidates)
+	}
+}
+
 func TestNegativeEvidenceCandidatesOrderEvidenceByFailureTimeline(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
