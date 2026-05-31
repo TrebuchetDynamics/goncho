@@ -638,7 +638,7 @@ func searchInstructionAnswerParts(sentence string) (subject, instruction string,
 		return "", "", false
 	}
 	subject = cleanFactValue(before)
-	instruction = cleanFactValue(after)
+	instruction = cleanFactCoordinatedValue(after)
 	if !searchFactSubjectLooksAssertive(subject) || !searchFactObjectLooksAssertive(instruction) {
 		return "", "", false
 	}

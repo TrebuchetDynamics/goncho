@@ -72,6 +72,12 @@ func TestDecisionFactIntentKeepsCoordinatedDecisionObject(t *testing.T) {
 	}
 }
 
+func TestInstructionFactIntentKeepsCoordinatedInstructionObject(t *testing.T) {
+	if score := Score("what instruction did Alex give about Go and Rust?", "Alex instructed us to use Go and Rust."); score != 1 {
+		t.Fatalf("instruction fact score = %v, want 1 for coordinated instruction object", score)
+	}
+}
+
 func TestVersionFactIntentKeepsDottedVersionAfterQuestionSentence(t *testing.T) {
 	if score := Score("what version is goncho?", "User asked what shipped? Goncho version is v1.2.3."); score != 1 {
 		t.Fatalf("version fact score = %v, want 1 for dotted version after question sentence", score)
