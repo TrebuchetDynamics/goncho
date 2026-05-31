@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/stableid"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
 )
@@ -438,11 +438,6 @@ func feedbackID(f RecallFeedback) string {
 	return stableEvalID("feedback", f.WorkspaceID, f.TraceID, f.MemoryID, string(f.Label), f.Reason)
 }
 func stableEvalID(parts ...string) string {
-	var seed strings.Builder
-	for _, p := range parts {
-		seed.WriteString(strings.TrimSpace(p))
-		seed.WriteByte(0)
-	}
-	return hashutil.SHA256HexStringPrefix(seed.String(), 12)
+	return stableid.TrimmedNullSeparated(12, parts...)
 }
 func roundRegression(v float64) float64 { return math.Round(v*1000) / 1000 }

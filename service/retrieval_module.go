@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/contexttokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
@@ -407,7 +408,7 @@ func (r retrievalModule) Context(ctx context.Context, params ContextParams) (Con
 	profileID := strings.TrimSpace(params.ProfileID)
 	sessionKey := strings.TrimSpace(params.SessionKey)
 	query := effectiveContextQuery(params)
-	tokenLimit := effectiveContextTokenLimit(params)
+	tokenLimit := contexttokens.EffectiveContextLimit(params.Tokens, params.MaxTokens)
 	unavailable := contextUnavailableEvidence(params, r.observer, peer)
 	if includeDreamStatus(params) {
 		dreamEvidence, err := r.dreamContextUnavailableEvidence(ctx, peer)
@@ -453,7 +454,7 @@ func (r retrievalModule) Context(ctx context.Context, params ContextParams) (Con
 			ProfileID:  profileID,
 			Peer:       peer,
 			Query:      query,
-			MaxTokens:  effectiveSearchTokenLimit(params),
+			MaxTokens:  contexttokens.EffectiveSearchLimit(params.Tokens, params.MaxTokens),
 			SessionKey: sessionKey,
 			Scope:      scope,
 			Sources:    params.Sources,
@@ -484,7 +485,7 @@ func (r retrievalModule) Context(ctx context.Context, params ContextParams) (Con
 			if summary != nil {
 				messageStartID = summary.MessageID
 				if tokenLimit > 0 {
-					_, messageBudget = splitContextTokenBudget(tokenLimit)
+					_, messageBudget = contexttokens.SplitSummaryMessageBudget(tokenLimit)
 				}
 			} else if tokenLimit > 0 && turnCount > 0 {
 				unavailable = append(unavailable, summaryAbsentEvidence(reason))

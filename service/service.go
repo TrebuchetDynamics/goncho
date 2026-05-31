@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/contexttokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
@@ -375,31 +376,8 @@ func effectiveContextQuery(params ContextParams) string {
 	return params.Query
 }
 
-func effectiveContextTokenLimit(params ContextParams) int {
-	if params.Tokens > 0 {
-		return params.Tokens
-	}
-	return params.MaxTokens
-}
-
-func effectiveSearchTokenLimit(params ContextParams) int {
-	if params.MaxTokens > 0 {
-		return params.MaxTokens
-	}
-	return params.Tokens
-}
-
 func includeSummaryComponent(params ContextParams) bool {
 	return params.Summary == nil || *params.Summary
-}
-
-func splitContextTokenBudget(tokenLimit int) (summaryBudget, messageBudget int) {
-	if tokenLimit <= 0 {
-		return 0, 0
-	}
-	summaryBudget = int(float64(tokenLimit) * 0.4)
-	messageBudget = tokenLimit - summaryBudget
-	return summaryBudget, messageBudget
 }
 
 func selectSessionContextSummary(ctx context.Context, db *sql.DB, workspaceID, sessionKey string, tokenLimit int) (*SessionSummary, string, error) {
@@ -417,7 +395,7 @@ func selectSessionContextSummary(ctx context.Context, db *sql.DB, workspaceID, s
 		return shortSummary, "", nil
 	}
 
-	summaryBudget, _ := splitContextTokenBudget(tokenLimit)
+	summaryBudget, _ := contexttokens.SplitSummaryMessageBudget(tokenLimit)
 	if longSummary != nil && longSummary.TokenCount <= summaryBudget {
 		return longSummary, "", nil
 	}
