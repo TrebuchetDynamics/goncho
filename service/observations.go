@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/internal/observationlog"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -71,12 +72,5 @@ func (s *Service) ListObservations(ctx context.Context, q ObservationQuery) (Obs
 }
 
 func serviceObservationWorkspace(defaultWorkspace, requested string) string {
-	requested = strings.TrimSpace(requested)
-	if requested == "*" {
-		return ""
-	}
-	if requested == "" {
-		return defaultWorkspace
-	}
-	return requested
+	return scopekey.Workspace(defaultWorkspace, requested, true)
 }

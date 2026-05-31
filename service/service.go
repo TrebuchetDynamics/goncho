@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
@@ -107,16 +108,11 @@ func (s *Service) SetProfileForTarget(ctx context.Context, peer, target string, 
 }
 
 func (s *Service) SetProfileInNamespace(ctx context.Context, ns MemoryNamespace, card []string) error {
-	profileID := strings.TrimSpace(ns.ProfileID)
-	peer := strings.TrimSpace(ns.PeerID)
-	if peer == "" {
+	scope := scopekey.Normalize(s.workspaceID, ns.WorkspaceID, ns.ProfileID, ns.PeerID)
+	if scope.Peer == "" {
 		return fmt.Errorf("goncho: peer_id is required")
 	}
-	workspaceID := strings.TrimSpace(ns.WorkspaceID)
-	if workspaceID == "" {
-		workspaceID = s.workspaceID
-	}
-	return upsertPeerCard(ctx, s.db, workspaceID, profileID, s.observer, peer, normalizePeerCard(card))
+	return upsertPeerCard(ctx, s.db, scope.WorkspaceID, scope.ProfileID, s.observer, scope.Peer, normalizePeerCard(card))
 }
 
 func (s *Service) Profile(ctx context.Context, peer string) (ProfileResult, error) {
@@ -136,22 +132,17 @@ func (s *Service) ProfileForTarget(ctx context.Context, peer, target string) (Pr
 }
 
 func (s *Service) ProfileInNamespace(ctx context.Context, ns MemoryNamespace) (ProfileResult, error) {
-	profileID := strings.TrimSpace(ns.ProfileID)
-	peer := strings.TrimSpace(ns.PeerID)
-	if peer == "" {
+	scope := scopekey.Normalize(s.workspaceID, ns.WorkspaceID, ns.ProfileID, ns.PeerID)
+	if scope.Peer == "" {
 		return ProfileResult{}, fmt.Errorf("goncho: peer_id is required")
 	}
-	workspaceID := strings.TrimSpace(ns.WorkspaceID)
-	if workspaceID == "" {
-		workspaceID = s.workspaceID
-	}
-	out := ProfileResult{WorkspaceID: workspaceID, ProfileID: profileID, Peer: peer, ObserverPeerID: s.observer, ObservedPeerID: peer, Card: []string{}}
+	out := ProfileResult{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ObserverPeerID: s.observer, ObservedPeerID: scope.Peer, Card: []string{}}
 	if !s.peerCardEnabled {
 		out.Result = emptyProfileResultText
 		out.Hint = profileHint("peer_card_disabled", "This is not an error. Peer-card support is disabled in Goncho config, so no curated card can be read for this peer.")
 		return out, nil
 	}
-	card, err := getPeerCard(ctx, s.db, workspaceID, profileID, s.observer, peer)
+	card, err := getPeerCard(ctx, s.db, scope.WorkspaceID, scope.ProfileID, s.observer, scope.Peer)
 	if err != nil {
 		return ProfileResult{}, err
 	}
@@ -273,9 +264,7 @@ func (s *Service) recallWithOptions(ctx context.Context, q RecallQuery, opts rec
 	if strings.TrimSpace(q.Peer) == "" {
 		return RecallTrace{}, fmt.Errorf("goncho: peer is required")
 	}
-	if strings.TrimSpace(q.WorkspaceID) == "" {
-		q.WorkspaceID = s.workspaceID
-	}
+	q.WorkspaceID = scopekey.Workspace(s.workspaceID, q.WorkspaceID, false)
 	engine := newRecallPipelineEngine(s.retrieval(), opts)
 	return engine.Run(ctx, q)
 }
