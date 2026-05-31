@@ -667,17 +667,38 @@ const recallEvidenceNoteFieldTrimCutset = " .:()[]{}"
 
 func recallTemporalEvidenceNoteState(note string) recallTemporalEvidenceState {
 	state := recallTemporalEvidenceUnknown
-	for _, field := range recallTemporalEvidenceNoteFields(note) {
+	fields := recallTemporalEvidenceNoteFields(note)
+	for i, field := range fields {
 		switch {
-		case strings.HasPrefix(field, "superseded_by=") && strings.TrimSpace(strings.TrimPrefix(field, "superseded_by=")) != "":
+		case recallTemporalSupersededByField(field):
 			return recallTemporalEvidenceSuperseded
-		case field == "superseded":
+		case recallTemporalSupersededField(fields, i):
 			return recallTemporalEvidenceSuperseded
 		case field == "current_fact" || field == "valid_now":
 			state = recallTemporalEvidenceCurrent
 		}
 	}
 	return state
+}
+
+func recallTemporalSupersededByField(field string) bool {
+	return strings.HasPrefix(field, "superseded_by=") && strings.TrimSpace(strings.TrimPrefix(field, "superseded_by=")) != ""
+}
+
+func recallTemporalSupersededField(fields []string, idx int) bool {
+	if idx < 0 || idx >= len(fields) || fields[idx] != "superseded" {
+		return false
+	}
+	return idx == 0 || !recallTemporalNegatesNextField(fields[idx-1])
+}
+
+func recallTemporalNegatesNextField(field string) bool {
+	switch field {
+	case "not", "non", "never":
+		return true
+	default:
+		return false
+	}
 }
 
 func recallTemporalEvidenceNoteFields(note string) []string {

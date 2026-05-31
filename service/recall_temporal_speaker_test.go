@@ -30,16 +30,27 @@ func TestRecallCurrentTruthIntentTokenization(t *testing.T) {
 }
 
 func TestRecallTemporalRoutingDoesNotWarnOnNegatedSupersededMarker(t *testing.T) {
-	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
-		MemoryID:   "mem-current",
-		Provenance: []EvidenceItem{{Kind: "temporal", Note: "current_fact valid_now not_superseded"}},
-	}}
-
-	if got := recallTemporalAdjustment(candidate, "who owns component A-17 now?"); got != recallTemporalCurrentBonus {
-		t.Fatalf("recallTemporalAdjustment() = %v, want current bonus for not_superseded current fact", got)
+	tests := []struct {
+		name string
+		note string
+	}{
+		{name: "underscore", note: "current_fact valid_now not_superseded"},
+		{name: "separate words", note: "current_fact valid_now not superseded"},
 	}
-	if recallHasSupersededEvidence([]ScoredRecallCandidate{candidate}) {
-		t.Fatalf("recallHasSupersededEvidence() = true, want false for negated superseded marker")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
+				MemoryID:   "mem-current",
+				Provenance: []EvidenceItem{{Kind: "temporal", Note: tt.note}},
+			}}
+
+			if got := recallTemporalAdjustment(candidate, "who owns component A-17 now?"); got != recallTemporalCurrentBonus {
+				t.Fatalf("recallTemporalAdjustment() = %v, want current bonus for negated superseded current fact", got)
+			}
+			if recallHasSupersededEvidence([]ScoredRecallCandidate{candidate}) {
+				t.Fatalf("recallHasSupersededEvidence() = true, want false for negated superseded marker")
+			}
+		})
 	}
 }
 
