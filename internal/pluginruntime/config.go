@@ -4,12 +4,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	workspacepkg "github.com/TrebuchetDynamics/goncho/workspace"
 	"net/url"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/evidence"
+	workspacepkg "github.com/TrebuchetDynamics/goncho/workspace"
 )
 
 const (
@@ -19,11 +21,7 @@ const (
 	GonchoConfigLocalBaseURL   = "goncho_config_local_base_url"
 )
 
-type ConfigEvidence struct {
-	Code    string `json:"code"`
-	Source  string `json:"source,omitempty"`
-	Message string `json:"message,omitempty"`
-}
+type ConfigEvidence = evidence.Config
 
 type PluginConfigInput struct {
 	Host string
@@ -52,12 +50,7 @@ type PluginConfig struct {
 }
 
 func (c PluginConfig) HasEvidence(code string) bool {
-	for _, item := range c.Evidence {
-		if item.Code == code {
-			return true
-		}
-	}
-	return false
+	return evidence.HasConfig(c.Evidence, code)
 }
 
 func ResolvePluginConfig(input PluginConfigInput) PluginConfig {

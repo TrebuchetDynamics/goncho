@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/TrebuchetDynamics/goncho/internal/pluginruntime/evidence"
 )
 
 const (
@@ -182,12 +184,7 @@ type PluginAsyncResult struct {
 }
 
 func (r PluginAsyncResult) HasEvidence(code string) bool {
-	for _, item := range r.Evidence {
-		if item == code {
-			return true
-		}
-	}
-	return false
+	return evidence.Has(r.Evidence, code)
 }
 
 func (w *PluginAsyncWriter) Enqueue(session PluginMemorySession) PluginAsyncResult {
@@ -250,7 +247,7 @@ func (w *PluginAsyncWriter) FlushAll() PluginAsyncResult {
 
 	if result.Pending > 0 {
 		result.Code = GonchoAsyncFlushFailed
-		result.Evidence = appendEvidence(result.Evidence, GonchoAsyncFlushFailed)
+		result.Evidence = evidence.Append(result.Evidence, GonchoAsyncFlushFailed)
 		return result
 	}
 	result.Code = GonchoAsyncFlushed
@@ -272,7 +269,7 @@ func (w *PluginAsyncWriter) flushWithRetry(session PluginMemorySession, result *
 		return errPluginAsyncNoFlusher{}
 	}
 	if err := w.flusher.FlushPluginSession(session); err != nil {
-		result.Evidence = appendEvidence(result.Evidence, GonchoAsyncRetry)
+		result.Evidence = evidence.Append(result.Evidence, GonchoAsyncRetry)
 		return w.flusher.FlushPluginSession(session)
 	}
 	return nil
@@ -281,15 +278,6 @@ func (w *PluginAsyncWriter) flushWithRetry(session PluginMemorySession, result *
 type errPluginAsyncNoFlusher struct{}
 
 func (errPluginAsyncNoFlusher) Error() string { return "goncho async writer: no flusher configured" }
-
-func appendEvidence(items []string, code string) []string {
-	for _, item := range items {
-		if item == code {
-			return items
-		}
-	}
-	return append(items, code)
-}
 
 func stringsLowerTrim(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
