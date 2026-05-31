@@ -39,6 +39,25 @@ func (scope TurnSearchScope) appendPredicate(b *strings.Builder, args *[]any) {
 	b.WriteString(`)`)
 }
 
+type turnQueryPlan struct {
+	RawQuery   string
+	FTSPattern string
+}
+
+// planTurnQuery keeps raw non-blank queries distinct from their FTS pattern.
+// FTS sanitation can erase punctuation-only input; callers must still keep that
+// input constrained instead of silently treating it as an unfiltered browse.
+func planTurnQuery(rawQuery string) turnQueryPlan {
+	trimmed := strings.TrimSpace(rawQuery)
+	if trimmed == "" {
+		return turnQueryPlan{}
+	}
+	return turnQueryPlan{
+		RawQuery:   trimmed,
+		FTSPattern: sqlutil.SanitizeFTS5Pattern(trimmed),
+	}
+}
+
 // BuildTurnSearchQuery builds the SQLite query used to search synced session turns.
 func BuildTurnSearchQuery(rawQuery string, sessionIDs, chatKeys, roles []string, limit int, sessionsOnly bool) (string, []any) {
 	var b strings.Builder
@@ -50,10 +69,13 @@ func BuildTurnSearchQuery(rawQuery string, sessionIDs, chatKeys, roles []string,
 		b.WriteString(`SELECT t.session_id, t.chat_id, t.role, t.content, t.ts_unix FROM turns t`)
 	}
 
-	query := sqlutil.SanitizeFTS5Pattern(rawQuery)
-	if query != "" {
+	query := planTurnQuery(rawQuery)
+	if query.FTSPattern != "" {
 		b.WriteString(` JOIN turns_fts fts ON fts.rowid = t.id WHERE turns_fts MATCH ?`)
-		args = append(args, query)
+		args = append(args, query.FTSPattern)
+	} else if query.RawQuery != "" {
+		b.WriteString(` WHERE t.content LIKE ?`)
+		args = append(args, "%"+query.RawQuery+"%")
 	} else {
 		b.WriteString(` WHERE 1=1`)
 	}

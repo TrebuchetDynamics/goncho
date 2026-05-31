@@ -98,6 +98,44 @@ func TestService_SearchSupportedFiltersKeepUserScopeNarrow(t *testing.T) {
 	}
 }
 
+func TestService_SearchPunctuationOnlyUserScopeQueryDoesNotWidenToAllTurns(t *testing.T) {
+	store, dir, svc, cleanup := newTestServiceWithDirectory(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	for _, meta := range []session.Metadata{
+		{SessionID: "sess-telegram", Source: "telegram", ChatID: "42", UserID: "user-juan"},
+		{SessionID: "sess-discord", Source: "discord", ChatID: "chan-9", UserID: "user-juan"},
+	} {
+		if err := dir.PutMetadata(ctx, meta); err != nil {
+			t.Fatalf("PutMetadata(%s): %v", meta.SessionID, err)
+		}
+	}
+	now := time.Now().Unix()
+	if _, err := store.DB().ExecContext(ctx,
+		`INSERT INTO turns(session_id, role, content, ts_unix, chat_id)
+		 VALUES
+		 ('sess-telegram', 'user', 'Atlas Telegram note.', ?, 'telegram:42'),
+		 ('sess-discord', 'user', 'Atlas Discord note.', ?, 'discord:chan-9')`,
+		now-20, now-10,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := svc.Search(ctx, SearchParams{
+		Peer:       "user-juan",
+		Query:      "???",
+		SessionKey: "discord:chan-9",
+		Scope:      "user",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Results) != 0 {
+		t.Fatalf("Search results = %+v, want punctuation-only query not to widen to all synced turns", got.Results)
+	}
+}
+
 func TestService_SearchSessionFilterCannotWidenSameChatRecall(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

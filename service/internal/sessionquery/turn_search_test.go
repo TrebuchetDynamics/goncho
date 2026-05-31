@@ -27,6 +27,21 @@ func TestBuildTurnSearchQuerySanitizesFTSAndNormalizesRoles(t *testing.T) {
 	}
 }
 
+func TestBuildTurnSearchQueryPunctuationOnlyQueryStaysConstrained(t *testing.T) {
+	query, args := BuildTurnSearchQuery(` ??? `, []string{"s1"}, nil, nil, 5, false)
+
+	if strings.Contains(query, `turns_fts MATCH ?`) {
+		t.Fatalf("query should not use empty FTS pattern: %q", query)
+	}
+	if !strings.Contains(query, `WHERE t.content LIKE ? AND (t.session_id IN (?))`) {
+		t.Fatalf("query = %q, want punctuation-only query to stay content-constrained", query)
+	}
+	wantArgs := []any{"%???%", "s1", 5}
+	if !reflect.DeepEqual(args, wantArgs) {
+		t.Fatalf("args = %#v, want %#v", args, wantArgs)
+	}
+}
+
 func TestBuildTurnSearchQueryTrimsScopeIdentifiers(t *testing.T) {
 	query, args := BuildTurnSearchQuery("", []string{" s1 ", "s1", " "}, []string{" chat:1 ", "chat:1"}, nil, 7, false)
 
