@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/contexttokens"
@@ -241,10 +240,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 	index := sliceutil.IndexBy(out, func(hit SearchHit) (string, bool) {
 		return searchHitVectorMergeKey(hit), true
 	})
-	sort.SliceStable(hits, func(i, j int) bool {
-		return hits[i].Score > hits[j].Score
-	})
-	for _, hit := range hits {
+	for _, hit := range vectorHitsByScoreDesc(hits) {
 		if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(vectorSources, hit.SourceType) {
 			continue
 		}

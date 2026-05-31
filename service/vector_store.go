@@ -3,6 +3,7 @@ package goncho
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -139,7 +140,7 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 	indexByID := sliceutil.IndexBy(out, func(candidate RecallCandidate) (string, bool) {
 		return candidate.MemoryID, strings.TrimSpace(candidate.MemoryID) != ""
 	})
-	for _, hit := range hits {
+	for _, hit := range vectorHitsByScoreDesc(hits) {
 		if strings.TrimSpace(hit.Content) == "" || !vectorSourceAllowed(q.Sources, hit.SourceType) {
 			continue
 		}
@@ -213,6 +214,14 @@ func mergeEvidenceMetadata(existing, incoming map[string]string) map[string]stri
 		merged[key] = value
 	}
 	return merged
+}
+
+func vectorHitsByScoreDesc(hits []VectorSearchHit) []VectorSearchHit {
+	out := sliceutil.Clone(hits)
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].Score > out[j].Score
+	})
+	return out
 }
 
 func vectorSourceAllowed(sources []string, sourceType string) bool {

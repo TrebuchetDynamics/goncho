@@ -284,6 +284,31 @@ func TestServiceRecallUsesOptionalVectorStoreForSemanticRRF(t *testing.T) {
 	}
 }
 
+func TestServiceRecallDeduplicatesVectorHitsByMemoryID(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	svc.vectorStore = &fakeVectorStore{hits: []VectorSearchHit{
+		{MemoryID: "vec-orchid", SourceType: "conclusion", Content: "lower scoring stale orchid recall content", SessionID: "sess-vector-dedupe", Score: 0.41},
+		{MemoryID: "vec-orchid", SourceType: "conclusion", Content: "higher scoring fresh orchid recall content", SessionID: "sess-vector-dedupe", Score: 0.95},
+	}}
+	svc.providerRegistry = NewProviderHealthRegistry(ProviderResilienceConfig{}, svc.vectorStore)
+
+	trace, err := svc.Recall(context.Background(), RecallQuery{Peer: "peer-vector-dedupe", Query: "orchid", Limit: 5})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	selected, ok := selectedRecallByID(trace, "vec-orchid")
+	if !ok {
+		t.Fatalf("selected IDs = %v, want vec-orchid", selectedRecallIDs(trace))
+	}
+	if selected.Candidate.Content != "higher scoring fresh orchid recall content" {
+		t.Fatalf("deduped vector recall content = %q, want highest-scoring hit retained", selected.Candidate.Content)
+	}
+	if !recallCandidateHasEvidence(selected.Candidate, "semantic", "vec-orchid") {
+		t.Fatalf("deduped vector recall provenance = %+v, want semantic evidence", selected.Candidate.Provenance)
+	}
+}
+
 func TestServiceRecallProjectorRoundTripsToSearchResult(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
