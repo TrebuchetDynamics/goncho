@@ -1,21 +1,19 @@
 package substrmatch
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/stringlist"
+)
 
 // Matcher is the shared contract for testing whether value matches a marker.
 type Matcher func(value, marker string) bool
 
 // AnyMatch reports whether value matches at least one marker using match.
 func AnyMatch(value string, markers []string, match Matcher) bool {
-	if match == nil {
-		return false
-	}
-	for _, marker := range markers {
-		if match(value, marker) {
-			return true
-		}
-	}
-	return false
+	return stringlist.Any(markers, func(marker string) bool {
+		return match != nil && match(value, marker)
+	})
 }
 
 // Any reports whether value contains at least one marker using case-sensitive

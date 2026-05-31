@@ -1,6 +1,10 @@
 package trimmed
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/stringlist"
+)
 
 const boundaryQuoteChars = "\"'`“”‘’"
 
@@ -76,26 +80,27 @@ func EqualFold(a, b string) bool {
 	return strings.EqualFold(Space(a), Space(b))
 }
 
+// Equaler is the shared contract for comparing a list value with the wanted
+// value after applying a focused trimmed-text policy.
+type Equaler func(value, want string) bool
+
+// ContainsMatch reports whether values contains want using equal.
+func ContainsMatch(values []string, want string, equal Equaler) bool {
+	return stringlist.Any(values, func(value string) bool {
+		return equal != nil && equal(value, want)
+	})
+}
+
 // Contains reports whether values contains want after applying Space to both
 // sides of each comparison.
 func Contains(values []string, want string) bool {
-	for _, value := range values {
-		if Equal(value, want) {
-			return true
-		}
-	}
-	return false
+	return ContainsMatch(values, want, Equal)
 }
 
 // ContainsEqualFold reports whether values contains want after applying Space
 // and Unicode case-folding to both sides of each comparison.
 func ContainsEqualFold(values []string, want string) bool {
-	for _, value := range values {
-		if EqualFold(value, want) {
-			return true
-		}
-	}
-	return false
+	return ContainsMatch(values, want, EqualFold)
 }
 
 // OptionalMatch reports whether value satisfies an optional exact-match filter

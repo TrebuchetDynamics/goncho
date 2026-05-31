@@ -20,3 +20,15 @@ func TestClonePreservesNil(t *testing.T) {
 		t.Fatalf("Clone(nil) = %#v, want nil", out)
 	}
 }
+
+func TestAnyUsesPredicateContract(t *testing.T) {
+	if !Any([]string{"alpha", "beta"}, func(value string) bool { return value == "beta" }) {
+		t.Fatalf("Any should report the first predicate match")
+	}
+	if Any([]string{"alpha"}, nil) {
+		t.Fatalf("Any should reject nil predicate")
+	}
+	if Any(nil, func(value string) bool { return true }) {
+		t.Fatalf("Any should reject empty input")
+	}
+}

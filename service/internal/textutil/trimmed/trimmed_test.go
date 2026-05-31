@@ -47,6 +47,21 @@ func TestComparisonAndOptionalFilterContracts(t *testing.T) {
 	}
 }
 
+func TestContainsMatchUsesEqualerContract(t *testing.T) {
+	lastByteMatches := func(value, want string) bool {
+		if value == "" || want == "" {
+			return false
+		}
+		return value[len(value)-1:] == want[len(want)-1:]
+	}
+	if !ContainsMatch([]string{"alpha", "note"}, "scope", lastByteMatches) {
+		t.Fatalf("ContainsMatch should use caller-supplied equality policy")
+	}
+	if ContainsMatch([]string{"alpha"}, "alpha", nil) {
+		t.Fatalf("ContainsMatch should reject nil equality policy")
+	}
+}
+
 func TestBoundaryTrimContracts(t *testing.T) {
 	if got := SpaceAndQuotes(" “alpha” "); got != "alpha" {
 		t.Fatalf("SpaceAndQuotes() = %q, want alpha", got)
