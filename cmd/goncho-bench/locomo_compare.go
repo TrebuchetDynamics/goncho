@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	benchlocomo "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/locomo"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/ranking"
 )
 
 const locomoNotFoundRank = benchlocomo.NotFoundRank
@@ -123,10 +124,7 @@ func compareWinner(aRank, bRank int) string {
 }
 
 func topN(ids []string, n int) []string {
-	if len(ids) < n {
-		n = len(ids)
-	}
-	return append([]string(nil), ids[:n]...)
+	return ranking.TopN(ids, n)
 }
 
 func classifyLocomoDeltaBucket(row locomoComparisonRow) string {

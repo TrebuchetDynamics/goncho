@@ -1,9 +1,8 @@
 package paired
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"math"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/checksum"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
 )
 
 type Config struct {
@@ -34,10 +33,9 @@ type servicePairedOutcome struct {
 }
 
 func roundMetric(v float64) float64 {
-	return math.Round(v*10000) / 10000
+	return metrics.Round(v)
 }
 
 func checksumBytesSHA256(raw []byte) string {
-	sum := sha256.Sum256(raw)
-	return hex.EncodeToString(sum[:])
+	return checksum.SHA256Bytes(raw)
 }

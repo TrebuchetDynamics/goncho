@@ -14,6 +14,8 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/classify"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/ranking"
 	"github.com/TrebuchetDynamics/goncho/memory"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
@@ -442,31 +444,11 @@ func loadDataset(path string) (dataset, error) {
 }
 
 func firstRelevantRank(retrievedIDs, relevantIDs []string) int {
-	relevant := set(relevantIDs)
-	for i, id := range retrievedIDs {
-		if _, ok := relevant[id]; ok {
-			return i + 1
-		}
-	}
-	return 0
+	return ranking.FirstRelevantRank(retrievedIDs, relevantIDs)
 }
 
 func recallAtKForIDs(retrievedIDs, relevantIDs []string, k int) float64 {
-	if len(relevantIDs) == 0 || k <= 0 {
-		return 0
-	}
-	relevant := set(relevantIDs)
-	limit := k
-	if len(retrievedIDs) < limit {
-		limit = len(retrievedIDs)
-	}
-	found := map[string]struct{}{}
-	for _, id := range retrievedIDs[:limit] {
-		if _, ok := relevant[id]; ok {
-			found[id] = struct{}{}
-		}
-	}
-	return roundMetric(float64(len(found)) / float64(len(relevant)))
+	return ranking.RecallAtK(retrievedIDs, relevantIDs, k)
 }
 
 func summarizeMetrics(questions []BenchmarkQuestionReport) (float64, float64, float64) {
@@ -499,16 +481,9 @@ func summarizeRecallAny(questions []BenchmarkQuestionReport) (float64, float64) 
 }
 
 func set(values []string) map[string]struct{} {
-	out := make(map[string]struct{}, len(values))
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value != "" {
-			out[value] = struct{}{}
-		}
-	}
-	return out
+	return ranking.StringSet(values)
 }
 
 func roundMetric(v float64) float64 {
-	return float64(int(v*10000+0.5)) / 10000
+	return metrics.Round(v)
 }

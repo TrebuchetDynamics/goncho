@@ -16,6 +16,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/checksum"
 	"github.com/TrebuchetDynamics/goncho/internal/stringutil"
 )
 
@@ -394,8 +395,7 @@ func encodeBeamJSONL(w io.Writer, records []beamJSONLRecord) error {
 }
 
 func checksumBytesSHA256(raw []byte) string {
-	sum := sha256.Sum256(raw)
-	return hex.EncodeToString(sum[:])
+	return checksum.SHA256Bytes(raw)
 }
 
 func summarizeBeamConversionRecords(records []beamJSONLRecord) beamConversionDiagnostics {
@@ -471,8 +471,6 @@ func stableBeamIDSegment(value string) string {
 	}
 	return out
 }
-
-
 
 var pythonLiteralBarewordPattern = regexp.MustCompile(`\b(True|False|None)\b`)
 

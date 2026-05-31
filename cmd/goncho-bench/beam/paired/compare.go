@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
 )
 
 const beamPairedComparisonBootstrapSeed int64 = 42
@@ -426,10 +428,7 @@ func beamPairedComparisonPointConclusion(delta, effectSizeFloor float64) (string
 }
 
 func roundSignedMetric(v float64) float64 {
-	if v < 0 {
-		return -roundMetric(-v)
-	}
-	return roundMetric(v)
+	return metrics.RoundSigned(v)
 }
 
 func bootstrapMeanCI(values []float64, samples int) beamPairedComparisonCI {

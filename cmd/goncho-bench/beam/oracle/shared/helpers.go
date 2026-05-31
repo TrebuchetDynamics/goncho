@@ -1,14 +1,14 @@
 package shared
 
-import "math"
+import (
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/metrics"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/ranking"
+)
 
 func RoundMetric(v float64) float64 {
-	return math.Round(v*10000) / 10000
+	return metrics.Round(v)
 }
 
 func TopN(values []string, n int) []string {
-	if n > len(values) {
-		n = len(values)
-	}
-	return append([]string(nil), values[:n]...)
+	return ranking.TopN(values, n)
 }

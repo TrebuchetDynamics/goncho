@@ -3,13 +3,12 @@ package oracle
 import (
 	"bufio"
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/checksum"
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
@@ -51,7 +50,7 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 	if err != nil {
 		return nil, fmt.Errorf("goncho-bench: open BEAM service judgments: %w", err)
 	}
-	sum := sha256.Sum256(raw)
+	sourceSHA256 := checksum.SHA256Bytes(raw)
 	rows := map[string]beamServiceJudgment{}
 	questionRows := map[string]beamServiceJudgment{}
 	trimmed := bytes.TrimSpace(raw)
@@ -62,7 +61,7 @@ func loadBeamServiceJudgments(path string) (*beamServiceJudgmentSet, error) {
 	} else if err := loadJSONLBeamServiceJudgments(raw, rows, questionRows); err != nil {
 		return nil, err
 	}
-	return &beamServiceJudgmentSet{Source: "beam-service-judgments", SourceSHA256: hex.EncodeToString(sum[:]), Rows: rows, QuestionRows: questionRows, RowCount: len(rows)}, nil
+	return &beamServiceJudgmentSet{Source: "beam-service-judgments", SourceSHA256: sourceSHA256, Rows: rows, QuestionRows: questionRows, RowCount: len(rows)}, nil
 }
 
 func loadJSONLBeamServiceJudgments(raw []byte, rows map[string]beamServiceJudgment, questionRows map[string]beamServiceJudgment) error {
