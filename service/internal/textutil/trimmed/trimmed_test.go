@@ -17,6 +17,15 @@ func TestSpaceCaseAndBlankContracts(t *testing.T) {
 	}
 }
 
+func TestFirstNonBlankSharesSpacePolicy(t *testing.T) {
+	if got := FirstNonBlank(" ", "\talpha ", "beta"); got != "alpha" {
+		t.Fatalf("FirstNonBlank() = %q, want alpha", got)
+	}
+	if got := FirstNonBlank(" ", "\n"); got != "" {
+		t.Fatalf("FirstNonBlank() = %q, want empty", got)
+	}
+}
+
 func TestComparisonAndOptionalFilterContracts(t *testing.T) {
 	if !Equal(" * ", "*") || Equal("Memory", "memory") {
 		t.Fatalf("Equal should trim without folding case")

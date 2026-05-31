@@ -20,6 +20,17 @@ func NonBlank(value string) bool {
 	return !Blank(value)
 }
 
+// FirstNonBlank returns the first value with non-whitespace content after
+// applying Space. It returns an empty string when every value is blank.
+func FirstNonBlank(values ...string) string {
+	for _, value := range values {
+		if value := Space(value); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 // Lower applies Space and simple lower-casing.
 func Lower(value string) string {
 	return strings.ToLower(Space(value))
