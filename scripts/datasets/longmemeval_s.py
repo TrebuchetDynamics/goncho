@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from shared.checksums import sha256
+from shared.jsonl import write_jsonl
 
 DATASET_REPO = "xiaowu0162/longmemeval-cleaned"
 DATASET_REVISION = "98d7416c24c778c2fee6e6f3006e7a073259d48f"
@@ -34,43 +35,34 @@ def download_raw(out_dir: Path) -> Path:
 
 def convert(raw_path: Path, out_path: Path) -> tuple[int, int]:
     data = json.loads(raw_path.read_text())
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     memory_count = 0
-    with out_path.open("w", encoding="utf-8") as f:
-        f.write(json.dumps({"type": "meta", "dataset": "longmemeval-s-cleaned"}) + "\n")
-        for item in data:
-            qid = item["question_id"]
-            peer = "longmemeval:" + qid
-            for sid, session in zip(item["haystack_session_ids"], item["haystack_sessions"]):
-                parts = []
-                for msg in session:
-                    parts.append(f"{msg.get('role', '')}: {msg.get('content', '')}")
-                f.write(
-                    json.dumps(
-                        {
-                            "type": "memory",
-                            "id": sid,
-                            "peer": peer,
-                            "content": "\n".join(parts),
-                        },
-                        ensure_ascii=False,
-                    )
-                    + "\n"
-                )
-                memory_count += 1
-            f.write(
-                json.dumps(
-                    {
-                        "type": "question",
-                        "id": qid,
-                        "peer": peer,
-                        "query": item["question"],
-                        "relevant_ids": item["answer_session_ids"],
-                    },
-                    ensure_ascii=False,
-                )
-                + "\n"
+    rows = [{"type": "meta", "dataset": "longmemeval-s-cleaned"}]
+    for item in data:
+        qid = item["question_id"]
+        peer = "longmemeval:" + qid
+        for sid, session in zip(item["haystack_session_ids"], item["haystack_sessions"]):
+            parts = []
+            for msg in session:
+                parts.append(f"{msg.get('role', '')}: {msg.get('content', '')}")
+            rows.append(
+                {
+                    "type": "memory",
+                    "id": sid,
+                    "peer": peer,
+                    "content": "\n".join(parts),
+                }
             )
+            memory_count += 1
+        rows.append(
+            {
+                "type": "question",
+                "id": qid,
+                "peer": peer,
+                "query": item["question"],
+                "relevant_ids": item["answer_session_ids"],
+            }
+        )
+    write_jsonl(out_path, rows)
     return len(data), memory_count
 
 

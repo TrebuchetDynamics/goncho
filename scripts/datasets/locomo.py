@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from shared.checksums import sha256
+from shared.jsonl import write_jsonl
 
 SOURCE_REPO = "snap-research/locomo"
 SOURCE_URL = "https://github.com/snap-research/locomo"
@@ -122,52 +123,49 @@ def parse_turn_index(dia_id: str, fallback: int) -> int:
 
 def convert(raw_path: Path, memories_out: Path, questions_out: Path, metadata_out: Path) -> dict[str, Any]:
     data = json.loads(raw_path.read_text())
-    memories_out.parent.mkdir(parents=True, exist_ok=True)
-    questions_out.parent.mkdir(parents=True, exist_ok=True)
     memory_ids: set[str] = set()
-    memory_count = 0
-    question_count = 0
     missing_evidence: list[str] = []
+    memory_rows = []
+    question_rows = []
 
-    with memories_out.open("w", encoding="utf-8") as mf:
-        for sample in data:
-            for row in iter_dialog_turns(sample):
-                memory_ids.add(row["memory_id"])
-                mf.write(json.dumps(row, ensure_ascii=False) + "\n")
-                memory_count += 1
+    for sample in data:
+        for row in iter_dialog_turns(sample):
+            memory_ids.add(row["memory_id"])
+            memory_rows.append(row)
 
-    with questions_out.open("w", encoding="utf-8") as qf:
-        for sample in data:
-            sample_id = str(sample.get("sample_id", "sample"))
-            for idx, qa in enumerate(sample.get("qa") or [], start=1):
-                evidence = normalize_evidence_items(qa.get("evidence") or [])
-                candidate_gold = [evidence_to_memory_id(sample_id, item) for item in evidence]
-                gold = []
-                for mid in candidate_gold:
-                    if mid not in memory_ids:
-                        missing_evidence.append(mid)
-                    else:
-                        gold.append(mid)
-                if not gold:
-                    continue
-                row = {
-                    "question_id": f"locomo-{sample_id}-q-{idx:03d}",
-                    "conversation_id": f"locomo-{sample_id}",
-                    "question": str(qa.get("question") or "").strip(),
-                    "gold_memory_ids": gold,
-                    "category": qa_category(qa.get("category")),
-                    "answer_hint": str(qa.get("answer") or ""),
-                    "metadata": {
-                        "source": "locomo10",
-                        "sample_id": sample_id,
-                        "category_id": qa.get("category"),
-                        "evidence": evidence,
-                    },
-                }
-                if not row["question"] or not row["gold_memory_ids"]:
-                    continue
-                qf.write(json.dumps(row, ensure_ascii=False) + "\n")
-                question_count += 1
+    for sample in data:
+        sample_id = str(sample.get("sample_id", "sample"))
+        for idx, qa in enumerate(sample.get("qa") or [], start=1):
+            evidence = normalize_evidence_items(qa.get("evidence") or [])
+            candidate_gold = [evidence_to_memory_id(sample_id, item) for item in evidence]
+            gold = []
+            for mid in candidate_gold:
+                if mid not in memory_ids:
+                    missing_evidence.append(mid)
+                else:
+                    gold.append(mid)
+            if not gold:
+                continue
+            row = {
+                "question_id": f"locomo-{sample_id}-q-{idx:03d}",
+                "conversation_id": f"locomo-{sample_id}",
+                "question": str(qa.get("question") or "").strip(),
+                "gold_memory_ids": gold,
+                "category": qa_category(qa.get("category")),
+                "answer_hint": str(qa.get("answer") or ""),
+                "metadata": {
+                    "source": "locomo10",
+                    "sample_id": sample_id,
+                    "category_id": qa.get("category"),
+                    "evidence": evidence,
+                },
+            }
+            if not row["question"] or not row["gold_memory_ids"]:
+                continue
+            question_rows.append(row)
+
+    memory_count = write_jsonl(memories_out, memory_rows)
+    question_count = write_jsonl(questions_out, question_rows)
 
     meta = {
         "source_repo": SOURCE_REPO,
