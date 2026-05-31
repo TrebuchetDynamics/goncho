@@ -6,13 +6,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sessionquery"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
-	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"gopkg.in/yaml.v3"
 )
@@ -364,54 +363,6 @@ func (idx searchLineageIndex) statusFor(sessionID string) string {
 	return LineageStatusOK
 }
 
-func sanitizeFTS5Pattern(raw string) string {
-	re := regexp.MustCompile(`[^\w\s\*+"]`)
-	return strings.TrimSpace(re.ReplaceAllString(raw, " "))
-}
-
-func buildTurnSearchQuery(rawQuery string, sessionIDs, chatKeys, roles []string, limit int, sessionsOnly bool) (string, []any) {
-	var b strings.Builder
-	args := make([]any, 0, len(sessionIDs)+len(chatKeys)+len(roles)+2)
-	if sessionsOnly {
-		b.WriteString(`SELECT t.session_id, t.chat_id, MAX(t.ts_unix) AS latest_turn_unix FROM turns t`)
-	} else {
-		b.WriteString(`SELECT t.session_id, t.chat_id, t.role, t.content, t.ts_unix FROM turns t`)
-	}
-
-	query := sanitizeFTS5Pattern(rawQuery)
-	if query != "" {
-		b.WriteString(` JOIN turns_fts fts ON fts.rowid = t.id WHERE turns_fts MATCH ?`)
-		args = append(args, query)
-	} else {
-		b.WriteString(` WHERE 1=1`)
-	}
-
-	b.WriteString(` AND (`)
-	sqlutil.AppendInClause(&b, "t.session_id", sessionIDs, &args)
-	if len(chatKeys) > 0 {
-		b.WriteString(` OR `)
-		sqlutil.AppendInClause(&b, "t.chat_id", chatKeys, &args)
-	}
-	b.WriteString(`)`)
-	b.WriteString(` AND t.memory_sync_status = 'ready'`)
-	if normalizedRoles := normalizeRoles(roles); len(normalizedRoles) > 0 {
-		b.WriteString(` AND `)
-		sqlutil.AppendInClause(&b, "t.role", normalizedRoles, &args)
-	}
-
-	if sessionsOnly {
-		b.WriteString(` GROUP BY t.session_id, t.chat_id ORDER BY latest_turn_unix DESC, t.session_id ASC LIMIT ?`)
-	} else {
-		b.WriteString(` ORDER BY t.ts_unix DESC, t.id DESC LIMIT ?`)
-	}
-	args = append(args, limit)
-	return b.String(), args
-}
-
-func normalizeRoles(roles []string) []string {
-	return textutil.UniqueLowerTrimmed(roles, false)
-}
-
 // SearchMessages returns matching turns across the canonical sessions bound to
 // one user, optionally narrowed to a subset of sources.
 func SearchMessages(ctx context.Context, db *sql.DB, metas []SessionMetadata, filter SearchFilter, limit int) ([]MessageSearchHit, error) {
@@ -425,7 +376,7 @@ func SearchMessages(ctx context.Context, db *sql.DB, metas []SessionMetadata, fi
 
 	sessionIDs, chatKeys, metaBySession, metaByChat := metadataIndexes(selected)
 	lineage := buildSearchLineageIndex(selected)
-	query, args := buildTurnSearchQuery(filter.Query, sessionIDs, chatKeys, filter.Roles, limit, false)
+	query, args := sessionquery.BuildTurnSearchQuery(filter.Query, sessionIDs, chatKeys, filter.Roles, limit, false)
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("session catalog: search messages: %w", err)

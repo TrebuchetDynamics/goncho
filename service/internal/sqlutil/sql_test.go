@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+func TestSanitizeFTS5Pattern(t *testing.T) {
+	got := SanitizeFTS5Pattern(` owner:(alice) +tag "quoted" path/a.go* `)
+	want := `owner  alice  +tag "quoted" path a go*`
+	if got != want {
+		t.Fatalf("SanitizeFTS5Pattern() = %q, want %q", got, want)
+	}
+}
+
 func TestSQLiteErrorClassifiers(t *testing.T) {
 	tests := []struct {
 		name string

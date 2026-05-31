@@ -3,6 +3,7 @@ package sqlutil
 import (
 	"context"
 	"database/sql"
+	"regexp"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -37,6 +38,14 @@ func AppendInClause(b *strings.Builder, column string, values []string, args *[]
 		*args = append(*args, value)
 	}
 	b.WriteString(`)`)
+}
+
+var fts5PatternUnsafeChars = regexp.MustCompile(`[^\w\s\*+"]`)
+
+// SanitizeFTS5Pattern removes punctuation that is unsafe in a SQLite FTS5 MATCH
+// pattern while preserving word characters, whitespace, wildcard, plus, and quotes.
+func SanitizeFTS5Pattern(raw string) string {
+	return strings.TrimSpace(fts5PatternUnsafeChars.ReplaceAllString(raw, " "))
 }
 
 // ExecDeleteCount executes a DELETE query and returns the number of rows affected.
