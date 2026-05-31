@@ -2,6 +2,7 @@ package foldmatch
 
 import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/foldcase"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/substrmatch"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 )
 
@@ -9,13 +10,7 @@ import (
 // lower-case matching. Markers are compared as provided; empty markers therefore
 // match the same way strings.Contains does.
 func AnySubstring(value string, markers []string) bool {
-	value = foldcase.Lower(value)
-	for _, marker := range markers {
-		if foldcase.ContainsFolded(value, marker) {
-			return true
-		}
-	}
-	return false
+	return substrmatch.AnyMatch(foldcase.Lower(value), markers, foldcase.ContainsFolded)
 }
 
 // AllSubstrings reports whether value contains every non-blank marker using
