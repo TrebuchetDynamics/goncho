@@ -838,22 +838,42 @@ func recallSpeakerEvidenceIdentity(evidence EvidenceItem) string {
 }
 
 func recallSpeakerIdentityFromNote(note string) string {
-	value, ok := recallLeadingEvidenceNoteValue(note, "speaker")
+	value, ok := recallEvidenceNoteValue(note, "speaker")
 	if !ok {
 		return ""
 	}
 	return value
 }
 
-func recallLeadingEvidenceNoteValue(note, key string) (string, bool) {
+func recallEvidenceNoteValue(note, key string) (string, bool) {
 	note = textutil.LowerTrimmed(note)
 	key = textutil.LowerTrimmed(key)
 	prefix := key + "="
-	if note == "" || key == "" || !strings.HasPrefix(note, prefix) {
+	if note == "" || key == "" {
 		return "", false
 	}
-	value := strings.TrimSpace(strings.TrimPrefix(note, prefix))
-	return recallTrimTrailingEvidenceNoteFields(value), true
+	for start := 0; start < len(note); {
+		idx := strings.Index(note[start:], prefix)
+		if idx < 0 {
+			return "", false
+		}
+		idx += start
+		if idx == 0 || recallEvidenceNoteFieldBoundary(note[idx-1]) {
+			value := recallTrimTrailingEvidenceNoteFields(note[idx+len(prefix):])
+			return value, value != ""
+		}
+		start = idx + len(prefix)
+	}
+	return "", false
+}
+
+func recallEvidenceNoteFieldBoundary(r byte) bool {
+	switch r {
+	case ' ', '\t', '\n', '\r', ',', ';':
+		return true
+	default:
+		return false
+	}
 }
 
 func recallTrimTrailingEvidenceNoteFields(value string) string {
