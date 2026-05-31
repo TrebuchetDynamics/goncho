@@ -679,7 +679,9 @@ func recallDiversityPenalty(candidate ScoredRecallCandidate, selected []ScoredRe
 }
 
 func recallDiversityValue(candidate RecallCandidate, key string) string {
-	switch textutil.LowerTrimmed(key) {
+	switch recallDiversityKey(key) {
+	case "memory_id":
+		return candidate.MemoryID
 	case "session_id":
 		return candidate.SessionID
 	case "source_type":
@@ -691,6 +693,10 @@ func recallDiversityValue(candidate RecallCandidate, key string) string {
 	default:
 		return ""
 	}
+}
+
+func recallDiversityKey(key string) string {
+	return textutil.LowerTrimmed(key)
 }
 
 func estimateRecallTokens(content string) int {

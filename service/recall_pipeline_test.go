@@ -126,6 +126,61 @@ func TestRecallPipelineScopeWarningWhenAllCandidatesExcluded(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineDiversityKeyMemoryIDPenalizesDuplicateMemories(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-duplicate",
+			Content:    "Auth deploys use the blue environment.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.8,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 1.0}},
+		},
+		{
+			MemoryID:   "mem-duplicate",
+			Content:    "Auth deploys use blue environment duplicate wording.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.8,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.99}},
+		},
+		{
+			MemoryID:   "mem-distinct",
+			Content:    "Billing deploys use the green environment.",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.8,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.98}},
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "memory-diversity-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:       "memory-diversity-test-v1",
+			Weights:       map[string]float64{"keyword": 1},
+			RRFK:          60,
+			MMRLambda:     0.01,
+			DiversityKeys: []string{"memory_id"},
+			TokenBudget:   120,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "auth",
+		ScopeID:     "team",
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(selectedRecallIDs(trace), []string{"mem-duplicate", "mem-distinct"}) {
+		t.Fatalf("selected IDs = %v, want duplicate memory_id penalized before second selection", selectedRecallIDs(trace))
+	}
+}
+
 func TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
