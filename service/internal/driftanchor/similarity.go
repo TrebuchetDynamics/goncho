@@ -1,14 +1,10 @@
 package driftanchor
 
 import (
-	"regexp"
-	"strings"
-
 	"github.com/TrebuchetDynamics/goncho/service/internal/textmatch"
+	"github.com/TrebuchetDynamics/goncho/service/internal/texttokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
-
-var tokenPattern = regexp.MustCompile(`[a-z0-9]+`)
 
 // Similarity scores prompt-memory overlap for negative drift-anchor warnings.
 func Similarity(prompt, memory string) float64 {
@@ -17,7 +13,7 @@ func Similarity(prompt, memory string) float64 {
 
 // TokenSet normalizes text for drift-anchor matching.
 func TokenSet(value string) map[string]struct{} {
-	return textutil.Set(tokenPattern.FindAllString(strings.ToLower(value), -1), func(token string) string {
+	return textutil.Set(texttokens.LowerAlnum(value), func(token string) string {
 		if len(token) < 4 || Stopword(token) {
 			return ""
 		}

@@ -1,10 +1,10 @@
 package benchmarkscore
 
 import (
-	"math"
 	"strings"
 	"unicode"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/recallscore"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -91,5 +91,5 @@ func RubricTokens(text string) []string {
 }
 
 func RoundFloat(value float64) float64 {
-	return math.Round(value*1_000_000) / 1_000_000
+	return recallscore.Round(value)
 }

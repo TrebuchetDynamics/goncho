@@ -1,17 +1,15 @@
 package searchtokens
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/textmatch"
+	"github.com/TrebuchetDynamics/goncho/service/internal/texttokens"
 )
-
-var tokenPattern = regexp.MustCompile(`[a-z0-9]+`)
 
 func Tokens(value string) []string {
 	out := []string{}
-	for _, token := range tokenPattern.FindAllString(strings.ToLower(value), -1) {
+	for _, token := range texttokens.LowerAlnum(value) {
 		token = Stem(token)
 		if len(token) < 3 || Stopword(token) {
 			continue

@@ -694,16 +694,9 @@ func recallTraceID(trace RecallTrace) string {
 }
 
 func clampRecall(value float64) float64 {
-	switch {
-	case value < 0:
-		return 0
-	case value > 1:
-		return 1
-	default:
-		return value
-	}
+	return recallscore.Clamp(value)
 }
 
 func roundRecallFloat(value float64) float64 {
-	return math.Round(value*1_000_000) / 1_000_000
+	return recallscore.Round(value)
 }
