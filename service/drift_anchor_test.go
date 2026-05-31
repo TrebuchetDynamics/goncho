@@ -8,6 +8,45 @@ import (
 	"github.com/TrebuchetDynamics/goncho/memory"
 )
 
+type scriptedDriftAnchorStore struct {
+	byQuery map[string][]MemoryToolEntry
+}
+
+func (s scriptedDriftAnchorStore) Store(ctx context.Context, entry MemoryToolEntry) error { return nil }
+func (s scriptedDriftAnchorStore) Retrieve(ctx context.Context, query string, limit int) ([]MemoryToolEntry, error) {
+	entries := append([]MemoryToolEntry(nil), s.byQuery[query]...)
+	if limit > 0 && len(entries) > limit {
+		entries = entries[:limit]
+	}
+	return entries, nil
+}
+func (s scriptedDriftAnchorStore) Update(ctx context.Context, id string, content string) error {
+	return nil
+}
+func (s scriptedDriftAnchorStore) Forget(ctx context.Context, id string) error { return nil }
+
+func TestDriftAnchorChecksNegativeFallbackWhenDeadEndQueryHasNoAnchorMatch(t *testing.T) {
+	detector := NewDriftAnchorDetector(scriptedDriftAnchorStore{byQuery: map[string][]MemoryToolEntry{
+		"dead-end": {
+			{ID: "unrelated-dead-end", Content: "Dead end: unrelated package manager retry failed.", Tags: []string{"dead-end"}},
+		},
+		"negative": {
+			{ID: "matching-negative", Content: "Known failure: stale Docker cache cleanup repeats unless live container state is verified first.", Tags: []string{"negative", "drift-anchor"}},
+		},
+	}})
+
+	warning, err := detector.Check(context.Background(), DriftAnchorCheckParams{
+		Prompt: "Retry the stale Docker cache cleanup again before checking live container state.",
+		Limit:  5,
+	})
+	if err != nil {
+		t.Fatalf("Check drift: %v", err)
+	}
+	if !warning.Warn || warning.MatchedMemoryID != "matching-negative" {
+		t.Fatalf("warning = %+v, want matching negative fallback anchor", warning)
+	}
+}
+
 func TestGonchoGoalNegativeDriftAnchorWarnsBeforeRepeatedFailureE2E(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()

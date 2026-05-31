@@ -32,6 +32,8 @@ func NewDriftAnchorDetector(store MemoryToolStore) *DriftAnchorDetector {
 	return &DriftAnchorDetector{store: store}
 }
 
+const driftAnchorSimilarityWarningThreshold = 0.30
+
 func (d *DriftAnchorDetector) Check(ctx context.Context, params DriftAnchorCheckParams) (DriftAnchorWarning, error) {
 	if d == nil || d.store == nil {
 		return DriftAnchorWarning{}, fmt.Errorf("goncho: drift anchor store is required")
@@ -41,17 +43,52 @@ func (d *DriftAnchorDetector) Check(ctx context.Context, params DriftAnchorCheck
 		return DriftAnchorWarning{}, fmt.Errorf("goncho: drift anchor prompt is required")
 	}
 	limit := limitutil.Default(params.Limit, 5)
-	entries, err := d.store.Retrieve(ctx, "dead-end", limit)
+	entries, err := retrieveDriftAnchorCandidates(ctx, d.store, limit)
 	if err != nil {
 		return DriftAnchorWarning{}, err
 	}
-	if len(entries) == 0 {
-		entries, err = d.store.Retrieve(ctx, "negative", limit)
+
+	best, bestScore := strongestDriftAnchorCandidate(prompt, entries)
+	if best.ID == "" || bestScore < driftAnchorSimilarityWarningThreshold {
+		return DriftAnchorWarning{Warn: false}, nil
+	}
+	return DriftAnchorWarning{
+		Warn:            true,
+		Code:            "negative_drift_anchor",
+		MatchedMemoryID: best.ID,
+		MatchedContent:  best.Content,
+		SimilarityScore: bestScore,
+		Recommendation:  "verify_live_state_before_repeating_failed_path",
+	}, nil
+}
+
+func driftAnchorCandidateQueries() []string {
+	return []string{"dead-end", "negative"}
+}
+
+func retrieveDriftAnchorCandidates(ctx context.Context, store MemoryToolStore, limit int) ([]MemoryToolEntry, error) {
+	seen := map[string]struct{}{}
+	entries := []MemoryToolEntry{}
+	for _, query := range driftAnchorCandidateQueries() {
+		matches, err := store.Retrieve(ctx, query, limit)
 		if err != nil {
-			return DriftAnchorWarning{}, err
+			return nil, err
+		}
+		for _, match := range matches {
+			id := strings.TrimSpace(match.ID)
+			if id != "" {
+				if _, ok := seen[id]; ok {
+					continue
+				}
+				seen[id] = struct{}{}
+			}
+			entries = append(entries, match)
 		}
 	}
+	return entries, nil
+}
 
+func strongestDriftAnchorCandidate(prompt string, entries []MemoryToolEntry) (MemoryToolEntry, float64) {
 	bestScore := 0.0
 	var best MemoryToolEntry
 	for _, entry := range entries {
@@ -64,17 +101,7 @@ func (d *DriftAnchorDetector) Check(ctx context.Context, params DriftAnchorCheck
 			best = entry
 		}
 	}
-	if best.ID == "" || bestScore < 0.30 {
-		return DriftAnchorWarning{Warn: false}, nil
-	}
-	return DriftAnchorWarning{
-		Warn:            true,
-		Code:            "negative_drift_anchor",
-		MatchedMemoryID: best.ID,
-		MatchedContent:  best.Content,
-		SimilarityScore: bestScore,
-		Recommendation:  "verify_live_state_before_repeating_failed_path",
-	}, nil
+	return best, bestScore
 }
 
 func isNegativeDriftAnchor(entry MemoryToolEntry) bool {
