@@ -51,27 +51,7 @@ type beamConvertedQuestion struct {
 	MaxTokens             int      `json:"max_tokens"`
 }
 
-type beamConversionDiagnostics struct {
-	Source                        string                     `json:"source"`
-	SourceSHA256                  string                     `json:"source_sha256,omitempty"`
-	ConvertedJSONLSHA256          string                     `json:"converted_jsonl_sha256,omitempty"`
-	ConversationCount             int                        `json:"conversation_count"`
-	MemoryCount                   int                        `json:"memory_count"`
-	QuestionCount                 int                        `json:"question_count"`
-	ExpectedNoAnswerQuestionCount int                        `json:"expected_no_answer_question_count"`
-	UnscorableQuestionCount       int                        `json:"unscorable_question_count"`
-	QuestionsByAbility            map[string]int             `json:"questions_by_ability,omitempty"`
-	UnscorableByAbility           map[string]int             `json:"unscorable_by_ability,omitempty"`
-	Warnings                      []beamConversionDiagnostic `json:"warnings,omitempty"`
-}
-
-type beamConversionDiagnostic struct {
-	Code           string `json:"code"`
-	ConversationID string `json:"conversation_id,omitempty"`
-	QID            string `json:"qid,omitempty"`
-	Ability        string `json:"ability,omitempty"`
-	Message        string `json:"message,omitempty"`
-}
+type beamConversionDiagnostics = convertpolicy.Diagnostics
 
 func ConvertHuggingFaceJSONL(inputPath, outputPath, fallbackScale string) error {
 	inputPath = strings.TrimSpace(inputPath)
@@ -355,47 +335,7 @@ func encodeBeamJSONL(w io.Writer, records []beamJSONLRecord) error {
 }
 
 func summarizeBeamConversionRecords(records []beamJSONLRecord) beamConversionDiagnostics {
-	diagnostics := beamConversionDiagnostics{
-		Source:              "huggingface-beam-jsonl",
-		QuestionsByAbility:  map[string]int{},
-		UnscorableByAbility: map[string]int{},
-		Warnings:            []beamConversionDiagnostic{},
-	}
-	conversations := map[string]struct{}{}
-	for _, record := range records {
-		switch shared.NormalizeRecordType(record.Type) {
-		case "memory":
-			diagnostics.MemoryCount++
-			conversationID := normalizeBeamJSONLConversationID(record.ConversationID)
-			conversations[conversationID] = struct{}{}
-		case "question":
-			diagnostics.QuestionCount++
-			conversationID := normalizeBeamJSONLConversationID(record.ConversationID)
-			conversations[conversationID] = struct{}{}
-			ability := shared.NormalizeAbility(record.Ability)
-			if ability == "" {
-				ability = "UNKNOWN"
-			}
-			diagnostics.QuestionsByAbility[ability]++
-			if record.ExpectedNoAnswer {
-				diagnostics.ExpectedNoAnswerQuestionCount++
-				continue
-			}
-			if len(record.RelevantIDs) == 0 && len(record.ContextContains) == 0 {
-				diagnostics.UnscorableQuestionCount++
-				diagnostics.UnscorableByAbility[ability]++
-				diagnostics.Warnings = append(diagnostics.Warnings, beamConversionDiagnostic{
-					Code:           "beam_question_missing_relevant_ids",
-					ConversationID: conversationID,
-					QID:            strings.TrimSpace(record.ID),
-					Ability:        ability,
-					Message:        "question has no stable relevant_ids/context_contains, so stable-ID pure recall scoring treats it as unscorable",
-				})
-			}
-		}
-	}
-	diagnostics.ConversationCount = len(conversations)
-	return diagnostics
+	return convertpolicy.SummarizeRecords(records)
 }
 
 func beamQuestionCount(questionsByAbility map[string][]beamConvertedQuestion) int {

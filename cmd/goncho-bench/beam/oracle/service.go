@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/artifactcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/casecontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/service"
@@ -116,15 +117,7 @@ type beamServiceQuestionResult struct {
 	JudgeTimeMS          float64                     `json:"judge_time_ms"`
 }
 
-type beamServiceRecallProvenance struct {
-	Engine             string             `json:"engine"`
-	KeptCount          int                `json:"kept_count"`
-	VoiceSums          map[string]float64 `json:"voice_sums"`
-	TopResultVoices    map[string]float64 `json:"top_result_voices"`
-	TopResultTier      string             `json:"top_result_tier"`
-	CandidateMemoryIDs []string           `json:"candidate_memory_ids,omitempty"`
-	SelectedMemoryIDs  []string           `json:"selected_memory_ids,omitempty"`
-}
+type beamServiceRecallProvenance = artifactcontract.RecallProvenance
 
 func writeBeamServiceComparisonArtifacts(report goncho.RecallBenchmarkReport, cfg ServiceConfig, runStartedAt time.Time) error {
 	configID := normalizeBeamServiceConfigID(cfg.ServiceConfigID)
@@ -282,23 +275,7 @@ func beamServiceResultsDiagnostics(report goncho.RecallBenchmarkReport, conversi
 }
 
 func beamServiceCaseRecallProvenance(c goncho.RecallBenchmarkCaseReport) beamServiceRecallProvenance {
-	return beamServiceRecallProvenance{
-		Engine:             beamServiceModelName,
-		KeptCount:          len(c.CandidateMemoryIDs),
-		VoiceSums:          beamServiceVoiceMap(c.SelectedEvidenceKinds),
-		TopResultVoices:    beamServiceVoiceMap(c.TopEvidenceKinds),
-		TopResultTier:      beamServiceTopResultTier(c.TopEvidenceKinds),
-		CandidateMemoryIDs: append([]string(nil), c.CandidateMemoryIDs...),
-		SelectedMemoryIDs:  append([]string(nil), c.SelectedMemoryIDs...),
-	}
-}
-
-func beamServiceVoiceMap(kinds []string) map[string]float64 {
-	return casecontract.VoiceMap(kinds)
-}
-
-func beamServiceTopResultTier(kinds []string) string {
-	return casecontract.TopResultTier(kinds)
+	return artifactcontract.BuildRecallProvenance(c)
 }
 
 func beamServiceCaseAssessment(c goncho.RecallBenchmarkCaseReport, score float64) string {
