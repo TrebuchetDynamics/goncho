@@ -5,7 +5,7 @@ import unittest
 
 from data_io.jsonl.behavior.roundtrip.cases.case_support.workspace import temp_jsonl_path
 from data_io.shared.contracts import load_jsonl, write_jsonl
-from data_io.jsonl.behavior.roundtrip.shared.samples import ROUNDTRIP_ROWS
+from data_io.jsonl.behavior.roundtrip.shared.payloads.fixtures import ROUNDTRIP_ROWS
 
 
 class JsonlWriteRoundTripTests(unittest.TestCase):
