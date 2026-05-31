@@ -29,6 +29,20 @@ func TestRecallCurrentTruthIntentTokenization(t *testing.T) {
 	}
 }
 
+func TestRecallTemporalRoutingDoesNotWarnOnNegatedSupersededMarker(t *testing.T) {
+	candidate := ScoredRecallCandidate{Candidate: RecallCandidate{
+		MemoryID:   "mem-current",
+		Provenance: []EvidenceItem{{Kind: "temporal", Note: "current_fact valid_now not_superseded"}},
+	}}
+
+	if got := recallTemporalAdjustment(candidate, "who owns component A-17 now?"); got != recallTemporalCurrentBonus {
+		t.Fatalf("recallTemporalAdjustment() = %v, want current bonus for not_superseded current fact", got)
+	}
+	if recallHasSupersededEvidence([]ScoredRecallCandidate{candidate}) {
+		t.Fatalf("recallHasSupersededEvidence() = true, want false for negated superseded marker")
+	}
+}
+
 func TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{

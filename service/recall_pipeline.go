@@ -516,23 +516,74 @@ const recallTemporalCurrentBonus = 0.08
 const recallTemporalSupersededPenalty = 0.20
 const recallSpeakerMatchBonus = 0.12
 
+type recallTemporalEvidenceState int
+
+const (
+	recallTemporalEvidenceUnknown recallTemporalEvidenceState = iota
+	recallTemporalEvidenceCurrent
+	recallTemporalEvidenceSuperseded
+)
+
 func recallTemporalAdjustment(candidate ScoredRecallCandidate, query string) float64 {
 	if !recallQueryAsksCurrentTruth(query) {
 		return 0
 	}
-	for _, evidence := range candidate.Candidate.Provenance {
+	state := recallTemporalState(candidate.Candidate.Provenance)
+	switch state {
+	case recallTemporalEvidenceSuperseded:
+		return -recallTemporalSupersededPenalty
+	case recallTemporalEvidenceCurrent:
+		return recallTemporalCurrentBonus
+	default:
+		return 0
+	}
+}
+
+func recallTemporalState(items []EvidenceItem) recallTemporalEvidenceState {
+	state := recallTemporalEvidenceUnknown
+	for _, evidence := range items {
 		if evidence.Kind != "temporal" {
 			continue
 		}
-		note := textutil.LowerTrimmed(evidence.Note)
-		if textutil.ContainsAnySubstring(note, []string{"superseded_by=", "superseded"}) {
-			return -recallTemporalSupersededPenalty
-		}
-		if textutil.ContainsAnySubstring(note, []string{"current_fact", "valid_now"}) {
-			return recallTemporalCurrentBonus
+		switch recallTemporalEvidenceNoteState(evidence.Note) {
+		case recallTemporalEvidenceSuperseded:
+			return recallTemporalEvidenceSuperseded
+		case recallTemporalEvidenceCurrent:
+			state = recallTemporalEvidenceCurrent
 		}
 	}
-	return 0
+	return state
+}
+
+func recallTemporalEvidenceNoteState(note string) recallTemporalEvidenceState {
+	state := recallTemporalEvidenceUnknown
+	for _, field := range recallTemporalEvidenceNoteFields(note) {
+		field = strings.Trim(field, " .:()[]{}")
+		switch {
+		case strings.HasPrefix(field, "superseded_by=") && strings.TrimSpace(strings.TrimPrefix(field, "superseded_by=")) != "":
+			return recallTemporalEvidenceSuperseded
+		case field == "superseded":
+			return recallTemporalEvidenceSuperseded
+		case field == "current_fact" || field == "valid_now":
+			state = recallTemporalEvidenceCurrent
+		}
+	}
+	return state
+}
+
+func recallTemporalEvidenceNoteFields(note string) []string {
+	note = textutil.LowerTrimmed(note)
+	if note == "" {
+		return nil
+	}
+	return strings.FieldsFunc(note, func(r rune) bool {
+		switch r {
+		case ' ', '\t', '\n', '\r', ',', ';':
+			return true
+		default:
+			return false
+		}
+	})
 }
 
 var recallCurrentTruthIntentTokens = map[string]struct{}{
@@ -571,14 +622,8 @@ func recallIntentTokens(query string) []string {
 
 func recallHasSupersededEvidence(candidates []ScoredRecallCandidate) bool {
 	for _, candidate := range candidates {
-		for _, evidence := range candidate.Candidate.Provenance {
-			if evidence.Kind != "temporal" {
-				continue
-			}
-			note := textutil.LowerTrimmed(evidence.Note)
-			if textutil.ContainsAnySubstring(note, []string{"superseded_by=", "superseded"}) {
-				return true
-			}
+		if recallTemporalState(candidate.Candidate.Provenance) == recallTemporalEvidenceSuperseded {
+			return true
 		}
 	}
 	return false
