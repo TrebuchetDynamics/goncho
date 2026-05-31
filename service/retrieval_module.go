@@ -261,10 +261,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 }
 
 func trimSearchHits(hits []SearchHit, limit int) []SearchHit {
-	if limit > 0 && len(hits) > limit {
-		return sliceutil.Clone(hits[:limit])
-	}
-	return hits
+	return sliceutil.LimitClone(hits, limit)
 }
 
 func searchHitFromVectorHit(hit VectorSearchHit) SearchHit {

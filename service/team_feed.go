@@ -10,6 +10,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopeauth"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
 
 type TeamFeedDecision string
@@ -205,7 +206,7 @@ func (s *Service) listTeamFeedEntries(ctx context.Context, scope TeamFeedEntry, 
 	next := ""
 	if len(entries) > limit {
 		next = idutil.Decimal(entries[limit-1].SignalID)
-		entries = entries[:limit]
+		entries = sliceutil.Limit(entries, limit)
 	}
 	return entries, next, nil
 }

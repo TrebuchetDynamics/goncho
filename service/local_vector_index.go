@@ -198,7 +198,7 @@ func (i *LocalVectorIndex) Search(ctx context.Context, query VectorSearchQuery) 
 		limit = len(scored)
 	}
 	out := make([]VectorSearchHit, 0, limit)
-	for _, item := range scored[:limit] {
+	for _, item := range sliceutil.Limit(scored, limit) {
 		item.hit.Score = roundRecallFloat(item.hit.Score)
 		out = append(out, item.hit)
 	}

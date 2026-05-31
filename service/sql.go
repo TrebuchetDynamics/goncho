@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
@@ -539,9 +540,7 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 	if trimmedQuery != "" {
 		hits = rankConclusionHitsByLexicalOverlap(trimmedQuery, hits)
 	}
-	if len(hits) > limit {
-		hits = hits[:limit]
-	}
+	hits = sliceutil.Limit(hits, limit)
 	return hits, nil
 }
 
