@@ -26,7 +26,7 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 		return hits
 	}
 	if len(hits) < 2 {
-		if len(hits) == 1 && expansion.Applied() && recallscore.Keyword(hits[0].Content, expansion.Expanded) > 0 {
+		if len(hits) == 1 && searchHitExpansionImproves(expansion, hits[0]) {
 			hits[0].Provenance = append(hits[0].Provenance, queryExpansionEvidence(expansion))
 		}
 		return hits
@@ -76,7 +76,7 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 		}
 		score += searchFactIntentBonus(factScore, maxScore)
 		score += searchTemporalRerankBonus(temporal, hit.Content, i, len(hits), score, maxScore)
-		if expansion.Applied() {
+		if searchHitExpansionImproves(expansion, hit) {
 			hit.Provenance = append(hit.Provenance, queryExpansionEvidence(expansion))
 		}
 		scored = append(scored, scoredHit{hit: hit, score: score, baseScore: baseScores[i], index: i})
@@ -99,6 +99,15 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 	return sliceutil.Map(scored, func(item scoredHit) SearchHit {
 		return item.hit
 	})
+}
+
+func searchHitExpansionImproves(expansion expandedQuery, hit SearchHit) bool {
+	if !expansion.Applied() {
+		return false
+	}
+	originalScore := recallscore.Keyword(hit.Content, expansion.Original)
+	expandedScore := recallscore.Keyword(hit.Content, expansion.Expanded)
+	return expandedScore > originalScore
 }
 
 func searchTemporalIntent(query string) searchTemporalFeatures {

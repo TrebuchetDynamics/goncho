@@ -30,6 +30,27 @@ func TestSearchRankTemporalMarkers(t *testing.T) {
 	}
 }
 
+func TestRankConclusionHitsAddsExpansionProvenanceOnlyWhenExpansionImprovesHit(t *testing.T) {
+	hits := []SearchHit{
+		{Content: "Mira uses signin on the front door dashboard."},
+		{Content: "Mira uses login on the authentication dashboard."},
+	}
+
+	got := rankConclusionHitsByLexicalOverlap("signin", hits)
+	if len(got) != 2 {
+		t.Fatalf("ranked hits len = %d, want 2", len(got))
+	}
+	for _, hit := range got {
+		hasExpansion := searchHitHasEvidenceKind(hit, "query_expansion")
+		if hit.Content == hits[0].Content && hasExpansion {
+			t.Fatalf("original-token hit provenance = %+v, want no query_expansion evidence", hit.Provenance)
+		}
+		if hit.Content == hits[1].Content && !hasExpansion {
+			t.Fatalf("expanded-token hit provenance = %+v, want query_expansion evidence", hit.Provenance)
+		}
+	}
+}
+
 func TestRankConclusionHitsTemporalDoesNotPenalizePersonalMemoryWithGenericAside(t *testing.T) {
 	hits := []SearchHit{
 		{Content: "user: What shampoo should I buy? assistant: I don't have personal experience, but here is a generic list of shampoo brands."},
