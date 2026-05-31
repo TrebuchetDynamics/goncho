@@ -130,6 +130,21 @@ func TestAppendRecallWarningsPreservesDistinctReplayEvidence(t *testing.T) {
 	}
 }
 
+func TestAppendRecallWarningsPreservesDistinctSeverityAndMessage(t *testing.T) {
+	warnings := appendRecallWarnings(nil,
+		RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Message: "semantic generator degraded", Evidence: map[string]string{"generator": "vector", "error": "timeout"}},
+		RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningError, Message: "semantic generator failed", Evidence: map[string]string{"generator": "vector", "error": "timeout"}},
+		RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Message: "semantic generator degraded", Evidence: map[string]string{"error": "timeout", "generator": "vector"}},
+	)
+
+	if len(warnings) != 2 {
+		t.Fatalf("warnings = %+v, want degraded and error warnings with same replay evidence preserved", warnings)
+	}
+	if warnings[0].Severity != RecallWarningDegraded || warnings[1].Severity != RecallWarningError {
+		t.Fatalf("warnings = %+v, want exact duplicates dropped without merging severity changes", warnings)
+	}
+}
+
 func TestRecallPipelineWarningsAreTraceOwned(t *testing.T) {
 	engine := newRecallPipelineEngine(staticRecallGenerator{
 		warnings: []RecallWarning{{

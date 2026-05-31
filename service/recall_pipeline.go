@@ -438,8 +438,26 @@ func cloneRecallWarning(warning RecallWarning) RecallWarning {
 	return warning
 }
 
+type recallWarningIdentity struct {
+	Stage       string
+	Code        string
+	Severity    string
+	Message     string
+	EvidenceKey string
+}
+
+func (id recallWarningIdentity) String() string {
+	return strings.Join([]string{id.Stage, id.Code, id.Severity, id.Message, id.EvidenceKey}, "\x00")
+}
+
 func recallWarningDedupKey(warning RecallWarning) string {
-	return warning.Stage + "\x00" + warning.Code + "\x00" + recallWarningEvidenceKey(warning.Evidence)
+	return recallWarningIdentity{
+		Stage:       warning.Stage,
+		Code:        warning.Code,
+		Severity:    warning.Severity,
+		Message:     warning.Message,
+		EvidenceKey: recallWarningEvidenceKey(warning.Evidence),
+	}.String()
 }
 
 func recallWarningEvidenceKey(evidence map[string]string) string {
