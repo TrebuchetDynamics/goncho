@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -61,17 +62,19 @@ func ExecDeleteCount(ctx context.Context, db LifecycleSQL, query string, args ..
 	return count, nil
 }
 
-// SessionKeyMatchesSources checks whether a sessionKey's source prefix matches
-// one of the given sources. If sources is empty or contains a wildcard, returns true.
+// SessionKeyMatchesSources checks whether a turn session key is allowed by a
+// source filter. Turn rows match either the storage kind "turn" or the
+// session key's adapter/source prefix (for example "discord"). If sources is
+// empty or contains a wildcard, returns true.
 func SessionKeyMatchesSources(sessionKey string, sources []string) bool {
 	if len(sources) == 0 || HasWildcard(sources) {
 		return true
 	}
 	source, _, ok := strings.Cut(strings.TrimSpace(sessionKey), ":")
 	if !ok {
-		return false
+		return sourcefilter.AllowsKindOrOrigin(sources, "turn", "", false)
 	}
-	return ContainsFold(sources, textutil.LowerTrimmed(source))
+	return sourcefilter.AllowsKindOrOrigin(sources, "turn", textutil.LowerTrimmed(source), false)
 }
 
 // OriginSourceFromChatKey extracts the source prefix from a "source:chatID" chat key.

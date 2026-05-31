@@ -13,6 +13,18 @@ func TestSanitizeFTS5Pattern(t *testing.T) {
 	}
 }
 
+func TestSessionKeyMatchesSourcesAllowsTurnKindOrAdapterPrefix(t *testing.T) {
+	if !SessionKeyMatchesSources("discord:chan-9", []string{"turn"}) {
+		t.Fatalf("source kind turn should allow any adapter-backed turn session")
+	}
+	if !SessionKeyMatchesSources("discord:chan-9", []string{"discord"}) {
+		t.Fatalf("adapter source discord should allow matching session prefix")
+	}
+	if SessionKeyMatchesSources("discord:chan-9", []string{"conclusion"}) {
+		t.Fatalf("conclusion source should not allow turn fallback")
+	}
+}
+
 func TestSQLiteErrorClassifiers(t *testing.T) {
 	tests := []struct {
 		name string

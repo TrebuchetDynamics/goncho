@@ -12,6 +12,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sessionquery"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 	"gopkg.in/yaml.v3"
 )
@@ -130,7 +131,7 @@ func ExplainCrossChatRecall(metas []SessionMetadata, filter SearchFilter) CrossC
 		if metaUserID != evidence.UserID {
 			continue
 		}
-		if len(allowedSources) > 0 && !sliceutil.Contains(allowedSources, textutil.LowerTrimmed(meta.Source)) {
+		if len(allowedSources) > 0 && !sourcefilter.AllowsKindOrOrigin(allowedSources, "turn", meta.Source, false) {
 			continue
 		}
 		if len(allowedSessions) > 0 && !sliceutil.Contains(allowedSessions, strings.TrimSpace(meta.SessionID)) {
@@ -266,7 +267,7 @@ func selectMetadata(metas []SessionMetadata, filter SearchFilter) ([]SessionMeta
 		if metaUserID != userID {
 			continue
 		}
-		if len(allowedSources) > 0 && !sliceutil.Contains(allowedSources, textutil.LowerTrimmed(meta.Source)) {
+		if len(allowedSources) > 0 && !sourcefilter.AllowsKindOrOrigin(allowedSources, "turn", meta.Source, false) {
 			continue
 		}
 		if len(allowedSessions) > 0 && !sliceutil.Contains(allowedSessions, strings.TrimSpace(meta.SessionID)) {

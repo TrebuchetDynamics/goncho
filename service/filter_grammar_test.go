@@ -261,6 +261,70 @@ func TestService_SearchBlankSourceFilterCannotWidenSameChatRecall(t *testing.T) 
 	}
 }
 
+func TestService_SearchSourceKindTurnAllowsSameChatTurnFallback(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	now := time.Now().Unix()
+	if _, err := svc.db.ExecContext(ctx,
+		`INSERT INTO turns(session_id, role, content, ts_unix, chat_id)
+		 VALUES ('sess-current', 'user', 'Atlas source-kind turn note.', ?, 'discord:chan-9')`,
+		now,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := svc.Search(ctx, SearchParams{
+		Peer:       "user-juan",
+		Query:      "Atlas",
+		SessionKey: "discord:chan-9",
+		Filters: map[string]any{
+			"source": "turn",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Results) != 1 || got.Results[0].Content != "Atlas source-kind turn note." {
+		t.Fatalf("Search results = %+v, want source=turn to allow same-chat turn fallback regardless adapter source", got.Results)
+	}
+}
+
+func TestService_SearchSourceKindTurnAllowsUserScopeTurnRecall(t *testing.T) {
+	store, dir, svc, cleanup := newTestServiceWithDirectory(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	if err := dir.PutMetadata(ctx, session.Metadata{SessionID: "sess-discord", Source: "discord", ChatID: "chan-9", UserID: "user-juan"}); err != nil {
+		t.Fatalf("PutMetadata: %v", err)
+	}
+	now := time.Now().Unix()
+	if _, err := store.DB().ExecContext(ctx,
+		`INSERT INTO turns(session_id, role, content, ts_unix, chat_id)
+		 VALUES ('sess-discord', 'user', 'Atlas user-scope source-kind turn note.', ?, 'discord:chan-9')`,
+		now,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := svc.Search(ctx, SearchParams{
+		Peer:       "user-juan",
+		Query:      "Atlas",
+		SessionKey: "discord:chan-9",
+		Scope:      "user",
+		Filters: map[string]any{
+			"source": "turn",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Results) != 1 || got.Results[0].Content != "Atlas user-scope source-kind turn note." {
+		t.Fatalf("Search results = %+v, want source=turn to allow user-scope turn recall regardless adapter source", got.Results)
+	}
+}
+
 func TestService_SearchSourceFilterCannotWidenSameChatRecall(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

@@ -28,3 +28,15 @@ func TestAllowsMatchesSourcesCaseInsensitively(t *testing.T) {
 		t.Fatalf("Allows should reject a source not in the allow-list")
 	}
 }
+
+func TestAllowsKindOrOriginKeepsSourceKindDistinctFromAdapterSource(t *testing.T) {
+	if !AllowsKindOrOrigin([]string{"turn"}, "turn", "discord", false) {
+		t.Fatalf("AllowsKindOrOrigin should allow a storage/source-kind match")
+	}
+	if !AllowsKindOrOrigin([]string{"discord"}, "turn", "discord", false) {
+		t.Fatalf("AllowsKindOrOrigin should allow an adapter-origin match")
+	}
+	if AllowsKindOrOrigin([]string{"conclusion"}, "turn", "discord", false) {
+		t.Fatalf("AllowsKindOrOrigin should reject unrelated source kind and adapter origin")
+	}
+}
