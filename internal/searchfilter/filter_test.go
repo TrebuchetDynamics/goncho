@@ -187,6 +187,22 @@ func TestGrammarAcceptsTypedGoSlicesForInOperator(t *testing.T) {
 	}
 }
 
+func TestGrammarAcceptsTypedGoSlicesForLogicalOperators(t *testing.T) {
+	expr := mustParse(t, map[string]any{
+		"AND": []map[string]any{
+			{"session_id": "sess-discord"},
+			{"source": "slack"},
+		},
+	})
+
+	if got := comparisonValues(t, expr, "session_id", searchfilter.OpEQ); !slices.Equal(got, []string{"sess-discord"}) {
+		t.Fatalf("session_id eq values = %#v, want typed Go slice child parsed", got)
+	}
+	if got := comparisonValues(t, expr, "source", searchfilter.OpEQ); !slices.Equal(got, []string{"slack"}) {
+		t.Fatalf("source eq values = %#v, want typed Go slice child parsed", got)
+	}
+}
+
 func TestCompilerSupportsSessionSourcePeerAndRejectsMetadata(t *testing.T) {
 	supported, err := searchfilter.Compile(mustParse(t, map[string]any{
 		"AND": []any{

@@ -128,7 +128,7 @@ func parseFilterMap(raw map[string]any, path []string) (Expression, error) {
 }
 
 func parseLogicalFilter(key string, value any, path []string) (Expression, error) {
-	items, ok := value.([]any)
+	items, ok := listElements(value)
 	if !ok {
 		return Expression{}, unsupportedFilter(strings.Join(path, "."), key, "logical filter value must be a list")
 	}
