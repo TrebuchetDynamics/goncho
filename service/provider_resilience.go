@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/providerpolicy"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 )
@@ -267,10 +268,7 @@ func (r *ProviderHealthRegistry) Diagnostics() ProviderHealthDiagnostics {
 		return defaultProviderHealthDiagnostics(nil)
 	}
 	r.mu.Lock()
-	breakers := make(map[string]*ProviderCircuitBreaker, len(r.breakers))
-	for name, breaker := range r.breakers {
-		breakers[name] = breaker
-	}
+	breakers := maputil.Clone(r.breakers)
 	r.mu.Unlock()
 	return defaultProviderHealthDiagnostics(breakers)
 }

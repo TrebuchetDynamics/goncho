@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/ptrutil"
 )
 
 func TestHostHookEventSchemasCoverP1AgentLifecycleEvents(t *testing.T) {
@@ -135,7 +137,7 @@ func TestServiceCaptureHostHookMapsToObserveMessagesAndSummary(t *testing.T) {
 			ToolName:   "bash",
 			Input:      "go test ./service -run HookCapture",
 			Output:     "build failed: missing HostHookEvent",
-			Success:    boolPtr(false),
+			Success:    ptrutil.Bool(false),
 			ObservedAt: observedAt.Add(time.Second),
 		},
 		{
@@ -201,5 +203,3 @@ func TestServiceCaptureHostHookMapsToObserveMessagesAndSummary(t *testing.T) {
 		t.Fatalf("summary = %+v, want host session summary", summary)
 	}
 }
-
-func boolPtr(v bool) *bool { return &v }

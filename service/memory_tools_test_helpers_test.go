@@ -29,7 +29,7 @@ func (m *mockMemoryToolStore) Retrieve(ctx context.Context, query string, limit 
 	defer m.mu.Unlock()
 	var results []MemoryToolEntry
 	for _, entry := range m.entries {
-		if query == "" || containsTag(entry.Tags, query) || containsMemoryContent(entry.Content, query) {
+		if query == "" || sliceutil.Contains(entry.Tags, query) || textutil.ContainsEitherSubstringFold(entry.Content, query) {
 			results = append(results, entry)
 			if len(results) >= limit {
 				break
@@ -68,12 +68,4 @@ func (m *mockMemoryToolStore) Forget(ctx context.Context, id string) error {
 	defer m.mu.Unlock()
 	delete(m.entries, id)
 	return nil
-}
-
-func containsTag(tags []string, query string) bool {
-	return sliceutil.Contains(tags, query)
-}
-
-func containsMemoryContent(content string, query string) bool {
-	return textutil.ContainsEitherSubstringFold(content, query)
 }

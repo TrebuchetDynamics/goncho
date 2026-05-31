@@ -10,6 +10,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -287,7 +288,7 @@ func searchHitFromVectorHit(hit VectorSearchHit) SearchHit {
 			ID:       memoryID,
 			Score:    clampRecall(hit.Score),
 			Note:     "matched optional vector store",
-			Metadata: cloneVectorMetadata(hit.Metadata),
+			Metadata: maputil.CloneStringStringNilIfEmpty(hit.Metadata),
 		}},
 	}
 }

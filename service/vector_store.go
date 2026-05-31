@@ -92,7 +92,7 @@ func recallCandidateFromVectorHit(hit VectorSearchHit, observer, scopeID string)
 			ID:       memoryID,
 			Score:    clampRecall(hit.Score),
 			Note:     "matched optional vector store",
-			Metadata: cloneVectorMetadata(hit.Metadata),
+			Metadata: maputil.CloneStringStringNilIfEmpty(hit.Metadata),
 		}},
 	}
 }
@@ -175,8 +175,4 @@ func mergeRecallCandidateEvidence(existing, incoming RecallCandidate) RecallCand
 
 func vectorSourceAllowed(sources []string, sourceType string) bool {
 	return sourcefilter.Allows(sources, sourceType, true)
-}
-
-func cloneVectorMetadata(in map[string]string) map[string]string {
-	return maputil.CloneStringStringNilIfEmpty(in)
 }

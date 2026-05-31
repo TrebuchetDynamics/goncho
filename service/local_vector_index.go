@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/vectorcalc"
 )
@@ -180,7 +181,7 @@ func (i *LocalVectorIndex) Search(ctx context.Context, query VectorSearchQuery) 
 			CreatedAt:  entry.CreatedAt,
 			Importance: entry.Importance,
 			Score:      score,
-			Metadata:   cloneVectorMetadata(entry.Metadata),
+			Metadata:   maputil.CloneStringStringNilIfEmpty(entry.Metadata),
 		}})
 	}
 	sort.SliceStable(scored, func(a, b int) bool {
@@ -281,7 +282,7 @@ func normalizeLocalVectorMemory(memory LocalVectorMemory) LocalVectorMemory {
 	memory.SessionID = strings.TrimSpace(memory.SessionID)
 	memory.AgentID = strings.TrimSpace(memory.AgentID)
 	memory.ScopeID = strings.TrimSpace(memory.ScopeID)
-	memory.Metadata = cloneVectorMetadata(memory.Metadata)
+	memory.Metadata = maputil.CloneStringStringNilIfEmpty(memory.Metadata)
 	return memory
 }
 
