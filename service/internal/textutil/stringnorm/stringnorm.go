@@ -17,16 +17,13 @@ func Apply(normalize Normalizer, value string) string {
 // Unique returns non-empty normalized strings, preserving first-seen order
 // unless sortOutput is true.
 func Unique(values []string, normalize Normalizer, sortOutput bool) []string {
+	values = normalizedNonEmpty(values, normalize)
 	if len(values) == 0 {
 		return nil
 	}
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(values))
 	for _, value := range values {
-		value = Apply(normalize, value)
-		if value == "" {
-			continue
-		}
 		if _, ok := seen[value]; ok {
 			continue
 		}
@@ -45,15 +42,12 @@ func Unique(values []string, normalize Normalizer, sortOutput bool) []string {
 // Set returns normalized non-empty strings as a set. It preserves nil for empty
 // input or when every normalized value is empty.
 func Set(values []string, normalize Normalizer) map[string]struct{} {
+	values = normalizedNonEmpty(values, normalize)
 	if len(values) == 0 {
 		return nil
 	}
 	out := make(map[string]struct{}, len(values))
 	for _, value := range values {
-		value = Apply(normalize, value)
-		if value == "" {
-			continue
-		}
 		out[value] = struct{}{}
 	}
 	if len(out) == 0 {
@@ -65,11 +59,22 @@ func Set(values []string, normalize Normalizer) map[string]struct{} {
 // SortedSetValues returns the sorted non-empty keys in values after optional
 // normalization.
 func SortedSetValues(values map[string]struct{}, normalize Normalizer) []string {
+	out := normalizedNonEmpty(setKeys(values), normalize)
+	if len(out) == 0 {
+		return nil
+	}
+	if len(out) > 1 {
+		sort.Strings(out)
+	}
+	return out
+}
+
+func normalizedNonEmpty(values []string, normalize Normalizer) []string {
 	if len(values) == 0 {
 		return nil
 	}
 	out := make([]string, 0, len(values))
-	for value := range values {
+	for _, value := range values {
 		value = Apply(normalize, value)
 		if value != "" {
 			out = append(out, value)
@@ -78,8 +83,16 @@ func SortedSetValues(values map[string]struct{}, normalize Normalizer) []string 
 	if len(out) == 0 {
 		return nil
 	}
-	if len(out) > 1 {
-		sort.Strings(out)
+	return out
+}
+
+func setKeys(values map[string]struct{}) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(values))
+	for value := range values {
+		out = append(out, value)
 	}
 	return out
 }
