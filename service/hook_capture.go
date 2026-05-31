@@ -199,7 +199,7 @@ func (s *Service) CaptureHostHook(ctx context.Context, event HostHookEvent) (Hoo
 		result.Messages = append(result.Messages, created.Messages...)
 	}
 
-	if event.Event == HostHookSessionEnd && strings.TrimSpace(event.Summary) != "" {
+	if event.Event == HostHookSessionEnd && textutil.NonBlank(event.Summary) {
 		summary := SessionSummary{
 			Content:     strings.TrimSpace(event.Summary),
 			SummaryType: "short",
@@ -247,11 +247,11 @@ func filterHostHookEvent(event HostHookEvent) hostHookFilterResult {
 	filtered, out = filterHostHookString(event.Summary, out)
 	out.Event.Summary = filtered
 	if event.Metadata != nil {
-		out.Event.Metadata = make(map[string]string, len(event.Metadata))
-		for key, value := range event.Metadata {
+		out.Event.Metadata = cloneStringMap(event.Metadata)
+		for key, value := range out.Event.Metadata {
 			filteredValue, next := filterHostHookString(value, out)
 			out = next
-			if hostHookSensitiveKey(key) && filteredValue == value && strings.TrimSpace(value) != "" {
+			if hostHookSensitiveKey(key) && filteredValue == value && textutil.NonBlank(value) {
 				filteredValue = "[REDACTED:metadata_secret]"
 				out.Redacted = true
 				out.RedactionCount++
@@ -360,19 +360,19 @@ func hostHookSuccess(event HostHookEvent) *bool {
 }
 
 func hostHookFailed(event HostHookEvent) bool {
-	return strings.TrimSpace(event.Error) != "" || (event.Success != nil && !*event.Success) || event.Event == HostHookFailure || event.Event == HostHookToolFailure
+	return textutil.NonBlank(event.Error) || (event.Success != nil && !*event.Success) || event.Event == HostHookFailure || event.Event == HostHookToolFailure
 }
 
 func hostHookMetadata(event HostHookEvent) map[string]string {
-	out := make(map[string]string, len(event.Metadata)+3)
-	for key, value := range event.Metadata {
-		out[key] = value
+	out := cloneStringMap(event.Metadata)
+	if out == nil {
+		out = map[string]string{}
 	}
 	out["hook_event"] = string(event.Event)
-	if strings.TrimSpace(event.Host) != "" {
+	if textutil.NonBlank(event.Host) {
 		out["host"] = strings.TrimSpace(event.Host)
 	}
-	if strings.TrimSpace(event.ToolName) != "" {
+	if textutil.NonBlank(event.ToolName) {
 		out["tool_name"] = strings.TrimSpace(event.ToolName)
 	}
 	if event.Event == HostHookSubagentStart || event.Event == HostHookSubagentStop {

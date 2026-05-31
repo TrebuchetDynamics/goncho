@@ -11,6 +11,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
 )
 
 // ViewerSnapshot is the read-only JSON model for Goncho's local viewer API.
@@ -353,9 +354,7 @@ func latestViewerConclusions(ctx context.Context, db *sql.DB, workspaceID, obser
 			return nil, err
 		}
 		item.SessionKey = sessionKey.String
-		if createdAt > 0 {
-			item.CreatedAt = time.Unix(createdAt, 0).UTC()
-		}
+		item.CreatedAt = timeutil.UnixUTC(createdAt)
 		out = append(out, item)
 	}
 	if err := rows.Err(); err != nil {

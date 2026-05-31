@@ -12,6 +12,8 @@ import (
 	"github.com/TrebuchetDynamics/goncho/internal/importance"
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/timeutil"
 )
 
 const RetentionActionArchive RetentionAction = "archive"
@@ -227,7 +229,7 @@ func (s *Service) RetentionAudit(ctx context.Context, q RetentionAuditQuery) (Re
 			return RetentionAuditResult{}, fmt.Errorf("goncho: scan retention audit: %w", err)
 		}
 		event.Action = RetentionAction(action)
-		event.CreatedAt = time.Unix(created, 0).UTC()
+		event.CreatedAt = timeutil.UnixUTC(created)
 		out.Events = append(out.Events, event)
 	}
 	return out, rows.Err()
@@ -277,7 +279,7 @@ func (s *Service) retentionCandidates(ctx context.Context, policy RetentionPolic
 			if err := rows.Scan(&id, &peer, &session, &content, &created); err != nil {
 				return nil, err
 			}
-			candidates = append(candidates, EvictionCandidate{StableID: idutil.Prefixed("conclusion:", id), TargetType: "conclusion", Action: RetentionActionArchive, WorkspaceID: s.workspaceID, PeerID: peer, SessionKey: session, CreatedAt: time.Unix(created, 0).UTC(), Bytes: int64(len(content)), Reasons: []string{fmt.Sprintf("max_age exceeded: older than %s", policy.MaxAge)}, Preview: previewRetentionContent(content)})
+			candidates = append(candidates, EvictionCandidate{StableID: idutil.Prefixed("conclusion:", id), TargetType: "conclusion", Action: RetentionActionArchive, WorkspaceID: s.workspaceID, PeerID: peer, SessionKey: session, CreatedAt: timeutil.UnixUTC(created), Bytes: int64(len(content)), Reasons: []string{fmt.Sprintf("max_age exceeded: older than %s", policy.MaxAge)}, Preview: previewRetentionContent(content)})
 		}
 		if err := rows.Err(); err != nil {
 			return nil, err
@@ -315,7 +317,7 @@ func (s *Service) retentionImageCandidates(ctx context.Context, reason string) (
 		if err := rows.Scan(&id, &peer, &session, &ref, &updated); err != nil {
 			return nil, err
 		}
-		out = append(out, EvictionCandidate{StableID: idutil.Prefixed("image:", id), TargetType: "image", Action: RetentionActionArchive, WorkspaceID: s.workspaceID, PeerID: peer, SessionKey: session, CreatedAt: time.Unix(updated, 0).UTC(), Reasons: []string{reason}, Preview: ref})
+		out = append(out, EvictionCandidate{StableID: idutil.Prefixed("image:", id), TargetType: "image", Action: RetentionActionArchive, WorkspaceID: s.workspaceID, PeerID: peer, SessionKey: session, CreatedAt: timeutil.UnixUTC(updated), Reasons: []string{reason}, Preview: ref})
 	}
 	return out, rows.Err()
 }
@@ -353,7 +355,7 @@ func previewRetentionContent(content string) string {
 }
 
 func fileBytes(path string) (int64, error) {
-	if strings.TrimSpace(path) == "" {
+	if textutil.IsBlank(path) {
 		return 0, nil
 	}
 	info, err := os.Stat(path)
@@ -370,7 +372,7 @@ func fileBytes(path string) (int64, error) {
 }
 
 func pathBytes(path string) (int64, error) {
-	if strings.TrimSpace(path) == "" {
+	if textutil.IsBlank(path) {
 		return 0, nil
 	}
 	var total int64
