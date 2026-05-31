@@ -569,7 +569,7 @@ func TestBenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout(t *testing.T) {
 }
 
 func TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation(t *testing.T) {
-	const path = "docs/superpowers/plans/2026-05-22-locomo-failure-driven-evaluation.md"
+	const path = "docs/superpowers/plans/locomo/2026-05-22-failure-driven-evaluation.md"
 	wantMarkers := []string{
 		"# LOCOMO Failure-Driven Evaluation Implementation Plan",
 		"TestLocomoFailureAuditClassifiesWrongBranchAndMissingCompanionBuckets",
@@ -595,7 +595,7 @@ func TestBenchmarkPlanDocumentsLocomoFailureDrivenEvaluation(t *testing.T) {
 }
 
 func TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall(t *testing.T) {
-	const path = "docs/superpowers/plans/2026-05-22-locomo-graph-assisted-multihop-recall.md"
+	const path = "docs/superpowers/plans/locomo/2026-05-22-graph-assisted-multihop-recall.md"
 	wantMarkers := []string{
 		"# Graph-Assisted LOCOMO Multi-Hop Recall Implementation Plan",
 		"Use superpowers:executing-plans",
@@ -621,7 +621,7 @@ func TestBenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall(t *testing.T) {
 }
 
 func TestBenchmarkPlanDocumentsLocomoQueryDecompositionRecall(t *testing.T) {
-	const path = "docs/superpowers/plans/2026-05-22-locomo-query-decomposition-recall.md"
+	const path = "docs/superpowers/plans/locomo/2026-05-22-query-decomposition-recall.md"
 	wantMarkers := []string{
 		"# LOCOMO Query Decomposition Recall Implementation Plan",
 		"TestRecallQueryDecompositionRetrievesEachSubQuestionFact",
@@ -645,7 +645,7 @@ func TestBenchmarkPlanDocumentsLocomoQueryDecompositionRecall(t *testing.T) {
 }
 
 func TestBenchmarkPlanDocumentsLocomoTemporalSpeakerRoutingRecall(t *testing.T) {
-	const path = "docs/superpowers/plans/2026-05-22-locomo-temporal-speaker-routing-recall.md"
+	const path = "docs/superpowers/plans/locomo/2026-05-22-temporal-speaker-routing-recall.md"
 	wantMarkers := []string{
 		"# LOCOMO Temporal and Speaker Routing Recall Implementation Plan",
 		"TestRecallTemporalRoutingPrefersCurrentFactAndWarnsOnSupersededEvidence",
