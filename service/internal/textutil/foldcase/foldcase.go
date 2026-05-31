@@ -1,6 +1,10 @@
 package foldcase
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/substrmatch"
+)
 
 // Lower applies Goncho's simple lower-case matching policy for substring and
 // prefix classifiers. It intentionally does not perform locale-specific
@@ -34,7 +38,5 @@ func IndexFolded(lowerValue, marker string) int {
 // EitherSubstring reports whether either value contains the other after
 // applying Goncho's simple lower-case matching policy to both values.
 func EitherSubstring(a, b string) bool {
-	lowerA := Lower(a)
-	lowerB := Lower(b)
-	return strings.Contains(lowerA, lowerB) || strings.Contains(lowerB, lowerA)
+	return substrmatch.Either(Lower(a), Lower(b))
 }

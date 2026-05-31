@@ -37,25 +37,28 @@ func AllSubstrings(value string, markers []string) bool {
 // HasAnyPrefix reports whether value starts with any non-empty prefix using
 // simple lower-case matching.
 func HasAnyPrefix(value string, prefixes ...string) bool {
-	value = foldcase.Lower(value)
-	for _, prefix := range prefixes {
-		if prefix == "" {
-			continue
-		}
-		if foldcase.HasPrefixFolded(value, prefix) {
-			return true
-		}
-	}
-	return false
+	_, ok := firstPrefix(value, prefixes, true)
+	return ok
 }
 
 // CutAnyPrefix removes the first matching prefix using simple lower-case
 // matching. The returned tail preserves original casing and spacing from value.
 func CutAnyPrefix(value string, prefixes []string) (tail string, ok bool) {
+	prefix, ok := firstPrefix(value, prefixes, false)
+	if !ok {
+		return "", false
+	}
+	return value[len(prefix):], true
+}
+
+func firstPrefix(value string, prefixes []string, skipEmpty bool) (string, bool) {
 	lower := foldcase.Lower(value)
 	for _, prefix := range prefixes {
+		if skipEmpty && prefix == "" {
+			continue
+		}
 		if foldcase.HasPrefixFolded(lower, prefix) {
-			return value[len(prefix):], true
+			return prefix, true
 		}
 	}
 	return "", false
