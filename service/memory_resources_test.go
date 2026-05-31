@@ -128,6 +128,35 @@ func TestMemoryResourceRegistryExposesStatusProfileLatestGraphAndRecallPrompt(t 
 	}
 }
 
+func TestNegativeEvidenceResourceLimitCapsCandidatesAfterRepeatedFailureMining(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+
+	ctx := context.Background()
+	failed := false
+	for _, id := range []string{"limited-fail-older", "limited-fail-newer"} {
+		if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, PeerID: "peer-limited", SessionKey: "sess-limited", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}}); err != nil {
+			t.Fatalf("Observe failure %s: %v", id, err)
+		}
+	}
+
+	registry := NewMemoryResourceRegistry(svc)
+	content, err := registry.Read(ctx, MemoryResourceRequest{URI: "goncho://negative-evidence/candidates", Peer: "peer-limited", SessionKey: "sess-limited", Limit: 1})
+	if err != nil {
+		t.Fatalf("negative evidence resource: %v", err)
+	}
+	candidates, ok := content.Payload["candidates"].([]NegativeEvidenceCandidate)
+	if !ok || len(candidates) != 1 {
+		t.Fatalf("negative candidates = %#v, want one candidate despite resource limit", content.Payload["candidates"])
+	}
+	if candidates[0].FailureCount != 2 {
+		t.Fatalf("failure count = %d, want repeated-failure mining before candidate limit", candidates[0].FailureCount)
+	}
+}
+
 func resourceDescriptorNames(descriptors []MemoryResourceDescriptor) []string {
 	names := make([]string, 0, len(descriptors))
 	for _, descriptor := range descriptors {

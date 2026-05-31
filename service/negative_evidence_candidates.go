@@ -242,6 +242,13 @@ func negativeEvidenceSubjectToken(part string) string {
 	return url.QueryEscape(part)
 }
 
+func limitNegativeEvidenceCandidates(candidates []NegativeEvidenceCandidate, limit int) []NegativeEvidenceCandidate {
+	if limit <= 0 || len(candidates) <= limit {
+		return candidates
+	}
+	return append([]NegativeEvidenceCandidate(nil), candidates[:limit]...)
+}
+
 func negativeEvidenceRecommendation(candidate NegativeEvidenceCandidate) string {
 	return fmt.Sprintf("review as negative memory candidate: %d failures for %s; verify live state before repeating this path", candidate.FailureCount, candidate.ToolName)
 }

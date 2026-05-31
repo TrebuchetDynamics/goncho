@@ -158,10 +158,11 @@ func (r *MemoryResourceRegistry) graphStats(ctx context.Context, req MemoryResou
 }
 
 func (r *MemoryResourceRegistry) negativeEvidenceCandidates(ctx context.Context, req MemoryResourceRequest) (MemoryResourceContent, error) {
-	candidates, err := r.svc.NegativeEvidenceCandidates(ctx, ObservationQuery{WorkspaceID: r.svc.workspaceID, ProfileID: req.ProfileID, PeerID: req.Peer, SessionKey: req.SessionKey, Limit: req.Limit})
+	candidates, err := r.svc.NegativeEvidenceCandidates(ctx, ObservationQuery{WorkspaceID: r.svc.workspaceID, ProfileID: req.ProfileID, PeerID: req.Peer, SessionKey: req.SessionKey})
 	if err != nil {
 		return MemoryResourceContent{}, err
 	}
+	candidates = limitNegativeEvidenceCandidates(candidates, req.Limit)
 	return memoryResourceJSON("goncho://negative-evidence/candidates", map[string]any{
 		"workspace_id": r.svc.workspaceID,
 		"profile_id":   strings.TrimSpace(req.ProfileID),
