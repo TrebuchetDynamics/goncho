@@ -5,9 +5,13 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 )
 
+// Normalizer is the shared contract for callers that canonicalize string values
+// before set/unique operations. A nil Normalizer preserves values as-is.
+type Normalizer = stringnorm.Normalizer
+
 // NormalizeUnique returns non-empty normalized strings, preserving first-seen
 // order unless sortOutput is true.
-func NormalizeUnique(values []string, normalize func(string) string, sortOutput bool) []string {
+func NormalizeUnique(values []string, normalize Normalizer, sortOutput bool) []string {
 	return stringnorm.Unique(values, normalize, sortOutput)
 }
 
@@ -24,7 +28,7 @@ func UniqueLowerTrimmed(values []string, sortOutput bool) []string {
 
 // Set returns normalized non-empty strings as a set. It preserves nil for empty
 // input or when every normalized value is empty.
-func Set(values []string, normalize func(string) string) map[string]struct{} {
+func Set(values []string, normalize Normalizer) map[string]struct{} {
 	return stringnorm.Set(values, normalize)
 }
 
@@ -41,7 +45,7 @@ func LowerTrimmedSet(values []string) map[string]struct{} {
 
 // SortedSetValues returns the sorted non-empty keys in values after optional
 // normalization.
-func SortedSetValues(values map[string]struct{}, normalize func(string) string) []string {
+func SortedSetValues(values map[string]struct{}, normalize Normalizer) []string {
 	return stringnorm.SortedSetValues(values, normalize)
 }
 
