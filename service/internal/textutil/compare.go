@@ -1,17 +1,17 @@
 package textutil
 
-import "strings"
+import "github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 
 // EqualTrimmed reports whether two strings are equal after trimming ASCII/
 // Unicode whitespace.
 func EqualTrimmed(a, b string) bool {
-	return strings.TrimSpace(a) == strings.TrimSpace(b)
+	return trimmed.Equal(a, b)
 }
 
 // EqualFoldTrimmed reports whether two strings are equal after trimming ASCII/
 // Unicode whitespace and applying Unicode case-folding.
 func EqualFoldTrimmed(a, b string) bool {
-	return strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(b))
+	return trimmed.EqualFold(a, b)
 }
 
 // ContainsTrimmed reports whether values contains want after trimming ASCII/

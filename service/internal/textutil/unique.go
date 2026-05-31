@@ -2,7 +2,8 @@ package textutil
 
 import (
 	"sort"
-	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 )
 
 // NormalizeUnique returns non-empty normalized strings, preserving first-seen
@@ -37,7 +38,7 @@ func NormalizeUnique(values []string, normalize func(string) string, sortOutput 
 
 // UniqueTrimmed returns distinct non-empty strings after whitespace trimming.
 func UniqueTrimmed(values []string, sortOutput bool) []string {
-	return NormalizeUnique(values, strings.TrimSpace, sortOutput)
+	return NormalizeUnique(values, trimmed.Space, sortOutput)
 }
 
 // UniqueLowerTrimmed returns distinct non-empty strings after trimming and
@@ -70,7 +71,7 @@ func Set(values []string, normalize func(string) string) map[string]struct{} {
 
 // TrimmedSet returns distinct non-empty strings after whitespace trimming.
 func TrimmedSet(values []string) map[string]struct{} {
-	return Set(values, strings.TrimSpace)
+	return Set(values, trimmed.Space)
 }
 
 // LowerTrimmedSet returns distinct non-empty strings after trimming and
@@ -105,7 +106,7 @@ func SortedSetValues(values map[string]struct{}, normalize func(string) string) 
 
 // LowerTrimmed trims surrounding whitespace and applies simple lower-casing.
 func LowerTrimmed(value string) string {
-	return strings.ToLower(strings.TrimSpace(value))
+	return trimmed.Lower(value)
 }
 
 func lowerTrimmed(value string) string {

@@ -1,11 +1,11 @@
 package textutil
 
-import "strings"
+import "github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 
 func FirstNonBlank(values ...string) string {
 	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			return trimmed
+		if value := trimmed.Space(value); value != "" {
+			return value
 		}
 	}
 	return ""

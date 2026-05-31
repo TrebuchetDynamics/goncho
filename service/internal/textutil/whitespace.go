@@ -2,6 +2,8 @@ package textutil
 
 import (
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 )
 
 // CollapseWhitespace trims leading/trailing whitespace and converts any run of
@@ -19,7 +21,7 @@ func FirstWords(content string, n int) string {
 		return ""
 	}
 	if len(words) <= n {
-		return strings.TrimSpace(content)
+		return trimmed.Space(content)
 	}
 	return strings.Join(words[:n], " ")
 }
@@ -33,7 +35,7 @@ func WordCount(content string) int {
 // Blank content is treated as one token so callers never undercount an empty
 // but present field.
 func ApproxTokens(content string) int {
-	content = strings.TrimSpace(content)
+	content = trimmed.Space(content)
 	if content == "" {
 		return 1
 	}
@@ -67,5 +69,5 @@ func CompactWhitespace(value string, limit int, empty string) string {
 	if limit <= 0 || len(value) <= limit {
 		return value
 	}
-	return strings.TrimSpace(value[:limit])
+	return trimmed.Space(value[:limit])
 }
