@@ -255,6 +255,44 @@ func TestGraphRecallAnnotatesAlreadyRetrievedTargetsWithRelationProvenance(t *te
 	}
 }
 
+func TestGraphRecallTrimsRelationEndpointsBeforeExpansion(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 11, 0, 0, time.UTC)
+	base := []RecallCandidate{{
+		MemoryID:   "mem-auth-service",
+		SourceType: "conclusion",
+		Content:    "The auth service mentions the owner path.",
+		ScopeID:    "team",
+		CreatedAt:  now,
+	}}
+	index := GraphExpansionIndex{
+		Memories: map[string]RecallCandidate{
+			"mem-auth-owner": {
+				MemoryID:   "mem-auth-owner",
+				SourceType: "conclusion",
+				Content:    "Mira owns auth.",
+				ScopeID:    "team",
+				CreatedAt:  now,
+			},
+		},
+		Relations: []GraphRelation{{
+			FromMemoryID: " mem-auth-service\t",
+			ToMemoryID:   "\nmem-auth-owner ",
+			Relation:     "owned_by",
+			QueryTerms:   []string{"owner"},
+			EvidenceID:   "edge-auth-owned-by-mira",
+			Score:        0.95,
+		}},
+	}
+
+	got := expandGraphRecallCandidates(RecallQuery{Query: "owner", ScopeID: "team"}, base, index)
+	if ids := recallCandidateMemoryIDs(got); !slices.Equal(ids, []string{"mem-auth-service", "mem-auth-owner"}) {
+		t.Fatalf("expanded IDs = %v, want whitespace-normalized relation endpoints to expand", ids)
+	}
+	if !recallCandidateHasGraphNote(got[1], "mem-auth-service -> owned_by -> mem-auth-owner") {
+		t.Fatalf("target provenance = %+v, want trimmed relation path note", got[1].Provenance)
+	}
+}
+
 func TestGraphRecallIgnoresMalformedRelationsWithUnstableEndpoints(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 10, 0, 0, time.UTC)
 	base := []RecallCandidate{{

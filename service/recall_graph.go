@@ -2,6 +2,7 @@ package goncho
 
 import (
 	"context"
+	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -54,6 +55,11 @@ type graphExpansionState struct {
 	index  map[string]int
 }
 
+type graphRelationEndpoints struct {
+	FromMemoryID string
+	ToMemoryID   string
+}
+
 func expandGraphRecallCandidates(q RecallQuery, base []RecallCandidate, index GraphExpansionIndex) []RecallCandidate {
 	out := sliceutil.Clone(base)
 	state := newGraphExpansionState(out, len(index.Memories))
@@ -61,10 +67,11 @@ func expandGraphRecallCandidates(q RecallQuery, base []RecallCandidate, index Gr
 		enriched := enrichExistingGraphRecallCandidates(q, index, state, out)
 		added := false
 		for _, relation := range index.Relations {
-			if !graphRelationCanExpand(q, relation, state.seen) {
+			endpoints, ok := graphRelationStableEndpoints(relation)
+			if !ok || !graphRelationCanExpand(q, relation, endpoints, state.seen) {
 				continue
 			}
-			source, ok := state.active[relation.FromMemoryID]
+			source, ok := state.active[endpoints.FromMemoryID]
 			if !ok {
 				continue
 			}
@@ -86,12 +93,13 @@ func expandGraphRecallCandidates(q RecallQuery, base []RecallCandidate, index Gr
 func enrichExistingGraphRecallCandidates(q RecallQuery, index GraphExpansionIndex, state graphExpansionState, candidates []RecallCandidate) bool {
 	enriched := false
 	for _, relation := range index.Relations {
-		if !graphRelationCanAnnotateExisting(q, relation, state) {
+		endpoints, ok := graphRelationStableEndpoints(relation)
+		if !ok || !graphRelationCanAnnotateExisting(q, relation, endpoints, state) {
 			continue
 		}
-		source, sourceOK := state.active[relation.FromMemoryID]
-		target, targetOK := state.active[relation.ToMemoryID]
-		targetIndex, indexOK := state.index[relation.ToMemoryID]
+		source, sourceOK := state.active[endpoints.FromMemoryID]
+		target, targetOK := state.active[endpoints.ToMemoryID]
+		targetIndex, indexOK := state.index[endpoints.ToMemoryID]
 		indexedTarget, indexedOK := graphRelationTargetCandidate(relation, index)
 		if !sourceOK || !targetOK || !indexOK || !indexedOK || recallScopeMismatch(q, indexedTarget) || graphCandidateHasRelationEvidence(target, relation) {
 			continue
@@ -117,54 +125,64 @@ func newGraphExpansionState(candidates []RecallCandidate, extraCapacity int) gra
 }
 
 func (s graphExpansionState) addAt(candidate RecallCandidate, index int) {
-	if candidate.MemoryID == "" {
+	memoryID, stable := recallCandidateStableMemoryID(candidate)
+	if !stable {
 		return
 	}
-	s.seen[candidate.MemoryID] = true
-	s.active[candidate.MemoryID] = candidate
-	s.index[candidate.MemoryID] = index
+	s.seen[memoryID] = true
+	s.active[memoryID] = candidate
+	s.index[memoryID] = index
 }
 
-func graphRelationCanExpand(q RecallQuery, relation GraphRelation, seen map[string]bool) bool {
-	return graphRelationHasEndpoints(relation) &&
-		graphRelationIsAccepted(relation) &&
-		seen[relation.FromMemoryID] &&
-		!seen[relation.ToMemoryID] &&
+func graphRelationCanExpand(q RecallQuery, relation GraphRelation, endpoints graphRelationEndpoints, seen map[string]bool) bool {
+	return graphRelationIsAccepted(relation) &&
+		seen[endpoints.FromMemoryID] &&
+		!seen[endpoints.ToMemoryID] &&
 		graphRelationMatchesQuery(q.Query, relation.QueryTerms) &&
 		graphRelationMatchesQuery(q.Query, relation.ActivationTerms)
 }
 
-func graphRelationCanAnnotateExisting(q RecallQuery, relation GraphRelation, state graphExpansionState) bool {
-	return graphRelationHasEndpoints(relation) &&
-		graphRelationIsAccepted(relation) &&
-		state.seen[relation.FromMemoryID] &&
-		state.seen[relation.ToMemoryID] &&
+func graphRelationCanAnnotateExisting(q RecallQuery, relation GraphRelation, endpoints graphRelationEndpoints, state graphExpansionState) bool {
+	return graphRelationIsAccepted(relation) &&
+		state.seen[endpoints.FromMemoryID] &&
+		state.seen[endpoints.ToMemoryID] &&
 		graphRelationMatchesQuery(q.Query, relation.QueryTerms) &&
 		graphRelationMatchesQuery(q.Query, relation.ActivationTerms)
 }
 
-func graphRelationHasEndpoints(relation GraphRelation) bool {
-	return relation.FromMemoryID != "" && relation.ToMemoryID != ""
+func graphRelationStableEndpoints(relation GraphRelation) (graphRelationEndpoints, bool) {
+	endpoints := graphRelationEndpoints{
+		FromMemoryID: strings.TrimSpace(relation.FromMemoryID),
+		ToMemoryID:   strings.TrimSpace(relation.ToMemoryID),
+	}
+	return endpoints, endpoints.FromMemoryID != "" && endpoints.ToMemoryID != ""
 }
 
 func graphRelationTargetCandidate(relation GraphRelation, index GraphExpansionIndex) (RecallCandidate, bool) {
-	if !graphRelationHasEndpoints(relation) {
+	endpoints, ok := graphRelationStableEndpoints(relation)
+	if !ok {
 		return RecallCandidate{}, false
 	}
-	target, ok := index.Memories[relation.ToMemoryID]
-	if !ok || target.MemoryID != relation.ToMemoryID {
+	target, ok := index.Memories[endpoints.ToMemoryID]
+	if !ok {
 		return RecallCandidate{}, false
 	}
+	targetMemoryID, stable := recallCandidateStableMemoryID(target)
+	if !stable || targetMemoryID != endpoints.ToMemoryID {
+		return RecallCandidate{}, false
+	}
+	target.MemoryID = targetMemoryID
 	return target, true
 }
 
 func graphExpandedProvenance(source, target RecallCandidate, relation GraphRelation) []EvidenceItem {
 	provenance := sliceutil.Clone(target.Provenance)
 	provenance = append(provenance, graphPathEvidence(source.Provenance)...)
+	endpoints, _ := graphRelationStableEndpoints(relation)
 	provenance = append(provenance, EvidenceItem{
 		Kind:   "graph",
 		ID:     relation.EvidenceID,
-		Source: relation.FromMemoryID,
+		Source: endpoints.FromMemoryID,
 		Note:   graphRelationNote(relation),
 		Score:  relation.Score,
 	})
@@ -182,6 +200,7 @@ func graphPathEvidence(provenance []EvidenceItem) []EvidenceItem {
 }
 
 func graphCandidateHasRelationEvidence(candidate RecallCandidate, relation GraphRelation) bool {
+	endpoints, _ := graphRelationStableEndpoints(relation)
 	note := graphRelationNote(relation)
 	for _, item := range candidate.Provenance {
 		if item.Kind != "graph" {
@@ -190,7 +209,7 @@ func graphCandidateHasRelationEvidence(candidate RecallCandidate, relation Graph
 		if relation.EvidenceID != "" && item.ID == relation.EvidenceID {
 			return true
 		}
-		if item.Source == relation.FromMemoryID && item.Note == note {
+		if item.Source == endpoints.FromMemoryID && item.Note == note {
 			return true
 		}
 	}
@@ -198,7 +217,8 @@ func graphCandidateHasRelationEvidence(candidate RecallCandidate, relation Graph
 }
 
 func graphRelationNote(relation GraphRelation) string {
-	return relation.FromMemoryID + " -> " + relation.Relation + " -> " + relation.ToMemoryID
+	endpoints, _ := graphRelationStableEndpoints(relation)
+	return endpoints.FromMemoryID + " -> " + relation.Relation + " -> " + endpoints.ToMemoryID
 }
 
 func graphRelationIsAccepted(relation GraphRelation) bool {
