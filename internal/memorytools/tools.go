@@ -79,7 +79,7 @@ func (t *storeMemoryTool) Execute(ctx context.Context, args json.RawMessage) (js
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("store_memory: %w", err)
 	}
-	if in.Content == "" {
+	if isBlankMemoryToolString(in.Content) {
 		return nil, errors.New("store_memory: content is required")
 	}
 	importance := 0.5
@@ -141,7 +141,7 @@ func (t *retrieveMemoryTool) Execute(ctx context.Context, args json.RawMessage) 
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("retrieve_memory: %w", err)
 	}
-	if in.Query == "" {
+	if isBlankMemoryToolString(in.Query) {
 		return nil, errors.New("retrieve_memory: query is required")
 	}
 	if in.Limit <= 0 {
@@ -197,13 +197,13 @@ func (t *updateMemoryTool) Execute(ctx context.Context, args json.RawMessage) (j
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("update_memory: %w", err)
 	}
-	if in.ID == "" {
+	if isBlankMemoryToolString(in.ID) {
 		return nil, errors.New("update_memory: id is required")
 	}
-	if in.Content == "" && in.Importance == nil {
+	if isBlankMemoryToolString(in.Content) && in.Importance == nil {
 		return nil, errors.New("update_memory: content or importance is required")
 	}
-	if in.Content != "" {
+	if !isBlankMemoryToolString(in.Content) {
 		if err := t.store.Update(ctx, in.ID, in.Content); err != nil {
 			return nil, fmt.Errorf("update_memory: %w", err)
 		}
@@ -259,7 +259,7 @@ func (t *summarizeMemoryTool) Execute(ctx context.Context, args json.RawMessage)
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("summarize_memories: %w", err)
 	}
-	if in.Filter == "" {
+	if isBlankMemoryToolString(in.Filter) {
 		return nil, errors.New("summarize_memories: filter is required")
 	}
 	if in.MaxItems <= 0 {
@@ -283,6 +283,10 @@ func (t *summarizeMemoryTool) Execute(ctx context.Context, args json.RawMessage)
 		"network_required": false,
 		"ollama_required":  false,
 	})
+}
+
+func isBlankMemoryToolString(value string) bool {
+	return strings.TrimSpace(value) == ""
 }
 
 func clampMemoryImportance(value float64) float64 {
@@ -352,7 +356,7 @@ func (t *forgetMemoryTool) Execute(ctx context.Context, args json.RawMessage) (j
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("forget_memory: %w", err)
 	}
-	if in.ID == "" {
+	if isBlankMemoryToolString(in.ID) {
 		return nil, errors.New("forget_memory: id is required")
 	}
 	if err := t.store.Forget(ctx, in.ID); err != nil {

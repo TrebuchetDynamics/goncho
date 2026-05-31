@@ -122,11 +122,17 @@ func TestMemoryToolsValidateRequiredInputs(t *testing.T) {
 		want string
 	}{
 		{name: "store", tool: NewStoreTool(store), args: `{"tags":["test"]}`, want: "content is required"},
+		{name: "store blank content", tool: NewStoreTool(store), args: `{"content":" \t "}`, want: "content is required"},
 		{name: "retrieve", tool: NewRetrieveTool(store), args: `{"limit":1}`, want: "query is required"},
+		{name: "retrieve blank query", tool: NewRetrieveTool(store), args: `{"query":" \n ","limit":1}`, want: "query is required"},
 		{name: "update id", tool: NewUpdateTool(store), args: `{"content":"new"}`, want: "id is required"},
+		{name: "update blank id", tool: NewUpdateTool(store), args: `{"id":"  ","content":"new"}`, want: "id is required"},
 		{name: "update body", tool: NewUpdateTool(store), args: `{"id":"mem_1"}`, want: "content or importance is required"},
+		{name: "update blank content", tool: NewUpdateTool(store), args: `{"id":"mem_1","content":" \t "}`, want: "content or importance is required"},
 		{name: "summarize", tool: NewSummarizeTool(store), args: `{"max_items":1}`, want: "filter is required"},
+		{name: "summarize blank filter", tool: NewSummarizeTool(store), args: `{"filter":" \n ","max_items":1}`, want: "filter is required"},
 		{name: "forget", tool: NewForgetTool(store), args: `{}`, want: "id is required"},
+		{name: "forget blank id", tool: NewForgetTool(store), args: `{"id":"  "}`, want: "id is required"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
