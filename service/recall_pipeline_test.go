@@ -80,6 +80,59 @@ func TestRecallPipelineWarningsAndTokenBudget(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineTokenBudgetSkipsOversizedBestCandidate(t *testing.T) {
+	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-too-large",
+			SourceType: "turn",
+			Content:    "auth deployment runbook with many extra words beyond budget",
+			SessionID:  "sess-large",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 1}},
+		},
+		{
+			MemoryID:   "mem-small",
+			SourceType: "turn",
+			Content:    "fallback",
+			SessionID:  "sess-small",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0.5,
+			Provenance: []EvidenceItem{{Kind: "keyword", Score: 0.1}},
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "budget-skip-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "budget-skip-test-v1",
+			Weights:     map[string]float64{"keyword": 1},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 3,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "auth",
+		ScopeID:     "team",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(selectedRecallIDs(trace), []string{"mem-small"}) {
+		t.Fatalf("selected IDs = %v, want oversized best candidate skipped and smaller candidate selected", selectedRecallIDs(trace))
+	}
+	if len(trace.Rejected) != 1 || trace.Rejected[0].Candidate.MemoryID != "mem-too-large" || trace.Rejected[0].Reason != RecallRejectTokenBudget {
+		t.Fatalf("rejected = %+v, want oversized candidate rejected by token budget", trace.Rejected)
+	}
+}
+
 func TestRecallPipelineScopeWarningWhenAllCandidatesExcluded(t *testing.T) {
 	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{

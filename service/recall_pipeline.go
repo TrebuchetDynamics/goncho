@@ -176,36 +176,8 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 	remaining := sliceutil.Clone(eligible)
 	usedTokens := 0
 	for len(selected) < limit && len(remaining) > 0 {
-		bestIdx := 0
-		bestScore := math.Inf(-1)
-		for i := range remaining {
-			penalty := recallDiversityPenalty(remaining[i], selected, e.opts.scoringConfig)
-			coverageBonus := recallCoverageBonus(remaining[i], selected)
-			temporalAdjustment := recallTemporalAdjustment(remaining[i], q.Query)
-			speakerAdjustment := recallSpeakerAdjustment(remaining[i], q.Query)
-			effectiveScore := remaining[i].Score.FinalScore - penalty + coverageBonus + temporalAdjustment + speakerAdjustment
-			if effectiveScore > bestScore || (effectiveScore == bestScore && compareScoredRecall(remaining[i], remaining[bestIdx]) < 0) {
-				bestScore = effectiveScore
-				bestIdx = i
-			}
-		}
-		chosen := remaining[bestIdx]
-		coverageBonus := recallCoverageBonus(chosen, selected)
-		temporalAdjustment := recallTemporalAdjustment(chosen, q.Query)
-		speakerAdjustment := recallSpeakerAdjustment(chosen, q.Query)
-		chosen.Score.DiversityPenalty = roundRecallFloat(recallDiversityPenalty(chosen, selected, e.opts.scoringConfig))
-		chosen.Score.FinalScore = roundRecallFloat(chosen.Score.FinalScore - chosen.Score.DiversityPenalty + coverageBonus + temporalAdjustment + speakerAdjustment)
-		chosen.Score.WhySelected = recallWhySelectedWithFinalScore(chosen.Score.WhySelected, chosen.Score.FinalScore)
-		chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("diversity_penalty=%.6f", chosen.Score.DiversityPenalty))
-		if coverageBonus > 0 {
-			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("coverage_bonus=%.6f", coverageBonus))
-		}
-		if temporalAdjustment != 0 {
-			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("temporal_adjustment=%.6f", temporalAdjustment))
-		}
-		if speakerAdjustment > 0 {
-			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("speaker_adjustment=%.6f", speakerAdjustment))
-		}
+		bestIdx := recallBestSelectionIndex(remaining, selected, q.Query, e.opts.scoringConfig)
+		chosen := applyRecallSelectionAdjustment(remaining[bestIdx], recallSelectionAdjustmentFor(remaining[bestIdx], selected, q.Query, e.opts.scoringConfig), true)
 		tokenCost := estimateRecallTokens(chosen.Candidate.Content)
 		if budget > 0 && usedTokens+tokenCost > budget {
 			rejected = append(rejected, RejectedRecallCandidate{
@@ -233,9 +205,7 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 		remaining = append(remaining[:bestIdx], remaining[bestIdx+1:]...)
 	}
 	for _, item := range remaining {
-		item.Score.DiversityPenalty = roundRecallFloat(recallDiversityPenalty(item, selected, e.opts.scoringConfig))
-		item.Score.FinalScore = roundRecallFloat(item.Score.FinalScore - item.Score.DiversityPenalty)
-		item.Score.WhySelected = recallWhySelectedWithFinalScore(item.Score.WhySelected, item.Score.FinalScore)
+		item = applyRecallSelectionAdjustment(item, recallRejectedSelectionAdjustmentFor(item, selected, e.opts.scoringConfig), false)
 		rejected = append(rejected, RejectedRecallCandidate{
 			Candidate: item.Candidate,
 			Score:     item.Score,
@@ -247,6 +217,64 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 	}
 	sortRejectedRecall(rejected)
 	return selected, rejected, warnings
+}
+
+type recallSelectionAdjustment struct {
+	DiversityPenalty   float64
+	CoverageBonus      float64
+	TemporalAdjustment float64
+	SpeakerAdjustment  float64
+	EffectiveScore     float64
+}
+
+func recallBestSelectionIndex(remaining, selected []ScoredRecallCandidate, query string, config RecallScoringConfig) int {
+	bestIdx := 0
+	bestScore := math.Inf(-1)
+	for i := range remaining {
+		adjustment := recallSelectionAdjustmentFor(remaining[i], selected, query, config)
+		if adjustment.EffectiveScore > bestScore || (adjustment.EffectiveScore == bestScore && compareScoredRecall(remaining[i], remaining[bestIdx]) < 0) {
+			bestScore = adjustment.EffectiveScore
+			bestIdx = i
+		}
+	}
+	return bestIdx
+}
+
+func recallSelectionAdjustmentFor(item ScoredRecallCandidate, selected []ScoredRecallCandidate, query string, config RecallScoringConfig) recallSelectionAdjustment {
+	adjustment := recallSelectionAdjustment{
+		DiversityPenalty:   recallDiversityPenalty(item, selected, config),
+		CoverageBonus:      recallCoverageBonus(item, selected),
+		TemporalAdjustment: recallTemporalAdjustment(item, query),
+		SpeakerAdjustment:  recallSpeakerAdjustment(item, query),
+	}
+	adjustment.EffectiveScore = item.Score.FinalScore - adjustment.DiversityPenalty + adjustment.CoverageBonus + adjustment.TemporalAdjustment + adjustment.SpeakerAdjustment
+	return adjustment
+}
+
+func recallRejectedSelectionAdjustmentFor(item ScoredRecallCandidate, selected []ScoredRecallCandidate, config RecallScoringConfig) recallSelectionAdjustment {
+	adjustment := recallSelectionAdjustment{DiversityPenalty: recallDiversityPenalty(item, selected, config)}
+	adjustment.EffectiveScore = item.Score.FinalScore - adjustment.DiversityPenalty
+	return adjustment
+}
+
+func applyRecallSelectionAdjustment(item ScoredRecallCandidate, adjustment recallSelectionAdjustment, includeAdjustmentReasons bool) ScoredRecallCandidate {
+	item.Score.DiversityPenalty = roundRecallFloat(adjustment.DiversityPenalty)
+	item.Score.FinalScore = roundRecallFloat(item.Score.FinalScore - item.Score.DiversityPenalty + adjustment.CoverageBonus + adjustment.TemporalAdjustment + adjustment.SpeakerAdjustment)
+	item.Score.WhySelected = recallWhySelectedWithFinalScore(item.Score.WhySelected, item.Score.FinalScore)
+	if !includeAdjustmentReasons {
+		return item
+	}
+	item.Score.WhySelected = append(item.Score.WhySelected, fmt.Sprintf("diversity_penalty=%.6f", item.Score.DiversityPenalty))
+	if adjustment.CoverageBonus > 0 {
+		item.Score.WhySelected = append(item.Score.WhySelected, fmt.Sprintf("coverage_bonus=%.6f", adjustment.CoverageBonus))
+	}
+	if adjustment.TemporalAdjustment != 0 {
+		item.Score.WhySelected = append(item.Score.WhySelected, fmt.Sprintf("temporal_adjustment=%.6f", adjustment.TemporalAdjustment))
+	}
+	if adjustment.SpeakerAdjustment > 0 {
+		item.Score.WhySelected = append(item.Score.WhySelected, fmt.Sprintf("speaker_adjustment=%.6f", adjustment.SpeakerAdjustment))
+	}
+	return item
 }
 
 func normalizeRecallScoringConfig(config RecallScoringConfig) RecallScoringConfig {
