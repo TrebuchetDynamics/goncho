@@ -185,6 +185,9 @@ func TestRecallSpeakerRoutingParsesSpeakerFieldWithoutTrailingMetadata(t *testin
 		{name: "speaker after provenance metadata", note: "source=turn-17 speaker=Mira"},
 		{name: "parenthesized speaker field", note: "source=turn-17 (speaker=Mira)"},
 		{name: "spaced speaker assignment", note: "source=turn-17 speaker = Mira"},
+		{name: "left-spaced speaker assignment", note: "source=turn-17 speaker= Mira"},
+		{name: "right-spaced speaker assignment", note: "source=turn-17 speaker =Mira"},
+		{name: "speaker with trailing prose", note: "speaker=Mira observed from hook capture"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -933,86 +933,82 @@ func recallSpeakerEvidenceIdentity(evidence EvidenceItem) string {
 }
 
 func recallSpeakerIdentityFromNote(note string) string {
-	value, ok := recallEvidenceNoteValue(note, "speaker")
+	value, ok := recallEvidenceNoteScalarValue(note, "speaker")
 	if !ok {
 		return ""
 	}
 	return value
 }
 
-func recallEvidenceNoteValue(note, key string) (string, bool) {
+func recallEvidenceNoteScalarValue(note, key string) (string, bool) {
 	key = textutil.LowerTrimmed(key)
 	if key == "" {
 		return "", false
 	}
-	for _, assignment := range recallEvidenceNoteAssignments(note) {
-		if assignment.Key == key && assignment.Value != "" {
-			return assignment.Value, true
+	fields := recallTemporalEvidenceNoteFields(note)
+	for i, field := range fields {
+		if value, ok := recallEvidenceInlineScalarValue(fields, i, field, key); ok {
+			return value, true
+		}
+		if value, ok := recallEvidenceSpacedScalarValue(fields, i, field, key); ok {
+			return value, true
 		}
 	}
 	return "", false
 }
 
-type recallEvidenceNoteAssignment struct {
-	Key   string
-	Value string
-}
-
-func recallEvidenceNoteAssignments(note string) []recallEvidenceNoteAssignment {
-	fields := recallTemporalEvidenceNoteFields(note)
-	assignments := make([]recallEvidenceNoteAssignment, 0)
-	for i := 0; i < len(fields); {
-		field := fields[i]
-		if key, value, ok := strings.Cut(field, "="); ok && key != "" {
-			i++
-			valueFields := recallEvidenceNoteAssignmentValueFields(fields, &i)
-			if value != "" {
-				valueFields = append([]string{value}, valueFields...)
-			}
-			assignments = appendEvidenceNoteAssignment(assignments, key, valueFields)
-			continue
-		}
-		if i+1 < len(fields) && fields[i+1] == "=" {
-			key := field
-			i += 2
-			assignments = appendEvidenceNoteAssignment(assignments, key, recallEvidenceNoteAssignmentValueFields(fields, &i))
-			continue
-		}
-		i++
+func recallEvidenceInlineScalarValue(fields []string, idx int, field, key string) (string, bool) {
+	assignmentKey, value, ok := strings.Cut(field, "=")
+	if !ok || recallNormalizeEvidenceNoteField(assignmentKey) != key {
+		return "", false
 	}
-	return assignments
-}
-
-func recallEvidenceNoteAssignmentValueFields(fields []string, idx *int) []string {
-	var valueFields []string
-	for *idx < len(fields) && !recallEvidenceNoteStartsAssignment(fields, *idx) {
-		valueFields = append(valueFields, fields[*idx])
-		*idx = *idx + 1
+	value = recallNormalizeEvidenceNoteField(value)
+	if value != "" {
+		return value, true
 	}
-	return valueFields
+	if idx+1 >= len(fields) {
+		return "", false
+	}
+	if value, ok := recallEvidenceLeadingEqualsValue(fields[idx+1]); ok {
+		return value, true
+	}
+	if recallEvidenceFieldStartsAssignment(fields, idx+1) {
+		return "", false
+	}
+	value = recallNormalizeEvidenceNoteField(fields[idx+1])
+	return value, value != ""
 }
 
-func recallEvidenceNoteStartsAssignment(fields []string, idx int) bool {
+func recallEvidenceSpacedScalarValue(fields []string, idx int, field, key string) (string, bool) {
+	if field != key || idx+1 >= len(fields) {
+		return "", false
+	}
+	if fields[idx+1] == "=" && idx+2 < len(fields) {
+		value := recallNormalizeEvidenceNoteField(fields[idx+2])
+		return value, value != ""
+	}
+	return recallEvidenceLeadingEqualsValue(fields[idx+1])
+}
+
+func recallEvidenceLeadingEqualsValue(field string) (string, bool) {
+	value, ok := strings.CutPrefix(field, "=")
+	if !ok {
+		return "", false
+	}
+	value = recallNormalizeEvidenceNoteField(value)
+	return value, value != ""
+}
+
+func recallEvidenceFieldStartsAssignment(fields []string, idx int) bool {
 	if idx < 0 || idx >= len(fields) {
 		return false
 	}
 	field := fields[idx]
-	if field == "=" {
+	if field == "=" || strings.HasPrefix(field, "=") {
 		return true
 	}
-	if key, _, ok := strings.Cut(field, "="); ok && key != "" {
-		return true
-	}
-	return idx+1 < len(fields) && fields[idx+1] == "="
-}
-
-func appendEvidenceNoteAssignment(assignments []recallEvidenceNoteAssignment, key string, valueFields []string) []recallEvidenceNoteAssignment {
-	key = recallNormalizeEvidenceNoteField(key)
-	value := recallNormalizeEvidenceNoteField(strings.Join(valueFields, " "))
-	if key == "" || value == "" {
-		return assignments
-	}
-	return append(assignments, recallEvidenceNoteAssignment{Key: key, Value: value})
+	assignmentKey, _, ok := strings.Cut(field, "=")
+	return ok && recallNormalizeEvidenceNoteField(assignmentKey) != ""
 }
 
 func recallQuerySpeakerTargets(query string) []string {
