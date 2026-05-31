@@ -301,11 +301,11 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 		Rows:             append([]beamPairedComparisonRow(nil), rows...),
 	}
 	abilityRows := map[string][]beamPairedComparisonRow{}
-	baseTotal, candidateTotal := 0.0, 0.0
+	var baselineTally, candidateTally shared.ScoreTally
 	diffs := make([]float64, 0, len(rows))
 	for _, row := range rows {
-		baseTotal += row.BaselineScore
-		candidateTotal += row.CandidateScore
+		baselineTally.Add(row.BaselineScore)
+		candidateTally.Add(row.CandidateScore)
 		diffs = append(diffs, row.CandidateScore-row.BaselineScore)
 		switch row.Winner {
 		case "candidate":
@@ -317,9 +317,8 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 		}
 		abilityRows[row.Ability] = append(abilityRows[row.Ability], row)
 	}
-	n := float64(len(rows))
-	report.BaselineAvgScore = shared.RoundMetric(baseTotal / n)
-	report.CandidateAvgScore = shared.RoundMetric(candidateTotal / n)
+	report.BaselineAvgScore = baselineTally.Average()
+	report.CandidateAvgScore = candidateTally.Average()
 	report.ScoreDelta = shared.RoundSignedMetric(report.CandidateAvgScore - report.BaselineAvgScore)
 	report.ScoreDeltaCI95 = bootstrapMeanCI(diffs, bootstrapSamples)
 	report.Conclusion, report.ConclusionReason = beamPairedComparisonConclusion(report.ScoreDeltaCI95, report.EffectSizeFloor)
@@ -331,10 +330,10 @@ func summarizeBeamPairedComparison(rows []beamPairedComparisonRow, bootstrapSamp
 
 func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow, effectSizeFloor float64) beamPairedComparisonStats {
 	stats := beamPairedComparisonStats{PairedCount: len(rows)}
-	baseTotal, candidateTotal := 0.0, 0.0
+	var baselineTally, candidateTally shared.ScoreTally
 	for _, row := range rows {
-		baseTotal += row.BaselineScore
-		candidateTotal += row.CandidateScore
+		baselineTally.Add(row.BaselineScore)
+		candidateTally.Add(row.CandidateScore)
 		switch row.Winner {
 		case "candidate":
 			stats.CandidateWins++
@@ -344,9 +343,8 @@ func beamPairedComparisonStatsForRows(rows []beamPairedComparisonRow, effectSize
 			stats.Ties++
 		}
 	}
-	n := float64(len(rows))
-	stats.BaselineAvgScore = shared.RoundMetric(baseTotal / n)
-	stats.CandidateAvgScore = shared.RoundMetric(candidateTotal / n)
+	stats.BaselineAvgScore = baselineTally.Average()
+	stats.CandidateAvgScore = candidateTally.Average()
 	stats.ScoreDelta = shared.RoundSignedMetric(stats.CandidateAvgScore - stats.BaselineAvgScore)
 	stats.Conclusion, stats.ConclusionReason = beamPairedComparisonPointConclusion(stats.ScoreDelta, effectSizeFloor)
 	return stats

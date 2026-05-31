@@ -337,10 +337,8 @@ func writeBeamServiceSummary(path string, report goncho.RecallBenchmarkReport, c
 
 func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) beamServiceSummaryFile {
 	type scaleStats struct {
-		abilityTotals map[string]float64
-		abilityCounts map[string]int
-		overallTotal  float64
-		overallCount  int
+		abilityTallies map[string]*shared.ScoreTally
+		overallTally   shared.ScoreTally
 	}
 	stats := map[string]*scaleStats{}
 	for _, c := range report.Cases {
@@ -351,23 +349,26 @@ func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID strin
 		scale := beamServiceCaseScale(c)
 		acc := stats[scale]
 		if acc == nil {
-			acc = &scaleStats{abilityTotals: map[string]float64{}, abilityCounts: map[string]int{}}
+			acc = &scaleStats{abilityTallies: map[string]*shared.ScoreTally{}}
 			stats[scale] = acc
 		}
+		tally := acc.abilityTallies[ability]
+		if tally == nil {
+			tally = &shared.ScoreTally{}
+			acc.abilityTallies[ability] = tally
+		}
 		score := beamServiceArtifactScore(c, judgments)
-		acc.abilityTotals[ability] += score
-		acc.abilityCounts[ability]++
-		acc.overallTotal += score
-		acc.overallCount++
+		tally.Add(score)
+		acc.overallTally.Add(score)
 	}
 	abilitySummary := map[string]map[string]beamAbilityStats{}
 	for scale, acc := range stats {
 		byAbility := map[string]beamAbilityStats{}
-		for ability, count := range acc.abilityCounts {
-			byAbility[ability] = beamAbilityStats{AvgScore: shared.RoundMetric(acc.abilityTotals[ability] / float64(count)), Count: count}
+		for ability, tally := range acc.abilityTallies {
+			byAbility[ability] = beamAbilityStats{AvgScore: tally.Average(), Count: tally.Count()}
 		}
-		if acc.overallCount > 0 {
-			byAbility["OVERALL"] = beamAbilityStats{AvgScore: shared.RoundMetric(acc.overallTotal / float64(acc.overallCount)), Count: acc.overallCount}
+		if acc.overallTally.Count() > 0 {
+			byAbility["OVERALL"] = beamAbilityStats{AvgScore: acc.overallTally.Average(), Count: acc.overallTally.Count()}
 		}
 		abilitySummary[scale] = byAbility
 	}
