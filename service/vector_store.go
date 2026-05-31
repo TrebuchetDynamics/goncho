@@ -123,8 +123,8 @@ func (r retrievalModule) mergeVectorRecall(ctx context.Context, q RecallQuery, w
 	}
 	var hits []VectorSearchHit
 	query := vectorSearchQueryFromRecall(q, workspaceID, profileID, peer, scopeID)
-	if maxPayload := r.providers.MaxPayloadBytes(string(ProviderKindEmbedding)); maxPayload > 0 && len(query.Query) > maxPayload {
-		r.recallWarnings.append(RecallWarning{Code: RecallWarningSemanticUnavailable, Stage: RecallStageGenerate, Severity: RecallWarningDegraded, Message: "optional semantic provider skipped because query exceeds configured provider payload limit; lexical/graph recall fallback remained active", Evidence: map[string]string{"provider": string(ProviderKindEmbedding), "error": "max_payload_exceeded", "max_payload_bytes": fmt.Sprintf("%d", maxPayload)}})
+	if decision := vectorProviderPayloadDecision(query.Query, r.providers.MaxPayloadBytes(string(ProviderKindEmbedding))); decision.Skip {
+		r.recallWarnings.append(decision.RecallWarning())
 		return base, nil
 	}
 	err := r.providers.Execute(ctx, string(ProviderKindEmbedding), func(providerCtx context.Context) error {
@@ -219,6 +219,32 @@ func mergeEvidenceMetadata(existing, incoming map[string]string) map[string]stri
 		merged[key] = value
 	}
 	return merged
+}
+
+type vectorProviderDecision struct {
+	Skip            bool
+	MaxPayloadBytes int
+}
+
+func vectorProviderPayloadDecision(query string, maxPayloadBytes int) vectorProviderDecision {
+	return vectorProviderDecision{
+		Skip:            maxPayloadBytes > 0 && len(query) > maxPayloadBytes,
+		MaxPayloadBytes: maxPayloadBytes,
+	}
+}
+
+func (d vectorProviderDecision) RecallWarning() RecallWarning {
+	return RecallWarning{
+		Code:     RecallWarningSemanticUnavailable,
+		Stage:    RecallStageGenerate,
+		Severity: RecallWarningDegraded,
+		Message:  "optional semantic provider skipped because query exceeds configured provider payload limit; lexical/graph recall fallback remained active",
+		Evidence: map[string]string{
+			"provider":          string(ProviderKindEmbedding),
+			"error":             "max_payload_exceeded",
+			"max_payload_bytes": fmt.Sprintf("%d", d.MaxPayloadBytes),
+		},
+	}
 }
 
 func vectorHitsByScoreDesc(hits []VectorSearchHit) []VectorSearchHit {

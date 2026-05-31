@@ -243,7 +243,7 @@ func (r retrievalModule) mergeVectorSearch(ctx context.Context, params SearchPar
 		Sources:     vectorSources,
 		Limit:       recallCandidateSearchLimit(limit),
 	}
-	if maxPayload := r.providers.MaxPayloadBytes(string(ProviderKindEmbedding)); maxPayload > 0 && len(query.Query) > maxPayload {
+	if decision := vectorProviderPayloadDecision(query.Query, r.providers.MaxPayloadBytes(string(ProviderKindEmbedding))); decision.Skip {
 		return base, nil
 	}
 	var hits []VectorSearchHit

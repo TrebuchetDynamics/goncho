@@ -98,8 +98,26 @@ func TestRecallSkipsVectorProviderWhenPayloadExceedsConfiguredLimit(t *testing.T
 	if vector.calls != 0 {
 		t.Fatalf("vector calls = %d, want payload guard to skip provider", vector.calls)
 	}
-	if !recallWarningListHasCode(trace.Warnings, RecallWarningSemanticUnavailable) {
+	warning, ok := recallWarningByCode(trace.Warnings, RecallWarningSemanticUnavailable)
+	if !ok {
 		t.Fatalf("warnings = %+v, want semantic_unavailable payload warning", trace.Warnings)
+	}
+	if warning.Stage != RecallStageGenerate || warning.Severity != RecallWarningDegraded || warning.Evidence["error"] != "max_payload_exceeded" || warning.Evidence["max_payload_bytes"] != "5" {
+		t.Fatalf("payload warning = %+v, want replayable payload-limit evidence", warning)
+	}
+}
+
+func TestVectorProviderPayloadDecisionUsesByteLimit(t *testing.T) {
+	decision := vectorProviderPayloadDecision("ééé", 5)
+	if !decision.Skip || decision.MaxPayloadBytes != 5 {
+		t.Fatalf("decision = %+v, want three two-byte runes to exceed five-byte limit", decision)
+	}
+	warning := decision.RecallWarning()
+	if warning.Code != RecallWarningSemanticUnavailable || warning.Evidence["error"] != "max_payload_exceeded" || warning.Evidence["max_payload_bytes"] != "5" {
+		t.Fatalf("warning = %+v, want replayable semantic payload warning", warning)
+	}
+	if got := vectorProviderPayloadDecision("abcde", 5); got.Skip {
+		t.Fatalf("decision = %+v, want exact byte limit allowed", got)
 	}
 }
 

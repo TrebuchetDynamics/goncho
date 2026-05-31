@@ -3,9 +3,17 @@ package goncho
 import "github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 
 func recallWarningListHasCode(warnings []RecallWarning, code string) bool {
-	return sliceutil.ContainsFunc(warnings, func(warning RecallWarning) bool {
-		return warning.Code == code
-	})
+	_, ok := recallWarningByCode(warnings, code)
+	return ok
+}
+
+func recallWarningByCode(warnings []RecallWarning, code string) (RecallWarning, bool) {
+	for _, warning := range warnings {
+		if warning.Code == code {
+			return warning, true
+		}
+	}
+	return RecallWarning{}, false
 }
 
 func recallReplayEventsHaveWarning(events []RecallReplayEvent, code string) bool {
