@@ -7,10 +7,43 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
+// TurnSearchScope is the explicit identifier set allowed to match synced session turns.
+// Empty scopes are valid inputs and intentionally compile to a no-row predicate.
+type TurnSearchScope struct {
+	SessionIDs []string
+	ChatKeys   []string
+}
+
+func newTurnSearchScope(sessionIDs, chatKeys []string) TurnSearchScope {
+	return TurnSearchScope{
+		SessionIDs: textutil.UniqueTrimmed(sessionIDs, false),
+		ChatKeys:   textutil.UniqueTrimmed(chatKeys, false),
+	}
+}
+
+func (scope TurnSearchScope) appendPredicate(b *strings.Builder, args *[]any) {
+	if len(scope.SessionIDs) == 0 && len(scope.ChatKeys) == 0 {
+		b.WriteString(`0=1`)
+		return
+	}
+	b.WriteString(`(`)
+	if len(scope.SessionIDs) > 0 {
+		sqlutil.AppendInClause(b, "t.session_id", scope.SessionIDs, args)
+	}
+	if len(scope.ChatKeys) > 0 {
+		if len(scope.SessionIDs) > 0 {
+			b.WriteString(` OR `)
+		}
+		sqlutil.AppendInClause(b, "t.chat_id", scope.ChatKeys, args)
+	}
+	b.WriteString(`)`)
+}
+
 // BuildTurnSearchQuery builds the SQLite query used to search synced session turns.
 func BuildTurnSearchQuery(rawQuery string, sessionIDs, chatKeys, roles []string, limit int, sessionsOnly bool) (string, []any) {
 	var b strings.Builder
-	args := make([]any, 0, len(sessionIDs)+len(chatKeys)+len(roles)+2)
+	scope := newTurnSearchScope(sessionIDs, chatKeys)
+	args := make([]any, 0, len(scope.SessionIDs)+len(scope.ChatKeys)+len(roles)+2)
 	if sessionsOnly {
 		b.WriteString(`SELECT t.session_id, t.chat_id, MAX(t.ts_unix) AS latest_turn_unix FROM turns t`)
 	} else {
@@ -25,13 +58,8 @@ func BuildTurnSearchQuery(rawQuery string, sessionIDs, chatKeys, roles []string,
 		b.WriteString(` WHERE 1=1`)
 	}
 
-	b.WriteString(` AND (`)
-	sqlutil.AppendInClause(&b, "t.session_id", sessionIDs, &args)
-	if len(chatKeys) > 0 {
-		b.WriteString(` OR `)
-		sqlutil.AppendInClause(&b, "t.chat_id", chatKeys, &args)
-	}
-	b.WriteString(`)`)
+	b.WriteString(` AND `)
+	scope.appendPredicate(&b, &args)
 	b.WriteString(` AND t.memory_sync_status = 'ready'`)
 	if normalizedRoles := normalizeRoles(roles); len(normalizedRoles) > 0 {
 		b.WriteString(` AND `)

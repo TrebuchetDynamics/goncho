@@ -27,6 +27,33 @@ func TestBuildTurnSearchQuerySanitizesFTSAndNormalizesRoles(t *testing.T) {
 	}
 }
 
+func TestBuildTurnSearchQueryTrimsScopeIdentifiers(t *testing.T) {
+	query, args := BuildTurnSearchQuery("", []string{" s1 ", "s1", " "}, []string{" chat:1 ", "chat:1"}, nil, 7, false)
+
+	if !strings.Contains(query, `t.session_id IN (?) OR t.chat_id IN (?)`) {
+		t.Fatalf("query scope predicate = %q, want trimmed unique identifier clauses", query)
+	}
+	wantArgs := []any{"s1", "chat:1", 7}
+	if !reflect.DeepEqual(args, wantArgs) {
+		t.Fatalf("args = %#v, want %#v", args, wantArgs)
+	}
+}
+
+func TestBuildTurnSearchQueryEmptyScopeIsNoRowsPredicate(t *testing.T) {
+	query, args := BuildTurnSearchQuery("", []string{" "}, nil, nil, 3, false)
+
+	if !strings.Contains(query, `AND 0=1 AND t.memory_sync_status = 'ready'`) {
+		t.Fatalf("query scope predicate = %q, want explicit no-row predicate for empty scope", query)
+	}
+	if strings.Contains(query, `IN ()`) {
+		t.Fatalf("query should not rely on empty IN clauses: %q", query)
+	}
+	wantArgs := []any{3}
+	if !reflect.DeepEqual(args, wantArgs) {
+		t.Fatalf("args = %#v, want %#v", args, wantArgs)
+	}
+}
+
 func TestBuildTurnSearchQuerySessionsOnlyOmitsBlankRoleFilter(t *testing.T) {
 	query, args := BuildTurnSearchQuery("", []string{"s1", "s2"}, nil, []string{" "}, 10, true)
 
