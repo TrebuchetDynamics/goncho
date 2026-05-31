@@ -569,6 +569,27 @@ func TestRecallPipelineSelectedReasonsReportAdjustedFinalScore(t *testing.T) {
 	}
 }
 
+func TestRecallSelectionPolicyMakesLimitAndBudgetAssumptionsExplicit(t *testing.T) {
+	policy := recallSelectionPolicyFor(RecallQuery{Limit: 0}, RecallScoringConfig{TokenBudget: 120})
+	if policy.Limit != 5 || policy.TokenBudget != 120 {
+		t.Fatalf("default policy = %+v, want limit default 5 and config token budget", policy)
+	}
+	policy = recallSelectionPolicyFor(RecallQuery{Limit: 2, MaxTokens: 9}, RecallScoringConfig{TokenBudget: 120})
+	if policy.Limit != 2 || policy.TokenBudget != 9 {
+		t.Fatalf("override policy = %+v, want query limit and max_tokens override", policy)
+	}
+	if !policy.FitsTokenBudget(4, 5) || policy.FitsTokenBudget(5, 5) {
+		t.Fatalf("budget fit checks for %+v were not boundary-inclusive", policy)
+	}
+	if got := strings.Join(policy.TokenBudgetRejectionReasons(5, 5), ";"); got != "used_tokens=5;candidate_tokens=5;token_budget=9" {
+		t.Fatalf("rejection reasons = %q", got)
+	}
+	warning := policy.TokenBudgetWarning()
+	if warning.Code != RecallWarningTokenBudgetTruncated || warning.Evidence["token_budget"] != "9" {
+		t.Fatalf("warning = %+v, want replayable token-budget evidence", warning)
+	}
+}
+
 func TestRecallPipelineRRFIgnoresAbsentSignalScores(t *testing.T) {
 	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
 	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{

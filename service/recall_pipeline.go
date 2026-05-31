@@ -128,11 +128,7 @@ func (e *recallPipelineEngine) score(q RecallQuery, candidates []RecallCandidate
 }
 
 func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRecallCandidate) ([]ScoredRecallCandidate, []RejectedRecallCandidate, []RecallWarning) {
-	limit := limitutil.Default(q.Limit, 5)
-	budget := e.opts.scoringConfig.TokenBudget
-	if q.MaxTokens > 0 {
-		budget = q.MaxTokens
-	}
+	policy := recallSelectionPolicyFor(q, e.opts.scoringConfig)
 	eligible := make([]ScoredRecallCandidate, 0, len(scored))
 	rejected := make([]RejectedRecallCandidate, 0)
 	scopeRejected := 0
@@ -167,26 +163,16 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 		})
 	}
 
-	selected := make([]ScoredRecallCandidate, 0, min(limit, len(eligible)))
+	selected := make([]ScoredRecallCandidate, 0, min(policy.Limit, len(eligible)))
 	remaining := sliceutil.Clone(eligible)
 	usedTokens := 0
-	for len(selected) < limit && len(remaining) > 0 {
+	for len(selected) < policy.Limit && len(remaining) > 0 {
 		bestIdx := recallBestSelectionIndex(remaining, selected, q.Query, e.opts.scoringConfig)
 		chosen := applyRecallSelectionAdjustment(remaining[bestIdx], recallSelectionAdjustmentFor(remaining[bestIdx], selected, q.Query, e.opts.scoringConfig), true)
 		tokenCost := estimateRecallTokens(chosen.Candidate.Content)
-		if budget > 0 && usedTokens+tokenCost > budget {
-			rejected = append(rejected, recallRejectedCandidate(chosen, RecallRejectTokenBudget, []string{
-				fmt.Sprintf("used_tokens=%d", usedTokens),
-				fmt.Sprintf("candidate_tokens=%d", tokenCost),
-				fmt.Sprintf("token_budget=%d", budget),
-			}))
-			warnings = appendRecallWarnings(warnings, RecallWarning{
-				Code:     RecallWarningTokenBudgetTruncated,
-				Stage:    RecallStageSelect,
-				Severity: RecallWarningDegraded,
-				Message:  "token budget truncated selected recall context",
-				Evidence: map[string]string{"token_budget": fmt.Sprintf("%d", budget)},
-			})
+		if !policy.FitsTokenBudget(usedTokens, tokenCost) {
+			rejected = append(rejected, recallRejectedCandidate(chosen, RecallRejectTokenBudget, policy.TokenBudgetRejectionReasons(usedTokens, tokenCost)))
+			warnings = appendRecallWarnings(warnings, policy.TokenBudgetWarning())
 			remaining = append(remaining[:bestIdx], remaining[bestIdx+1:]...)
 			continue
 		}
@@ -197,10 +183,48 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 	for _, item := range remaining {
 		item = applyRecallSelectionAdjustment(item, recallRejectedSelectionAdjustmentFor(item, selected, e.opts.scoringConfig), false)
 		rejected = append(rejected, recallRejectedCandidate(item, RecallRejectNotSelected, []string{
-			fmt.Sprintf("limit=%d", limit),
+			fmt.Sprintf("limit=%d", policy.Limit),
 		}))
 	}
 	return selected, rejected, warnings
+}
+
+type recallSelectionPolicy struct {
+	Limit       int
+	TokenBudget int
+}
+
+func recallSelectionPolicyFor(q RecallQuery, config RecallScoringConfig) recallSelectionPolicy {
+	policy := recallSelectionPolicy{
+		Limit:       limitutil.Default(q.Limit, 5),
+		TokenBudget: config.TokenBudget,
+	}
+	if q.MaxTokens > 0 {
+		policy.TokenBudget = q.MaxTokens
+	}
+	return policy
+}
+
+func (p recallSelectionPolicy) FitsTokenBudget(usedTokens, candidateTokens int) bool {
+	return p.TokenBudget <= 0 || usedTokens+candidateTokens <= p.TokenBudget
+}
+
+func (p recallSelectionPolicy) TokenBudgetRejectionReasons(usedTokens, candidateTokens int) []string {
+	return []string{
+		fmt.Sprintf("used_tokens=%d", usedTokens),
+		fmt.Sprintf("candidate_tokens=%d", candidateTokens),
+		fmt.Sprintf("token_budget=%d", p.TokenBudget),
+	}
+}
+
+func (p recallSelectionPolicy) TokenBudgetWarning() RecallWarning {
+	return RecallWarning{
+		Code:     RecallWarningTokenBudgetTruncated,
+		Stage:    RecallStageSelect,
+		Severity: RecallWarningDegraded,
+		Message:  "token budget truncated selected recall context",
+		Evidence: map[string]string{"token_budget": fmt.Sprintf("%d", p.TokenBudget)},
+	}
 }
 
 func recallRejectedCandidate(item ScoredRecallCandidate, reason string, why []string) RejectedRecallCandidate {
