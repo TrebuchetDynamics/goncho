@@ -332,6 +332,52 @@ func TestRecallPipelineSelectedReasonsReportAdjustedFinalScore(t *testing.T) {
 	}
 }
 
+func TestRecallPipelineRRFIgnoresAbsentSignalScores(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{
+		{
+			MemoryID:   "mem-b",
+			Content:    "candidate without semantic evidence",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0,
+		},
+		{
+			MemoryID:   "mem-a",
+			Content:    "another candidate without semantic evidence",
+			ScopeID:    "team",
+			CreatedAt:  now,
+			Importance: 0,
+		},
+	}}, recallPipelineOptions{
+		pipelineVersion: "absent-signal-rrf-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "absent-signal-rrf-test-v1",
+			Weights:     map[string]float64{"semantic": 1},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 100,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "semantic only",
+		ScopeID:     "team",
+		Limit:       2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range trace.Candidates {
+		if item.Score.SemanticScore != 0 || item.Score.RRFScore != 0 || item.Score.FinalScore != 0 {
+			t.Fatalf("candidate %s score = %+v, want absent semantic signal to contribute no score", item.Candidate.MemoryID, item.Score)
+		}
+	}
+}
+
 func TestRecallPipelineCopiesScoringConfig(t *testing.T) {
 	now := time.Date(2026, 5, 17, 12, 0, 0, 0, time.UTC)
 	config := RecallScoringConfig{

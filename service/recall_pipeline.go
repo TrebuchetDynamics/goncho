@@ -483,18 +483,7 @@ func addRecallRRF(items []ScoredRecallCandidate, config RecallScoringConfig) {
 		if weight == 0 {
 			continue
 		}
-		indexes := make([]int, len(items))
-		for i := range items {
-			indexes[i] = i
-		}
-		sort.SliceStable(indexes, func(i, j int) bool {
-			left := items[indexes[i]]
-			right := items[indexes[j]]
-			if signal.score(left.Score) != signal.score(right.Score) {
-				return signal.score(left.Score) > signal.score(right.Score)
-			}
-			return left.Candidate.MemoryID < right.Candidate.MemoryID
-		})
+		indexes := rankedRecallSignalIndexes(items, signal.score)
 		for rank, idx := range indexes {
 			items[idx].Score.RRFScore += weight / float64(config.RRFK+rank+1)
 		}
@@ -502,6 +491,25 @@ func addRecallRRF(items []ScoredRecallCandidate, config RecallScoringConfig) {
 	for i := range items {
 		items[i].Score.RRFScore = roundRecallFloat(items[i].Score.RRFScore)
 	}
+}
+
+func rankedRecallSignalIndexes(items []ScoredRecallCandidate, score func(RecallScore) float64) []int {
+	indexes := make([]int, 0, len(items))
+	for i := range items {
+		if score(items[i].Score) <= 0 {
+			continue
+		}
+		indexes = append(indexes, i)
+	}
+	sort.SliceStable(indexes, func(i, j int) bool {
+		left := items[indexes[i]]
+		right := items[indexes[j]]
+		if score(left.Score) != score(right.Score) {
+			return score(left.Score) > score(right.Score)
+		}
+		return left.Candidate.MemoryID < right.Candidate.MemoryID
+	})
+	return indexes
 }
 
 const recallTemporalCurrentBonus = 0.08
