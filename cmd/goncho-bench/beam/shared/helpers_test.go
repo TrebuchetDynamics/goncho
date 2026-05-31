@@ -20,6 +20,15 @@ func TestFirstNonEmptyTrimmedReturnsFirstTrimmedValue(t *testing.T) {
 	}
 }
 
+func TestHasNonEmptyTrimmed(t *testing.T) {
+	if HasNonEmptyTrimmed("  ") {
+		t.Fatal("HasNonEmptyTrimmed(blank) = true, want false")
+	}
+	if !HasNonEmptyTrimmed(" value ") {
+		t.Fatal("HasNonEmptyTrimmed(value) = false, want true")
+	}
+}
+
 func TestPairedOutcomeCorrectUsesSharedThreshold(t *testing.T) {
 	for _, tc := range []struct {
 		name  string

@@ -26,7 +26,7 @@ func RunServiceBenchmark(ctx context.Context, cfg ServiceConfig) error {
 }
 
 func RunHuggingFaceServiceBenchmark(ctx context.Context, cfg ServiceConfig) error {
-	if strings.TrimSpace(cfg.JSONLPath) != "" {
+	if shared.HasNonEmptyTrimmed(cfg.JSONLPath) {
 		return fmt.Errorf("goncho-bench: --beam-convert-in direct service run cannot be combined with --beam-jsonl")
 	}
 	records, diagnostics, err := loadBeamHuggingFaceRecordsWithDiagnostics(cfg.ConvertIn, cfg.ConvertScale)

@@ -87,10 +87,10 @@ func loadNestedBeamServiceJudgments(raw []byte, rows map[shared.OutcomeKey]beamS
 	}
 	for conversationIndex, conv := range file.Results {
 		for resultIndex, row := range conv.Results {
-			if strings.TrimSpace(row.Scale) == "" {
+			if !shared.HasNonEmptyTrimmed(row.Scale) {
 				row.Scale = conv.Scale
 			}
-			if strings.TrimSpace(row.ConversationID) == "" {
+			if !shared.HasNonEmptyTrimmed(row.ConversationID) {
 				row.ConversationID = conv.ConversationID
 			}
 			if err := addBeamServiceJudgment(rows, questionRows, row, fmt.Sprintf("conversation %d result %d", conversationIndex+1, resultIndex+1)); err != nil {

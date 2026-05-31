@@ -115,7 +115,7 @@ func buildBeamPairedComparison(cfg Config) (beamPairedComparisonReport, error) {
 	}
 	baselineRows, candidateRows := []servicePairedOutcome{}, []servicePairedOutcome{}
 	for _, row := range rows {
-		if strings.TrimSpace(row.QID) == "" {
+		if !shared.HasNonEmptyTrimmed(row.QID) {
 			continue
 		}
 		switch strings.TrimSpace(row.ConfigID) {

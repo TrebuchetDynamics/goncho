@@ -85,7 +85,7 @@ func buildBeamServiceJudgeRequestRows(report goncho.RecallBenchmarkReport, confi
 }
 
 func buildBeamServiceAnswerRequest(question, context string) beamServicePromptRequest {
-	if strings.TrimSpace(context) == "" {
+	if !shared.HasNonEmptyTrimmed(context) {
 		context = "[No memories found]"
 	}
 	return beamServicePromptRequest{

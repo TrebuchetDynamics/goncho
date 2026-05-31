@@ -2,7 +2,8 @@ package oracle
 
 import (
 	"context"
-	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 )
 
 type ServiceConfig struct {
@@ -29,15 +30,11 @@ type ServiceConfig struct {
 }
 
 func ArtifactRequested(cfg ServiceConfig) bool {
-	return trimNonEmpty(cfg.ServiceOut) || trimNonEmpty(cfg.ServiceResultsOut) || trimNonEmpty(cfg.ServiceSummaryOut) || trimNonEmpty(cfg.ServicePairedOut) || trimNonEmpty(cfg.ServiceFailuresOut) || trimNonEmpty(cfg.ServiceJudgeRequestsOut)
+	return shared.HasNonEmptyTrimmed(cfg.ServiceOut) || shared.HasNonEmptyTrimmed(cfg.ServiceResultsOut) || shared.HasNonEmptyTrimmed(cfg.ServiceSummaryOut) || shared.HasNonEmptyTrimmed(cfg.ServicePairedOut) || shared.HasNonEmptyTrimmed(cfg.ServiceFailuresOut) || shared.HasNonEmptyTrimmed(cfg.ServiceJudgeRequestsOut)
 }
 
-func trimNonEmpty(value string) bool { return stringsTrimSpace(value) != "" }
-
-var stringsTrimSpace = strings.TrimSpace
-
 func Run(ctx context.Context, cfg ServiceConfig) error {
-	if stringsTrimSpace(cfg.ConvertIn) != "" {
+	if shared.HasNonEmptyTrimmed(cfg.ConvertIn) {
 		if ArtifactRequested(cfg) {
 			return RunHuggingFaceServiceBenchmark(ctx, cfg)
 		}

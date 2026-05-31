@@ -25,6 +25,11 @@ func ChecksumBytesSHA256(raw []byte) string {
 	return checksum.SHA256Bytes(raw)
 }
 
+// HasNonEmptyTrimmed reports whether value has non-empty content after trimming.
+func HasNonEmptyTrimmed(value string) bool {
+	return strings.TrimSpace(value) != ""
+}
+
 // FirstNonEmptyTrimmed returns the first argument with non-empty trimmed content.
 func FirstNonEmptyTrimmed(values ...string) string {
 	for _, value := range values {

@@ -180,7 +180,7 @@ func convertBeamHuggingFaceRecord(record beamHuggingFaceRecord, lineNo int, fall
 		questions := questionsByAbility[ability]
 		for i, question := range questions {
 			query := stringutil.FirstNonEmpty(question.Question, question.Query, question.Prompt)
-			if strings.TrimSpace(query) == "" {
+			if !shared.HasNonEmptyTrimmed(query) {
 				continue
 			}
 			qid := stringutil.FirstNonEmpty(question.ID, question.QID)
@@ -268,7 +268,7 @@ func flattenBeamChat(raw json.RawMessage) ([]beamConvertedMessage, error) {
 			if err := json.Unmarshal(item, &msg); err != nil {
 				return nil, err
 			}
-			if strings.TrimSpace(msg.Content) != "" {
+			if shared.HasNonEmptyTrimmed(msg.Content) {
 				out = append(out, beamConvertedMessage{Role: msg.Role, Content: msg.Content})
 			}
 		}
@@ -287,7 +287,7 @@ func parseBeamHuggingFaceQuestions(raw json.RawMessage) (map[string][]beamConver
 		if err := json.Unmarshal(trimmed, &encoded); err != nil {
 			return nil, err
 		}
-		if strings.TrimSpace(encoded) == "" {
+		if !shared.HasNonEmptyTrimmed(encoded) {
 			return map[string][]beamConvertedQuestion{}, nil
 		}
 		candidate := []byte(encoded)
