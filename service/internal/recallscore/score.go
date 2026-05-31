@@ -2,9 +2,9 @@ package recallscore
 
 import (
 	"math"
-	"strings"
 	"time"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/texttokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -13,25 +13,50 @@ func Keyword(content, query string) float64 {
 	if query == "" {
 		return 0
 	}
-	content = strings.ToLower(content)
-	if strings.Contains(content, query) {
+	contentTokensList := texttokens.LowerAlnum(content)
+	queryTokenSequence := texttokens.LowerAlnum(query)
+	if tokenSequenceContains(contentTokensList, queryTokenSequence) {
 		return 1
 	}
-	tokens := strings.Fields(query)
-	if len(tokens) == 0 {
+	queryTokens := textutil.UniqueTrimmed(queryTokenSequence, false)
+	if len(queryTokens) == 0 {
 		return 0
 	}
-	tokens = textutil.UniqueTrimmed(tokens, false)
+	contentTokens := tokenSet(contentTokensList)
 	hits := 0
-	for _, token := range tokens {
-		if strings.Contains(content, token) {
+	for _, token := range queryTokens {
+		if _, ok := contentTokens[token]; ok {
 			hits++
 		}
 	}
-	if len(tokens) == 0 {
-		return 0
+	return Clamp(float64(hits) / float64(len(queryTokens)))
+}
+
+func tokenSequenceContains(contentTokens, queryTokens []string) bool {
+	if len(queryTokens) == 0 || len(queryTokens) > len(contentTokens) {
+		return false
 	}
-	return Clamp(float64(hits) / float64(len(tokens)))
+	for start := 0; start <= len(contentTokens)-len(queryTokens); start++ {
+		matched := true
+		for offset, token := range queryTokens {
+			if contentTokens[start+offset] != token {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+func tokenSet(tokens []string) map[string]struct{} {
+	out := make(map[string]struct{}, len(tokens))
+	for _, token := range tokens {
+		out[token] = struct{}{}
+	}
+	return out
 }
 
 func Recency(createdAt, now time.Time, halfLife time.Duration) float64 {
