@@ -219,6 +219,41 @@ func TestService_ContextIncludesPeerCardConclusionsAndRecentMessages(t *testing.
 	}
 }
 
+func TestLimitHitsByTokensSkipsOversizedMiddleCandidate(t *testing.T) {
+	hits := []SearchHit{
+		{Content: "alpha beta", SessionKey: "fits-first"},
+		{Content: "one two three four five six seven", SessionKey: "too-large-middle"},
+		{Content: "gamma", SessionKey: "fits-after-oversized"},
+	}
+
+	got := limitHitsByTokens(hits, 3)
+	gotKeys := searchHitSessionKeys(got)
+	if !slices.Equal(gotKeys, []string{"fits-first", "fits-after-oversized"}) {
+		t.Fatalf("session keys = %v, want oversized middle candidate skipped without truncating later fits", gotKeys)
+	}
+}
+
+func TestLimitHitsByTokensKeepsFirstOversizedCandidateForCompatibility(t *testing.T) {
+	hits := []SearchHit{
+		{Content: "one two three four five", SessionKey: "first-oversized"},
+		{Content: "tail", SessionKey: "tail"},
+	}
+
+	got := limitHitsByTokens(hits, 3)
+	gotKeys := searchHitSessionKeys(got)
+	if !slices.Equal(gotKeys, []string{"first-oversized"}) {
+		t.Fatalf("session keys = %v, want first oversized candidate preserved as legacy fallback", gotKeys)
+	}
+}
+
+func searchHitSessionKeys(hits []SearchHit) []string {
+	out := make([]string, 0, len(hits))
+	for _, hit := range hits {
+		out = append(out, hit.SessionKey)
+	}
+	return out
+}
+
 func TestService_SkipsInterruptedTurnsInSearchAndContext(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

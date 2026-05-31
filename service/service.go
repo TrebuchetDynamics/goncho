@@ -605,13 +605,16 @@ func limitHitsByTokens(hits []SearchHit, maxTokens int) []SearchHit {
 	if maxTokens <= 0 || len(hits) == 0 {
 		return hits
 	}
+	return selectSearchHitsWithinTokenBudget(hits, maxTokens)
+}
 
+func selectSearchHitsWithinTokenBudget(hits []SearchHit, maxTokens int) []SearchHit {
 	used := 0
 	out := make([]SearchHit, 0, len(hits))
 	for _, hit := range hits {
 		cost := textutil.ApproxTokens(hit.Content)
 		if !textutil.FitsTokenBudget(used, cost, maxTokens, true) {
-			break
+			continue
 		}
 		out = append(out, hit)
 		used += cost
