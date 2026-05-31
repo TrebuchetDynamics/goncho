@@ -51,6 +51,30 @@ func TestRankConclusionHitsAddsExpansionProvenanceOnlyWhenExpansionImprovesHit(t
 	}
 }
 
+func TestRankConclusionHitsDoesNotDuplicateExistingExpansionProvenance(t *testing.T) {
+	expansion := expandSearchQuery("signin")
+	hits := []SearchHit{
+		{
+			Content:    "Mira uses login on the authentication dashboard.",
+			Provenance: []EvidenceItem{queryExpansionEvidence(expansion)},
+		},
+	}
+
+	got := rankConclusionHitsByLexicalOverlap("signin", hits)
+	if len(got) != 1 {
+		t.Fatalf("ranked hits len = %d, want 1", len(got))
+	}
+	count := 0
+	for _, item := range got[0].Provenance {
+		if item.Kind == "query_expansion" && item.ID == "signin" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("query_expansion provenance count = %d, want 1: %+v", count, got[0].Provenance)
+	}
+}
+
 func TestRankConclusionHitsFiltersSingleUnrelatedHitLikeMultiHitRanking(t *testing.T) {
 	unrelated := SearchHit{Content: "Mira stores aquarium filters in the blue cabinet."}
 	got := rankConclusionHitsByLexicalOverlap("rare orchid retrieval marker", []SearchHit{unrelated})

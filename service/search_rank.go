@@ -74,7 +74,7 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 		score += searchFactIntentBonus(factScore, maxScore)
 		score += searchTemporalRerankBonus(temporal, hit.Content, i, len(hits), score, maxScore)
 		if searchHitExpansionImproves(expansion, hit) {
-			hit.Provenance = append(hit.Provenance, queryExpansionEvidence(expansion))
+			hit.Provenance = appendSearchHitQueryExpansionEvidence(hit.Provenance, expansion)
 		}
 		scored = append(scored, scoredHit{hit: hit, score: score, baseScore: baseScores[i], index: i})
 	}
@@ -105,6 +105,13 @@ func searchHitExpansionImproves(expansion expandedQuery, hit SearchHit) bool {
 	originalScore := recallscore.Keyword(hit.Content, expansion.Original)
 	expandedScore := recallscore.Keyword(hit.Content, expansion.Expanded)
 	return expandedScore > originalScore
+}
+
+func appendSearchHitQueryExpansionEvidence(provenance []EvidenceItem, expansion expandedQuery) []EvidenceItem {
+	if evidenceListHas(provenance, "query_expansion", queryExpansionEvidenceID(expansion)) {
+		return provenance
+	}
+	return append(provenance, queryExpansionEvidence(expansion))
 }
 
 func searchTemporalIntent(query string) searchTemporalFeatures {

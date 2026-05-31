@@ -13,11 +13,15 @@ func expandSearchQuery(query string) expandedQuery {
 	return queryexpand.Expand(query)
 }
 
+func queryExpansionEvidenceID(expansion expandedQuery) string {
+	return textutil.LowerTrimmed(expansion.Original)
+}
+
 func queryExpansionEvidence(expansion expandedQuery) EvidenceItem {
 	return EvidenceItem{
 		Kind:   "query_expansion",
 		Source: "goncho_query_expansion",
-		ID:     textutil.LowerTrimmed(expansion.Original),
+		ID:     queryExpansionEvidenceID(expansion),
 		Score:  1,
 		Note:   "expanded query with transparent synonyms",
 		Metadata: map[string]string{
