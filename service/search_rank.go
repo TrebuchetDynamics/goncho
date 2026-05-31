@@ -3,6 +3,7 @@ package goncho
 import (
 	"slices"
 
+	"github.com/TrebuchetDynamics/goncho/service/internal/recallscore"
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchrank"
 	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
@@ -25,7 +26,7 @@ func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []Search
 		return hits
 	}
 	if len(hits) < 2 {
-		if len(hits) == 1 && expansion.Applied() && keywordRecallScore(hits[0].Content, expansion.Expanded) > 0 {
+		if len(hits) == 1 && expansion.Applied() && recallscore.Keyword(hits[0].Content, expansion.Expanded) > 0 {
 			hits[0].Provenance = append(hits[0].Provenance, queryExpansionEvidence(expansion))
 		}
 		return hits

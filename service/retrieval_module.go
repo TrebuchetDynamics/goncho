@@ -11,6 +11,7 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service/internal/contexttokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/idutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/recallscore"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sourcefilter"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -93,11 +94,11 @@ func recallSourcesAllowConclusions(sources []string) bool {
 
 func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeID string) RecallCandidate {
 	provenance := sliceutil.Clone(hit.Provenance)
-	keywordScore := roundRecallFloat(keywordRecallScore(hit.Content, q.Query))
+	keywordScore := roundRecallFloat(recallscore.Keyword(hit.Content, q.Query))
 	expansion := expandSearchQuery(q.Query)
 	expandedKeywordScore := keywordScore
 	if expansion.Applied() {
-		expandedKeywordScore = roundRecallFloat(keywordRecallScore(hit.Content, expansion.Expanded))
+		expandedKeywordScore = roundRecallFloat(recallscore.Keyword(hit.Content, expansion.Expanded))
 	}
 	if keywordScore > 0 {
 		provenance = append(provenance, EvidenceItem{

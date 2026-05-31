@@ -60,7 +60,7 @@ func (t *GonchoContextTool) Execute(ctx context.Context, args json.RawMessage) (
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("goncho_context: %w", err)
 	}
-	out, err := t.svc.Context(ctx, ContextParams{ProfileID: in.ProfileID, Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, MaxTokens: in.MaxTokens})
+	out, err := t.svc.Context(ctx, ContextParams{ProfileID: in.ProfileID, Peer: textutil.FirstNonBlank(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, MaxTokens: in.MaxTokens})
 	if err != nil {
 		return nil, fmt.Errorf("goncho_context: %w", err)
 	}
@@ -94,7 +94,7 @@ func (t *GonchoSearchTool) Execute(ctx context.Context, args json.RawMessage) (j
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("goncho_search: %w", err)
 	}
-	out, err := t.svc.Search(ctx, SearchParams{ProfileID: in.ProfileID, Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, Scope: in.Scope, MaxTokens: in.MaxTokens})
+	out, err := t.svc.Search(ctx, SearchParams{ProfileID: in.ProfileID, Peer: textutil.FirstNonBlank(in.PeerID, in.Peer), Query: in.Query, SessionKey: in.SessionKey, Scope: in.Scope, MaxTokens: in.MaxTokens})
 	if err != nil {
 		return nil, fmt.Errorf("goncho_search: %w", err)
 	}
@@ -134,10 +134,10 @@ func (t *GonchoRecallTool) Execute(ctx context.Context, args json.RawMessage) (j
 	}
 	trace, err := t.svc.Recall(ctx, RecallQuery{
 		WorkspaceID: in.WorkspaceID,
-		Peer:        firstPublicNonEmpty(in.PeerID, in.Peer),
+		Peer:        textutil.FirstNonBlank(in.PeerID, in.Peer),
 		Query:       in.Query,
 		SessionKey:  in.SessionKey,
-		ScopeID:     firstPublicNonEmpty(in.ScopeID, in.Scope),
+		ScopeID:     textutil.FirstNonBlank(in.ScopeID, in.Scope),
 		Sources:     in.Sources,
 		Limit:       in.Limit,
 		MaxTokens:   in.MaxTokens,
@@ -175,7 +175,7 @@ func (t *GonchoRememberTool) Execute(ctx context.Context, args json.RawMessage) 
 	if err := json.Unmarshal(args, &in); err != nil {
 		return nil, fmt.Errorf("goncho_remember: %w", err)
 	}
-	out, err := t.svc.Conclude(ctx, ConcludeParams{ProfileID: in.ProfileID, Peer: firstPublicNonEmpty(in.PeerID, in.Peer), Conclusion: firstPublicNonEmpty(in.Content, in.Conclusion), SessionKey: in.SessionKey, Scope: in.Scope})
+	out, err := t.svc.Conclude(ctx, ConcludeParams{ProfileID: in.ProfileID, Peer: textutil.FirstNonBlank(in.PeerID, in.Peer), Conclusion: textutil.FirstNonBlank(in.Content, in.Conclusion), SessionKey: in.SessionKey, Scope: in.Scope})
 	if err != nil {
 		return nil, fmt.Errorf("goncho_remember: %w", err)
 	}
@@ -234,8 +234,4 @@ func (t *GonchoHandoffTool) Execute(ctx context.Context, args json.RawMessage) (
 
 func gonchoPublicToolSpec(name, description string, schema json.RawMessage, mutating, idempotent bool) toolmeta.OperationSpec {
 	return toolmeta.OperationSpec{ToolDescriptor: toolmeta.ToolDescriptor{Name: name, Description: description, Schema: schema}, Mutating: mutating, Idempotent: idempotent, PromptSafe: true, TrustClass: []string{"operator", "system"}, AuditKind: "memory"}
-}
-
-func firstPublicNonEmpty(values ...string) string {
-	return textutil.FirstNonBlank(values...)
 }

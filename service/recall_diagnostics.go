@@ -192,7 +192,7 @@ func recallDiagnosticsCandidate(item ScoredRecallCandidate) RecallDiagnosticsCan
 		SessionID:      item.Candidate.SessionID,
 		AgentID:        item.Candidate.AgentID,
 		ScopeID:        item.Candidate.ScopeID,
-		ContentPreview: previewRecallContent(item.Candidate.Content),
+		ContentPreview: recalldiag.PreviewContent(item.Candidate.Content),
 		FinalScore:     item.Score.FinalScore,
 		Scores:         item.Score,
 		WhySelected:    sliceutil.Clone(item.Score.WhySelected),
@@ -206,12 +206,10 @@ func recallDiagnosticsRejection(item RejectedRecallCandidate) RecallDiagnosticsR
 		SessionID:      item.Candidate.SessionID,
 		AgentID:        item.Candidate.AgentID,
 		ScopeID:        item.Candidate.ScopeID,
-		ContentPreview: previewRecallContent(item.Candidate.Content),
+		ContentPreview: recalldiag.PreviewContent(item.Candidate.Content),
 		Reason:         item.Reason,
 		FinalScore:     item.Score.FinalScore,
 		Scores:         item.Score,
 		WhyRejected:    sliceutil.Clone(item.WhyRejected),
 	}
 }
-
-func previewRecallContent(content string) string { return recalldiag.PreviewContent(content) }

@@ -80,14 +80,14 @@ type annotationGraphNegationTarget struct {
 func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q RecallQuery, workspaceID, peer, memoryScope string, base []RecallCandidate) ([]RecallCandidate, error) {
 	ownerQuery := annotationGraphOwnerQuery(q.Query)
 	versionQuery := annotationGraphVersionQuery(q.Query)
-	timelineQuery := annotationGraphTimelineQuery(q.Query)
-	metricQuery := annotationGraphMetricQuery(q.Query)
-	locationQuery := annotationGraphLocationQuery(q.Query)
-	preferenceQuery := annotationGraphPreferenceQuery(q.Query)
-	instructionQuery := annotationGraphInstructionQuery(q.Query)
-	sequenceQuery := annotationGraphSequenceQuery(q.Query)
-	decisionQuery := annotationGraphDecisionQuery(q.Query)
-	negationQuery := annotationGraphNegationQuery(q.Query)
+	timelineQuery := annotationgraph.TimelineQuery(q.Query)
+	metricQuery := annotationgraph.MetricQuery(q.Query)
+	locationQuery := annotationgraph.LocationQuery(q.Query)
+	preferenceQuery := annotationgraph.PreferenceQuery(q.Query)
+	instructionQuery := annotationgraph.InstructionQuery(q.Query)
+	sequenceQuery := annotationgraph.SequenceQuery(q.Query)
+	decisionQuery := annotationgraph.DecisionQuery(q.Query)
+	negationQuery := annotationgraph.NegationQuery(q.Query)
 	if len(base) == 0 || (!ownerQuery && !versionQuery && !timelineQuery && !metricQuery && !locationQuery && !preferenceQuery && !instructionQuery && !sequenceQuery && !decisionQuery && !negationQuery) {
 		return base, nil
 	}
@@ -102,8 +102,8 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 			}
 			fact := strings.TrimPrefix(evidence.Note, "fact=")
 			if timelineQuery {
-				owner, entity, ok := annotationGraphOwnerFactParts(fact)
-				if ok && annotationGraphQueryMatchesOwnerFact(q.Query, owner) {
+				owner, entity, ok := annotationgraph.OwnerFactParts(fact)
+				if ok && annotationgraph.QueryMatchesOwnerFact(q.Query, owner) {
 					targets, err := r.findAnnotationGraphTimelineTargets(ctx, q, workspaceID, peer, memoryScope, entity, source.MemoryID)
 					if err != nil {
 						return nil, err
@@ -114,8 +114,8 @@ func (r retrievalModule) expandAnnotationGraphRecall(ctx context.Context, q Reca
 					}
 				}
 			}
-			subject, relation, entity, ok := kgRelationAnswerParts(fact)
-			if !ok || !annotationGraphQueryMatchesKGRelation(q.Query, subject, relation) {
+			subject, relation, entity, ok := annotationgraph.KGRelationAnswerParts(fact)
+			if !ok || !annotationgraph.QueryMatchesKGRelation(q.Query, subject, relation) {
 				continue
 			}
 			if ownerQuery {
@@ -274,8 +274,8 @@ func (r retrievalModule) findAnnotationGraphOwnerTargets(ctx context.Context, q 
 		if memoryID == sourceMemoryID {
 			continue
 		}
-		_, owned, ok := annotationGraphOwnerFactParts(fact.Value)
-		if !ok || !annotationGraphEntityMatches(entity, owned) {
+		_, owned, ok := annotationgraph.OwnerFactParts(fact.Value)
+		if !ok || !annotationgraph.EntityMatches(entity, owned) {
 			continue
 		}
 		candidate := annotationGraphCandidateFromFact(q, fact, content, sessionKey, r.observer, memoryScope)
@@ -299,7 +299,7 @@ func (r retrievalModule) findAnnotationGraphTimelineTargets(ctx context.Context,
 			continue
 		}
 		event, _, ok := searchTimelineAnswerParts(timelineFact.Value)
-		if !ok || !annotationGraphEntityMatches(entity, event) {
+		if !ok || !annotationgraph.EntityMatches(entity, event) {
 			continue
 		}
 		candidate := annotationGraphCandidateFromFact(q, timelineFact.memoryFactAnnotation, timelineFact.Content, timelineFact.SessionKey, r.observer, memoryScope)
@@ -320,7 +320,7 @@ func (r retrievalModule) findAnnotationGraphLocationTargets(ctx context.Context,
 			continue
 		}
 		object, _, ok := searchLocationAnswerParts(locationFact.Value)
-		if !ok || !annotationGraphEntityMatches(entity, object) {
+		if !ok || !annotationgraph.EntityMatches(entity, object) {
 			continue
 		}
 		candidate := annotationGraphCandidateFromFact(q, locationFact.memoryFactAnnotation, locationFact.Content, locationFact.SessionKey, r.observer, memoryScope)
@@ -343,7 +343,7 @@ func (r retrievalModule) findAnnotationGraphPreferenceTargets(ctx context.Contex
 			continue
 		}
 		subject, _, attribute, ok := searchPreferenceAnswerParts(preferenceFact.Value)
-		if !ok || !annotationGraphEntityMatches(entity, subject) {
+		if !ok || !annotationgraph.EntityMatches(entity, subject) {
 			continue
 		}
 		if attributeOK && len(attributeTokens) > 0 && searchRankTokenCoverage(attributeTokens, attribute) < 0.80 {
@@ -369,7 +369,7 @@ func (r retrievalModule) findAnnotationGraphInstructionTargets(ctx context.Conte
 			continue
 		}
 		subject, instruction, ok := searchInstructionAnswerParts(instructionFact.Value)
-		if !ok || !annotationGraphEntityMatches(entity, subject) {
+		if !ok || !annotationgraph.EntityMatches(entity, subject) {
 			continue
 		}
 		if topicOK && len(topicTokens) > 0 && searchRankTokenCoverage(topicTokens, instruction) < 0.80 {
@@ -393,7 +393,7 @@ func (r retrievalModule) findAnnotationGraphSequenceTargets(ctx context.Context,
 			continue
 		}
 		subject, _, ok := searchSequenceAnswerParts(sequenceFact.Value)
-		if !ok || !annotationGraphEntityMentionedInFact(entity, subject) {
+		if !ok || !annotationgraph.EntityMentionedInFact(entity, subject) {
 			continue
 		}
 		candidate := annotationGraphCandidateFromFact(q, sequenceFact.memoryFactAnnotation, sequenceFact.Content, sequenceFact.SessionKey, r.observer, memoryScope)
@@ -414,7 +414,7 @@ func (r retrievalModule) findAnnotationGraphDecisionTargets(ctx context.Context,
 			continue
 		}
 		decision, ok := searchDecisionAnswerParts(decisionFact.Value)
-		if !ok || !annotationGraphEntityMentionedInFact(entity, decision) {
+		if !ok || !annotationgraph.EntityMentionedInFact(entity, decision) {
 			continue
 		}
 		candidate := annotationGraphCandidateFromFact(q, decisionFact.memoryFactAnnotation, decisionFact.Content, decisionFact.SessionKey, r.observer, memoryScope)
@@ -435,7 +435,7 @@ func (r retrievalModule) findAnnotationGraphNegationTargets(ctx context.Context,
 			continue
 		}
 		object, ok := searchNegationAnswerParts(negationFact.Value)
-		if !ok || !annotationGraphEntityMentionedInFact(entity, object) {
+		if !ok || !annotationgraph.EntityMentionedInFact(entity, object) {
 			continue
 		}
 		candidate := annotationGraphCandidateFromFact(q, negationFact.memoryFactAnnotation, negationFact.Content, negationFact.SessionKey, r.observer, memoryScope)
@@ -456,7 +456,7 @@ func (r retrievalModule) findAnnotationGraphMetricTargets(ctx context.Context, q
 			continue
 		}
 		key, _, ok := searchMetricAnswerParts(metricFact.Value)
-		if !ok || !annotationGraphEntityMentionedInFact(entity, key) {
+		if !ok || !annotationgraph.EntityMentionedInFact(entity, key) {
 			continue
 		}
 		candidate := annotationGraphCandidateFromFact(q, metricFact.memoryFactAnnotation, metricFact.Content, metricFact.SessionKey, r.observer, memoryScope)
@@ -476,13 +476,13 @@ func (r retrievalModule) findAnnotationGraphVersionTargets(ctx context.Context, 
 		if memoryID == sourceMemoryID {
 			continue
 		}
-		subject, relation, nextEntity, ok := kgRelationAnswerParts(relationFact.Value)
-		if !ok || !annotationGraphEntityMatches(entity, subject) {
+		subject, relation, nextEntity, ok := annotationgraph.KGRelationAnswerParts(relationFact.Value)
+		if !ok || !annotationgraph.EntityMatches(entity, subject) {
 			continue
 		}
 		for _, versionFact := range facts {
 			versionSubject, _, ok := searchVersionAnswerParts(versionFact.Value)
-			if !ok || !annotationGraphEntityMatches(nextEntity, versionSubject) {
+			if !ok || !annotationgraph.EntityMatches(nextEntity, versionSubject) {
 				continue
 			}
 			candidate := annotationGraphCandidateFromFact(q, versionFact.memoryFactAnnotation, versionFact.Content, versionFact.SessionKey, r.observer, memoryScope)
@@ -661,33 +661,3 @@ func annotationGraphOwnerQuery(query string) bool {
 func annotationGraphVersionQuery(query string) bool {
 	return textutil.ContainsAnySubstringFold(query, []string{"version"}) && textutil.ContainsAnySubstringFold(query, []string{"what", "which"})
 }
-
-func annotationGraphTimelineQuery(query string) bool { return annotationgraph.TimelineQuery(query) }
-func annotationGraphMetricQuery(query string) bool   { return annotationgraph.MetricQuery(query) }
-func annotationGraphLocationQuery(query string) bool { return annotationgraph.LocationQuery(query) }
-func annotationGraphPreferenceQuery(query string) bool {
-	return annotationgraph.PreferenceQuery(query)
-}
-func annotationGraphInstructionQuery(query string) bool {
-	return annotationgraph.InstructionQuery(query)
-}
-func annotationGraphSequenceQuery(query string) bool { return annotationgraph.SequenceQuery(query) }
-func annotationGraphDecisionQuery(query string) bool { return annotationgraph.DecisionQuery(query) }
-func annotationGraphNegationQuery(query string) bool { return annotationgraph.NegationQuery(query) }
-func annotationGraphQueryMatchesOwnerFact(query, owner string) bool {
-	return annotationgraph.QueryMatchesOwnerFact(query, owner)
-}
-func annotationGraphQueryMatchesKGRelation(query, subject, relation string) bool {
-	return annotationgraph.QueryMatchesKGRelation(query, subject, relation)
-}
-func annotationGraphEntityMatches(a, b string) bool { return annotationgraph.EntityMatches(a, b) }
-func annotationGraphEntityMentionedInFact(entity, factKey string) bool {
-	return annotationgraph.EntityMentionedInFact(entity, factKey)
-}
-func annotationGraphOwnerFactParts(fact string) (owner, entity string, ok bool) {
-	return annotationgraph.OwnerFactParts(fact)
-}
-func kgRelationAnswerParts(sentence string) (subject, relation, object string, ok bool) {
-	return annotationgraph.KGRelationAnswerParts(sentence)
-}
-func kgRelationPhrase(relation string) string { return annotationgraph.KGRelationPhrase(relation) }

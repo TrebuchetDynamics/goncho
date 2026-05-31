@@ -100,7 +100,7 @@ func (e *recallPipelineEngine) score(q RecallQuery, candidates []RecallCandidate
 	out := make([]ScoredRecallCandidate, 0, len(candidates))
 	for _, candidate := range candidates {
 		score := RecallScore{
-			KeywordScore:    roundRecallFloat(maxEvidenceScore(candidate.Provenance, "keyword", keywordRecallScore(candidate.Content, q.Query))),
+			KeywordScore:    roundRecallFloat(maxEvidenceScore(candidate.Provenance, "keyword", recallscore.Keyword(candidate.Content, q.Query))),
 			SemanticScore:   roundRecallFloat(maxEvidenceScore(candidate.Provenance, "semantic", 0)),
 			GraphScore:      roundRecallFloat(maxEvidenceScore(candidate.Provenance, "graph", 0)),
 			FactScore:       roundRecallFloat(maxEvidenceScore(candidate.Provenance, "fact", 0)),
@@ -321,8 +321,6 @@ func maxEvidenceScore(items []EvidenceItem, kind string, fallback float64) float
 	}
 	return clampRecall(score)
 }
-
-func keywordRecallScore(content, query string) float64 { return recallscore.Keyword(content, query) }
 
 func recallRecencyScore(createdAt, now time.Time) float64 {
 	return recallscore.Recency(createdAt, now, defaultDecayHalfLife)

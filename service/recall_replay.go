@@ -3,6 +3,8 @@ package goncho
 import (
 	"fmt"
 	"strings"
+
+	"github.com/TrebuchetDynamics/goncho/service/internal/recalldiag"
 )
 
 const (
@@ -173,7 +175,7 @@ func recallReplayCandidateEvent(stage string, kind string, item ScoredRecallCand
 	if len(item.Score.WhySelected) > 0 {
 		details = append(details, "why="+strings.Join(item.Score.WhySelected, "; "))
 	}
-	if preview := previewRecallContent(item.Candidate.Content); preview != "" {
+	if preview := recalldiag.PreviewContent(item.Candidate.Content); preview != "" {
 		details = append(details, "content="+preview)
 	}
 	return RecallReplayEvent{
