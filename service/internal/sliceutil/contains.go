@@ -1,21 +1,13 @@
 package sliceutil
 
+import "github.com/TrebuchetDynamics/goncho/service/internal/sliceutil/searchops"
+
 // Contains reports whether values includes want.
 func Contains[T comparable](values []T, want T) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return searchops.Contains(values, want)
 }
 
 // ContainsFunc reports whether any value satisfies match.
 func ContainsFunc[T any](values []T, match func(T) bool) bool {
-	for _, value := range values {
-		if match(value) {
-			return true
-		}
-	}
-	return false
+	return searchops.ContainsFunc(values, match)
 }
