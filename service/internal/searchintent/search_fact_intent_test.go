@@ -1,0 +1,22 @@
+package searchintent
+
+import "testing"
+
+func TestSequenceAnswerPartsCountsRepeatedMarkers(t *testing.T) {
+	subject, steps, ok := SequenceAnswerParts("Deployment order is build, then test, then deploy.")
+	if !ok {
+		t.Fatal("SequenceAnswerParts did not recognize repeated sequence markers")
+	}
+	if subject != "Deployment order is build" {
+		t.Fatalf("subject = %q, want cleaned prefix before first repeated marker", subject)
+	}
+	if steps != "then test, then deploy" {
+		t.Fatalf("steps = %q, want repeated marker steps", steps)
+	}
+}
+
+func TestSequenceMarkerCountIgnoresEmbeddedMarkerText(t *testing.T) {
+	if got := searchSequenceMarkerCount("context first draft"); got != 1 {
+		t.Fatalf("embedded marker count = %d, want 1", got)
+	}
+}

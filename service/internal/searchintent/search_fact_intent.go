@@ -426,7 +426,7 @@ func searchSequenceAnswerParts(sentence string) (subject, steps string, ok bool)
 
 func sequenceSubjectBeforeMarker(prefix string) string {
 	prefix = strings.TrimSpace(prefix)
-	prefix = strings.TrimSpace(strings.TrimRight(prefix, ":;"))
+	prefix = strings.TrimSpace(strings.TrimRight(prefix, ":;,"))
 	if idx := strings.LastIndexAny(prefix, ":;"); idx >= 0 {
 		prefix = strings.TrimSpace(prefix[idx+1:])
 	}
@@ -434,29 +434,52 @@ func sequenceSubjectBeforeMarker(prefix string) string {
 }
 
 func searchSequenceFirstMarkerIndex(value string) int {
-	lower := strings.ToLower(value)
 	best := -1
-	for _, marker := range searchSequenceMarkers {
-		idx := strings.Index(lower, marker)
-		if idx < 0 {
-			continue
-		}
-		if best < 0 || idx < best {
-			best = idx
+	for _, match := range sequenceMarkerMatches(value) {
+		if best < 0 || match.index < best {
+			best = match.index
 		}
 	}
 	return best
 }
 
 func searchSequenceMarkerCount(value string) int {
+	return len(sequenceMarkerMatches(value))
+}
+
+type sequenceMarkerMatch struct {
+	index int
+}
+
+func sequenceMarkerMatches(value string) []sequenceMarkerMatch {
 	lower := strings.ToLower(value)
-	count := 0
+	matches := make([]sequenceMarkerMatch, 0)
 	for _, marker := range searchSequenceMarkers {
-		if strings.Contains(lower, marker) {
-			count++
+		offset := 0
+		for offset < len(lower) {
+			idx := strings.Index(lower[offset:], marker)
+			if idx < 0 {
+				break
+			}
+			idx += offset
+			if sequenceMarkerHasBoundary(lower, idx, marker) {
+				matches = append(matches, sequenceMarkerMatch{index: idx})
+			}
+			offset = idx + len(marker)
 		}
 	}
-	return count
+	return matches
+}
+
+func sequenceMarkerHasBoundary(value string, idx int, marker string) bool {
+	beforeOK := idx == 0 || !sequenceMarkerWordByte(value[idx-1])
+	after := idx + len(marker)
+	afterOK := after >= len(value) || !sequenceMarkerWordByte(value[after])
+	return beforeOK && afterOK
+}
+
+func sequenceMarkerWordByte(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') || b == '_'
 }
 
 func cleanSequenceValue(value string) string {
