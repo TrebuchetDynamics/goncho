@@ -130,6 +130,36 @@ func TestService_SearchSessionFilterCannotWidenSameChatRecall(t *testing.T) {
 	}
 }
 
+func TestService_SearchSameChatTurnFallbackMatchesQueryTokensNotOnlyExactPhrase(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	now := time.Now().Unix()
+	if _, err := svc.db.ExecContext(ctx,
+		`INSERT INTO turns(session_id, role, content, ts_unix, chat_id)
+		 VALUES ('sess-current', 'assistant', 'Nadia owns component A-17.', ?, 'discord:chan-9')`,
+		now,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := svc.Search(ctx, SearchParams{
+		Peer:       "user-juan",
+		Query:      "Who owns component A-17?",
+		SessionKey: "discord:chan-9",
+		Filters: map[string]any{
+			"source": "discord",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Results) != 1 || got.Results[0].Content != "Nadia owns component A-17." {
+		t.Fatalf("Search results = %+v, want same-chat token match", got.Results)
+	}
+}
+
 func TestService_SearchSessionIDFilterTreatsReservedLookingValueAsLiteral(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

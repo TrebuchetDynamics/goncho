@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/maputil"
+	"github.com/TrebuchetDynamics/goncho/service/internal/searchtokens"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sliceutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/sqlutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
@@ -580,6 +581,35 @@ func insertAssistantChatTurn(ctx context.Context, db *sql.DB, sessionID, peer, c
 	return nil
 }
 
+type turnContentSearchPlan struct {
+	TrimmedQuery string
+	Tokens       []string
+	ExactPhrase  bool
+}
+
+func planTurnContentSearch(query string) turnContentSearchPlan {
+	trimmed := strings.TrimSpace(query)
+	if trimmed == "" {
+		return turnContentSearchPlan{}
+	}
+	tokens := textutil.UniqueTrimmed(searchtokens.Tokens(trimmed), false)
+	return turnContentSearchPlan{TrimmedQuery: trimmed, Tokens: tokens, ExactPhrase: len(tokens) == 0}
+}
+
+func appendTurnContentSearchPredicate(sql string, args []any, plan turnContentSearchPlan) (string, []any) {
+	if plan.TrimmedQuery == "" {
+		return sql, args
+	}
+	if plan.ExactPhrase {
+		return sql + ` AND content LIKE ?`, append(args, "%"+plan.TrimmedQuery+"%")
+	}
+	for _, token := range plan.Tokens {
+		sql += ` AND lower(content) LIKE ?`
+		args = append(args, "%"+token+"%")
+	}
+	return sql, args
+}
+
 func findTurns(ctx context.Context, db *sql.DB, query, sessionKey string, filter compiledSearchFilter, limit int) ([]SearchHit, error) {
 	if strings.TrimSpace(sessionKey) == "" {
 		return nil, nil
@@ -601,10 +631,7 @@ func findTurns(ctx context.Context, db *sql.DB, query, sessionKey string, filter
 		sqlutil.AppendInClause(&b, "session_id", filter.SessionIDs, &args)
 		base += b.String()
 	}
-	if trimmed := strings.TrimSpace(query); trimmed != "" {
-		base += ` AND content LIKE ?`
-		args = append(args, "%"+trimmed+"%")
-	}
+	base, args = appendTurnContentSearchPredicate(base, args, planTurnContentSearch(query))
 	base += ` ORDER BY ts_unix DESC, id DESC LIMIT ?`
 	args = append(args, limit)
 
