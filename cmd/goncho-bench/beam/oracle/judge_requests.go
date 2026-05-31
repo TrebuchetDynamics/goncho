@@ -49,12 +49,7 @@ type beamServiceJudgePrompt struct {
 }
 
 func writeBeamServiceJudgeRequests(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
-	file, err := shared.CreateFileWithParents(path, "goncho-bench: create BEAM judge request dir", "goncho-bench: create BEAM judge requests")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return shared.WriteJSONLRows(file, buildBeamServiceJudgeRequestRows(report, configID, runStartedAt), "goncho-bench: write BEAM judge request row")
+	return shared.WriteJSONLFileWithParents(path, "goncho-bench: create BEAM judge request dir", "goncho-bench: create BEAM judge requests", "goncho-bench: write BEAM judge request row", buildBeamServiceJudgeRequestRows(report, configID, runStartedAt))
 }
 
 func buildBeamServiceJudgeRequestRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceJudgeRequestRow {

@@ -50,3 +50,12 @@ func WriteFileWithParents(path string, raw []byte, mkdirContext, writeContext st
 	}
 	return nil
 }
+
+// WriteBytesArtifact writes a BEAM byte artifact to stdout when path is "-" or to a parent-creating file otherwise.
+func WriteBytesArtifact(path string, raw []byte, mkdirContext, writeContext string) error {
+	if path == "-" {
+		_, err := os.Stdout.Write(raw)
+		return err
+	}
+	return WriteFileWithParents(path, raw, mkdirContext, writeContext)
+}

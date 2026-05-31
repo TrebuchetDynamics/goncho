@@ -31,6 +31,26 @@ func WriteJSONLRows[T any](w io.Writer, rows []T, writeContext string) error {
 	return nil
 }
 
+// WriteJSONLFileWithParents creates/truncates a parent-creating BEAM JSONL artifact and writes rows to it.
+func WriteJSONLFileWithParents[T any](path, mkdirContext, createContext, writeContext string, rows []T) error {
+	file, err := CreateFileWithParents(path, mkdirContext, createContext)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return WriteJSONLRows(file, rows, writeContext)
+}
+
+// AppendJSONLFileWithParents opens a parent-creating BEAM JSONL artifact for append and writes rows to it.
+func AppendJSONLFileWithParents[T any](path, mkdirContext, openContext, writeContext string, rows []T) error {
+	file, err := AppendFileWithParents(path, mkdirContext, openContext)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return WriteJSONLRows(file, rows, writeContext)
+}
+
 // ForEachNonEmptyJSONLLine walks non-blank JSONL lines with BEAM's shared trim-and-scan-error convention.
 func ForEachNonEmptyJSONLLine(scanner *bufio.Scanner, scanContext string, handle func(lineNumber int, line string) error) error {
 	lineNumber := 0

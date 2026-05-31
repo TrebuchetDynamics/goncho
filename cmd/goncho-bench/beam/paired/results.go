@@ -53,12 +53,7 @@ func AppendPairedOutcomesFromResults(cfg Config) error {
 	if len(rows) == 0 {
 		return fmt.Errorf("goncho-bench: BEAM paired results contained no question results")
 	}
-	file, err := shared.AppendFileWithParents(outPath, "goncho-bench: create BEAM paired results output dir", "goncho-bench: open BEAM paired results output")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return shared.WriteJSONLRows(file, rows, "goncho-bench: write BEAM paired result row")
+	return shared.AppendJSONLFileWithParents(outPath, "goncho-bench: create BEAM paired results output dir", "goncho-bench: open BEAM paired results output", "goncho-bench: write BEAM paired result row", rows)
 }
 
 func beamPairedOutcomesFromResults(results beamPairedResultsFile, overrideConfigID, sourcePath, sourceSHA256 string) ([]servicePairedOutcome, error) {

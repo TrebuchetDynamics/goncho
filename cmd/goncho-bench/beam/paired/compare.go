@@ -404,11 +404,10 @@ func writeBeamPairedComparisonJSON(jsonOut, markdownOut string, report beamPaire
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode BEAM paired comparison: %w", err)
 	}
-	if jsonOut == "" || jsonOut == "-" {
-		_, err = os.Stdout.Write(raw)
-		return err
+	if jsonOut == "" {
+		jsonOut = "-"
 	}
-	return shared.WriteFileWithParents(jsonOut, raw, "goncho-bench: create BEAM paired comparison JSON dir", "goncho-bench: write BEAM paired comparison JSON")
+	return shared.WriteBytesArtifact(jsonOut, raw, "goncho-bench: create BEAM paired comparison JSON dir", "goncho-bench: write BEAM paired comparison JSON")
 }
 
 func writeBeamPairedComparisonMarkdown(path, jsonPath string, report beamPairedComparisonReport) error {

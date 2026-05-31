@@ -3,6 +3,8 @@ package shared
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -40,6 +42,27 @@ func TestNewJSONLScannerAcceptsLargePromptRows(t *testing.T) {
 	}
 	if got := scanner.Text(); got != largeLine {
 		t.Fatalf("NewJSONLScanner().Text() length = %d, want %d", len(got), len(largeLine))
+	}
+}
+
+func TestWriteAndAppendJSONLFileWithParents(t *testing.T) {
+	type row struct {
+		Name string `json:"name"`
+	}
+	path := filepath.Join(t.TempDir(), "nested", "rows.jsonl")
+	if err := WriteJSONLFileWithParents(path, "make dir", "create rows", "write rows", []row{{Name: "alpha"}}); err != nil {
+		t.Fatalf("WriteJSONLFileWithParents() error = %v", err)
+	}
+	if err := AppendJSONLFileWithParents(path, "make dir", "open rows", "write rows", []row{{Name: "beta"}}); err != nil {
+		t.Fatalf("AppendJSONLFileWithParents() error = %v", err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	want := "{\"name\":\"alpha\"}\n{\"name\":\"beta\"}\n"
+	if string(got) != want {
+		t.Fatalf("JSONL file = %q, want %q", got, want)
 	}
 }
 

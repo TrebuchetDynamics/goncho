@@ -2,7 +2,6 @@ package oracle
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -166,13 +165,7 @@ func writeBeamServiceResults(path string, report goncho.RecallBenchmarkReport, c
 	if err != nil {
 		return fmt.Errorf("goncho-bench: encode BEAM service results: %w", err)
 	}
-	if path == "-" {
-		if _, err := os.Stdout.Write(raw); err != nil {
-			return err
-		}
-		return nil
-	}
-	return shared.WriteFileWithParents(path, raw, "goncho-bench: create BEAM service results dir", "goncho-bench: write BEAM service results")
+	return shared.WriteBytesArtifact(path, raw, "goncho-bench: create BEAM service results dir", "goncho-bench: write BEAM service results")
 }
 
 func buildBeamServiceResults(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, conversionDiagnostics *beamConversionDiagnostics, leakageChecks *beamServiceLeakageChecks, judgments *beamServiceJudgmentSet) beamServiceResultsFile {
@@ -396,12 +389,7 @@ func buildBeamServiceSummary(report goncho.RecallBenchmarkReport, configID strin
 }
 
 func appendBeamServicePairedOutcomes(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) error {
-	file, err := shared.AppendFileWithParents(path, "goncho-bench: create BEAM service paired-outcomes dir", "goncho-bench: open BEAM service paired outcomes")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return shared.WriteJSONLRows(file, buildBeamServicePairedOutcomes(report, configID, runStartedAt, judgments), "goncho-bench: write BEAM service paired outcome")
+	return shared.AppendJSONLFileWithParents(path, "goncho-bench: create BEAM service paired-outcomes dir", "goncho-bench: open BEAM service paired outcomes", "goncho-bench: write BEAM service paired outcome", buildBeamServicePairedOutcomes(report, configID, runStartedAt, judgments))
 }
 
 func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time, judgments *beamServiceJudgmentSet) []beamServicePairedOutcome {
@@ -425,12 +413,7 @@ func buildBeamServicePairedOutcomes(report goncho.RecallBenchmarkReport, configI
 }
 
 func writeBeamServiceFailureAudit(path string, report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) error {
-	file, err := shared.CreateFileWithParents(path, "goncho-bench: create BEAM service failure audit dir", "goncho-bench: create BEAM service failure audit")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return shared.WriteJSONLRows(file, buildBeamServiceFailureAuditRows(report, configID, runStartedAt), "goncho-bench: write BEAM service failure audit row")
+	return shared.WriteJSONLFileWithParents(path, "goncho-bench: create BEAM service failure audit dir", "goncho-bench: create BEAM service failure audit", "goncho-bench: write BEAM service failure audit row", buildBeamServiceFailureAuditRows(report, configID, runStartedAt))
 }
 
 func buildBeamServiceFailureAuditRows(report goncho.RecallBenchmarkReport, configID string, runStartedAt time.Time) []beamServiceFailureAuditRow {

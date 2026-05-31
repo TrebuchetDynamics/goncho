@@ -341,12 +341,7 @@ func writeConvertedBeamJSONL(path string, records []beamJSONLRecord) error {
 	if path == "-" {
 		return encodeBeamJSONL(os.Stdout, records)
 	}
-	file, err := shared.CreateFileWithParents(path, "goncho-bench: create converted BEAM JSONL dir", "goncho-bench: create converted BEAM JSONL")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return encodeBeamJSONL(file, records)
+	return shared.WriteJSONLFileWithParents(path, "goncho-bench: create converted BEAM JSONL dir", "goncho-bench: create converted BEAM JSONL", "goncho-bench: write converted BEAM JSONL", records)
 }
 
 func encodeBeamJSONLBytes(records []beamJSONLRecord) ([]byte, error) {

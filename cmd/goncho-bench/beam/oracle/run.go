@@ -86,14 +86,8 @@ func runServiceBenchmarkCases(ctx context.Context, cfg ServiceConfig, cases []go
 		if err != nil {
 			return fmt.Errorf("goncho-bench: encode BEAM service report: %w", err)
 		}
-		if outPath == "-" {
-			if _, err := os.Stdout.Write(raw); err != nil {
-				return err
-			}
-		} else {
-			if err := shared.WriteFileWithParents(outPath, raw, "goncho-bench: create BEAM service report dir", "goncho-bench: write BEAM service report"); err != nil {
-				return err
-			}
+		if err := shared.WriteBytesArtifact(outPath, raw, "goncho-bench: create BEAM service report dir", "goncho-bench: write BEAM service report"); err != nil {
+			return err
 		}
 	}
 	return writeBeamServiceComparisonArtifacts(report, cfg, runStartedAt)
