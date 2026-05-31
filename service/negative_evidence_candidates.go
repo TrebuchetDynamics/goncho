@@ -180,10 +180,11 @@ func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]
 	if !negativeEvidenceFailureObservation(obs) {
 		return
 	}
-	key, seed := negativeEvidenceCandidateSeed(projection, obs)
+	scope := negativeEvidenceObservationScopeFrom(projection, obs)
+	key := scope.key()
 	b := buckets[key]
 	if b == nil {
-		b = &negativeEvidenceBucket{candidate: seed, observationIDs: map[string]struct{}{}}
+		b = &negativeEvidenceBucket{candidate: scope.candidate(), observationIDs: map[string]struct{}{}}
 		buckets[key] = b
 	}
 	if !negativeEvidenceRecordObservation(b.observationIDs, obs.ID) {
@@ -201,23 +202,40 @@ func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]
 	}
 }
 
-func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceCandidateKey, NegativeEvidenceCandidate) {
-	toolName := negativeEvidenceToolName(obs)
+type negativeEvidenceObservationScope struct {
+	WorkspaceID string
+	ProfileID   string
+	PeerID      string
+	SessionKey  string
+	ToolName    string
+}
+
+func negativeEvidenceObservationScopeFrom(projection SessionEvidenceProjection, obs Observation) negativeEvidenceObservationScope {
 	workspaceID := strings.TrimSpace(obs.WorkspaceID)
 	if workspaceID == "" {
-		workspaceID = projection.WorkspaceID
+		workspaceID = strings.TrimSpace(projection.WorkspaceID)
 	}
-	profileID := strings.TrimSpace(obs.ProfileID)
-	peerID := strings.TrimSpace(obs.PeerID)
-	sessionKey := strings.TrimSpace(obs.SessionKey)
-	key := negativeEvidenceCandidateKey{WorkspaceID: workspaceID, ProfileID: profileID, PeerID: peerID, SessionKey: sessionKey, ToolName: toolName}
-	return key, NegativeEvidenceCandidate{
-		Kind:        NegativeEvidenceRepeatedToolFailure,
+	return negativeEvidenceObservationScope{
 		WorkspaceID: workspaceID,
-		ProfileID:   profileID,
-		PeerID:      peerID,
-		SessionKey:  sessionKey,
-		ToolName:    toolName,
+		ProfileID:   strings.TrimSpace(obs.ProfileID),
+		PeerID:      strings.TrimSpace(obs.PeerID),
+		SessionKey:  strings.TrimSpace(obs.SessionKey),
+		ToolName:    negativeEvidenceToolName(obs),
+	}
+}
+
+func (scope negativeEvidenceObservationScope) key() negativeEvidenceCandidateKey {
+	return negativeEvidenceCandidateKey{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, PeerID: scope.PeerID, SessionKey: scope.SessionKey, ToolName: scope.ToolName}
+}
+
+func (scope negativeEvidenceObservationScope) candidate() NegativeEvidenceCandidate {
+	return NegativeEvidenceCandidate{
+		Kind:        NegativeEvidenceRepeatedToolFailure,
+		WorkspaceID: scope.WorkspaceID,
+		ProfileID:   scope.ProfileID,
+		PeerID:      scope.PeerID,
+		SessionKey:  scope.SessionKey,
+		ToolName:    scope.ToolName,
 		EvidenceIDs: []string{},
 	}
 }

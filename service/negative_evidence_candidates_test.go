@@ -6,6 +6,25 @@ import (
 	"time"
 )
 
+func TestNegativeEvidenceCandidatesTrimScopeAndToolBeforeBucketing(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: " gormes "}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "fail-1", Kind: ObservationKindToolError, ProfileID: " mineru ", PeerID: " peer ", SessionKey: " sess ", Success: &failed, Metadata: map[string]string{"tool_name": " Bash "}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "fail-2", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+		},
+	})
+	if len(candidates) != 1 {
+		t.Fatalf("candidates = %+v, want one normalized scope/tool bucket", candidates)
+	}
+	candidate := candidates[0]
+	if candidate.WorkspaceID != "gormes" || candidate.ProfileID != "mineru" || candidate.PeerID != "peer" || candidate.SessionKey != "sess" || candidate.ToolName != "bash" || candidate.FailureCount != 2 {
+		t.Fatalf("candidate = %+v, want trimmed scope and lowercase tool with two failures", candidate)
+	}
+}
+
 func TestNegativeEvidenceCandidatesDoNotCollapseDelimiterBearingDimensions(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
