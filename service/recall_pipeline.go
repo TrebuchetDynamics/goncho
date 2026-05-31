@@ -195,6 +195,7 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 		speakerAdjustment := recallSpeakerAdjustment(chosen, q.Query)
 		chosen.Score.DiversityPenalty = roundRecallFloat(recallDiversityPenalty(chosen, selected, e.opts.scoringConfig))
 		chosen.Score.FinalScore = roundRecallFloat(chosen.Score.FinalScore - chosen.Score.DiversityPenalty + coverageBonus + temporalAdjustment + speakerAdjustment)
+		chosen.Score.WhySelected = recallWhySelectedWithFinalScore(chosen.Score.WhySelected, chosen.Score.FinalScore)
 		chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("diversity_penalty=%.6f", chosen.Score.DiversityPenalty))
 		if coverageBonus > 0 {
 			chosen.Score.WhySelected = append(chosen.Score.WhySelected, fmt.Sprintf("coverage_bonus=%.6f", coverageBonus))
@@ -234,6 +235,7 @@ func (e *recallPipelineEngine) selectCandidates(q RecallQuery, scored []ScoredRe
 	for _, item := range remaining {
 		item.Score.DiversityPenalty = roundRecallFloat(recallDiversityPenalty(item, selected, e.opts.scoringConfig))
 		item.Score.FinalScore = roundRecallFloat(item.Score.FinalScore - item.Score.DiversityPenalty)
+		item.Score.WhySelected = recallWhySelectedWithFinalScore(item.Score.WhySelected, item.Score.FinalScore)
 		rejected = append(rejected, RejectedRecallCandidate{
 			Candidate: item.Candidate,
 			Score:     item.Score,
@@ -345,6 +347,18 @@ func scopeRecallScore(q RecallQuery, candidate RecallCandidate) float64 {
 
 func recallScopeMismatch(q RecallQuery, candidate RecallCandidate) bool {
 	return q.ScopeID != "" && candidate.ScopeID != "" && candidate.ScopeID != q.ScopeID
+}
+
+func recallWhySelectedWithFinalScore(reasons []string, finalScore float64) []string {
+	out := sliceutil.Clone(reasons)
+	updated := fmt.Sprintf("final_score=%.6f", finalScore)
+	for i, reason := range out {
+		if strings.HasPrefix(reason, "final_score=") {
+			out[i] = updated
+			return out
+		}
+	}
+	return append([]string{updated}, out...)
 }
 
 func buildRecallVoiceDiagnostics(scored, selected []ScoredRecallCandidate, config RecallScoringConfig) []RecallVoiceDiagnostic {

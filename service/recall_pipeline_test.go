@@ -2,7 +2,9 @@ package goncho
 
 import (
 	"context"
+	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -176,6 +178,49 @@ func TestRecallPipelineCoverageAwareSelectionKeepsGraphCompanion(t *testing.T) {
 	}
 	if !slices.Equal(selectedRecallIDs(trace), []string{"mem-auth-service", "mem-auth-owner"}) {
 		t.Fatalf("selected IDs = %v, want coverage-aware selection", selectedRecallIDs(trace))
+	}
+}
+
+func TestRecallPipelineSelectedReasonsReportAdjustedFinalScore(t *testing.T) {
+	now := time.Date(2026, 5, 22, 12, 0, 0, 0, time.UTC)
+	engine := newRecallPipelineEngine(staticRecallGenerator{candidates: []RecallCandidate{{
+		MemoryID:  "mem-current",
+		Content:   "The current owner is Mira.",
+		ScopeID:   "team",
+		CreatedAt: now,
+		Provenance: []EvidenceItem{
+			{Kind: "keyword", Score: 1},
+			{Kind: "temporal", Note: "current_fact valid_now"},
+		},
+	}}}, recallPipelineOptions{
+		pipelineVersion: "adjusted-score-test-v1",
+		scoringConfig: RecallScoringConfig{
+			Version:     "adjusted-score-test-v1",
+			Weights:     map[string]float64{"keyword": 1},
+			RRFK:        60,
+			MMRLambda:   1,
+			TokenBudget: 100,
+		},
+		now: func() time.Time { return now },
+	})
+
+	trace, err := engine.Run(context.Background(), RecallQuery{
+		WorkspaceID: "default",
+		Peer:        "user-juan",
+		Query:       "current owner",
+		ScopeID:     "team",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Selected) != 1 {
+		t.Fatalf("selected = %+v, want one current-truth candidate", trace.Selected)
+	}
+	selected := trace.Selected[0]
+	wantReason := fmt.Sprintf("final_score=%.6f", selected.Score.FinalScore)
+	if !strings.Contains(strings.Join(selected.Score.WhySelected, ";"), wantReason) {
+		t.Fatalf("selected score = %.6f why = %+v, want reason %q after selection adjustments", selected.Score.FinalScore, selected.Score.WhySelected, wantReason)
 	}
 }
 

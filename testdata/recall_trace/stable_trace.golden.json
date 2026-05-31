@@ -395,7 +395,7 @@
         "diversity_penalty": 0.3,
         "final_score": 0.428847,
         "why_selected": [
-          "final_score=0.728847",
+          "final_score=0.428847",
           "scoring_config=test-v1"
         ]
       },
