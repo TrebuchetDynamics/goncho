@@ -35,34 +35,45 @@ func applySearchReranker(ctx context.Context, reranker SearchReranker, query str
 	if reranker == nil || textutil.IsBlank(query) || len(hits) < 2 {
 		return hits
 	}
-	candidates := make([]SearchRerankCandidate, 0, len(hits))
-	for _, hit := range hits {
-		id := searchHitRerankID(hit)
-		if id == "" || textutil.IsBlank(hit.Content) {
-			continue
-		}
-		candidates = append(candidates, SearchRerankCandidate{ID: id, Source: hit.Source, Content: hit.Content})
-	}
-	if len(candidates) < 2 {
+	plans := searchRerankCandidatePlans(hits)
+	if len(plans) < 2 {
 		return hits
 	}
-	scored, err := reranker.RerankSearch(ctx, query, candidates)
+	scored, err := reranker.RerankSearch(ctx, query, searchRerankCandidates(plans))
 	if err != nil || len(scored) == 0 {
 		return hits
 	}
-	scores := map[string]float64{}
+	scoresByID := map[string]float64{}
 	for _, score := range scored {
 		if id := strings.TrimSpace(score.ID); id != "" {
-			scores[id] = score.Score
+			scoresByID[id] = score.Score
 		}
 	}
-	if len(scores) == 0 {
+	if len(scoresByID) == 0 {
 		return hits
 	}
-	out := sliceutil.Clone(hits)
+	scoresByHit := map[int]float64{}
+	for _, plan := range plans {
+		if score, ok := scoresByID[plan.ID]; ok {
+			scoresByHit[plan.Index] = score
+		}
+	}
+	if len(scoresByHit) == 0 {
+		return hits
+	}
+	type scoredSearchHit struct {
+		Hit   SearchHit
+		Index int
+	}
+	out := sliceutil.Map(hits, func(hit SearchHit) scoredSearchHit {
+		return scoredSearchHit{Hit: hit}
+	})
+	for i := range out {
+		out[i].Index = i
+	}
 	sort.SliceStable(out, func(i, j int) bool {
-		left, leftOK := scores[searchHitRerankID(out[i])]
-		right, rightOK := scores[searchHitRerankID(out[j])]
+		left, leftOK := scoresByHit[out[i].Index]
+		right, rightOK := scoresByHit[out[j].Index]
 		if leftOK != rightOK {
 			return leftOK
 		}
@@ -71,7 +82,50 @@ func applySearchReranker(ctx context.Context, reranker SearchReranker, query str
 		}
 		return left > right
 	})
-	return out
+	return sliceutil.Map(out, func(item scoredSearchHit) SearchHit {
+		return item.Hit
+	})
+}
+
+type searchRerankCandidatePlan struct {
+	Index     int
+	ID        string
+	Candidate SearchRerankCandidate
+}
+
+func searchRerankCandidatePlans(hits []SearchHit) []searchRerankCandidatePlan {
+	plans := make([]searchRerankCandidatePlan, 0, len(hits))
+	seen := map[string]int{}
+	for i, hit := range hits {
+		id := uniqueSearchHitRerankID(hit, seen)
+		if id == "" || textutil.IsBlank(hit.Content) {
+			continue
+		}
+		plans = append(plans, searchRerankCandidatePlan{
+			Index:     i,
+			ID:        id,
+			Candidate: SearchRerankCandidate{ID: id, Source: hit.Source, Content: hit.Content},
+		})
+	}
+	return plans
+}
+
+func searchRerankCandidates(plans []searchRerankCandidatePlan) []SearchRerankCandidate {
+	return sliceutil.Map(plans, func(plan searchRerankCandidatePlan) SearchRerankCandidate {
+		return plan.Candidate
+	})
+}
+
+func uniqueSearchHitRerankID(hit SearchHit, seen map[string]int) string {
+	id := searchHitRerankID(hit)
+	if id == "" {
+		return ""
+	}
+	seen[id]++
+	if seen[id] == 1 {
+		return id
+	}
+	return id + "#" + strconv.Itoa(seen[id])
 }
 
 func searchHitRerankID(hit SearchHit) string {

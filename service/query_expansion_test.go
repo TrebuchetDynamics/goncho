@@ -115,6 +115,22 @@ func TestSearchUsesOptionalRerankerWhenConfigured(t *testing.T) {
 	}
 }
 
+func TestSearchRerankerDistinguishesSyntheticDuplicateContentHits(t *testing.T) {
+	reranker := &duplicateContentReranker{}
+	hits := []SearchHit{
+		{Source: "turn", SessionKey: "older", Content: "same repeated turn text"},
+		{Source: "turn", SessionKey: "newer", Content: "same repeated turn text"},
+	}
+
+	got := applySearchReranker(context.Background(), reranker, "same repeated", hits)
+	if len(reranker.ids) != 2 || reranker.ids[0] == reranker.ids[1] {
+		t.Fatalf("reranker candidate ids = %+v, want duplicate synthetic content hits to remain individually scoreable", reranker.ids)
+	}
+	if len(got) != 2 || got[0].SessionKey != "newer" {
+		t.Fatalf("reranked duplicate-content hits = %+v, want second synthetic hit movable by its own score", got)
+	}
+}
+
 func TestSearchFallsBackWhenOptionalRerankerFails(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
@@ -190,6 +206,24 @@ func TestSearchAndRecallUseQueryExpansionWithProvenance(t *testing.T) {
 type fakeSearchReranker struct {
 	scores map[string]float64
 	err    error
+}
+
+type duplicateContentReranker struct {
+	ids []string
+}
+
+func (r *duplicateContentReranker) RerankSearch(_ context.Context, _ string, candidates []SearchRerankCandidate) ([]SearchRerankScore, error) {
+	r.ids = r.ids[:0]
+	out := make([]SearchRerankScore, 0, len(candidates))
+	for i, candidate := range candidates {
+		r.ids = append(r.ids, candidate.ID)
+		score := 0.1
+		if i == 1 {
+			score = 0.9
+		}
+		out = append(out, SearchRerankScore{ID: candidate.ID, Score: score})
+	}
+	return out, nil
 }
 
 func (f fakeSearchReranker) RerankSearch(_ context.Context, _ string, candidates []SearchRerankCandidate) ([]SearchRerankScore, error) {
