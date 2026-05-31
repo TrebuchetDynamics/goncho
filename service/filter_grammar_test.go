@@ -130,6 +130,39 @@ func TestService_SearchSessionFilterCannotWidenSameChatRecall(t *testing.T) {
 	}
 }
 
+func TestService_SearchSessionIDFilterTreatsReservedLookingValueAsLiteral(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	now := time.Now().Unix()
+	if _, err := svc.db.ExecContext(ctx,
+		`INSERT INTO turns(session_id, role, content, ts_unix, chat_id)
+		 VALUES ('__deny_all__', 'user', 'Atlas literal sentinel-looking note.', ?, 'discord:chan-9')`,
+		now,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := svc.Search(ctx, SearchParams{
+		Peer:       "user-juan",
+		Query:      "Atlas",
+		SessionKey: "discord:chan-9",
+		Filters: map[string]any{
+			"session_id": "__deny_all__",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("Search results len = %d, want 1: %+v", len(got.Results), got.Results)
+	}
+	if got.Results[0].SessionKey != "__deny_all__" {
+		t.Fatalf("Search result session = %q, want literal __deny_all__", got.Results[0].SessionKey)
+	}
+}
+
 func TestService_SearchSourceFilterCannotWidenSameChatRecall(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

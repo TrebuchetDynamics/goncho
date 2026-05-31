@@ -154,7 +154,7 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 		return SearchResultSet{}, err
 	}
 	sources, denySources := mergeSearchSources(params.Sources, compiled.Sources)
-	if denySources || compiled.DenyAll || filterValuesDenyAll(compiled.SessionIDs) {
+	if denySources || compiled.DenyAll {
 		return SearchResultSet{
 			WorkspaceID: r.workspaceID,
 			ProfileID:   profileID,

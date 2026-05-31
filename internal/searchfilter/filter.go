@@ -403,24 +403,29 @@ func mergeCompiledSearchFilters(a, b Compiled) Compiled {
 	if a.DenyAll || b.DenyAll {
 		return Compiled{DenyAll: true}
 	}
+	sessionIDs, denySessions := intersectFilterValues(a.SessionIDs, b.SessionIDs)
+	sources, denySources := intersectFilterValues(a.Sources, b.Sources)
+	if denySessions || denySources {
+		return Compiled{DenyAll: true}
+	}
 	return Compiled{
-		SessionIDs: intersectFilterValues(a.SessionIDs, b.SessionIDs),
-		Sources:    intersectFilterValues(a.Sources, b.Sources),
+		SessionIDs: sessionIDs,
+		Sources:    sources,
 	}
 }
 
-func intersectFilterValues(a, b []string) []string {
+func intersectFilterValues(a, b []string) ([]string, bool) {
 	if len(a) == 0 {
-		return append([]string(nil), b...)
+		return append([]string(nil), b...), false
 	}
 	if len(b) == 0 {
-		return append([]string(nil), a...)
+		return append([]string(nil), a...), false
 	}
 	if slices.Contains(a, "*") {
-		return append([]string(nil), b...)
+		return append([]string(nil), b...), false
 	}
 	if slices.Contains(b, "*") {
-		return append([]string(nil), a...)
+		return append([]string(nil), a...), false
 	}
 	out := make([]string, 0, min(len(a), len(b)))
 	for _, left := range a {
@@ -428,10 +433,7 @@ func intersectFilterValues(a, b []string) []string {
 			out = append(out, left)
 		}
 	}
-	if len(out) == 0 {
-		return []string{"__deny_all__"}
-	}
-	return out
+	return out, len(out) == 0
 }
 
 func ParseAndCompile(raw map[string]any, peer string) (Compiled, error) {
@@ -443,18 +445,14 @@ func ParseAndCompile(raw map[string]any, peer string) (Compiled, error) {
 }
 
 func MergeSources(paramsSources, filterSources []string) (sources []string, denyAll bool) {
-	merged := intersectFilterValues(normalizeFilterValues(paramsSources, true), normalizeFilterValues(filterSources, true))
-	if len(merged) == 1 && merged[0] == "__deny_all__" {
+	merged, denyAll := intersectFilterValues(normalizeFilterValues(paramsSources, true), normalizeFilterValues(filterSources, true))
+	if denyAll {
 		return nil, true
 	}
 	if slices.Contains(merged, "*") {
 		return nil, false
 	}
 	return merged, false
-}
-
-func ValuesDenyAll(values []string) bool {
-	return len(values) == 1 && values[0] == "__deny_all__"
 }
 
 func HasWildcard(values []string) bool {

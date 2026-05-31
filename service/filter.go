@@ -56,10 +56,6 @@ func mergeSearchSources(paramsSources, filterSources []string) (sources []string
 	return searchfilter.MergeSources(paramsSources, filterSources)
 }
 
-func filterValuesDenyAll(values []string) bool {
-	return searchfilter.ValuesDenyAll(values)
-}
-
 func filterHasWildcard(values []string) bool {
 	return searchfilter.HasWildcard(values)
 }

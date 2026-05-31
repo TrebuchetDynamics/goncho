@@ -132,6 +132,34 @@ func TestCompilerSupportsSessionSourcePeerAndRejectsMetadata(t *testing.T) {
 	}
 }
 
+func TestCompilerTracksDenyAllWithoutReservedValueCollision(t *testing.T) {
+	literal, err := searchfilter.Compile(mustParse(t, map[string]any{
+		"session_id": "__deny_all__",
+	}), "user-juan")
+	if err != nil {
+		t.Fatalf("Compile literal reserved-looking session_id: %v", err)
+	}
+	if literal.DenyAll {
+		t.Fatal("DenyAll = true for literal __deny_all__ session_id")
+	}
+	if !slices.Equal(literal.SessionIDs, []string{"__deny_all__"}) {
+		t.Fatalf("SessionIDs = %#v, want literal __deny_all__", literal.SessionIDs)
+	}
+
+	contradiction, err := searchfilter.Compile(mustParse(t, map[string]any{
+		"AND": []any{
+			map[string]any{"session_id": "sess-a"},
+			map[string]any{"session_id": "sess-b"},
+		},
+	}), "user-juan")
+	if err != nil {
+		t.Fatalf("Compile contradictory session filters: %v", err)
+	}
+	if !contradiction.DenyAll {
+		t.Fatalf("DenyAll = false for contradictory session filters: %+v", contradiction)
+	}
+}
+
 func TestNormalizeLimitDefaultsToTenAndClampsAtHonchoMaximum(t *testing.T) {
 	tests := []struct {
 		raw  int
