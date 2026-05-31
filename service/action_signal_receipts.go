@@ -9,7 +9,6 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
 	"github.com/TrebuchetDynamics/goncho/service/internal/scopeauth"
-	"github.com/TrebuchetDynamics/goncho/service/internal/scopekey"
 )
 
 type ActionSignalReceiptDecision string
@@ -213,30 +212,31 @@ func (s *Service) ListActionSignalReceiptAudit(ctx context.Context, query Action
 }
 
 func (s *Service) normalizeActionSignalReceiptParams(params ActionSignalReceiptParams) (ActionSignalReceipt, error) {
-	scope := scopekey.Normalize(s.workspaceID, params.WorkspaceID, params.ProfileID, params.Peer)
-	actionID := strings.TrimSpace(params.ActionID)
+	action, err := s.normalizeScopedAction(params.WorkspaceID, params.ProfileID, params.Peer, params.ActionID, "action signal receipt workspace_id, peer, action_id, signal_id, and actor are required", true)
+	if err != nil {
+		return ActionSignalReceipt{}, err
+	}
 	actor := strings.TrimSpace(params.Actor)
-	if !scope.Complete() || actionID == "" || params.SignalID == 0 || actor == "" {
+	if params.SignalID == 0 || actor == "" {
 		return ActionSignalReceipt{}, fmt.Errorf("goncho: action signal receipt workspace_id, peer, action_id, signal_id, and actor are required")
 	}
-	return ActionSignalReceipt{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: actionID, SignalID: params.SignalID, Actor: actor}, nil
+	return ActionSignalReceipt{WorkspaceID: action.WorkspaceID, ProfileID: action.ProfileID, Peer: action.Peer, ActionID: action.ActionID, SignalID: params.SignalID, Actor: actor}, nil
 }
 
 func (s *Service) normalizeActionSignalReceiptQuery(query ActionSignalReceiptQuery) (ActionSignalReceipt, error) {
-	scope := scopekey.Normalize(s.workspaceID, query.WorkspaceID, query.ProfileID, query.Peer)
-	actionID := strings.TrimSpace(query.ActionID)
-	if !scope.Complete() || actionID == "" {
-		return ActionSignalReceipt{}, fmt.Errorf("goncho: action signal receipt query workspace_id, peer, and action_id are required")
+	action, err := s.normalizeScopedAction(query.WorkspaceID, query.ProfileID, query.Peer, query.ActionID, "action signal receipt query workspace_id, peer, and action_id are required", true)
+	if err != nil {
+		return ActionSignalReceipt{}, err
 	}
-	return ActionSignalReceipt{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: actionID, SignalID: query.SignalID}, nil
+	return ActionSignalReceipt{WorkspaceID: action.WorkspaceID, ProfileID: action.ProfileID, Peer: action.Peer, ActionID: action.ActionID, SignalID: query.SignalID}, nil
 }
 
 func (s *Service) normalizeActionSignalReceiptAuditQuery(query ActionSignalReceiptAuditQuery) (ActionSignalReceipt, error) {
-	scope := scopekey.Normalize(s.workspaceID, query.WorkspaceID, query.ProfileID, query.Peer)
-	if !scope.Complete() {
-		return ActionSignalReceipt{}, fmt.Errorf("goncho: action signal receipt audit workspace_id and peer are required")
+	action, err := s.normalizeScopedAction(query.WorkspaceID, query.ProfileID, query.Peer, query.ActionID, "action signal receipt audit workspace_id and peer are required", false)
+	if err != nil {
+		return ActionSignalReceipt{}, err
 	}
-	return ActionSignalReceipt{WorkspaceID: scope.WorkspaceID, ProfileID: scope.ProfileID, Peer: scope.Peer, ActionID: strings.TrimSpace(query.ActionID), SignalID: query.SignalID}, nil
+	return ActionSignalReceipt{WorkspaceID: action.WorkspaceID, ProfileID: action.ProfileID, Peer: action.Peer, ActionID: action.ActionID, SignalID: query.SignalID}, nil
 }
 
 func (s *Service) insertActionSignalReceiptAudit(ctx context.Context, receipt ActionSignalReceipt, actorWorkspaceID, actorProfileID string, decision ActionSignalReceiptDecision, reason string) (int64, error) {
