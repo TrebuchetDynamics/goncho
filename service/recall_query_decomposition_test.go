@@ -140,6 +140,18 @@ func TestPlannedRecallQueriesDeduplicatesWildcardSourceVariants(t *testing.T) {
 	}
 }
 
+func TestPlannedRecallQueriesDeduplicatesBlankSourceVariants(t *testing.T) {
+	queries := plannedRecallQueries(
+		RecallQuery{Query: "authentication owner"},
+		func(q RecallQuery) []RecallQuery {
+			return []RecallQuery{{Query: " authentication owner ", Sources: []string{" ", "\t"}}}
+		},
+	)
+	if got := len(queries); got != 1 {
+		t.Fatalf("planned query count = %d, want blank source filters treated as empty wildcard filters: %+v", got, queries)
+	}
+}
+
 func TestRecallQueryDecompositionTreatsBlankMemoryIDsAsUnstable(t *testing.T) {
 	base := queryKeyedRecallGenerator{candidatesByQuery: map[string][]RecallCandidate{
 		"authentication owner incident": {
@@ -202,6 +214,19 @@ func TestMergeRecallCandidateEvidenceKeepsMetadataWhenScoreImproves(t *testing.T
 	}
 	if got := merged.Provenance[0].Metadata["fact_type"]; got != "ownership" {
 		t.Fatalf("merged evidence metadata = %+v, want existing provenance metadata preserved", merged.Provenance[0].Metadata)
+	}
+}
+
+func TestMergeRecallCandidateEvidenceDeduplicatesWhitespaceEquivalentEvidenceIDs(t *testing.T) {
+	merged := mergeRecallCandidateEvidence(
+		RecallCandidate{MemoryID: "mem-auth-owner", Provenance: []EvidenceItem{{Kind: "fact", Source: "annotations", ID: " ann-owner ", Note: " owner fact ", Score: 0.40}}},
+		RecallCandidate{MemoryID: "mem-auth-owner", Provenance: []EvidenceItem{{Kind: "fact", Source: "annotations", ID: "ann-owner", Note: "owner fact", Score: 0.95}}},
+	)
+	if len(merged.Provenance) != 1 {
+		t.Fatalf("merged provenance count = %d, want whitespace-equivalent evidence id/note deduped: %+v", len(merged.Provenance), merged.Provenance)
+	}
+	if got := merged.Provenance[0].Score; got != 0.95 {
+		t.Fatalf("merged evidence score = %v, want strongest duplicate evidence score", got)
 	}
 }
 

@@ -107,7 +107,16 @@ func recallCandidateStableMemoryID(candidate RecallCandidate) (string, bool) {
 }
 
 func recallCandidateEvidenceKey(evidence EvidenceItem) string {
-	return evidence.Kind + "\x00" + evidence.Source + "\x00" + evidence.ID + "\x00" + evidence.Note
+	return strings.Join([]string{
+		recallEvidenceIdentityToken(evidence.Kind),
+		recallEvidenceIdentityToken(evidence.Source),
+		recallEvidenceIdentityToken(evidence.ID),
+		recallEvidenceIdentityToken(evidence.Note),
+	}, "\x00")
+}
+
+func recallEvidenceIdentityToken(value string) string {
+	return strings.TrimSpace(value)
 }
 
 func recallQueryKey(q RecallQuery) string {
