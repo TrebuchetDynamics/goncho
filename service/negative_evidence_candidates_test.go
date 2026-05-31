@@ -152,6 +152,44 @@ func TestNegativeEvidenceCandidatesIgnoreExplicitlySuccessfulToolErrors(t *testi
 	}
 }
 
+func TestNegativeEvidenceCandidatesDoNotPromoteFailuresResolvedByLaterSuccess(t *testing.T) {
+	failed := false
+	succeeded := true
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "fail-before-success-1", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "fail-before-success-2", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+			{ID: "later-success", Kind: ObservationKindToolResult, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &succeeded, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(30, 0).UTC()},
+		},
+	})
+	if len(candidates) != 0 {
+		t.Fatalf("candidates = %+v, want later scoped success to suppress resolved repeated-failure candidate", candidates)
+	}
+}
+
+func TestNegativeEvidenceCandidatesStillPromoteFailuresAfterLastSuccess(t *testing.T) {
+	failed := false
+	succeeded := true
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "early-fail", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "middle-success", Kind: ObservationKindToolResult, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &succeeded, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()},
+			{ID: "late-fail-1", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(30, 0).UTC()},
+			{ID: "late-fail-2", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "mineru", PeerID: "peer", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(40, 0).UTC()},
+		},
+	})
+	if len(candidates) != 1 || candidates[0].FailureCount != 2 {
+		t.Fatalf("candidates = %+v, want only repeated failures after the latest scoped success", candidates)
+	}
+	if got := strings.Join(candidates[0].EvidenceIDs, ","); got != "late-fail-1,late-fail-2" {
+		t.Fatalf("evidence ids = %q, want only post-success failures", got)
+	}
+}
+
 func TestNegativeEvidenceCandidatesStillTreatImplicitToolErrorsAsFailures(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{

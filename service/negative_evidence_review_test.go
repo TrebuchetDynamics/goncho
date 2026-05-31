@@ -236,6 +236,34 @@ func TestNegativeEvidenceReviewsCreatedFromWildcardScanUseCandidateWorkspace(t *
 	}
 }
 
+func TestNegativeEvidenceReviewsSkipFailuresResolvedByLaterSuccess(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	failed := false
+	succeeded := true
+	for i := 1; i <= 2; i++ {
+		id := "resolved-bash-fail-" + strconv.Itoa(i)
+		if _, err := svc.Observe(ctx, ObservationParams{ID: id, Kind: ObservationKindToolError, ProfileID: "mineru", PeerID: "peer-review-resolved", SessionKey: "sess-review-resolved", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(int64(10+i), 0).UTC()}); err != nil {
+			t.Fatalf("Observe %s: %v", id, err)
+		}
+	}
+	if _, err := svc.Observe(ctx, ObservationParams{ID: "resolved-bash-success", Kind: ObservationKindToolResult, ProfileID: "mineru", PeerID: "peer-review-resolved", SessionKey: "sess-review-resolved", Success: &succeeded, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(20, 0).UTC()}); err != nil {
+		t.Fatalf("Observe resolved-bash-success: %v", err)
+	}
+
+	created, err := svc.CreateNegativeEvidenceReviewItems(ctx, NegativeEvidenceReviewRequest{PeerID: "peer-review-resolved", SessionKey: "sess-review-resolved", CreatedAt: time.Unix(30, 0).UTC()})
+	if err != nil {
+		t.Fatalf("CreateNegativeEvidenceReviewItems: %v", err)
+	}
+	if len(created) != 0 {
+		t.Fatalf("created = %+v, want no review item for repeated failures resolved by a later scoped success", created)
+	}
+}
+
 func TestNegativeEvidenceReviewLimitAppliesAfterCandidateGeneration(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

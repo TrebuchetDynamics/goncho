@@ -224,9 +224,10 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 	if minFailures <= 0 {
 		minFailures = 2
 	}
+	latestSuccessByScope := negativeEvidenceLatestSuccessByScope(input.Projection, input.Observations)
 	buckets := map[negativeEvidenceCandidateKey]*negativeEvidenceBucket{}
 	for _, obs := range input.Observations {
-		negativeEvidenceBucketObservation(buckets, input.Projection, obs)
+		negativeEvidenceBucketObservation(buckets, input.Projection, latestSuccessByScope, obs)
 	}
 	out := []NegativeEvidenceCandidate{}
 	for _, b := range buckets {
@@ -264,9 +265,9 @@ type negativeEvidenceBucket struct {
 	observationIDs map[string]struct{}
 }
 
-func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]*negativeEvidenceBucket, projection SessionEvidenceProjection, obs Observation) {
+func negativeEvidenceBucketObservation(buckets map[negativeEvidenceCandidateKey]*negativeEvidenceBucket, projection SessionEvidenceProjection, latestSuccessByScope map[negativeEvidenceCandidateKey]time.Time, obs Observation) {
 	signal, ok := negativeEvidenceFailureSignalFrom(projection, obs)
-	if !ok {
+	if !ok || negativeEvidenceFailureResolvedByLaterSuccess(signal, latestSuccessByScope) {
 		return
 	}
 	key := signal.Scope.key()
@@ -292,6 +293,36 @@ type negativeEvidenceFailureSignal struct {
 	EvidenceID string
 	Scope      negativeEvidenceObservationScope
 	ObservedAt time.Time
+}
+
+func negativeEvidenceLatestSuccessByScope(projection SessionEvidenceProjection, observations []Observation) map[negativeEvidenceCandidateKey]time.Time {
+	latest := map[negativeEvidenceCandidateKey]time.Time{}
+	for _, obs := range observations {
+		scope, observedAt, ok := negativeEvidenceSuccessSignalFrom(projection, obs)
+		if !ok || observedAt.IsZero() {
+			continue
+		}
+		key := scope.key()
+		if observedAt.After(latest[key]) {
+			latest[key] = observedAt
+		}
+	}
+	return latest
+}
+
+func negativeEvidenceSuccessSignalFrom(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceObservationScope, time.Time, bool) {
+	if obs.Success == nil || !*obs.Success || !negativeEvidenceFailureCapableKind(obs.Kind) {
+		return negativeEvidenceObservationScope{}, time.Time{}, false
+	}
+	return negativeEvidenceObservationScopeFrom(projection, obs), obs.ObservedAt, true
+}
+
+func negativeEvidenceFailureResolvedByLaterSuccess(signal negativeEvidenceFailureSignal, latestSuccessByScope map[negativeEvidenceCandidateKey]time.Time) bool {
+	if signal.ObservedAt.IsZero() {
+		return false
+	}
+	latestSuccess := latestSuccessByScope[signal.Scope.key()]
+	return !latestSuccess.IsZero() && !signal.ObservedAt.After(latestSuccess)
 }
 
 func negativeEvidenceFailureSignalFrom(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceFailureSignal, bool) {
