@@ -1,19 +1,13 @@
 package textutil
 
 import (
-	"strings"
-
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/foldmatch"
+	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/substrmatch"
 )
 
 // ContainsAnySubstring reports whether value contains at least one marker.
 func ContainsAnySubstring(value string, markers []string) bool {
-	for _, marker := range markers {
-		if strings.Contains(value, marker) {
-			return true
-		}
-	}
-	return false
+	return substrmatch.Any(value, markers)
 }
 
 // ContainsAnySubstringFold reports whether value contains at least one marker,
@@ -24,13 +18,13 @@ func ContainsAnySubstringFold(value string, markers []string) bool {
 
 // ContainsEitherSubstring reports whether either value contains the other.
 func ContainsEitherSubstring(a, b string) bool {
-	return strings.Contains(a, b) || strings.Contains(b, a)
+	return substrmatch.Either(a, b)
 }
 
 // ContainsEitherSubstringFold reports whether either value contains the other
 // after applying the same simple case-fold policy used by Goncho text filters.
 func ContainsEitherSubstringFold(a, b string) bool {
-	return ContainsEitherSubstring(strings.ToLower(a), strings.ToLower(b))
+	return foldmatch.EitherSubstring(a, b)
 }
 
 // ContainsAllSubstringsFold reports whether value contains every non-blank

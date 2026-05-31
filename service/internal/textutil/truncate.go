@@ -1,17 +1,9 @@
 package textutil
 
-import "unicode/utf8"
+import "github.com/TrebuchetDynamics/goncho/service/internal/textutil/utf8limit"
 
+// TruncateUTF8Bytes returns value truncated to at most limit bytes without
+// splitting a UTF-8 encoded rune.
 func TruncateUTF8Bytes(value string, limit int) string {
-	if limit <= 0 || len([]byte(value)) <= limit {
-		return value
-	}
-	raw := []byte(value)
-	if limit > len(raw) {
-		limit = len(raw)
-	}
-	for limit > 0 && !utf8.Valid(raw[:limit]) {
-		limit--
-	}
-	return string(raw[:limit])
+	return utf8limit.TruncateBytes(value, limit)
 }

@@ -96,6 +96,14 @@ func CutBeforeAnySubstring(value string, markers ...string) (string, bool) {
 	return value[:best], true
 }
 
+// EitherSubstring reports whether either value contains the other using simple
+// lower-case matching.
+func EitherSubstring(a, b string) bool {
+	lowerA := strings.ToLower(a)
+	lowerB := strings.ToLower(b)
+	return strings.Contains(lowerA, lowerB) || strings.Contains(lowerB, lowerA)
+}
+
 func containsFolded(lowerValue, marker string) bool {
 	return strings.Contains(lowerValue, strings.ToLower(marker))
 }

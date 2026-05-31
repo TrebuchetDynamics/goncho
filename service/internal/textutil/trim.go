@@ -1,10 +1,6 @@
 package textutil
 
-import (
-	"strings"
-
-	"github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
-)
+import "github.com/TrebuchetDynamics/goncho/service/internal/textutil/trimmed"
 
 // IsBlank reports whether value is empty after trimming Unicode whitespace.
 func IsBlank(value string) bool {
@@ -25,17 +21,17 @@ func UpperTrimmed(value string) string {
 // fact classifiers, then trims surrounding whitespace. It intentionally keeps
 // punctuation inside the value unchanged.
 func TrimSentenceBoundary(value string) string {
-	return trimmed.Space(strings.Trim(value, ".!?"))
+	return trimmed.SentenceBoundary(value)
 }
 
 // TrimQuestionPunctuation removes leading/trailing question punctuation before
 // trimming whitespace, matching the policy used by fact-question classifiers.
 func TrimQuestionPunctuation(value string) string {
-	return trimmed.Space(strings.Trim(value, "?!."))
+	return trimmed.QuestionPunctuation(value)
 }
 
 // TrimQuestionPhraseBoundary removes question punctuation, dots, and spaces as
 // boundary characters, matching classifiers that accept loosely spaced prompts.
 func TrimQuestionPhraseBoundary(value string) string {
-	return trimmed.Space(strings.Trim(value, "?! ."))
+	return trimmed.QuestionPhraseBoundary(value)
 }
