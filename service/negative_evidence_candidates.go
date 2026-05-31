@@ -132,7 +132,7 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 		candidate  NegativeEvidenceCandidate
 		evidenceID []negativeEvidenceEvidenceRef
 	}
-	buckets := map[string]*bucket{}
+	buckets := map[negativeEvidenceCandidateKey]*bucket{}
 	for _, obs := range input.Observations {
 		if !negativeEvidenceFailureObservation(obs) {
 			continue
@@ -176,7 +176,15 @@ func GenerateNegativeEvidenceCandidates(input NegativeEvidenceCandidateInput) []
 	return out
 }
 
-func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Observation) (string, NegativeEvidenceCandidate) {
+type negativeEvidenceCandidateKey struct {
+	WorkspaceID string
+	ProfileID   string
+	PeerID      string
+	SessionKey  string
+	ToolName    string
+}
+
+func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Observation) (negativeEvidenceCandidateKey, NegativeEvidenceCandidate) {
 	toolName := strings.TrimSpace(obs.Metadata["tool_name"])
 	if toolName == "" {
 		toolName = strings.TrimSpace(obs.Metadata["custom_kind"])
@@ -191,7 +199,7 @@ func negativeEvidenceCandidateSeed(projection SessionEvidenceProjection, obs Obs
 	profileID := strings.TrimSpace(obs.ProfileID)
 	peerID := strings.TrimSpace(obs.PeerID)
 	sessionKey := strings.TrimSpace(obs.SessionKey)
-	key := strings.Join([]string{workspaceID, profileID, peerID, sessionKey, toolName}, "\x00")
+	key := negativeEvidenceCandidateKey{WorkspaceID: workspaceID, ProfileID: profileID, PeerID: peerID, SessionKey: sessionKey, ToolName: toolName}
 	return key, NegativeEvidenceCandidate{
 		Kind:        NegativeEvidenceRepeatedToolFailure,
 		WorkspaceID: workspaceID,

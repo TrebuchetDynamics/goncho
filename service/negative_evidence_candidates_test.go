@@ -6,6 +6,33 @@ import (
 	"time"
 )
 
+func TestNegativeEvidenceCandidatesDoNotCollapseDelimiterBearingDimensions(t *testing.T) {
+	failed := false
+	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
+		Projection:  ProjectSessionEvidence(SessionEvidenceInput{WorkspaceID: "gormes"}),
+		MinFailures: 2,
+		Observations: []Observation{
+			{ID: "left-1", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "a\x00b", PeerID: "c", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(10, 0).UTC()},
+			{ID: "left-2", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "a\x00b", PeerID: "c", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(11, 0).UTC()},
+			{ID: "right-1", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "a", PeerID: "b\x00c", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(12, 0).UTC()},
+			{ID: "right-2", Kind: ObservationKindToolError, WorkspaceID: "gormes", ProfileID: "a", PeerID: "b\x00c", SessionKey: "sess", Success: &failed, Metadata: map[string]string{"tool_name": "bash"}, ObservedAt: time.Unix(13, 0).UTC()},
+		},
+	})
+	if len(candidates) != 2 {
+		t.Fatalf("candidates = %+v, want delimiter-bearing profile/peer dimensions kept distinct", candidates)
+	}
+	seen := map[string]bool{}
+	for _, candidate := range candidates {
+		if candidate.FailureCount != 2 {
+			t.Fatalf("candidate = %+v, want each dimension bucket to keep its own two failures", candidate)
+		}
+		seen[candidate.ProfileID+"|"+candidate.PeerID] = true
+	}
+	if !seen["a\x00b|c"] || !seen["a|b\x00c"] {
+		t.Fatalf("candidates = %+v, want both delimiter-bearing dimensions", candidates)
+	}
+}
+
 func TestNegativeEvidenceCandidatesOrderEvidenceByFailureTimeline(t *testing.T) {
 	failed := false
 	candidates := GenerateNegativeEvidenceCandidates(NegativeEvidenceCandidateInput{
