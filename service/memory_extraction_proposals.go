@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
-	"regexp"
 	"strings"
 
-	"github.com/TrebuchetDynamics/goncho/service/internal/sensitive"
+	"github.com/TrebuchetDynamics/goncho/service/internal/memproposal"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -80,8 +79,6 @@ type MemoryProposal struct {
 	ReviewItemID string                  `json:"review_item_id,omitempty"`
 	ReviewReason string                  `json:"review_reason,omitempty"`
 }
-
-var durableFactPattern = regexp.MustCompile(`(?i)^(.+?)\s+(?:is|are|lives in|uses|owns)\s+(.+)$`)
 
 func (s *Service) ExtractMemoryProposals(ctx context.Context, params ExtractMemoryProposalsParams) (ExtractMemoryProposalsResult, error) {
 	if s == nil {
@@ -168,7 +165,7 @@ func (s *Service) memoryProposalFromMessage(ctx context.Context, scope ExtractMe
 		Confidence:  0.82,
 		EvidenceIDs: evidenceIDs,
 	}
-	prefix, body, marked := splitMemoryProposalMarker(content)
+	prefix, body, marked := memproposal.SplitMarker(content)
 	if !marked {
 		base.Operation = MemoryProposalNoop
 		base.Content = content
@@ -177,7 +174,7 @@ func (s *Service) memoryProposalFromMessage(ctx context.Context, scope ExtractMe
 		return base, true
 	}
 	base.Content = strings.TrimSpace(body)
-	base.Subject = proposalSubject(base.Content)
+	base.Subject = memproposal.Subject(base.Content)
 	if base.Subject == "" {
 		base.Subject = strings.TrimSpace(base.Content)
 	}
@@ -200,12 +197,12 @@ func (s *Service) memoryProposalFromMessage(ctx context.Context, scope ExtractMe
 		base.Kind = MemoryProposalProcedure
 		base.ExpiryHint = "reusable workflow; review after failure or project change"
 	}
-	if proposalIsLowConfidence(base.Content) {
+	if memproposal.IsLowConfidence(base.Content) {
 		base.Status = MemoryProposalReviewRequired
 		base.Confidence = 0.45
 		base.ReviewReason = "memory extraction proposal is low-confidence and requires operator review before promotion"
 	}
-	if proposalIsPrivacySensitive(base.Content) {
+	if memproposal.IsPrivacySensitive(base.Content) {
 		base.Status = MemoryProposalReviewRequired
 		base.Confidence = 0.2
 		base.ReviewReason = "memory extraction proposal appears privacy-sensitive or secret-like and must not be written as active memory"
@@ -220,29 +217,6 @@ func (s *Service) memoryProposalFromMessage(ctx context.Context, scope ExtractMe
 	}
 	base.ID = memoryProposalID(base.Operation, base.Kind, base.Content, evidenceIDs)
 	return base, true
-}
-
-func splitMemoryProposalMarker(content string) (string, string, bool) {
-	prefix, body, ok := strings.Cut(content, ":")
-	if !ok {
-		return "", "", false
-	}
-	prefix = textutil.LowerTrimmed(prefix)
-	switch prefix {
-	case "remember", "update", "supersede", "forget", "delete", "preference", "procedure", "lesson":
-		return prefix, strings.TrimSpace(body), true
-	default:
-		return "", "", false
-	}
-}
-
-func proposalSubject(content string) string {
-	content = strings.Trim(strings.TrimSpace(content), ".")
-	matches := durableFactPattern.FindStringSubmatch(content)
-	if len(matches) >= 2 {
-		return strings.TrimSpace(matches[1])
-	}
-	return firstWords(content, 5)
 }
 
 func (s *Service) findContradictoryMemory(ctx context.Context, peer, sessionKey, subject, content string) ([]string, bool) {
@@ -278,14 +252,6 @@ func filterProposalMessagesByPeer(messages []MessageRecord, peer string) []Messa
 	return out
 }
 
-func proposalIsLowConfidence(content string) bool {
-	return textutil.ContainsAnySubstringFold(content, []string{"maybe ", " might ", "not sure", "i think"})
-}
-
-func proposalIsPrivacySensitive(content string) bool {
-	return sensitive.ContainsSecretLikeContent(content)
-}
-
 func memoryProposalID(operation MemoryProposalOperation, kind MemoryProposalKind, content string, evidence []string) string {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(string(operation)))
@@ -298,8 +264,4 @@ func firstString(values []string) string {
 		return ""
 	}
 	return values[0]
-}
-
-func firstWords(content string, n int) string {
-	return textutil.FirstWords(content, n)
 }

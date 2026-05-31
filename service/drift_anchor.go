@@ -3,11 +3,10 @@ package goncho
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
+	internaldriftanchor "github.com/TrebuchetDynamics/goncho/service/internal/driftanchor"
 	"github.com/TrebuchetDynamics/goncho/service/internal/limitutil"
-	"github.com/TrebuchetDynamics/goncho/service/internal/textmatch"
 	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
@@ -88,26 +87,6 @@ func isNegativeDriftAnchor(entry MemoryToolEntry) bool {
 	return textutil.ContainsAnySubstringFold(entry.Content, []string{"dead end", "known failure", "failed path"})
 }
 
-var driftAnchorTokenPattern = regexp.MustCompile(`[a-z0-9]+`)
-
 func driftAnchorSimilarity(prompt, memory string) float64 {
-	return textmatch.OverlapCoefficient(driftAnchorTokenSet(prompt), driftAnchorTokenSet(memory))
-}
-
-func driftAnchorTokenSet(value string) map[string]struct{} {
-	return textutil.Set(driftAnchorTokenPattern.FindAllString(strings.ToLower(value), -1), func(token string) string {
-		if len(token) < 4 || driftAnchorStopword(token) {
-			return ""
-		}
-		return token
-	})
-}
-
-func driftAnchorStopword(token string) bool {
-	switch token {
-	case "this", "that", "with", "from", "before", "after", "again", "should", "would", "could", "known":
-		return true
-	default:
-		return false
-	}
+	return internaldriftanchor.Similarity(prompt, memory)
 }

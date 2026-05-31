@@ -4,10 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/textmatch"
-	"github.com/TrebuchetDynamics/goncho/service/internal/textutil"
 )
 
 func (s *Service) ExecuteDreamCompression(ctx context.Context) (int, error) {
@@ -83,15 +81,5 @@ func tombstoneConclusion(ctx context.Context, db *sql.DB, id int64) error {
 }
 
 func wordSimilarity(a, b string) float64 {
-	return textmatch.Jaccard(wordSet(a), wordSet(b))
-}
-
-func wordSet(s string) map[string]struct{} {
-	return textutil.Set(strings.Fields(s), func(w string) string {
-		w = strings.Trim(strings.ToLower(w), ".,;:!?\"'()[]{}")
-		if len(w) <= 2 {
-			return ""
-		}
-		return w
-	})
+	return textmatch.JaccardSignificantWords(a, b)
 }
