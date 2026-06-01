@@ -1,6 +1,11 @@
 package serviceartifact
 
-import "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact/filecontract"
+import (
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact/filecontract"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact/results"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact/scoring"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact/summary"
+)
 
 // SummaryFile is the stable JSON contract for BEAM service summary artifacts.
 type SummaryFile = filecontract.SummaryFile
@@ -28,3 +33,19 @@ type ConversationResults = filecontract.ConversationResults
 
 // QuestionResult is one stable BEAM service result row.
 type QuestionResult = filecontract.QuestionResult
+
+// CaseScoreFunc supplies the artifact score used by builders that can be
+// pure-recall scored or external-judgment scored.
+type CaseScoreFunc = scoring.CaseScoreFunc
+
+// CaseJudgment contains optional external answer/judge fields for one result row.
+type CaseJudgment = results.CaseJudgment
+
+// CaseJudgmentFunc supplies optional external judgment fields for a report case.
+type CaseJudgmentFunc = results.CaseJudgmentFunc
+
+// ResultsOptions contains metadata and callbacks needed to build service results.
+type ResultsOptions = results.Options
+
+// SummaryOptions contains run metadata supplied by the oracle service facade.
+type SummaryOptions = summary.Options

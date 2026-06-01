@@ -1,4 +1,4 @@
-package serviceartifact
+package caseprojection
 
 import (
 	"testing"

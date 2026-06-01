@@ -1,4 +1,4 @@
-package serviceartifact
+package results
 
 import (
 	"strings"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/artifactcontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/casecontract"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact/filecontract"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/collection"
 	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
@@ -26,8 +27,8 @@ type CaseJudgment struct {
 // CaseJudgmentFunc supplies optional external judgment fields for a report case.
 type CaseJudgmentFunc func(goncho.RecallBenchmarkCaseReport) CaseJudgment
 
-// ResultsOptions contains metadata and callbacks needed to build service results.
-type ResultsOptions struct {
+// Options contains metadata and callbacks needed to build service results.
+type Options struct {
 	ConfigID    string
 	RunStarted  time.Time
 	JudgeModel  string
@@ -36,12 +37,12 @@ type ResultsOptions struct {
 	Judgment    CaseJudgmentFunc
 }
 
-// BuildResults projects a recall report into the BEAM service results artifact contract.
-func BuildResults(report goncho.RecallBenchmarkReport, opts ResultsOptions) ResultsFile {
+// Build projects a recall report into the BEAM service results artifact contract.
+func Build(report goncho.RecallBenchmarkReport, opts Options) filecontract.ResultsFile {
 	type conversationAccumulator struct {
 		conversationID string
 		scale          string
-		results        []QuestionResult
+		results        []filecontract.QuestionResult
 	}
 	byConversation := map[string]*conversationAccumulator{}
 	conversationOrder := []string{}
@@ -74,7 +75,7 @@ func BuildResults(report goncho.RecallBenchmarkReport, opts ResultsOptions) Resu
 			answerTimeMS = judgment.AnswerTimeMS
 			judgeTimeMS = judgment.JudgeTimeMS
 		}
-		acc.results = append(acc.results, QuestionResult{
+		acc.results = append(acc.results, filecontract.QuestionResult{
 			QID:                  fields.QID,
 			Ability:              fields.Ability,
 			Question:             fields.Question,
@@ -91,10 +92,10 @@ func BuildResults(report goncho.RecallBenchmarkReport, opts ResultsOptions) Resu
 			JudgeTimeMS:          judgeTimeMS,
 		})
 	}
-	conversationResults := make([]ConversationResults, 0, len(conversationOrder))
+	conversationResults := make([]filecontract.ConversationResults, 0, len(conversationOrder))
 	for _, key := range conversationOrder {
 		acc := byConversation[key]
-		conversationResults = append(conversationResults, ConversationResults{
+		conversationResults = append(conversationResults, filecontract.ConversationResults{
 			ConversationID: acc.conversationID,
 			Scale:          acc.scale,
 			NumQuestions:   len(acc.results),
@@ -102,8 +103,8 @@ func BuildResults(report goncho.RecallBenchmarkReport, opts ResultsOptions) Resu
 			Results:        acc.results,
 		})
 	}
-	return ResultsFile{
-		Metadata: ResultsMetadata{
+	return filecontract.ResultsFile{
+		Metadata: filecontract.ResultsMetadata{
 			Date:               time.Now().UTC().Format(time.RFC3339),
 			RunStartedAt:       shared.FormatArtifactTimestamp(opts.RunStarted),
 			ConfigID:           opts.ConfigID,

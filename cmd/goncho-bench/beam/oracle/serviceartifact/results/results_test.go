@@ -1,4 +1,4 @@
-package serviceartifact
+package results
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ func TestBuildResultsGroupsConversationsAndAppliesJudgmentContract(t *testing.T)
 		TokenBudgetWithin:     true,
 	}}}
 
-	results := BuildResults(report, ResultsOptions{
+	results := Build(report, Options{
 		ConfigID:    "cfg",
 		RunStarted:  started,
 		JudgeModel:  "judge",

@@ -1,26 +1,28 @@
-package serviceartifact
+package summary
 
 import (
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/casecontract"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact/filecontract"
+	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/oracle/serviceartifact/scoring"
 	"github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared"
 	sharedscore "github.com/TrebuchetDynamics/goncho/cmd/goncho-bench/beam/shared/score"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
-// SummaryOptions contains run metadata supplied by the oracle service facade.
-type SummaryOptions struct {
+// Options contains run metadata supplied by the oracle service facade.
+type Options struct {
 	ConfigID    string
 	RunStarted  time.Time
 	JudgeModel  string
 	Description string
 	PureRecall  bool
-	Score       CaseScoreFunc
+	Score       scoring.CaseScoreFunc
 }
 
-// BuildSummary projects a recall report into the BEAM service summary artifact contract.
-func BuildSummary(report goncho.RecallBenchmarkReport, opts SummaryOptions) SummaryFile {
+// Build projects a recall report into the BEAM service summary artifact contract.
+func Build(report goncho.RecallBenchmarkReport, opts Options) filecontract.SummaryFile {
 	type scaleStats struct {
 		abilityTallies map[string]*sharedscore.ScoreTally
 		overallTally   sharedscore.ScoreTally
@@ -46,20 +48,20 @@ func BuildSummary(report goncho.RecallBenchmarkReport, opts SummaryOptions) Summ
 		tally.Add(score)
 		acc.overallTally.Add(score)
 	}
-	abilitySummary := map[string]map[string]AbilityStats{}
+	abilitySummary := map[string]map[string]filecontract.AbilityStats{}
 	for scale, acc := range stats {
-		byAbility := map[string]AbilityStats{}
+		byAbility := map[string]filecontract.AbilityStats{}
 		for ability, tally := range acc.abilityTallies {
-			byAbility[ability] = AbilityStats{AvgScore: tally.Average(), Count: tally.Count()}
+			byAbility[ability] = filecontract.AbilityStats{AvgScore: tally.Average(), Count: tally.Count()}
 		}
 		if acc.overallTally.Count() > 0 {
-			byAbility["OVERALL"] = AbilityStats{AvgScore: acc.overallTally.Average(), Count: acc.overallTally.Count()}
+			byAbility["OVERALL"] = filecontract.AbilityStats{AvgScore: acc.overallTally.Average(), Count: acc.overallTally.Count()}
 		}
 		abilitySummary[scale] = byAbility
 	}
-	return SummaryFile{
+	return filecontract.SummaryFile{
 		Date: opts.RunStarted.UTC().Format(time.RFC3339),
-		Metadata: SummaryMetadata{
+		Metadata: filecontract.SummaryMetadata{
 			Model:       casecontract.ModelName,
 			SampleSize:  report.CaseCount,
 			JudgeModel:  opts.JudgeModel,

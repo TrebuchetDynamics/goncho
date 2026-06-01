@@ -1,4 +1,4 @@
-package serviceartifact
+package summary
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ func TestBuildSummaryGroupsScoresByScaleAndAbility(t *testing.T) {
 	}
 	scores := map[string]float64{"a": 1, "b": 0.5, "c": 0}
 
-	summary := BuildSummary(report, SummaryOptions{
+	summary := Build(report, Options{
 		ConfigID:    "cfg",
 		RunStarted:  started,
 		JudgeModel:  "judge",
