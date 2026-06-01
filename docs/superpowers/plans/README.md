@@ -17,4 +17,4 @@ All plans in this tree should keep these contracts explicit instead of restating
 - `docs-site/` — documentation-site implementation plans.
 - `integrations/` — donor/provider integration plans that adapt external memory-system ideas to Goncho contracts.
 - `locomo/` — LOCOMO benchmark and recall-improvement plans.
-- `roadmap/` — larger cross-cutting roadmap and landscape plans.
+- `roadmap/` — larger cross-cutting roadmap and landscape plans, including the agentmemory feature-matrix roadmap.

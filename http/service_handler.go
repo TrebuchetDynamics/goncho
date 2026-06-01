@@ -44,6 +44,12 @@ func (h serviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleViewerSessionTimeline(w, r, rest[2])
 	case r.Method == http.MethodGet && len(rest) == 2 && rest[0] == "viewer" && rest[1] == "recall":
 		h.handleViewerRecallTrace(w, r)
+	case r.Method == http.MethodGet && len(rest) == 2 && rest[0] == "viewer" && rest[1] == "orientation":
+		h.handleViewerOrientationPack(w, r)
+	case r.Method == http.MethodGet && len(rest) == 2 && rest[0] == "viewer" && rest[1] == "retention":
+		h.handleViewerRetentionReport(w, r)
+	case r.Method == http.MethodGet && len(rest) == 2 && rest[0] == "viewer" && rest[1] == "memory":
+		h.handleViewerMemoryReport(w, r)
 	case r.Method == http.MethodPut && len(rest) == 3 && rest[0] == "peers" && rest[2] == "card":
 		h.handleSetPeerCard(w, r, rest[1])
 	case r.Method == http.MethodGet && len(rest) == 3 && rest[0] == "peers" && rest[2] == "context":
@@ -85,11 +91,46 @@ func (h serviceHandler) handleViewerRecallTrace(w http.ResponseWriter, r *http.R
 	query := r.URL.Query()
 	peer := query.Get("peer")
 	search := query.Get("query")
+	sessionKey := stringutil.FirstNonEmpty(query.Get("session_key"), query.Get("session"), query.Get("session_id"))
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	if limit <= 0 {
 		limit = 5
 	}
-	result, err := h.svc.ViewerRecallTrace(r.Context(), peer, search, limit)
+	result, err := h.svc.ViewerRecallTrace(r.Context(), peer, search, sessionKey, limit)
+	if err != nil {
+		writeHTTPError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h serviceHandler) handleViewerMemoryReport(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	result, err := h.svc.ViewerMemoryReport(r.Context(), query.Get("facet"), query.Get("value"), limit)
+	if err != nil {
+		writeHTTPError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h serviceHandler) handleViewerRetentionReport(w http.ResponseWriter, r *http.Request) {
+	result, err := h.svc.RetentionAccessReport(r.Context(), goncho.RetentionAccessReportParams{})
+	if err != nil {
+		writeHTTPError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h serviceHandler) handleViewerOrientationPack(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	peer := query.Get("peer")
+	search := query.Get("query")
+	sessionKey := stringutil.FirstNonEmpty(query.Get("session_key"), query.Get("session"), query.Get("session_id"))
+	maxTokens, _ := strconv.Atoi(query.Get("max_tokens"))
+	result, err := h.svc.ViewerOrientationPack(r.Context(), peer, search, sessionKey, maxTokens)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err.Error())
 		return
@@ -278,5 +319,3 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 func writeHTTPError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
-
-

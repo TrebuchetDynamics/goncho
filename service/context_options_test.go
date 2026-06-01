@@ -136,6 +136,44 @@ func TestService_ContextUnsupportedRepresentationOptionsReturnUnavailableEvidenc
 	)
 }
 
+func TestContextProjectionRecordsInclusionReasons(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	if _, err := svc.Conclude(ctx, ConcludeParams{Peer: "peer-orientation", SessionKey: "sess-orientation", Conclusion: "Orientation packs explain amber context inclusion."}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.Context(ctx, ContextParams{Peer: "peer-orientation", Query: "amber context", SessionKey: "sess-orientation", MaxTokens: 128})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !contextReasonIncluded(got.InclusionReasons, "conclusions") || !contextReasonPresent(got.InclusionReasons, "recent_messages") {
+		t.Fatalf("inclusion reasons = %+v, want included conclusions and recent_messages exclusion reason", got.InclusionReasons)
+	}
+	if got.InclusionReasons[0].Reason == "" {
+		t.Fatalf("inclusion reasons missing reason text: %+v", got.InclusionReasons)
+	}
+}
+
+func contextReasonIncluded(reasons []ContextInclusionReason, section string) bool {
+	for _, reason := range reasons {
+		if reason.Section == section && reason.Included && reason.Reason != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func contextReasonPresent(reasons []ContextInclusionReason, section string) bool {
+	for _, reason := range reasons {
+		if reason.Section == section && reason.Reason != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func requireUnavailableFields(t *testing.T, got ContextResult, wantFields ...string) {
 	t.Helper()
 

@@ -17,7 +17,7 @@ import (
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 )
 
-func TestRunOnboardingPrintsNonMutatingGuidance(t *testing.T) {
+func TestOnboardingOutputNamesServerAndViewerURLs(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "goncho.db")
 	configPath := filepath.Join(dir, "goncho-server.json")
@@ -36,8 +36,8 @@ func TestRunOnboardingPrintsNonMutatingGuidance(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
 		t.Fatalf("decode onboarding report: %v\n%s", err, stdout.String())
 	}
-	if report.Status != "plan" || report.Mutates || report.DBPath != dbPath || report.ConfigPath != configPath || report.BindAddr != "127.0.0.1:8799" || report.MCPURL != "http://127.0.0.1:8799/mcp" {
-		t.Fatalf("onboarding report = %+v, want non-mutating local paths and MCP URL", report)
+	if report.Status != "plan" || report.Mutates || report.DBPath != dbPath || report.ConfigPath != configPath || report.BindAddr != "127.0.0.1:8799" || report.MCPURL != "http://127.0.0.1:8799/mcp" || report.ViewerURL != "http://127.0.0.1:8799/v3/workspaces/default/viewer" {
+		t.Fatalf("onboarding report = %+v, want non-mutating local paths, MCP URL, and viewer URL", report)
 	}
 	for _, want := range []string{"goncho-server init", "goncho-server serve", "goncho connect"} {
 		if !strings.Contains(strings.Join(report.NextCommands, "\n"), want) {
@@ -78,6 +78,31 @@ func TestRunInitCreatesConfigAndSQLiteDB(t *testing.T) {
 	}
 	if report.Status != "ok" || report.ConfigPath != configPath || report.DBPath != dbPath {
 		t.Fatalf("init report = %+v, want ok paths", report)
+	}
+}
+
+func TestDoctorCanReadRunningServerHealth(t *testing.T) {
+	health := healthReport{Status: "ok", Version: "test", DB: dbHealth{Status: "ok", Path: "test.db"}}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/health" {
+			t.Fatalf("path = %s, want /health", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(health)
+	}))
+	defer server.Close()
+
+	dbPath := filepath.Join(t.TempDir(), "goncho.db")
+	var stdout bytes.Buffer
+	if err := run(context.Background(), config{Command: "doctor", DatabasePath: dbPath, Addr: freeTestAddr(t), ServerURL: server.URL, Stdout: &stdout}); err != nil {
+		t.Fatalf("run doctor: %v", err)
+	}
+	var report doctorReport
+	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
+		t.Fatalf("decode doctor report: %v\n%s", err, stdout.String())
+	}
+	check, ok := report.CheckByName("running_server_health")
+	if !ok || check.Status != "ok" {
+		t.Fatalf("running_server_health = %+v ok=%v report=%+v", check, ok, report)
 	}
 }
 
@@ -311,6 +336,41 @@ func TestServerHandlerExposesMCPResourcesAndPrompts(t *testing.T) {
 	}
 }
 
+func TestMCPCompatFlagKeepsDefaultToolSurfaceSmall(t *testing.T) {
+	core, err := openRuntime(context.Background(), config{DatabasePath: filepath.Join(t.TempDir(), "core.db"), MCPCompat: "core"})
+	if err != nil {
+		t.Fatalf("open core runtime: %v", err)
+	}
+	defer core.Close(context.Background())
+	coreTools := postMCP(t, newServerHandler(core), map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["result"].(map[string]any)["tools"].([]any)
+	if !mcpToolsContain(coreTools, "goncho_remember") || mcpToolsContain(coreTools, "memory_save") {
+		t.Fatalf("core tools = %#v, want Goncho tools without agentmemory aliases", coreTools)
+	}
+
+	compat, err := openRuntime(context.Background(), config{DatabasePath: filepath.Join(t.TempDir(), "compat.db"), MCPCompat: "agentmemory"})
+	if err != nil {
+		t.Fatalf("open compat runtime: %v", err)
+	}
+	defer compat.Close(context.Background())
+	compatTools := postMCP(t, newServerHandler(compat), map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/list"})["result"].(map[string]any)["tools"].([]any)
+	if !mcpToolsContain(compatTools, "goncho_remember") || !mcpToolsContain(compatTools, "memory_save") || !mcpToolsContain(compatTools, "memory_recall") {
+		t.Fatalf("compat tools = %#v, want core plus executable agentmemory aliases", compatTools)
+	}
+	if !mcpToolDescriptorHasMetadata(compatTools, "memory_save", "agentmemory_compat_catalog", "delivered", "service.Service.Conclude") {
+		t.Fatalf("compat memory_save descriptor missing compatibility metadata: %#v", compatTools)
+	}
+
+	off, err := openRuntime(context.Background(), config{DatabasePath: filepath.Join(t.TempDir(), "off.db"), MCPCompat: "off"})
+	if err != nil {
+		t.Fatalf("open off runtime: %v", err)
+	}
+	defer off.Close(context.Background())
+	offTools := postMCP(t, newServerHandler(off), map[string]any{"jsonrpc": "2.0", "id": 3, "method": "tools/list"})["result"].(map[string]any)["tools"].([]any)
+	if len(offTools) != 0 {
+		t.Fatalf("off tools = %#v, want no tools", offTools)
+	}
+}
+
 func TestServerHandlerExposesMCPToolsListAndCall(t *testing.T) {
 	rt, err := openRuntime(context.Background(), config{DatabasePath: filepath.Join(t.TempDir(), "goncho.db")})
 	if err != nil {
@@ -444,6 +504,17 @@ func mcpToolsContain(tools []any, name string) bool {
 		if ok && obj["name"] == name {
 			return true
 		}
+	}
+	return false
+}
+
+func mcpToolDescriptorHasMetadata(tools []any, name, source, status, seam string) bool {
+	for _, tool := range tools {
+		desc, ok := tool.(map[string]any)
+		if !ok || desc["name"] != name {
+			continue
+		}
+		return desc["source"] == source && desc["status"] == status && desc["goncho_seam"] == seam && desc["prompt_safe"] == true && desc["audit_kind"] == "memory"
 	}
 	return false
 }

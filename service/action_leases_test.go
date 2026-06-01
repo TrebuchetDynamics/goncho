@@ -10,6 +10,7 @@ import (
 func TestActionLeaseAcquireRenewExpireAndAudit(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
+	svc.serverMode = ServerModeTeamEnabled
 	if err := RunMigrations(svc.db); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
@@ -57,6 +58,7 @@ func TestActionLeaseAcquireRenewExpireAndAudit(t *testing.T) {
 func TestActionLeaseConcurrentAcquireAllowsOnlyOneOwner(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
+	svc.serverMode = ServerModeTeamEnabled
 	if err := RunMigrations(svc.db); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
@@ -110,6 +112,7 @@ func TestActionLeaseConcurrentAcquireAllowsOnlyOneOwner(t *testing.T) {
 func TestActionLeaseAcquireRejectsOverflowingTTL(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
+	svc.serverMode = ServerModeTeamEnabled
 	if err := RunMigrations(svc.db); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
@@ -134,6 +137,7 @@ func TestActionLeaseAcquireRejectsOverflowingTTL(t *testing.T) {
 func TestActionLeaseRenewRejectsOverflowingTTLWithoutShorteningLease(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
+	svc.serverMode = ServerModeTeamEnabled
 	if err := RunMigrations(svc.db); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
@@ -174,6 +178,7 @@ func TestActionLeaseAcquiredAtPreservesOnlyActiveSameOwnerLease(t *testing.T) {
 func TestActionLeaseSameOwnerReacquireExpiredLeaseStartsNewAcquisition(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
+	svc.serverMode = ServerModeTeamEnabled
 	if err := RunMigrations(svc.db); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}
@@ -202,6 +207,7 @@ func TestActionLeaseSameOwnerReacquireExpiredLeaseStartsNewAcquisition(t *testin
 func TestActionLeaseExpirationAllowsAnotherOwner(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()
+	svc.serverMode = ServerModeTeamEnabled
 	if err := RunMigrations(svc.db); err != nil {
 		t.Fatalf("RunMigrations: %v", err)
 	}

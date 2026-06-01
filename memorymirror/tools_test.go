@@ -82,6 +82,23 @@ func TestBroadMemoryCompatibleToolRegistryExecutesCoreAliases(t *testing.T) {
 	}
 }
 
+func TestAgentmemoryCompatibilityCatalogMarksPartialTools(t *testing.T) {
+	catalog := CompatibilityCatalog()
+	partial, ok := catalog.CompatTool("memory_graph_query")
+	if !ok {
+		t.Fatalf("catalog missing memory_graph_query")
+	}
+	if partial.Status != PortPartial || partial.RegisteredName != "" || partial.DefaultEnabled || partial.GonchoSeam == "" || partial.Residual == "" {
+		t.Fatalf("partial graph tool = %+v, want descriptor-only deferred executable", partial)
+	}
+	for _, name := range []string{"memory_save", "memory_smart_search", "memory_recall"} {
+		entry, ok := catalog.CompatTool(name)
+		if !ok || entry.Status != PortDelivered || !entry.DefaultEnabled || entry.RegisteredName != name || entry.Source == "" || !entry.PromptSafe || entry.AuditKind != "memory" {
+			t.Fatalf("catalog[%s] = %+v, want executable metadata", name, entry)
+		}
+	}
+}
+
 func TestCompatibilityCatalogDocumentsRegisteredSafeAliases(t *testing.T) {
 	svc, cleanup := newMemoryMirrorTestService(t)
 	defer cleanup()

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -326,6 +327,37 @@ func TestSearchFallsBackWhenOptionalRerankerFails(t *testing.T) {
 	}
 	if len(got.Results) != 2 || got.Results[0].ID != first.ID {
 		t.Fatalf("fallback Search results = %+v, want original ranking", got.Results)
+	}
+}
+
+func TestRecallQueryExpansionProvenanceExplainsAliasHit(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	svc.queryAliases = cloneQueryAliases(map[string][]string{"pager": {"oncall", "rotation"}})
+
+	ctx := context.Background()
+	if _, err := svc.Conclude(ctx, ConcludeParams{Peer: "peer-alias", Conclusion: "Mira owns the oncall rotation for auth incidents.", SessionKey: "sess-alias"}); err != nil {
+		t.Fatal(err)
+	}
+	trace, err := svc.Recall(ctx, RecallQuery{Peer: "peer-alias", Query: "pager", SessionKey: "sess-alias", Limit: 3})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	if len(trace.Selected) == 0 {
+		t.Fatal("recall selected no results; want configured pager alias hit")
+	}
+	var expansion EvidenceItem
+	for _, item := range trace.Selected[0].Candidate.Provenance {
+		if item.Kind == "query_expansion" {
+			expansion = item
+			break
+		}
+	}
+	if expansion.ID != "pager" || expansion.Metadata["alias_source"] != "configured" || !strings.Contains(expansion.Metadata["configured_terms"], "oncall") {
+		t.Fatalf("query expansion evidence = %+v, want configured alias provenance", expansion)
+	}
+	if !recallCandidateHasEvidence(trace.Selected[0].Candidate, "keyword", "expanded:pager") {
+		t.Fatalf("recall provenance = %+v, want expanded keyword evidence", trace.Selected[0].Candidate.Provenance)
 	}
 }
 

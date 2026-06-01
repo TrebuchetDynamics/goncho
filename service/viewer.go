@@ -65,13 +65,30 @@ type ViewerReviewQueue struct {
 
 // ViewerRecallTrace is the read-only viewer wrapper around a recall trace.
 type ViewerRecallTrace struct {
-	Status      string      `json:"status"`
-	ReadOnly    bool        `json:"read_only"`
-	WorkspaceID string      `json:"workspace_id"`
-	Peer        string      `json:"peer"`
-	Query       string      `json:"query"`
-	Trace       RecallTrace `json:"trace"`
-	GeneratedAt time.Time   `json:"generated_at"`
+	Status          string                  `json:"status"`
+	ReadOnly        bool                    `json:"read_only"`
+	WorkspaceID     string                  `json:"workspace_id"`
+	Peer            string                  `json:"peer"`
+	Query           string                  `json:"query"`
+	SessionKey      string                  `json:"session_key,omitempty"`
+	Trace           RecallTrace             `json:"trace"`
+	Diagnostics     RecallDiagnosticsReport `json:"diagnostics"`
+	DiagnosticsText string                  `json:"diagnostics_text"`
+	QueryExpansion  []EvidenceItem          `json:"query_expansion,omitempty"`
+	GeneratedAt     time.Time               `json:"generated_at"`
+}
+
+type ViewerOrientationPack struct {
+	Status           string                       `json:"status"`
+	ReadOnly         bool                         `json:"read_only"`
+	WorkspaceID      string                       `json:"workspace_id"`
+	Peer             string                       `json:"peer"`
+	Query            string                       `json:"query,omitempty"`
+	SessionKey       string                       `json:"session_key,omitempty"`
+	Context          ContextResult                `json:"context"`
+	InclusionReasons []ContextInclusionReason     `json:"inclusion_reasons"`
+	Warnings         []ContextUnavailableEvidence `json:"warnings,omitempty"`
+	GeneratedAt      time.Time                    `json:"generated_at"`
 }
 
 type ViewerSessionTimeline struct {
@@ -97,6 +114,35 @@ type ViewerTimelineEvent struct {
 	Content   string `json:"content,omitempty"`
 	Source    string `json:"source"`
 	Truncated bool   `json:"truncated,omitempty"`
+}
+
+func (s *Service) ViewerOrientationPack(ctx context.Context, peer, query, sessionKey string, maxTokens int) (ViewerOrientationPack, error) {
+	if err := ctx.Err(); err != nil {
+		return ViewerOrientationPack{}, err
+	}
+	if s == nil {
+		return ViewerOrientationPack{}, fmt.Errorf("goncho: nil service")
+	}
+	peer = strings.TrimSpace(peer)
+	if peer == "" {
+		return ViewerOrientationPack{}, fmt.Errorf("goncho: peer is required")
+	}
+	contextResult, err := s.Context(ctx, ContextParams{Peer: peer, Query: query, SessionKey: sessionKey, MaxTokens: maxTokens})
+	if err != nil {
+		return ViewerOrientationPack{}, err
+	}
+	return ViewerOrientationPack{
+		Status:           "ok",
+		ReadOnly:         true,
+		WorkspaceID:      s.workspaceID,
+		Peer:             peer,
+		Query:            strings.TrimSpace(query),
+		SessionKey:       strings.TrimSpace(sessionKey),
+		Context:          contextResult,
+		InclusionReasons: contextResult.InclusionReasons,
+		Warnings:         contextResult.Unavailable,
+		GeneratedAt:      timeutil.NowUTC(),
+	}, nil
 }
 
 // ViewerSnapshot returns a local-first, read-only overview for viewer clients.
@@ -166,7 +212,7 @@ func (s *Service) ViewerSnapshot(ctx context.Context) (ViewerSnapshot, error) {
 	return snapshot, nil
 }
 
-func (s *Service) ViewerRecallTrace(ctx context.Context, peer, query string, limit int) (ViewerRecallTrace, error) {
+func (s *Service) ViewerRecallTrace(ctx context.Context, peer, query, sessionKey string, limit int) (ViewerRecallTrace, error) {
 	if err := ctx.Err(); err != nil {
 		return ViewerRecallTrace{}, err
 	}
@@ -184,20 +230,54 @@ func (s *Service) ViewerRecallTrace(ctx context.Context, peer, query string, lim
 		WorkspaceID: s.workspaceID,
 		Peer:        strings.TrimSpace(peer),
 		Query:       strings.TrimSpace(query),
+		SessionKey:  strings.TrimSpace(sessionKey),
 		Limit:       limit,
 	})
 	if err != nil {
 		return ViewerRecallTrace{}, err
 	}
+	diagnostics := BuildRecallDiagnostics(trace)
 	return ViewerRecallTrace{
-		Status:      "ok",
-		ReadOnly:    true,
-		WorkspaceID: s.workspaceID,
-		Peer:        strings.TrimSpace(peer),
-		Query:       strings.TrimSpace(query),
-		Trace:       trace,
-		GeneratedAt: time.Now().UTC(),
+		Status:          "ok",
+		ReadOnly:        true,
+		WorkspaceID:     s.workspaceID,
+		Peer:            strings.TrimSpace(peer),
+		Query:           strings.TrimSpace(query),
+		SessionKey:      strings.TrimSpace(sessionKey),
+		Trace:           trace,
+		Diagnostics:     diagnostics,
+		DiagnosticsText: FormatRecallDiagnosticsReport(diagnostics),
+		QueryExpansion:  traceQueryExpansionEvidence(trace),
+		GeneratedAt:     time.Now().UTC(),
 	}, nil
+}
+
+func traceQueryExpansionEvidence(trace RecallTrace) []EvidenceItem {
+	seen := map[string]struct{}{}
+	out := []EvidenceItem{}
+	collect := func(items []EvidenceItem) {
+		for _, item := range items {
+			if item.Kind != "query_expansion" {
+				continue
+			}
+			key := item.Kind + "\x00" + item.ID
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, item)
+		}
+	}
+	for _, candidate := range trace.Candidates {
+		collect(candidate.Candidate.Provenance)
+	}
+	for _, candidate := range trace.Selected {
+		collect(candidate.Candidate.Provenance)
+	}
+	for _, candidate := range trace.Rejected {
+		collect(candidate.Candidate.Provenance)
+	}
+	return out
 }
 
 func (s *Service) ViewerSessionTimeline(ctx context.Context, sessionKey string) (ViewerSessionTimeline, error) {

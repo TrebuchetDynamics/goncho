@@ -222,6 +222,133 @@ func TestRunConnectPlanAliasAndRemovePlanAreNonMutating(t *testing.T) {
 	}
 }
 
+func TestConnectCursorPlanPrintsMCPPatch(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "Cursor", "mcp.json")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "connect", Connector: "cursor", Plan: true, ConfigPath: configPath, ServerAddr: "127.0.0.1:8720", Stdout: &stdout}); err != nil {
+		t.Fatalf("connect cursor --plan: %v", err)
+	}
+	if _, err := os.Stat(filepath.Dir(configPath)); !os.IsNotExist(err) {
+		t.Fatalf("connect cursor --plan created config dir or unexpected stat error: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode cursor plan: %v\n%s", err, stdout.String())
+	}
+	if plan.Status != "plan" || plan.Operation != "connect" || plan.Integration != "cursor" || plan.Mutates {
+		t.Fatalf("cursor plan = %+v, want non-mutating connect plan", plan)
+	}
+	if plan.Protocol != "mcp" || plan.ConfigFormat != "json" || plan.ConfigAction != "append_or_replace_mcp_server" {
+		t.Fatalf("cursor config fields = %+v", plan)
+	}
+	for _, want := range []string{`"mcpServers"`, `"goncho"`, `"goncho-server"`, `"127.0.0.1:8720"`} {
+		if !strings.Contains(plan.ConfigPatch, want) {
+			t.Fatalf("cursor config patch = %q missing %q", plan.ConfigPatch, want)
+		}
+	}
+}
+
+func TestConnectGeminiCLIPlanPrintsMCPPatch(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, ".gemini", "settings.json")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "connect", Connector: "gemini-cli", Plan: true, ConfigPath: configPath, ServerAddr: "127.0.0.1:8721", Stdout: &stdout}); err != nil {
+		t.Fatalf("connect gemini-cli --plan: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode gemini plan: %v\n%s", err, stdout.String())
+	}
+	if plan.Status != "plan" || plan.Integration != "gemini-cli" || plan.Mutates || plan.ConfigPath != configPath {
+		t.Fatalf("gemini plan = %+v", plan)
+	}
+	if plan.Protocol != "mcp" || plan.ConfigFormat != "json" || plan.ConfigAction != "append_or_replace_mcp_server" {
+		t.Fatalf("gemini config fields = %+v", plan)
+	}
+	for _, want := range []string{`"mcpServers"`, `"goncho"`, `"command"`, `"goncho-server"`, `"127.0.0.1:8721"`} {
+		if !strings.Contains(plan.ConfigPatch, want) {
+			t.Fatalf("gemini config patch = %q missing %q", plan.ConfigPatch, want)
+		}
+	}
+}
+
+func TestConnectHermesPlanNamesGormesHandoff(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, ".hermes", "config.yaml")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "connect", Connector: "hermes", Plan: true, ConfigPath: configPath, ServerAddr: "127.0.0.1:8722", Stdout: &stdout}); err != nil {
+		t.Fatalf("connect hermes --plan: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode hermes plan: %v\n%s", err, stdout.String())
+	}
+	joinedSteps := strings.Join(plan.RecommendedNextStep, "\n")
+	if plan.Status != "plan" || plan.Integration != "hermes" || plan.Mutates || plan.ConfigFormat != "yaml" {
+		t.Fatalf("hermes plan = %+v", plan)
+	}
+	for _, want := range []string{"Gormes", "Hermes", "handoff"} {
+		if !strings.Contains(joinedSteps, want) {
+			t.Fatalf("hermes next steps = %v missing %q", plan.RecommendedNextStep, want)
+		}
+	}
+	if !strings.Contains(plan.ConfigPatch, "goncho-server") || !strings.Contains(plan.ConfigPatch, "127.0.0.1:8722") {
+		t.Fatalf("hermes config patch = %q", plan.ConfigPatch)
+	}
+}
+
+func TestConnectOpenCodePlanUsesTopLevelMCPShape(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "opencode.json")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "connect", Connector: "opencode", Plan: true, ConfigPath: configPath, ServerAddr: "127.0.0.1:8723", Stdout: &stdout}); err != nil {
+		t.Fatalf("connect opencode --plan: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode opencode plan: %v\n%s", err, stdout.String())
+	}
+	if plan.Status != "plan" || plan.Integration != "opencode" || plan.Mutates || plan.ConfigFormat != "json" || plan.ConfigAction != "append_or_replace_top_level_mcp" {
+		t.Fatalf("opencode plan = %+v", plan)
+	}
+	for _, want := range []string{`"mcp"`, `"type": "local"`, `"command"`, `"enabled": true`, `"127.0.0.1:8723"`} {
+		if !strings.Contains(plan.ConfigPatch, want) {
+			t.Fatalf("opencode config patch = %q missing %q", plan.ConfigPatch, want)
+		}
+	}
+	if !slices.Contains(plan.GeneratedHookEvents, "prompt") || !slices.Contains(plan.GeneratedHookEvents, "tool_failure") {
+		t.Fatalf("opencode generated hooks = %v", plan.GeneratedHookEvents)
+	}
+}
+
+func TestRemovePlansMirrorConnectPlans(t *testing.T) {
+	connectors := []string{"codex", "pi", "gormes", "cursor", "gemini-cli", "hermes", "opencode"}
+	for _, connector := range connectors {
+		t.Run(connector, func(t *testing.T) {
+			var stdout bytes.Buffer
+			cfg := config{Command: "remove", Connector: connector, Plan: true, ConfigPath: filepath.Join(t.TempDir(), connector+".conf"), ExtensionPath: filepath.Join(t.TempDir(), "goncho-extension"), DatabasePath: filepath.Join(t.TempDir(), "goncho.db"), ServerAddr: "127.0.0.1:8724", Stdout: &stdout}
+			if err := run(context.Background(), cfg); err != nil {
+				t.Fatalf("remove %s --plan: %v", connector, err)
+			}
+			var plan connectPlan
+			if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+				t.Fatalf("decode remove plan: %v\n%s", err, stdout.String())
+			}
+			if plan.Status != "plan" || plan.Operation != "remove" || plan.Integration != connector || plan.Mutates {
+				t.Fatalf("remove plan = %+v", plan)
+			}
+			if !strings.Contains(plan.ConfigAction, "remove") || strings.TrimSpace(plan.ConfigPatch) == "" {
+				t.Fatalf("remove plan action/patch = %q/%q", plan.ConfigAction, plan.ConfigPatch)
+			}
+		})
+	}
+}
+
 func TestRunConnectPiDryRunPrintsExtensionPlanWithoutMutating(t *testing.T) {
 	dir := t.TempDir()
 	settingsPath := filepath.Join(dir, ".pi", "agent", "settings.json")
@@ -315,6 +442,194 @@ func TestRunEmbeddingsReindexPlanReportsPreviewWithoutMutation(t *testing.T) {
 	}
 }
 
+func TestRunEmbeddingsDiagnoseReportsLocalVectorIndexHealth(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "goncho.db")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "default", ObserverPeerID: "gormes"}, nil)
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: "user-diagnose", Conclusion: "Diagnose missing local vector row."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+	if err := store.Close(ctx); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	if err := run(ctx, config{Command: "embeddings", Connector: "diagnose", DatabasePath: dbPath, EmbeddingIndexPath: filepath.Join(dir, "vectors.json"), Stdout: &stdout}); err != nil {
+		t.Fatalf("run embeddings diagnose: %v", err)
+	}
+	var report goncho.EmbeddingDiagnosticsReport
+	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
+		t.Fatalf("decode diagnostics: %v\n%s", err, stdout.String())
+	}
+	if report.Status != "degraded" || report.Mutates || report.Preview.NotIndexed != 1 || report.VectorIndex.Path == "" {
+		t.Fatalf("diagnostics = %+v, want degraded non-mutating missing-vector report", report)
+	}
+}
+
+func TestRunEmbeddingsReindexApplyPopulatesLocalIndex(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "goncho.db")
+	indexPath := filepath.Join(dir, "vectors.json")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "default", ObserverPeerID: "gormes"}, nil)
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: "user-apply", Conclusion: "Apply reindex writes a local vector row."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+	if err := store.Close(ctx); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	if err := run(ctx, config{Command: "embeddings", Connector: "reindex", Apply: true, DatabasePath: dbPath, EmbeddingIndexPath: indexPath, Stdout: &stdout}); err != nil {
+		t.Fatalf("run embeddings reindex --apply: %v", err)
+	}
+	var result goncho.ReindexResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("decode reindex result: %v\n%s", err, stdout.String())
+	}
+	if !result.Mutates || result.Indexed != 1 || result.NotIndexed != 0 || result.Fresh != 1 {
+		t.Fatalf("result = %+v, want one indexed fresh vector", result)
+	}
+	if _, err := os.Stat(indexPath); err != nil {
+		t.Fatalf("index file not written: %v", err)
+	}
+}
+
+func TestExportCommandWritesPortableManifest(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "goncho.db")
+	outPath := filepath.Join(dir, "export.jsonl")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "gormes", ObserverPeerID: "gormes"}, nil)
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: "user-export", Conclusion: "Portable export manifest memory."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+	if err := store.Close(ctx); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+	var stdout bytes.Buffer
+	if err := run(ctx, config{Command: "export", DatabasePath: dbPath, IOPath: outPath, Format: "jsonl", Stdout: &stdout}); err != nil {
+		t.Fatalf("run export: %v", err)
+	}
+	var manifest goncho.PortableExportManifest
+	if err := json.Unmarshal(stdout.Bytes(), &manifest); err != nil {
+		t.Fatalf("decode manifest: %v", err)
+	}
+	if manifest.SchemaVersion != goncho.PortableExportSchemaVersion || manifest.Counts["conclusions"] == 0 || manifest.Checksum == "" {
+		t.Fatalf("manifest = %+v, want portable manifest with conclusion count", manifest)
+	}
+	if info, err := os.Stat(outPath); err != nil || info.Size() == 0 {
+		t.Fatalf("export file stat=%+v err=%v, want non-empty file", info, err)
+	}
+}
+
+func TestImportPreviewReportsConflictsWithoutWrites(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "goncho.db")
+	exportPath := filepath.Join(dir, "export.jsonl")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "gormes", ObserverPeerID: "gormes"}, nil)
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: "user-import", Conclusion: "Portable import conflict memory."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+	exported, err := svc.ExportPortableJSONL(ctx, goncho.PortableExportParams{})
+	if err != nil {
+		t.Fatalf("ExportPortableJSONL: %v", err)
+	}
+	if err := os.WriteFile(exportPath, exported.JSONL, 0o600); err != nil {
+		t.Fatalf("write export: %v", err)
+	}
+	if err := store.Close(ctx); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+	var stdout bytes.Buffer
+	if err := run(ctx, config{Command: "import", Connector: "preview", DatabasePath: dbPath, IOPath: exportPath, Stdout: &stdout}); err != nil {
+		t.Fatalf("run import preview: %v", err)
+	}
+	var preview goncho.PortableImportPreview
+	if err := json.Unmarshal(stdout.Bytes(), &preview); err != nil {
+		t.Fatalf("decode preview: %v", err)
+	}
+	if preview.Mutates || preview.SafeToApply || len(preview.Conflicts) == 0 {
+		t.Fatalf("preview = %+v, want non-mutating conflict preview", preview)
+	}
+}
+
+func TestImportApplyRequiresConfirm(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "goncho.db")
+	inPath := filepath.Join(dir, "empty.jsonl")
+	if err := os.WriteFile(inPath, []byte("{}\n"), 0o600); err != nil {
+		t.Fatalf("write input: %v", err)
+	}
+	var stdout bytes.Buffer
+	err := run(context.Background(), config{Command: "import", Connector: "apply", DatabasePath: dbPath, IOPath: inPath, Stdout: &stdout})
+	if err == nil || !strings.Contains(err.Error(), "--confirm APPLY") {
+		t.Fatalf("err = %v, want confirm requirement", err)
+	}
+}
+
+func TestRetentionReportCommandIsReadOnly(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "goncho.db")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "gormes", ObserverPeerID: "gormes"}, nil)
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: "user-report", Conclusion: "Retention report password token candidate."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+	if err := store.Close(ctx); err != nil {
+		t.Fatalf("close store: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	if err := run(ctx, config{Command: "report", Connector: "retention", ReportJSON: true, DatabasePath: dbPath, Stdout: &stdout}); err != nil {
+		t.Fatalf("run report retention --json: %v", err)
+	}
+	var report goncho.RetentionAccessReport
+	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
+		t.Fatalf("decode retention report: %v\n%s", err, stdout.String())
+	}
+	if report.Mutates || report.Status != "ok" || report.Counts["high_risk"] == 0 {
+		t.Fatalf("report = %+v, want read-only high-risk report", report)
+	}
+}
+
 func TestRunQuickstartPlanPrintsNonMutatingGuideWithStepsAndNextCommands(t *testing.T) {
 	dir := t.TempDir()
 	var stdout bytes.Buffer
@@ -363,6 +678,35 @@ func TestRunQuickstartPlanPrintsNonMutatingGuideWithStepsAndNextCommands(t *test
 	// Must include recommended next steps for connectors.
 	if len(plan.NextSteps) == 0 {
 		t.Fatalf("quickstart plan missing next_steps")
+	}
+}
+
+func TestConnectCodexPlanIncludesHookBundleManifest(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, ".codex", "config.toml")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "connect", Connector: "codex", Plan: true, ConfigPath: configPath, ServerAddr: "127.0.0.1:8725", Stdout: &stdout}); err != nil {
+		t.Fatalf("connect codex --plan: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode plan: %v\n%s", err, stdout.String())
+	}
+	if len(plan.HookBundles) == 0 {
+		t.Fatalf("hook_bundles empty in plan: %+v", plan)
+	}
+	events := make([]string, 0, len(plan.HookBundles))
+	for _, bundle := range plan.HookBundles {
+		events = append(events, bundle.Event)
+		if bundle.Host != "codex" || bundle.InstallStatus != "plan_only" || bundle.RedactionClass == "" || bundle.PayloadSchema == nil || len(bundle.Command) == 0 || bundle.OutputPath == "" {
+			t.Fatalf("hook bundle = %+v, want complete codex plan-only manifest", bundle)
+		}
+	}
+	for _, want := range []string{"prompt", "pre_tool_use", "post_tool_use", "tool_failure", "session_end"} {
+		if !slices.Contains(events, want) {
+			t.Fatalf("hook bundle events = %v, missing %s", events, want)
+		}
 	}
 }
 

@@ -13,6 +13,9 @@ type CompatTool struct {
 	Status         PortStatus `json:"status"`
 	GonchoSeam     string     `json:"goncho_seam"`
 	Mutating       bool       `json:"mutating"`
+	PromptSafe     bool       `json:"prompt_safe"`
+	AuditKind      string     `json:"audit_kind"`
+	Source         string     `json:"source"`
 	DefaultEnabled bool       `json:"default_enabled"`
 	Residual       string     `json:"residual,omitempty"`
 }
@@ -45,5 +48,5 @@ func (c CompatCatalog) CompatTool(name string) (CompatTool, bool) {
 }
 
 func compatTool(name, registeredName string, status PortStatus, seam string, mutating, defaultEnabled bool, residual string) CompatTool {
-	return CompatTool{Name: name, RegisteredName: registeredName, Status: status, GonchoSeam: seam, Mutating: mutating, DefaultEnabled: defaultEnabled, Residual: residual}
+	return CompatTool{Name: name, RegisteredName: registeredName, Status: status, GonchoSeam: seam, Mutating: mutating, PromptSafe: true, AuditKind: "memory", Source: "agentmemory_compat_catalog", DefaultEnabled: defaultEnabled, Residual: residual}
 }

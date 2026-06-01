@@ -144,6 +144,8 @@ type locomoRecallDiagnostics struct {
 	BestSelectedRank          int      `json:"best_selected_rank"`
 	Bucket                    string   `json:"bucket"`
 	RejectionReasons          []string `json:"rejection_reasons,omitempty"`
+	QueryExpansionTerms       []string `json:"query_expansion_terms,omitempty"`
+	QueryExpansionSources     []string `json:"query_expansion_sources,omitempty"`
 	BestCandidateFinalScore   float64  `json:"best_candidate_final_score,omitempty"`
 	BestCandidateKeywordScore float64  `json:"best_candidate_keyword_score,omitempty"`
 	BestCandidateFactScore    float64  `json:"best_candidate_fact_score,omitempty"`
@@ -609,6 +611,7 @@ func locomoRecallDiagnosticsFromTrace(q locomoQuestionRow, trace goncho.RecallTr
 	}
 	diagnostics := locomoRecallDiagnosticsWithScores(candidateRank, selectedRank, q.GoldMemoryIDs, candidateScore, locomoRecallSelectedFloorScore(trace.Selected))
 	diagnostics.RejectionReasons = locomoRecallGoldRejectionReasons(q, trace, contentIDs)
+	diagnostics.QueryExpansionTerms, diagnostics.QueryExpansionSources = locomoRecallQueryExpansionProvenance(trace)
 	return diagnostics
 }
 
@@ -634,6 +637,46 @@ func locomoRecallDiagnosticsWithScores(candidateRank, selectedRank int, goldIDs 
 		diagnostics.ScoreGapToSelectedFloor = roundMetric(selectedFloorScore.FinalScore - candidateScore.FinalScore)
 	}
 	return diagnostics
+}
+
+func locomoRecallQueryExpansionProvenance(trace goncho.RecallTrace) ([]string, []string) {
+	terms := map[string]bool{}
+	sources := map[string]bool{}
+	visit := func(candidate goncho.RecallCandidate) {
+		for _, evidence := range candidate.Provenance {
+			if evidence.Kind != "query_expansion" {
+				continue
+			}
+			for _, term := range strings.Split(evidence.Metadata["expanded_terms"], ",") {
+				term = strings.TrimSpace(term)
+				if term != "" {
+					terms[term] = true
+				}
+			}
+			if source := strings.TrimSpace(evidence.Metadata["alias_source"]); source != "" {
+				sources[source] = true
+			}
+		}
+	}
+	for _, item := range trace.Candidates {
+		visit(item.Candidate)
+	}
+	for _, item := range trace.Selected {
+		visit(item.Candidate)
+	}
+	return sortedLocomoKeys(terms), sortedLocomoKeys(sources)
+}
+
+func sortedLocomoKeys(values map[string]bool) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(values))
+	for value := range values {
+		out = append(out, value)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func locomoRecallScoreSnapshotFromScored(item goncho.ScoredRecallCandidate) locomoRecallScoreSnapshot {

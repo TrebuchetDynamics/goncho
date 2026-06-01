@@ -34,7 +34,11 @@ type searchRankCandidateDecision struct {
 }
 
 func rankConclusionHitsByLexicalOverlap(query string, hits []SearchHit) []SearchHit {
-	expansion := expandSearchQuery(query)
+	return rankConclusionHitsByLexicalOverlapWithAliases(query, hits, nil)
+}
+
+func rankConclusionHitsByLexicalOverlapWithAliases(query string, hits []SearchHit, aliases map[string][]string) []SearchHit {
+	expansion := expandSearchQueryWithAliases(query, aliases)
 	queryTokens := searchRankTokenSet(expansion.Expanded)
 	if len(queryTokens) == 0 {
 		return hits

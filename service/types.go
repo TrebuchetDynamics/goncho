@@ -28,6 +28,8 @@ type Config struct {
 	SessionDirectory             SessionDirectory
 	VectorStore                  VectorStore
 	SearchReranker               SearchReranker
+	QueryAliases                 map[string][]string
+	ServerMode                   string
 	ProviderFailureThreshold     int
 	ProviderCooldown             time.Duration
 	ProviderTimeout              time.Duration
@@ -294,6 +296,15 @@ type ContextUnavailableEvidence struct {
 	Reason     string `json:"reason"`
 }
 
+type ContextInclusionReason struct {
+	Section     string `json:"section"`
+	Included    bool   `json:"included"`
+	Reason      string `json:"reason"`
+	TokenBudget int    `json:"token_budget,omitempty"`
+	Count       int    `json:"count,omitempty"`
+	Source      string `json:"source,omitempty"`
+}
+
 // ContextResult is the stable JSON shape for honcho_context.
 type ContextResult struct {
 	WorkspaceID       string                       `json:"workspace_id"`
@@ -310,6 +321,7 @@ type ContextResult struct {
 	SearchResults     []SearchHit                  `json:"search_results,omitempty"`
 	ScopeEvidence     *CrossChatRecallEvidence     `json:"scope_evidence,omitempty"`
 	RecentMessages    []MessageSlice               `json:"recent_messages,omitempty"`
+	InclusionReasons  []ContextInclusionReason     `json:"inclusion_reasons,omitempty"`
 	Unavailable       []ContextUnavailableEvidence `json:"unavailable,omitempty"`
 }
 

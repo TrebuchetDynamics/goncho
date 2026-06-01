@@ -51,7 +51,7 @@ func (p *RecallProjector) ProjectContext(trace RecallTrace) ContextResult {
 			representation.WriteString(note)
 		}
 	}
-	return ContextResult{
+	result := ContextResult{
 		WorkspaceID:    trace.Query.WorkspaceID,
 		Peer:           trace.Query.Peer,
 		SessionKey:     trace.Query.SessionKey,
@@ -59,6 +59,8 @@ func (p *RecallProjector) ProjectContext(trace RecallTrace) ContextResult {
 		Conclusions:    conclusions,
 		SearchResults:  search.Results,
 	}
+	result.InclusionReasons = contextInclusionReasons(result, trace.Query.MaxTokens)
+	return result
 }
 
 func graphRelationPathNotes(provenance []EvidenceItem) []string {

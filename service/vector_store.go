@@ -102,13 +102,19 @@ func vectorHitSourceType(hit VectorSearchHit) string {
 }
 
 func semanticVectorEvidence(hit VectorSearchHit, memoryID string) EvidenceItem {
+	metadata := maputil.CloneStringStringNilIfEmpty(hit.Metadata)
+	if metadata == nil {
+		metadata = map[string]string{}
+	}
+	metadata["rrf_candidate"] = "true"
+	metadata["lexical_fallback"] = "active"
 	return EvidenceItem{
 		Kind:     "semantic",
 		Source:   "vector_store",
 		ID:       memoryID,
 		Score:    clampRecall(hit.Score),
 		Note:     "matched optional vector store",
-		Metadata: maputil.CloneStringStringNilIfEmpty(hit.Metadata),
+		Metadata: metadata,
 	}
 }
 

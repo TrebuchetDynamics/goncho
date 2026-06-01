@@ -492,7 +492,7 @@ func planConclusionCandidateScan(query string, finalLimit int) conclusionCandida
 	}
 }
 
-func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer, query, sessionKey, memoryScope string, filter compiledSearchFilter, limit int) ([]SearchHit, error) {
+func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, observer, peer, query, sessionKey, memoryScope string, filter compiledSearchFilter, limit int, queryAliases map[string][]string) ([]SearchHit, error) {
 	base := `
 		SELECT id, content, COALESCE(session_key, ''), updated_at
 		FROM goncho_conclusions
@@ -559,7 +559,7 @@ func findConclusions(ctx context.Context, db *sql.DB, workspaceID, profileID, ob
 		return nil, err
 	}
 	if scan.TrimmedQuery != "" {
-		hits = rankConclusionHitsByLexicalOverlap(scan.TrimmedQuery, hits)
+		hits = rankConclusionHitsByLexicalOverlapWithAliases(scan.TrimmedQuery, hits, queryAliases)
 	}
 	hits = sliceutil.Limit(hits, limit)
 	return hits, nil

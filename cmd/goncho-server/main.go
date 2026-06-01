@@ -15,12 +15,15 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"time"
 
 	gonchohttp "github.com/TrebuchetDynamics/goncho/http"
 	"github.com/TrebuchetDynamics/goncho/memory"
+	"github.com/TrebuchetDynamics/goncho/memorymirror"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
+	"github.com/TrebuchetDynamics/goncho/toolmeta"
 )
 
 const defaultServeAddr = "127.0.0.1:8765"
@@ -38,6 +41,9 @@ type config struct {
 	MaxImageBytes  int64
 	MaxVectorBytes int64
 	AuthToken      string
+	MCPCompat      string
+	ServerURL      string
+	ServerMode     string
 	Stdin          io.Reader
 	Stdout         io.Writer
 	Stderr         io.Writer
@@ -51,6 +57,7 @@ type runtimeState struct {
 	DatabasePath  string
 	WorkspaceID   string
 	MigrationTime time.Time
+	MCPCompat     string
 }
 
 type healthReport struct {
@@ -85,6 +92,7 @@ type onboardingReport struct {
 	ConfigPath   string   `json:"config_path"`
 	BindAddr     string   `json:"bind_addr"`
 	MCPURL       string   `json:"mcp_url"`
+	ViewerURL    string   `json:"viewer_url"`
 	NextCommands []string `json:"next_commands"`
 	MCPSnippet   string   `json:"mcp_snippet"`
 	HookSnippet  string   `json:"hook_snippet"`
@@ -239,6 +247,7 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 	}
 	fs.StringVar(&cfg.WorkspaceID, "workspace", "", "Goncho workspace ID; defaults to service default")
 	fs.StringVar(&cfg.ObserverPeerID, "observer", "", "observer peer ID; defaults to service default")
+	fs.StringVar(&cfg.ServerMode, "server-mode", goncho.ServerModeLocalOnly, "server capability mode: local-only, team-preview, or team-enabled")
 	fs.StringVar(&cfg.ImageDir, "image-dir", "", "optional image storage directory for disk diagnostics")
 	fs.StringVar(&cfg.VectorDir, "vector-dir", "", "optional vector index directory for disk diagnostics")
 	fs.Int64Var(&cfg.MaxDBBytes, "max-db-bytes", 0, "optional DB size budget for diagnostics")
@@ -247,8 +256,15 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 	if cfg.Command == "serve" || cfg.Command == "doctor" || cfg.Command == "onboarding" {
 		fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "HTTP listen address to check or serve; defaults to loopback only")
 	}
+	if cfg.Command == "doctor" {
+		fs.StringVar(&cfg.ServerURL, "server-url", "", "optional running goncho-server health URL to check without mutation")
+	}
 	if cfg.Command == "serve" {
 		fs.StringVar(&cfg.AuthToken, "auth-token", "", "explicit local server token required for non-loopback binds; enforcement is reserved for future server mode")
+		fs.StringVar(&cfg.MCPCompat, "mcp-compat", "core", "MCP tool compatibility surface: core, agentmemory, or off")
+	}
+	if cfg.Command == "stdio" {
+		fs.StringVar(&cfg.MCPCompat, "mcp-compat", "core", "MCP tool compatibility surface: core, agentmemory, or off")
 	}
 	if err := fs.Parse(args); err != nil {
 		return cfg, err
@@ -277,7 +293,7 @@ func run(ctx context.Context, cfg config) error {
 	case "doctor":
 		return runDoctor(ctx, cfg)
 	case "security":
-		return json.NewEncoder(cfg.Stdout).Encode(goncho.ServerModeSecurityRequirements())
+		return json.NewEncoder(cfg.Stdout).Encode(goncho.ServerModeCapabilityReport(cfg.ServerMode))
 	case "health":
 		rt, err := openRuntime(ctx, cfg)
 		if err != nil {
@@ -385,6 +401,7 @@ func runOnboarding(ctx context.Context, cfg config) error {
 		ConfigPath: configPath,
 		BindAddr:   addr,
 		MCPURL:     "http://" + addr + "/mcp",
+		ViewerURL:  "http://" + addr + "/v3/workspaces/default/viewer",
 		NextCommands: []string{
 			fmt.Sprintf("goncho-server init -db %q -config %q", dbPath, configPath),
 			fmt.Sprintf("goncho-server serve -db %q -addr %q", dbPath, addr),
@@ -427,6 +444,9 @@ func runDoctor(ctx context.Context, cfg config) error {
 	}
 	addCheck("port_available", checkPortAvailable(addr))
 	addCheck("public_tools", checkPublicTools())
+	if strings.TrimSpace(cfg.ServerURL) != "" {
+		addCheck("running_server_health", checkRunningServerHealth(ctx, cfg.ServerURL))
+	}
 	if rt != nil && rt.Service != nil {
 		_, diskErr := rt.Service.DiskUsage(ctx, retentionPolicyFromConfig(cfg))
 		addCheck("disk_usage", diskErr)
@@ -460,6 +480,38 @@ func rtForProviderHealth(rt *runtimeState) goncho.ProviderHealthDiagnostics {
 	return rt.Service.ProviderHealthDiagnostics()
 }
 
+func checkRunningServerHealth(ctx context.Context, serverURL string) error {
+	serverURL = strings.TrimRight(strings.TrimSpace(serverURL), "/")
+	if serverURL == "" {
+		return nil
+	}
+	if !strings.HasSuffix(serverURL, "/health") {
+		serverURL += "/health"
+	}
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, serverURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("running server health returned HTTP %d", resp.StatusCode)
+	}
+	var report healthReport
+	if err := json.NewDecoder(resp.Body).Decode(&report); err != nil {
+		return err
+	}
+	if report.Status != "ok" {
+		return fmt.Errorf("running server health status %q", report.Status)
+	}
+	return nil
+}
+
 func doctorSuggestions(name, dbPath, addr string) []string {
 	switch name {
 	case "db_path", "write_permissions":
@@ -477,6 +529,8 @@ func doctorSuggestions(name, dbPath, addr string) []string {
 		}
 	case "public_tools":
 		return []string{"Run go test ./service ./cmd/goncho-server and inspect publicToolNames/buildMCPTools registration."}
+	case "running_server_health":
+		return []string{"Start goncho-server serve on the configured loopback address, then rerun doctor with --server-url http://<addr>.", "Inspect /health JSON before applying connector plans."}
 	case "optional_providers":
 		return []string{"Inspect provider health diagnostics; Goncho will continue lexical/graph recall fallback while optional providers recover.", "Increase provider timeout/cooldown only after confirming the adapter is local and trusted."}
 	default:
@@ -541,10 +595,16 @@ func openRuntime(ctx context.Context, cfg config) (*runtimeState, error) {
 		WorkspaceID:     cfg.WorkspaceID,
 		ObserverPeerID:  cfg.ObserverPeerID,
 		PeerCardEnabled: true,
+		ServerMode:      cfg.ServerMode,
 	}.Effective()
 	svc := goncho.NewService(store.DB(), serviceCfg, slog.Default())
-	tools := buildMCPTools(svc, store.DB(), dbPath, serviceCfg)
-	return &runtimeState{Store: store, DB: store.DB(), Service: svc, Tools: tools, DatabasePath: dbPath, WorkspaceID: serviceCfg.WorkspaceID, MigrationTime: time.Now().UTC()}, nil
+	mcpCompat, err := normalizeMCPCompat(cfg.MCPCompat)
+	if err != nil {
+		_ = store.Close(ctx)
+		return nil, err
+	}
+	tools := buildMCPTools(svc, store.DB(), dbPath, serviceCfg, mcpCompat)
+	return &runtimeState{Store: store, DB: store.DB(), Service: svc, Tools: tools, DatabasePath: dbPath, WorkspaceID: serviceCfg.WorkspaceID, MigrationTime: time.Now().UTC(), MCPCompat: mcpCompat}, nil
 }
 
 func (rt *runtimeState) Close(ctx context.Context) error {
@@ -600,8 +660,8 @@ func (rt *runtimeState) Health(ctx context.Context, policies ...goncho.Retention
 			AppliedAt: rt.MigrationTime.Format(time.RFC3339),
 		},
 		Tools: toolHealth{
-			Count:     len(publicToolNames),
-			Available: append([]string(nil), publicToolNames...),
+			Count:     len(mcpToolNames(rt.Tools, rt.MCPCompat)),
+			Available: mcpToolNames(rt.Tools, rt.MCPCompat),
 		},
 		Providers: rt.Service.ProviderHealthDiagnostics(),
 	}
@@ -645,7 +705,20 @@ func newServerHandler(rt *runtimeState) http.Handler {
 	return mux
 }
 
-func buildMCPTools(svc *goncho.Service, db *sql.DB, dbPath string, cfg goncho.Config) map[string]mcpTool {
+func normalizeMCPCompat(value string) (string, error) {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == "" {
+		value = "core"
+	}
+	switch value {
+	case "core", "agentmemory", "off":
+		return value, nil
+	default:
+		return "", fmt.Errorf("goncho-server: invalid -mcp-compat %q (want core, agentmemory, or off)", value)
+	}
+}
+
+func buildMCPTools(svc *goncho.Service, db *sql.DB, dbPath string, cfg goncho.Config, mcpCompat string) map[string]mcpTool {
 	memoryStore := goncho.NewLocalMarkdownMemoryStore(db, goncho.LocalMarkdownMemoryConfig{
 		Path:           filepath.Join(filepath.Dir(dbPath), "goncho-server-memory.md"),
 		WorkspaceID:    cfg.WorkspaceID,
@@ -653,6 +726,9 @@ func buildMCPTools(svc *goncho.Service, db *sql.DB, dbPath string, cfg goncho.Co
 		PeerID:         "goncho-server",
 		SessionID:      "goncho-server",
 	})
+	if mcpCompat == "off" {
+		return map[string]mcpTool{}
+	}
 	tools := []mcpTool{
 		goncho.NewGonchoContextTool(svc),
 		goncho.NewGonchoSearchTool(svc),
@@ -660,6 +736,11 @@ func buildMCPTools(svc *goncho.Service, db *sql.DB, dbPath string, cfg goncho.Co
 		goncho.NewGonchoRememberTool(svc),
 		goncho.NewReviewTool(svc),
 		goncho.NewGonchoHandoffTool(memoryStore),
+	}
+	if mcpCompat == "agentmemory" {
+		for _, tool := range memorymirror.NewToolRegistry(svc, memorymirror.ToolRegistryOptions{DefaultWorkspaceID: cfg.WorkspaceID, DefaultPeerID: "goncho-server", DefaultSessionKey: "goncho-server"}) {
+			tools = append(tools, tool)
+		}
 	}
 	out := make(map[string]mcpTool, len(tools))
 	for _, tool := range tools {
@@ -689,7 +770,7 @@ func handleMCPRequest(ctx context.Context, rt *runtimeState, req mcpRequest) mcp
 	case "initialize":
 		resp.Result = map[string]any{"protocolVersion": "2024-11-05", "serverInfo": map[string]any{"name": "goncho-server", "version": buildVersion()}, "capabilities": map[string]any{"tools": map[string]any{}, "resources": map[string]any{}, "prompts": map[string]any{}}}
 	case "tools/list":
-		resp.Result = map[string]any{"tools": mcpToolDescriptors(rt.Tools)}
+		resp.Result = map[string]any{"tools": mcpToolDescriptors(rt.Tools, rt.MCPCompat)}
 	case "resources/list":
 		resp.Result = map[string]any{"resources": mcpResourceDescriptors(rt.Service)}
 	case "resources/read":
@@ -771,15 +852,51 @@ func mcpPromptDescriptors(svc *goncho.Service) []map[string]any {
 	return out
 }
 
-func mcpToolDescriptors(tools map[string]mcpTool) []map[string]any {
-	out := make([]map[string]any, 0, len(publicToolNames))
-	for _, name := range publicToolNames {
+func mcpToolDescriptors(tools map[string]mcpTool, mcpCompat string) []map[string]any {
+	names := mcpToolNames(tools, mcpCompat)
+	out := make([]map[string]any, 0, len(names))
+	catalog := memorymirror.CompatibilityCatalog()
+	for _, name := range names {
 		tool, ok := tools[name]
 		if !ok {
 			continue
 		}
-		out = append(out, map[string]any{"name": tool.Name(), "description": tool.Description(), "inputSchema": json.RawMessage(tool.Schema())})
+		desc := map[string]any{"name": tool.Name(), "description": tool.Description(), "inputSchema": json.RawMessage(tool.Schema())}
+		if spec, ok := tool.(toolmeta.Spec); ok {
+			op := spec.Spec()
+			desc["mutating"] = op.Mutating
+			desc["prompt_safe"] = op.PromptSafe
+			desc["audit_kind"] = op.AuditKind
+		}
+		if entry, ok := catalog.CompatTool(name); ok && mcpCompat == "agentmemory" {
+			desc["source"] = entry.Source
+			desc["status"] = entry.Status
+			desc["goncho_seam"] = entry.GonchoSeam
+			desc["residual"] = entry.Residual
+		}
+		out = append(out, desc)
 	}
+	return out
+}
+
+func mcpToolNames(tools map[string]mcpTool, mcpCompat string) []string {
+	if mcpCompat == "off" {
+		return []string{}
+	}
+	if mcpCompat != "agentmemory" {
+		out := []string{}
+		for _, name := range publicToolNames {
+			if _, ok := tools[name]; ok {
+				out = append(out, name)
+			}
+		}
+		return out
+	}
+	out := make([]string, 0, len(tools))
+	for name := range tools {
+		out = append(out, name)
+	}
+	sort.Strings(out)
 	return out
 }
 

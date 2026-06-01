@@ -44,6 +44,29 @@ func TestHostHookEventSchemasCoverP1AgentLifecycleEvents(t *testing.T) {
 	}
 }
 
+func TestGeneratedHookPayloadsPassCaptureFilter(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	for _, schema := range HostHookEventSchemas() {
+		event := minimalHookEventForSchema(schema.Event)
+		if _, err := svc.CaptureHostHook(ctx, event); err != nil {
+			t.Fatalf("CaptureHostHook generated payload %s: %v", schema.Event, err)
+		}
+	}
+}
+
+func minimalHookEventForSchema(event HostHookEventName) HostHookEvent {
+	out := HostHookEvent{Event: event, PeerID: "generated-hook-agent", SessionKey: "generated-hook-session", Content: "generated hook content", ToolName: "bash", Input: "echo generated", Output: "ok", Error: "exit status 1", Summary: "generated hook summary", ContextID: "generated-subagent"}
+	if event == HostHookPostToolUse {
+		out.Success = ptrutil.Bool(true)
+	}
+	return out
+}
+
 func TestServiceCaptureHostHookAcceptsP1AgentLifecycleEvents(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

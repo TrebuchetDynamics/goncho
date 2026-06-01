@@ -15,6 +15,10 @@ const (
 type ServerModeSecurityRequirement struct {
 	Mode                     string                   `json:"mode"`
 	Status                   ServerModeSecurityStatus `json:"status"`
+	CapabilityMode           string                   `json:"capability_mode"`
+	LeasesEnabled            bool                     `json:"leases_enabled"`
+	SignalsEnabled           bool                     `json:"signals_enabled"`
+	ServerModeOnly           []string                 `json:"server_mode_only,omitempty"`
 	EnforcementEnabled       bool                     `json:"enforcement_enabled"`
 	Roles                    []string                 `json:"roles"`
 	ThreatModelSummary       string                   `json:"threat_model_summary"`
@@ -27,10 +31,20 @@ type ServerModeSecurityRequirement struct {
 // contract for future server/team mode. It is safe to surface from CLI/doctor
 // flows because it does not grant access or mutate state.
 func ServerModeSecurityRequirements() ServerModeSecurityRequirement {
+	return ServerModeCapabilityReport(ServerModeLocalOnly)
+}
+
+func ServerModeCapabilityReport(mode string) ServerModeSecurityRequirement {
+	capabilityMode := normalizeServerMode(mode)
+	teamEnabled := capabilityMode == ServerModeTeamEnabled
 	return ServerModeSecurityRequirement{
 		Mode:                     "server",
 		Status:                   ServerModeStatusRequirementsOnly,
-		EnforcementEnabled:       false,
+		CapabilityMode:           capabilityMode,
+		LeasesEnabled:            teamEnabled,
+		SignalsEnabled:           teamEnabled,
+		ServerModeOnly:           []string{"distributed_action_leases", "distributed_action_signals"},
+		EnforcementEnabled:       teamEnabled,
 		Roles:                    []string{"admin", "operator", "reader"},
 		ThreatModelSummary:       "Server mode must cover auth, profiles, workspaces, audit, backup, retention, and admin operations before shared/team features are enabled.",
 		AuthRequirement:          "loopback-only unless an explicit server auth token is configured",

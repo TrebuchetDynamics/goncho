@@ -25,6 +25,7 @@ type retrievalModule struct {
 	sessions       SessionDirectory
 	vectorStore    VectorStore
 	searchReranker SearchReranker
+	queryAliases   map[string][]string
 	providers      *ProviderHealthRegistry
 	recallWarnings *recallWarningBuffer
 }
@@ -39,6 +40,7 @@ func (s *Service) retrieval() retrievalModule {
 		sessions:       s.sessions,
 		vectorStore:    s.vectorStore,
 		searchReranker: s.searchReranker,
+		queryAliases:   cloneQueryAliases(s.queryAliases),
 		providers:      s.providerRegistry,
 		recallWarnings: &recallWarningBuffer{},
 	}
@@ -64,12 +66,12 @@ func (r retrievalModule) Generate(ctx context.Context, q RecallQuery) ([]RecallC
 	memoryScope := normalizeMemoryScope(q.ScopeID, "")
 	var out []RecallCandidate
 	if sourcePlan.IncludeConclusions {
-		hits, err := findConclusions(ctx, r.db, workspaceID, "", r.observer, peer, q.Query, q.SessionKey, memoryScope, compiledSearchFilter{}, recallCandidateSearchLimit(q.Limit))
+		hits, err := findConclusions(ctx, r.db, workspaceID, "", r.observer, peer, q.Query, q.SessionKey, memoryScope, compiledSearchFilter{}, recallCandidateSearchLimit(q.Limit), r.queryAliases)
 		if err != nil {
 			return nil, err
 		}
 		out = sliceutil.Map(hits, func(hit SearchHit) RecallCandidate {
-			return recallCandidateFromSearchHit(q, hit, r.observer, memoryScope)
+			return recallCandidateFromSearchHit(q, hit, r.observer, memoryScope, r.queryAliases)
 		})
 	}
 	if sourcePlan.IncludeVector {
@@ -111,10 +113,10 @@ func recallSourcesAllowConclusions(sources []string) bool {
 	return sourcefilter.Allows(sources, "conclusion", false)
 }
 
-func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeID string) RecallCandidate {
+func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeID string, queryAliases map[string][]string) RecallCandidate {
 	provenance := sliceutil.Clone(hit.Provenance)
 	keywordScore := roundRecallFloat(recallscore.Keyword(hit.Content, q.Query))
-	expansion := expandSearchQuery(q.Query)
+	expansion := expandSearchQueryWithAliases(q.Query, queryAliases)
 	expandedKeywordScore := keywordScore
 	if expansion.Applied() {
 		expandedKeywordScore = roundRecallFloat(recallscore.Keyword(hit.Content, expansion.Expanded))
@@ -133,15 +135,12 @@ func recallCandidateFromSearchHit(q RecallQuery, hit SearchHit, observer, scopeI
 			provenance = append(provenance, queryExpansionEvidence(expansion))
 		}
 		provenance = append(provenance, EvidenceItem{
-			Kind:   "keyword",
-			Source: "goncho_query_expansion",
-			ID:     "expanded:" + textutil.LowerTrimmed(expansion.Original),
-			Score:  expandedKeywordScore,
-			Note:   "matched expanded query terms",
-			Metadata: map[string]string{
-				"original_query": strings.TrimSpace(expansion.Original),
-				"expanded_terms": strings.Join(expansion.Terms, ","),
-			},
+			Kind:     "keyword",
+			Source:   "goncho_query_expansion",
+			ID:       "expanded:" + textutil.LowerTrimmed(expansion.Original),
+			Score:    expandedKeywordScore,
+			Note:     "matched expanded query terms",
+			Metadata: queryExpansionEvidenceMetadata(expansion),
 		})
 	}
 	for _, fact := range hit.factAnnotations {
@@ -189,12 +188,12 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 	var results []SearchHit
 	var scopeEvidence *CrossChatRecallEvidence
 	if len(compiled.Sources) == 0 || filterHasWildcard(compiled.Sources) {
-		results, err = findConclusions(ctx, r.db, r.workspaceID, profileID, r.observer, peer, params.Query, params.SessionKey, memoryScope, compiled, limit)
+		results, err = findConclusions(ctx, r.db, r.workspaceID, profileID, r.observer, peer, params.Query, params.SessionKey, memoryScope, compiled, limit, r.queryAliases)
 		if err != nil {
 			return SearchResultSet{}, err
 		}
 		if len(results) == 0 && strings.TrimSpace(params.Query) != "" {
-			results, err = findConclusions(ctx, r.db, r.workspaceID, profileID, r.observer, peer, "", params.SessionKey, memoryScope, compiled, limit)
+			results, err = findConclusions(ctx, r.db, r.workspaceID, profileID, r.observer, peer, "", params.SessionKey, memoryScope, compiled, limit, r.queryAliases)
 			if err != nil {
 				return SearchResultSet{}, err
 			}
@@ -569,7 +568,7 @@ func (r retrievalModule) Context(ctx context.Context, params ContextParams) (Con
 		}
 	}
 
-	return ContextResult{
+	result := ContextResult{
 		WorkspaceID:    r.workspaceID,
 		ProfileID:      profileID,
 		Peer:           peer,
@@ -584,7 +583,29 @@ func (r retrievalModule) Context(ctx context.Context, params ContextParams) (Con
 		ScopeEvidence:  searchResult.ScopeEvidence,
 		RecentMessages: recentMessages,
 		Unavailable:    unavailable,
-	}, nil
+	}
+	result.InclusionReasons = contextInclusionReasons(result, tokenLimit)
+	return result, nil
+}
+
+func contextInclusionReasons(result ContextResult, tokenBudget int) []ContextInclusionReason {
+	reasons := []ContextInclusionReason{
+		{Section: "peer_card", Included: len(result.PeerCard) > 0, Reason: contextInclusionReason(len(result.PeerCard) > 0, "peer card facts available", "no peer card facts stored"), Count: len(result.PeerCard), Source: "goncho_peer_cards"},
+		{Section: "summary", Included: result.Summary != nil, Reason: contextInclusionReason(result.Summary != nil, "session summary selected before recent messages", "no eligible session summary"), TokenBudget: tokenBudget, Source: "goncho_session_summaries"},
+		{Section: "conclusions", Included: len(result.Conclusions) > 0, Reason: contextInclusionReason(len(result.Conclusions) > 0, "search/recall evidence matched context query", "no matching conclusions selected"), Count: len(result.Conclusions), Source: "goncho_conclusions"},
+		{Section: "recent_messages", Included: len(result.RecentMessages) > 0, Reason: contextInclusionReason(len(result.RecentMessages) > 0, "recent session turns fit token budget", "no recent session turns selected"), TokenBudget: tokenBudget, Count: len(result.RecentMessages), Source: "turns"},
+	}
+	if len(result.Unavailable) > 0 {
+		reasons = append(reasons, ContextInclusionReason{Section: "warnings", Included: true, Reason: "context unavailable evidence reported", Count: len(result.Unavailable), Source: "context_unavailable"})
+	}
+	return reasons
+}
+
+func contextInclusionReason(condition bool, yes, no string) string {
+	if condition {
+		return yes
+	}
+	return no
 }
 
 func (r retrievalModule) refreshSessionSummaries(ctx context.Context, sessionKey string) (int, error) {

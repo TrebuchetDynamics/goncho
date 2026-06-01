@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	gormes "github.com/TrebuchetDynamics/goncho/integration/gormes"
+	"github.com/TrebuchetDynamics/goncho/internal/hostintegration"
 	goncho "github.com/TrebuchetDynamics/goncho/service"
 	_ "github.com/ncruces/go-sqlite3/driver"
 )
@@ -48,38 +49,45 @@ type config struct {
 	QuickstartDBPath      string
 	QuickstartServerAddr  string
 	EmbeddingReindexPlan  bool
+	EmbeddingIndexPath    string
+	ReportJSON            bool
+	IOPath                string
+	Format                string
+	RedactionPolicy       string
+	Confirm               string
 	Stdout                io.Writer
 	Stderr                io.Writer
 }
 
 type connectPlan struct {
-	Status              string   `json:"status"`
-	Operation           string   `json:"operation"`
-	Integration         string   `json:"integration"`
-	Mutates             bool     `json:"mutates"`
-	WorkspaceID         string   `json:"workspace_id,omitempty"`
-	ObserverID          string   `json:"observer_id,omitempty"`
-	ProfileID           string   `json:"profile_id,omitempty"`
-	ProfilesDirectory   string   `json:"profiles_directory,omitempty"`
-	ProfileDirectory    string   `json:"profile_directory,omitempty"`
-	DatabasePath        string   `json:"database_path,omitempty"`
-	MemoryMarkdownPath  string   `json:"memory_markdown_path,omitempty"`
-	ToolNames           []string `json:"tool_names,omitempty"`
-	HookEvents          []string `json:"hook_events,omitempty"`
-	MCPCommand          []string `json:"mcp_command,omitempty"`
-	ServerURL           string   `json:"server_url,omitempty"`
-	ConfigPath          string   `json:"config_path,omitempty"`
-	ExtensionPath       string   `json:"extension_path,omitempty"`
-	ExtensionFiles      []string `json:"extension_files,omitempty"`
-	Protocol            string   `json:"protocol,omitempty"`
-	ConfigFormat        string   `json:"config_format,omitempty"`
-	ConfigAction        string   `json:"config_action,omitempty"`
-	ConfigPatch         string   `json:"config_patch,omitempty"`
-	GeneratedHookEvents []string `json:"generated_hook_events,omitempty"`
-	WatchRoots          []string `json:"watch_roots,omitempty"`
-	IncludeGlobs        []string `json:"include_globs,omitempty"`
-	ExcludeGlobs        []string `json:"exclude_globs,omitempty"`
-	RecommendedNextStep []string `json:"recommended_next_steps"`
+	Status              string                           `json:"status"`
+	Operation           string                           `json:"operation"`
+	Integration         string                           `json:"integration"`
+	Mutates             bool                             `json:"mutates"`
+	WorkspaceID         string                           `json:"workspace_id,omitempty"`
+	ObserverID          string                           `json:"observer_id,omitempty"`
+	ProfileID           string                           `json:"profile_id,omitempty"`
+	ProfilesDirectory   string                           `json:"profiles_directory,omitempty"`
+	ProfileDirectory    string                           `json:"profile_directory,omitempty"`
+	DatabasePath        string                           `json:"database_path,omitempty"`
+	MemoryMarkdownPath  string                           `json:"memory_markdown_path,omitempty"`
+	ToolNames           []string                         `json:"tool_names,omitempty"`
+	HookEvents          []string                         `json:"hook_events,omitempty"`
+	MCPCommand          []string                         `json:"mcp_command,omitempty"`
+	ServerURL           string                           `json:"server_url,omitempty"`
+	ConfigPath          string                           `json:"config_path,omitempty"`
+	ExtensionPath       string                           `json:"extension_path,omitempty"`
+	ExtensionFiles      []string                         `json:"extension_files,omitempty"`
+	Protocol            string                           `json:"protocol,omitempty"`
+	ConfigFormat        string                           `json:"config_format,omitempty"`
+	ConfigAction        string                           `json:"config_action,omitempty"`
+	ConfigPatch         string                           `json:"config_patch,omitempty"`
+	GeneratedHookEvents []string                         `json:"generated_hook_events,omitempty"`
+	HookBundles         []hostintegration.HookBundlePlan `json:"hook_bundles,omitempty"`
+	WatchRoots          []string                         `json:"watch_roots,omitempty"`
+	IncludeGlobs        []string                         `json:"include_globs,omitempty"`
+	ExcludeGlobs        []string                         `json:"exclude_globs,omitempty"`
+	RecommendedNextStep []string                         `json:"recommended_next_steps"`
 }
 
 type operatorPreferences struct {
@@ -246,26 +254,89 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 			return cfg, err
 		}
 		return cfg, nil
-	case "embeddings":
+	case "export":
+		fs := flag.NewFlagSet("goncho export", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		fs.StringVar(&cfg.DatabasePath, "db", "", "Goncho SQLite database path")
+		fs.StringVar(&cfg.WorkspaceID, "workspace", "", "workspace id")
+		fs.StringVar(&cfg.ProfileID, "profile", "", "profile id")
+		fs.StringVar(&cfg.IOPath, "out", "", "output path")
+		fs.StringVar(&cfg.Format, "format", "jsonl", "export format jsonl or markdown")
+		fs.StringVar(&cfg.RedactionPolicy, "redaction-policy", "", "redaction policy label")
+		if err := fs.Parse(args); err != nil {
+			return cfg, err
+		}
+		return cfg, nil
+	case "import":
 		if len(args) == 0 {
-			return cfg, errors.New("goncho embeddings: subcommand required (reindex)")
+			return cfg, errors.New("goncho import: subcommand required (preview or apply)")
 		}
 		sub := strings.TrimSpace(args[0])
-		if sub != "reindex" {
-			return cfg, fmt.Errorf("goncho embeddings: unknown subcommand %q (want reindex)", sub)
+		if sub != "preview" && sub != "apply" {
+			return cfg, fmt.Errorf("goncho import: unknown subcommand %q (want preview or apply)", sub)
 		}
+		cfg.Connector = sub
 		args = args[1:]
-		fs := flag.NewFlagSet("goncho embeddings reindex", flag.ContinueOnError)
+		fs := flag.NewFlagSet("goncho import "+sub, flag.ContinueOnError)
 		fs.SetOutput(stderr)
-		fs.BoolVar(&cfg.Plan, "plan", false, "print non-mutating reindex preview")
-		fs.BoolVar(&cfg.DryRun, "dry-run", false, "alias for --plan")
+		fs.StringVar(&cfg.DatabasePath, "db", "", "Goncho SQLite database path")
+		fs.StringVar(&cfg.IOPath, "in", "", "input JSONL path")
+		fs.StringVar(&cfg.Confirm, "confirm", "", "required confirmation for apply")
+		if err := fs.Parse(args); err != nil {
+			return cfg, err
+		}
+		return cfg, nil
+	case "report":
+		if len(args) == 0 {
+			return cfg, errors.New("goncho report: subcommand required (retention)")
+		}
+		sub := strings.TrimSpace(args[0])
+		if sub != "retention" {
+			return cfg, fmt.Errorf("goncho report: unknown subcommand %q (want retention)", sub)
+		}
+		cfg.Connector = sub
+		args = args[1:]
+		fs := flag.NewFlagSet("goncho report retention", flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		fs.BoolVar(&cfg.ReportJSON, "json", false, "print retention report as JSON")
 		fs.StringVar(&cfg.DatabasePath, "db", "", "Goncho SQLite database path")
 		fs.StringVar(&cfg.PreferencesConfigPath, "config", "", "Goncho preferences JSON path")
 		if err := fs.Parse(args); err != nil {
 			return cfg, err
 		}
-		if !cfg.Plan && !cfg.DryRun {
-			return cfg, errors.New("goncho embeddings reindex: pass --plan or --dry-run to inspect the non-mutating preview")
+		return cfg, nil
+	case "embeddings":
+		if len(args) == 0 {
+			return cfg, errors.New("goncho embeddings: subcommand required (diagnose or reindex)")
+		}
+		sub := strings.TrimSpace(args[0])
+		if sub != "reindex" && sub != "diagnose" {
+			return cfg, fmt.Errorf("goncho embeddings: unknown subcommand %q (want diagnose or reindex)", sub)
+		}
+		cfg.Connector = sub
+		args = args[1:]
+		fs := flag.NewFlagSet("goncho embeddings "+sub, flag.ContinueOnError)
+		fs.SetOutput(stderr)
+		fs.BoolVar(&cfg.Plan, "plan", false, "print non-mutating reindex preview")
+		fs.BoolVar(&cfg.DryRun, "dry-run", false, "alias for --plan")
+		fs.BoolVar(&cfg.Apply, "apply", false, "apply local vector reindex")
+		fs.StringVar(&cfg.DatabasePath, "db", "", "Goncho SQLite database path")
+		fs.StringVar(&cfg.EmbeddingIndexPath, "index", "", "local vector index JSON path; defaults to <db>.vectors.json")
+		fs.StringVar(&cfg.PreferencesConfigPath, "config", "", "Goncho preferences JSON path")
+		if err := fs.Parse(args); err != nil {
+			return cfg, err
+		}
+		if sub == "diagnose" {
+			if cfg.Apply {
+				return cfg, errors.New("goncho embeddings diagnose: --apply is not supported")
+			}
+			return cfg, nil
+		}
+		if cfg.Apply && (cfg.Plan || cfg.DryRun) {
+			return cfg, errors.New("goncho embeddings reindex: choose --apply or --plan, not both")
+		}
+		if !cfg.Apply && !cfg.Plan && !cfg.DryRun {
+			return cfg, errors.New("goncho embeddings reindex: pass --plan/--dry-run to inspect or --apply to mutate the local index")
 		}
 		return cfg, nil
 	case "version":
@@ -299,7 +370,7 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 		cfg.PreferenceUpdates = map[string]string(updates)
 		return cfg, nil
 	default:
-		return cfg, fmt.Errorf("goncho: unknown command %q (want connect, remove, preferences, doctor, upgrade-check, schema-fingerprint, version, quickstart, or embeddings)", cfg.Command)
+		return cfg, fmt.Errorf("goncho: unknown command %q (want connect, remove, preferences, doctor, upgrade-check, schema-fingerprint, version, quickstart, report, or embeddings)", cfg.Command)
 	}
 }
 
@@ -353,8 +424,14 @@ func run(ctx context.Context, cfg config) error {
 		return runQuickstart(ctx, cfg)
 	case "embeddings":
 		return runEmbeddings(ctx, cfg)
+	case "report":
+		return runReport(ctx, cfg)
+	case "export":
+		return runExport(ctx, cfg)
+	case "import":
+		return runImport(ctx, cfg)
 	default:
-		return fmt.Errorf("goncho: unknown command %q (want connect, remove, preferences, doctor, upgrade-check, schema-fingerprint, version, quickstart, or embeddings)", cfg.Command)
+		return fmt.Errorf("goncho: unknown command %q (want connect, remove, preferences, doctor, upgrade-check, schema-fingerprint, version, quickstart, report, or embeddings)", cfg.Command)
 	}
 }
 
@@ -371,6 +448,14 @@ func buildConnectPlan(cfg config) (connectPlan, error) {
 		return buildGormesConnectPlan(cfg)
 	case "codex":
 		return buildCodexConnectPlan(cfg)
+	case "cursor":
+		return buildMCPJSONConnectPlan(cfg, "cursor", defaultCursorConfigPath, "Cursor MCP config")
+	case "gemini-cli":
+		return buildMCPJSONConnectPlan(cfg, "gemini-cli", defaultGeminiCLIConfigPath, "Gemini CLI MCP config")
+	case "hermes":
+		return buildHermesConnectPlan(cfg)
+	case "opencode":
+		return buildOpenCodeConnectPlan(cfg)
 	case "pi":
 		return buildPiConnectPlan(cfg)
 	case "filesystem-watcher":
@@ -403,6 +488,17 @@ func buildRemovePlan(cfg config) (connectPlan, error) {
 		plan.ExtensionFiles = nil
 		plan.GeneratedHookEvents = nil
 		plan.RecommendedNextStep = []string{"Remove the Goncho extension path from Pi settings.", "Delete copied extension files only after export/review if they were locally modified."}
+		return plan, nil
+	case "cursor", "gemini-cli", "hermes", "opencode":
+		plan, err := buildConnectPlan(cfg)
+		if err != nil {
+			return connectPlan{}, err
+		}
+		plan.ConfigAction = removeConfigActionForConnector(cfg.Connector)
+		plan.ConfigPatch = removeConfigPatchForConnector(cfg.Connector)
+		plan.MCPCommand = nil
+		plan.GeneratedHookEvents = nil
+		plan.RecommendedNextStep = []string{"Remove the Goncho MCP entry from the host config after confirming no active sessions use it.", "Stop goncho-server only after all connected hosts are disconnected."}
 		return plan, nil
 	case "gormes":
 		plan, err := buildGormesConnectPlan(cfg)
@@ -597,6 +693,125 @@ func checkDoctorPreferences(path string) error {
 	return nil
 }
 
+func runExport(ctx context.Context, cfg config) error {
+	if cfg.Stdout == nil {
+		cfg.Stdout = os.Stdout
+	}
+	if strings.TrimSpace(cfg.DatabasePath) == "" || strings.TrimSpace(cfg.IOPath) == "" {
+		return errors.New("goncho export: --db and --out are required")
+	}
+	db, err := sql.Open("sqlite3", cfg.DatabasePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	svc := goncho.NewService(db, goncho.Config{WorkspaceID: strings.TrimSpace(cfg.WorkspaceID), ObserverPeerID: goncho.DefaultObserverPeerID}, nil)
+	params := goncho.PortableExportParams{WorkspaceID: strings.TrimSpace(cfg.WorkspaceID), ProfileID: strings.TrimSpace(cfg.ProfileID), RedactionPolicy: strings.TrimSpace(cfg.RedactionPolicy)}
+	format := strings.TrimSpace(strings.ToLower(cfg.Format))
+	if format == "" {
+		format = "jsonl"
+	}
+	switch format {
+	case "jsonl":
+		exported, err := svc.ExportPortableJSONL(ctx, params)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(cfg.IOPath, exported.JSONL, 0o600); err != nil {
+			return err
+		}
+		return json.NewEncoder(cfg.Stdout).Encode(exported.Manifest)
+	case "markdown":
+		markdown, err := svc.ExportPortableMarkdown(ctx, params)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(cfg.IOPath, []byte(markdown), 0o600)
+	default:
+		return fmt.Errorf("goncho export: unknown --format %q", cfg.Format)
+	}
+}
+
+func runImport(ctx context.Context, cfg config) error {
+	if cfg.Stdout == nil {
+		cfg.Stdout = os.Stdout
+	}
+	if strings.TrimSpace(cfg.DatabasePath) == "" || strings.TrimSpace(cfg.IOPath) == "" {
+		return errors.New("goncho import: --db and --in are required")
+	}
+	raw, err := os.ReadFile(cfg.IOPath)
+	if err != nil {
+		return err
+	}
+	db, err := sql.Open("sqlite3", cfg.DatabasePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	svc := goncho.NewService(db, goncho.Config{WorkspaceID: goncho.DefaultWorkspaceID, ObserverPeerID: goncho.DefaultObserverPeerID}, nil)
+	if cfg.Connector == "preview" {
+		preview, err := svc.PreviewPortableImport(ctx, raw)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(cfg.Stdout).Encode(preview)
+	}
+	if cfg.Confirm != "APPLY" {
+		return errors.New("goncho import apply: pass --confirm APPLY after reviewing preview")
+	}
+	result, err := svc.ImportPortableJSONL(ctx, goncho.PortableImportParams{JSONL: raw, Apply: true})
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(cfg.Stdout).Encode(result)
+}
+
+func runReport(ctx context.Context, cfg config) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if cfg.Stdout == nil {
+		cfg.Stdout = os.Stdout
+	}
+	if cfg.Connector != "retention" {
+		return fmt.Errorf("goncho report: unknown subcommand %q", cfg.Connector)
+	}
+	dbPath, workspaceID := reportDBPathAndWorkspace(cfg)
+	if dbPath == "" {
+		return errors.New("goncho report retention: --db or preferences db_path is required")
+	}
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return fmt.Errorf("goncho report retention: open sqlite: %w", err)
+	}
+	defer db.Close()
+	if err := db.PingContext(ctx); err != nil {
+		return fmt.Errorf("goncho report retention: ping sqlite: %w", err)
+	}
+	svc := goncho.NewService(db, goncho.Config{WorkspaceID: workspaceID, ObserverPeerID: goncho.DefaultObserverPeerID}, nil)
+	report, err := svc.RetentionAccessReport(ctx, goncho.RetentionAccessReportParams{})
+	if err != nil {
+		return fmt.Errorf("goncho report retention: %w", err)
+	}
+	return json.NewEncoder(cfg.Stdout).Encode(report)
+}
+
+func reportDBPathAndWorkspace(cfg config) (string, string) {
+	dbPath := strings.TrimSpace(cfg.DatabasePath)
+	workspaceID := goncho.DefaultWorkspaceID
+	if configPath, err := preferenceConfigPath(cfg.PreferencesConfigPath); err == nil {
+		if loaded, err := readPreferences(configPath); err == nil {
+			if dbPath == "" {
+				dbPath = strings.TrimSpace(loaded.DBPath)
+			}
+			if strings.TrimSpace(loaded.WorkspaceID) != "" {
+				workspaceID = strings.TrimSpace(loaded.WorkspaceID)
+			}
+		}
+	}
+	return dbPath, workspaceID
+}
+
 func runEmbeddings(ctx context.Context, cfg config) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -629,7 +844,29 @@ func runEmbeddings(ctx context.Context, cfg config) error {
 	if workspaceID == "" {
 		workspaceID = goncho.DefaultWorkspaceID
 	}
-	svc := goncho.NewService(db, goncho.Config{WorkspaceID: workspaceID, ObserverPeerID: goncho.DefaultObserverPeerID}, nil)
+	indexPath := strings.TrimSpace(cfg.EmbeddingIndexPath)
+	if indexPath == "" {
+		indexPath = dbPath + ".vectors.json"
+	}
+	index, err := goncho.NewLocalVectorIndex(ctx, goncho.LocalVectorIndexOptions{Path: indexPath, Provider: goncho.HashTextEmbeddingProvider{}})
+	if err != nil {
+		return fmt.Errorf("goncho embeddings %s: open local vector index: %w", cfg.Connector, err)
+	}
+	svc := goncho.NewService(db, goncho.Config{WorkspaceID: workspaceID, ObserverPeerID: goncho.DefaultObserverPeerID, VectorStore: index}, nil)
+	if cfg.Connector == "diagnose" {
+		report, err := svc.EmbeddingDiagnostics(ctx)
+		if err != nil {
+			return fmt.Errorf("goncho embeddings diagnose: %w", err)
+		}
+		return json.NewEncoder(cfg.Stdout).Encode(report)
+	}
+	if cfg.Apply {
+		result, err := svc.Reindex(ctx)
+		if err != nil {
+			return fmt.Errorf("goncho embeddings reindex: apply: %w", err)
+		}
+		return json.NewEncoder(cfg.Stdout).Encode(result)
+	}
 	preview, err := svc.ReindexPreview(ctx)
 	if err != nil {
 		return fmt.Errorf("goncho embeddings reindex: preview: %w", err)
@@ -1014,7 +1251,8 @@ func buildPiConnectPlan(cfg config) (connectPlan, error) {
 			string(goncho.HostHookCompaction),
 			string(goncho.HostHookSessionEnd),
 		},
-		MCPCommand: []string{"goncho-server", "serve", "-addr", serverAddr},
+		HookBundles: hostintegration.BuildHookBundlePlan("pi", filepath.Join(extensionPath, "hooks")),
+		MCPCommand:  []string{"goncho-server", "serve", "-addr", serverAddr},
 		RecommendedNextStep: []string{
 			"Review the settings patch and TypeScript extension paths before copying files.",
 			"Start goncho-server with the planned address before launching Pi.",
@@ -1043,6 +1281,184 @@ func piRemoveSettingsConfigPatch(extensionPath string) string {
 		panic(err)
 	}
 	return string(raw) + "\n"
+}
+
+func defaultCursorConfigPath(home string) string {
+	return filepath.Join(home, ".cursor", "mcp.json")
+}
+
+func defaultGeminiCLIConfigPath(home string) string {
+	return filepath.Join(home, ".gemini", "settings.json")
+}
+
+func defaultHermesConfigPath(home string) string {
+	return filepath.Join(home, ".hermes", "config.yaml")
+}
+
+func defaultOpenCodeConfigPath(home string) string {
+	return filepath.Join(home, ".config", "opencode", "opencode.json")
+}
+
+func resolveConnectorConfigPath(cfg config, connector string, defaultPath func(string) string) (string, error) {
+	configPath := strings.TrimSpace(cfg.ConfigPath)
+	if configPath != "" {
+		return configPath, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || strings.TrimSpace(home) == "" {
+		return "", fmt.Errorf("goncho connect %s: --config is required when home directory cannot be resolved", connector)
+	}
+	return defaultPath(home), nil
+}
+
+func connectorServerAddr(cfg config) string {
+	serverAddr := strings.TrimSpace(cfg.ServerAddr)
+	if serverAddr == "" {
+		serverAddr = "127.0.0.1:8765"
+	}
+	return serverAddr
+}
+
+func buildMCPJSONConnectPlan(cfg config, connector string, defaultPath func(string) string, hostLabel string) (connectPlan, error) {
+	configPath, err := resolveConnectorConfigPath(cfg, connector, defaultPath)
+	if err != nil {
+		return connectPlan{}, err
+	}
+	serverAddr := connectorServerAddr(cfg)
+	return connectPlan{
+		Status:       "dry_run",
+		Integration:  connector,
+		Mutates:      false,
+		ConfigPath:   configPath,
+		Protocol:     "mcp",
+		ConfigFormat: "json",
+		ConfigAction: "append_or_replace_mcp_server",
+		ConfigPatch:  mcpServersJSONConfigPatch(serverAddr),
+		MCPCommand:   []string{"goncho-server", "serve", "-addr", serverAddr},
+		RecommendedNextStep: []string{
+			"Review the " + hostLabel + " patch before applying it to host config.",
+			"Start goncho-server with the planned address before launching the host.",
+			"Keep --apply disabled until generated connector plans have golden tests and host smoke coverage.",
+		},
+	}, nil
+}
+
+func mcpServersJSONConfigPatch(serverAddr string) string {
+	patch := map[string]any{
+		"mcpServers": map[string]any{
+			"goncho": map[string]any{
+				"command": "goncho-server",
+				"args":    []string{"serve", "-addr", serverAddr},
+				"env": map[string]string{
+					"GONCHO_TRANSPORT": "http",
+				},
+			},
+		},
+	}
+	raw, err := json.MarshalIndent(patch, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(raw) + "\n"
+}
+
+func buildHermesConnectPlan(cfg config) (connectPlan, error) {
+	configPath, err := resolveConnectorConfigPath(cfg, "hermes", defaultHermesConfigPath)
+	if err != nil {
+		return connectPlan{}, err
+	}
+	serverAddr := connectorServerAddr(cfg)
+	return connectPlan{
+		Status:       "dry_run",
+		Integration:  "hermes",
+		Mutates:      false,
+		ConfigPath:   configPath,
+		Protocol:     "mcp",
+		ConfigFormat: "yaml",
+		ConfigAction: "append_or_replace_mcp_server",
+		ConfigPatch:  hermesYAMLConfigPatch(serverAddr),
+		MCPCommand:   []string{"goncho-server", "serve", "-addr", serverAddr},
+		RecommendedNextStep: []string{
+			"Review the Hermes MCP snippet with the Hermes operator before applying it.",
+			"If Hermes is running through Gormes, use the Gormes/Hermes handoff path and keep Gormes as the first-party integration owner.",
+			"Keep --apply disabled until Hermes connector smoke coverage proves the handoff and MCP paths.",
+		},
+	}, nil
+}
+
+func hermesYAMLConfigPatch(serverAddr string) string {
+	return fmt.Sprintf("mcp_servers:\n  goncho:\n    command: goncho-server\n    args:\n      - serve\n      - -addr\n      - %q\n    env:\n      GONCHO_TRANSPORT: http\n", serverAddr)
+}
+
+func buildOpenCodeConnectPlan(cfg config) (connectPlan, error) {
+	configPath, err := resolveConnectorConfigPath(cfg, "opencode", defaultOpenCodeConfigPath)
+	if err != nil {
+		return connectPlan{}, err
+	}
+	serverAddr := connectorServerAddr(cfg)
+	return connectPlan{
+		Status:       "dry_run",
+		Integration:  "opencode",
+		Mutates:      false,
+		ConfigPath:   configPath,
+		Protocol:     "mcp",
+		ConfigFormat: "json",
+		ConfigAction: "append_or_replace_top_level_mcp",
+		ConfigPatch:  openCodeJSONConfigPatch(serverAddr),
+		GeneratedHookEvents: []string{
+			string(goncho.HostHookPrompt),
+			string(goncho.HostHookAssistantResponse),
+			string(goncho.HostHookPreToolUse),
+			string(goncho.HostHookPostToolUse),
+			string(goncho.HostHookToolFailure),
+			string(goncho.HostHookCompaction),
+			string(goncho.HostHookSessionEnd),
+		},
+		HookBundles: hostintegration.BuildHookBundlePlan("opencode", filepath.Join(filepath.Dir(configPath), "goncho-hooks")),
+		MCPCommand:  []string{"goncho-server", "serve", "-addr", serverAddr},
+		RecommendedNextStep: []string{
+			"Review the OpenCode top-level mcp patch before applying it.",
+			"Treat generated hook events as a bundle plan only; do not install hooks until smoke coverage exists.",
+			"Start goncho-server with the planned address before launching OpenCode.",
+		},
+	}, nil
+}
+
+func openCodeJSONConfigPatch(serverAddr string) string {
+	patch := map[string]any{
+		"mcp": map[string]any{
+			"goncho": map[string]any{
+				"type":    "local",
+				"command": []string{"goncho-server", "serve", "-addr", serverAddr},
+				"enabled": true,
+			},
+		},
+	}
+	raw, err := json.MarshalIndent(patch, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(raw) + "\n"
+}
+
+func removeConfigActionForConnector(connector string) string {
+	switch connector {
+	case "opencode":
+		return "remove_top_level_mcp_server"
+	default:
+		return "remove_mcp_server"
+	}
+}
+
+func removeConfigPatchForConnector(connector string) string {
+	switch connector {
+	case "opencode":
+		return "Remove the top-level mcp.goncho entry from OpenCode config; leave other mcp entries intact.\n"
+	case "hermes":
+		return "Remove the mcp_servers.goncho entry from Hermes config; use the Gormes/Hermes handoff owner if Hermes runs through Gormes.\n"
+	default:
+		return "Remove the mcpServers.goncho entry from the host JSON config; leave other MCP servers intact.\n"
+	}
 }
 
 func buildCodexConnectPlan(cfg config) (connectPlan, error) {
@@ -1075,7 +1491,8 @@ func buildCodexConnectPlan(cfg config) (connectPlan, error) {
 			string(goncho.HostHookToolFailure),
 			string(goncho.HostHookSessionEnd),
 		},
-		MCPCommand: []string{"goncho-server", "serve", "-addr", serverAddr},
+		HookBundles: hostintegration.BuildHookBundlePlan("codex", filepath.Join(filepath.Dir(configPath), "goncho-hooks")),
+		MCPCommand:  []string{"goncho-server", "serve", "-addr", serverAddr},
 		RecommendedNextStep: []string{
 			"Review the TOML patch before applying it to Codex config.",
 			"Start goncho-server with the planned address before launching Codex.",

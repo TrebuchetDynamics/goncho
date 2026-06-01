@@ -31,7 +31,7 @@ QUERY = "quartz llama"
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     with tempfile.TemporaryDirectory(prefix="goncho-server-smoke-") as tmp:
         tmpdir = Path(tmp)
         binary = tmpdir / ("goncho-server.exe" if sys.platform == "win32" else "goncho-server")

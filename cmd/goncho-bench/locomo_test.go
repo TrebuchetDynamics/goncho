@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -389,6 +390,28 @@ func TestLocomoRecallRankScoringConfig(t *testing.T) {
 	}
 	if len(config.DiversityKeys) != 0 {
 		t.Fatalf("DiversityKeys = %+v, want none", config.DiversityKeys)
+	}
+}
+
+func TestBenchmarkRecallRecordsExpansionProvenance(t *testing.T) {
+	trace := goncho.RecallTrace{
+		Candidates: []goncho.ScoredRecallCandidate{{
+			Candidate: goncho.RecallCandidate{
+				Content: "Mira owns auth",
+				Provenance: []goncho.EvidenceItem{{
+					Kind: "query_expansion",
+					ID:   "pager",
+					Metadata: map[string]string{
+						"expanded_terms": "oncall,rotation",
+						"alias_source":   "configured",
+					},
+				}},
+			},
+		}},
+	}
+	diagnostics := locomoRecallDiagnosticsFromTrace(locomoQuestionRow{ConversationID: "c1", GoldMemoryIDs: []string{"m1"}}, trace, map[string][]string{"mira owns auth": {"m1"}})
+	if !slices.Contains(diagnostics.QueryExpansionTerms, "oncall") || !slices.Contains(diagnostics.QueryExpansionTerms, "rotation") || !slices.Contains(diagnostics.QueryExpansionSources, "configured") {
+		t.Fatalf("diagnostics expansion provenance = %+v", diagnostics)
 	}
 }
 

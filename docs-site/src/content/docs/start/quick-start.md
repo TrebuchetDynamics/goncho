@@ -29,6 +29,25 @@ From a checkout, verify the benchmark CLI only when you need reproducible local 
 make install-smoke
 ```
 
+## Standalone local server quick start
+
+If you want a product-shaped local runtime before embedding the Go library, inspect the non-mutating first-run plan:
+
+```sh
+goncho-server onboarding -db ./goncho.db -config ./goncho-server.json -addr 127.0.0.1:8765
+```
+
+The plan names the DB path, config path, loopback bind, MCP URL at `http://127.0.0.1:8765/mcp`, viewer URL at `http://127.0.0.1:8765/v3/workspaces/default/viewer`, next commands, and hook guidance. Use `goncho-server doctor --server-url http://127.0.0.1:8765` after starting the server to include the running `/health` check. The default MCP surface stays Goncho-small; opt into agentmemory-compatible aliases only when a host asks for them with `goncho-server serve -mcp-compat agentmemory`.
+
+Optional local vector maintenance is explicit and reviewable:
+
+```sh
+goncho embeddings diagnose --db ./goncho.db --index ./goncho.db.vectors.json
+goncho embeddings reindex --db ./goncho.db --index ./goncho.db.vectors.json --plan
+# mutate only when you are ready:
+goncho embeddings reindex --db ./goncho.db --index ./goncho.db.vectors.json --apply
+```
+
 The service package is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.3.0, published May 25, 2026, and includes the benchmark CLI.
 
 :::note[Pre-1.0 note]

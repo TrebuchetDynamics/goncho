@@ -120,6 +120,21 @@ go test ./... -run TestGonchoPublicToolsRestartE2E
 go test ./... -run TestHTTPServiceRestartE2E
 ```
 
+### Optional local vector index checks
+
+Embeddings are optional. To inspect the local vector index without mutating it:
+
+```sh
+goncho embeddings diagnose --db ./goncho.db --index ./goncho.db.vectors.json
+```
+
+To preview and then explicitly refresh the local index:
+
+```sh
+goncho embeddings reindex --db ./goncho.db --index ./goncho.db.vectors.json --plan
+goncho embeddings reindex --db ./goncho.db --index ./goncho.db.vectors.json --apply
+```
+
 ### Trust checks
 
 ```sh
@@ -237,6 +252,8 @@ Primary outputs:
 | Review warnings keep appearing | List review items with `goncho_review`; resolve only after operator evidence review. |
 | External backend marked not comparable | Confirm it can return the exact inserted `memory_id` in search results. If not, keep it not comparable; do not use content-only matching. |
 | Backend comparison scores changed unexpectedly | Re-run `make bench-locomo-backends-smoke`, check `docs/benchmarks/failures/locomo-backend-comparison.jsonl`, and verify the same LOCOMO data files were used. |
+| Connector sees too few MCP tools | Confirm whether the server is using the default small Goncho tool surface or the opt-in `goncho-server serve -mcp-compat agentmemory` compatibility catalog. |
+| Server appears running but connector fails | Run `goncho-server doctor --server-url http://127.0.0.1:8765` and inspect the `running_server_health` check before applying connector plans. |
 
 ## Release Checklist
 

@@ -91,7 +91,7 @@ func timelineEventsContainContent(events []goncho.ViewerTimelineEvent, want stri
 	return false
 }
 
-func TestViewerRecallTraceEndpointReturnsSelectedAndRejectedCandidates(t *testing.T) {
+func TestViewerRecallEndpointReturnsTraceEvidence(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "recall-viewer.db")
 	store, err := memory.OpenSqlite(dbPath, 0, nil)
@@ -113,16 +113,22 @@ func TestViewerRecallTraceEndpointReturnsSelectedAndRejectedCandidates(t *testin
 	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: peer, SessionKey: session, Conclusion: "The recall viewer endpoint returns trace JSON."}); err != nil {
 		t.Fatalf("Conclude: %v", err)
 	}
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: peer, SessionKey: session, Conclusion: "The recall viewer endpoint includes rejected trace evidence."}); err != nil {
+		t.Fatalf("Conclude second: %v", err)
+	}
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: peer, SessionKey: "other-session", Conclusion: "The recall viewer endpoint must not leak this other session."}); err != nil {
+		t.Fatalf("Conclude other session: %v", err)
+	}
 
 	recallResult := getJSON[goncho.ViewerRecallTrace](t, handler,
-		"/v3/workspaces/"+workspace+"/viewer/recall?peer="+peer+"&query=recall+viewer+endpoint",
+		"/v3/workspaces/"+workspace+"/viewer/recall?peer="+peer+"&session="+session+"&query=recall+viewer+endpoint&limit=1",
 		http.StatusOK)
 
 	if recallResult.Status != "ok" || !recallResult.ReadOnly {
 		t.Fatalf("recall viewer status/read_only = %q/%v, want ok/read-only", recallResult.Status, recallResult.ReadOnly)
 	}
-	if recallResult.WorkspaceID != workspace || recallResult.Peer != peer || recallResult.Query != "recall viewer endpoint" {
-		t.Fatalf("recall viewer identity = %+v, want workspace/peer/query", recallResult)
+	if recallResult.WorkspaceID != workspace || recallResult.Peer != peer || recallResult.Query != "recall viewer endpoint" || recallResult.SessionKey != session {
+		t.Fatalf("recall viewer identity = %+v, want workspace/peer/query/session", recallResult)
 	}
 	if recallResult.Trace.TraceID == "" {
 		t.Fatalf("recall viewer trace missing trace_id")
@@ -130,9 +136,8 @@ func TestViewerRecallTraceEndpointReturnsSelectedAndRejectedCandidates(t *testin
 	if len(recallResult.Trace.Selected) == 0 {
 		t.Fatalf("recall viewer trace has zero selected candidates, want at least one from seeded conclusion")
 	}
-	// Verify rejected candidates are included even when empty.
-	if recallResult.Trace.Rejected == nil {
-		t.Fatalf("recall viewer trace rejected is nil, want empty slice")
+	if len(recallResult.Trace.Rejected) == 0 {
+		t.Fatalf("recall viewer trace rejected = %+v, want non-selected in-session evidence", recallResult.Trace.Rejected)
 	}
 
 	// Verify warnings are included even when empty.
@@ -152,9 +157,22 @@ func TestViewerRecallTraceEndpointReturnsSelectedAndRejectedCandidates(t *testin
 		t.Fatalf("recall viewer trace selected = %+v, missing seeded conclusion", recallResult.Trace.Selected)
 	}
 
-	// Verify scoring config is present.
+	// Verify scoring config and diagnostics are present.
 	if recallResult.Trace.ScoringConfig.Version == "" {
 		t.Fatalf("recall viewer trace missing scoring config version")
+	}
+	if recallResult.Diagnostics.TraceID != recallResult.Trace.TraceID || recallResult.DiagnosticsText == "" {
+		t.Fatalf("recall viewer diagnostics = %+v text=%q, want trace-aligned diagnostics", recallResult.Diagnostics, recallResult.DiagnosticsText)
+	}
+	for _, selected := range recallResult.Trace.Selected {
+		if selected.Candidate.SessionID != session {
+			t.Fatalf("selected leaked other session: %+v", selected)
+		}
+	}
+	for _, rejected := range recallResult.Trace.Rejected {
+		if rejected.Candidate.SessionID != session {
+			t.Fatalf("rejected leaked other session: %+v", rejected)
+		}
 	}
 
 	// POST should return 404 (read-only viewer).
@@ -162,6 +180,47 @@ func TestViewerRecallTraceEndpointReturnsSelectedAndRejectedCandidates(t *testin
 		"/v3/workspaces/"+workspace+"/viewer/recall",
 		map[string]any{"mutate": true},
 		http.StatusNotFound)
+}
+
+func TestViewerOrientationEndpointExplainsIncludedContext(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "orientation-viewer.db")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	workspace := "orientation-viewer-workspace"
+	peer := "user-orientation"
+	session := "orientation-session"
+	svc := goncho.NewService(store.DB(), goncho.Config{WorkspaceID: workspace, ObserverPeerID: "assistant"}, nil)
+	handler := NewServiceHandler(svc)
+	if _, err := svc.Conclude(ctx, goncho.ConcludeParams{Peer: peer, SessionKey: session, Conclusion: "The viewer orientation endpoint explains amber inclusion."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+
+	result := getJSON[goncho.ViewerOrientationPack](t, handler,
+		"/v3/workspaces/"+workspace+"/viewer/orientation?peer="+peer+"&session="+session+"&query=amber+inclusion&max_tokens=128",
+		http.StatusOK)
+	if result.Status != "ok" || !result.ReadOnly || result.Peer != peer || result.SessionKey != session {
+		t.Fatalf("orientation viewer header = %+v, want ok read-only identity", result)
+	}
+	if !viewerReasonIncluded(result.InclusionReasons, "conclusions") || result.Context.Representation == "" {
+		t.Fatalf("orientation viewer context = %+v reasons=%+v, want included context explanation", result.Context, result.InclusionReasons)
+	}
+	_ = requestJSON[map[string]any](t, handler, http.MethodPost, "/v3/workspaces/"+workspace+"/viewer/orientation", map[string]any{"mutate": true}, http.StatusNotFound)
+}
+
+func viewerReasonIncluded(reasons []goncho.ContextInclusionReason, section string) bool {
+	for _, reason := range reasons {
+		if reason.Section == section && reason.Included && reason.Reason != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func TestViewerEndpointReturnsReadOnlyWorkspaceSnapshot(t *testing.T) {

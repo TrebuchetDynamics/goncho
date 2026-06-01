@@ -115,6 +115,9 @@ type ActionLeaseExpireResult struct {
 }
 
 func (s *Service) AcquireActionLease(ctx context.Context, params ActionLeaseParams) (ActionLeaseResult, error) {
+	if err := s.requireDistributedServerMode("action leases"); err != nil {
+		return ActionLeaseResult{}, err
+	}
 	norm, err := s.normalizeActionLeaseParams(params)
 	if err != nil {
 		return ActionLeaseResult{}, err
@@ -171,6 +174,9 @@ func (s *Service) AcquireActionLease(ctx context.Context, params ActionLeasePara
 }
 
 func (s *Service) RenewActionLease(ctx context.Context, params ActionLeaseParams) (ActionLeaseResult, error) {
+	if err := s.requireDistributedServerMode("action leases"); err != nil {
+		return ActionLeaseResult{}, err
+	}
 	norm, err := s.normalizeActionLeaseParams(params)
 	if err != nil {
 		return ActionLeaseResult{}, err
@@ -231,6 +237,9 @@ func (s *Service) RenewActionLease(ctx context.Context, params ActionLeaseParams
 }
 
 func (s *Service) ExpireActionLeases(ctx context.Context, params ActionLeaseExpireParams) (ActionLeaseExpireResult, error) {
+	if err := s.requireDistributedServerMode("action leases"); err != nil {
+		return ActionLeaseExpireResult{}, err
+	}
 	norm, err := s.normalizeActionLeaseExpireParams(params)
 	if err != nil {
 		return ActionLeaseExpireResult{}, err

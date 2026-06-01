@@ -41,6 +41,8 @@ type Service struct {
 	sessions         SessionDirectory
 	vectorStore      VectorStore
 	searchReranker   SearchReranker
+	queryAliases     map[string][]string
+	serverMode       string
 	providerRegistry *ProviderHealthRegistry
 	log              *slog.Logger
 	dialecticCaller  DialecticCaller
@@ -82,6 +84,8 @@ func NewService(db *sql.DB, cfg Config, log *slog.Logger) *Service {
 		sessions:         cfg.SessionDirectory,
 		vectorStore:      cfg.VectorStore,
 		searchReranker:   cfg.SearchReranker,
+		queryAliases:     cloneQueryAliases(cfg.QueryAliases),
+		serverMode:       normalizeServerMode(cfg.ServerMode),
 		providerRegistry: NewProviderHealthRegistry(providerResilienceConfigFromServiceConfig(cfg), cfg.VectorStore),
 		log:              log,
 	}
@@ -240,7 +244,17 @@ func (s *Service) Search(ctx context.Context, params SearchParams) (SearchResult
 }
 
 func (s *Service) Context(ctx context.Context, params ContextParams) (ContextResult, error) {
-	return s.retrieval().Context(ctx, params)
+	result, err := s.retrieval().Context(ctx, params)
+	if err != nil {
+		return ContextResult{}, err
+	}
+	warnings, err := s.sentinelContextWarnings(ctx, params.Peer, result)
+	if err != nil {
+		return ContextResult{}, err
+	}
+	result.Unavailable = append(result.Unavailable, warnings...)
+	result.InclusionReasons = contextInclusionReasons(result, contexttokens.EffectiveContextLimit(params.Tokens, params.MaxTokens))
+	return result, nil
 }
 
 // Recall runs the full scored recall pipeline against stored conclusions and
@@ -266,7 +280,17 @@ func (s *Service) recallWithOptions(ctx context.Context, q RecallQuery, opts rec
 	}
 	q.WorkspaceID = scopekey.Workspace(s.workspaceID, q.WorkspaceID, false)
 	engine := newRecallPipelineEngine(s.retrieval(), opts)
-	return engine.Run(ctx, q)
+	trace, err := engine.Run(ctx, q)
+	if err != nil {
+		return RecallTrace{}, err
+	}
+	warnings, err := s.sentinelRecallWarnings(ctx, q, trace)
+	if err != nil {
+		return RecallTrace{}, err
+	}
+	trace.Warnings = appendRecallWarnings(trace.Warnings, warnings...)
+	trace.TraceID = recallTraceID(trace)
+	return trace, nil
 }
 
 func (s *Service) Chat(ctx context.Context, peer string, params ChatParams) (ChatResult, error) {

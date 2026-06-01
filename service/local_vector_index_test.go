@@ -82,6 +82,9 @@ func TestLocalVectorIndexPersistsDiagnosticsAndFeedsRecall(t *testing.T) {
 	if !slices.Contains(selectedRecallIDs(trace), "vec-blue-vault") {
 		t.Fatalf("selected IDs = %v, want local vector index hit", selectedRecallIDs(trace))
 	}
+	if got := trace.Selected[0].Candidate.Provenance[0].Metadata; got["rrf_candidate"] != "true" || got["lexical_fallback"] != "active" {
+		t.Fatalf("semantic provenance metadata = %+v, want RRF and lexical fallback markers", got)
+	}
 }
 
 type fakeTextEmbeddingProvider struct{ dims int }

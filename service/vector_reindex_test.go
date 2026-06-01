@@ -94,6 +94,47 @@ func TestReindexPreviewReportsConclusionCountsWithoutMutatingOrEmbedding(t *test
 	}
 }
 
+func TestReindexApplyIndexesMissingAndStaleLocalVectors(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "reindex-apply.db")
+	store, err := memory.OpenSqlite(dbPath, 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(ctx)
+	if err := RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	workspace := "apply-workspace"
+	peer := "user-apply"
+	index, err := NewLocalVectorIndex(ctx, LocalVectorIndexOptions{Path: filepath.Join(t.TempDir(), "vectors.json"), Provider: HashTextEmbeddingProvider{Dimensions: 8}})
+	if err != nil {
+		t.Fatalf("NewLocalVectorIndex: %v", err)
+	}
+	svc := NewService(store.DB(), Config{WorkspaceID: workspace, ObserverPeerID: "assistant", VectorStore: index}, nil)
+	if _, err := svc.Conclude(ctx, ConcludeParams{Peer: peer, Conclusion: "Local reindex should embed this conclusion."}); err != nil {
+		t.Fatalf("Conclude: %v", err)
+	}
+	if err := index.Upsert(ctx, LocalVectorMemory{MemoryID: "1", WorkspaceID: workspace, Peer: peer, SourceType: "conclusion", Content: "stale content"}); err != nil {
+		t.Fatalf("Upsert stale: %v", err)
+	}
+
+	result, err := svc.Reindex(ctx)
+	if err != nil {
+		t.Fatalf("Reindex: %v", err)
+	}
+	if !result.Mutates || result.Updated != 1 || result.Stale != 0 || result.NotIndexed != 0 || result.Fresh != 1 {
+		t.Fatalf("Reindex result = %+v, want updated stale row and fresh index", result)
+	}
+	diag, err := svc.EmbeddingDiagnostics(ctx)
+	if err != nil {
+		t.Fatalf("EmbeddingDiagnostics: %v", err)
+	}
+	if diag.Status != "ok" || diag.Preview.Fresh != 1 || diag.Preview.NotIndexed != 0 {
+		t.Fatalf("diagnostics after apply = %+v, want ok fresh index", diag)
+	}
+}
+
 func TestReindexPreviewDetectsStaleRowsWhenContentChanges(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "reindex-stale.db")

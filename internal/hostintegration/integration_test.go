@@ -9,6 +9,22 @@ import (
 	"github.com/TrebuchetDynamics/goncho/internal/hostintegration"
 )
 
+func TestHookBundlePlanMapsEverySupportedEvent(t *testing.T) {
+	plans := hostintegration.BuildHookBundlePlan("opencode", "hooks")
+	events := make([]string, 0, len(plans))
+	for _, plan := range plans {
+		events = append(events, plan.Event)
+		if plan.Host != "opencode" || plan.InstallStatus != "plan_only" || plan.RedactionClass == "" || len(plan.Command) == 0 || plan.PayloadSchema == nil || plan.OutputPath == "" {
+			t.Fatalf("hook bundle plan = %+v, want complete non-mutating plan", plan)
+		}
+	}
+	for _, want := range []string{"prompt", "assistant_response", "pre_tool_use", "post_tool_use", "tool_failure", "compaction", "stop", "session_end", "subagent_start", "subagent_stop"} {
+		if !slices.Contains(events, want) {
+			t.Fatalf("hook bundle events = %v, missing %s", events, want)
+		}
+	}
+}
+
 func TestHostIntegrationMappingSupportsDocumentedSessionStrategies(t *testing.T) {
 	tests := []struct {
 		name    string

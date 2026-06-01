@@ -9,9 +9,10 @@ import (
 )
 
 type Expanded struct {
-	Original string
-	Expanded string
-	Terms    []string
+	Original        string
+	Expanded        string
+	Terms           []string
+	ConfiguredTerms []string
 }
 
 var explicitSynonyms = map[string][]string{
@@ -97,20 +98,32 @@ func appendUnique(values []string, candidates ...string) []string {
 }
 
 func Expand(query string) Expanded {
+	return ExpandWithAliases(query, nil)
+}
+
+func ExpandWithAliases(query string, aliases map[string][]string) Expanded {
 	original := strings.TrimSpace(query)
 	if original == "" {
 		return Expanded{}
 	}
 	terms := []string{}
+	configured := []string{}
+	configuredLexicon := reciprocalLexicon(aliases)
 	for _, token := range searchtokens.Tokens(original) {
 		terms = append(terms, synonyms[token]...)
+		if custom := configuredLexicon[token]; len(custom) > 0 {
+			terms = append(terms, custom...)
+			configured = append(configured, custom...)
+		}
 	}
 	terms = textutil.UniqueLowerTrimmed(terms, false)
+	configured = textutil.UniqueLowerTrimmed(configured, false)
 	sort.Strings(terms)
+	sort.Strings(configured)
 	if len(terms) == 0 {
 		return Expanded{Original: original, Expanded: original}
 	}
-	return Expanded{Original: original, Expanded: original + " " + strings.Join(terms, " "), Terms: terms}
+	return Expanded{Original: original, Expanded: original + " " + strings.Join(terms, " "), Terms: terms, ConfiguredTerms: configured}
 }
 
 func (e Expanded) Applied() bool {
