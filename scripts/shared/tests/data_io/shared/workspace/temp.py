@@ -1,4 +1,4 @@
-"""Temporary workspace contracts shared by data I/O behavior tests."""
+"""Temporary workspace path helper for data I/O behavior tests."""
 from __future__ import annotations
 
 from collections.abc import Iterator
