@@ -16,6 +16,7 @@ Supported host configuration plans:
 
 - [Codex Connector](agent-hosts/codex.md)
 - [Pi Connector](agent-hosts/pi.md)
+- [Additional Agent Host Connector Plans](agent-hosts/agentmemory-second-pass-hosts.md)
 
 Planned connectors:
 

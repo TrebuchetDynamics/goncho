@@ -26,6 +26,7 @@ type retrievalModule struct {
 	vectorStore    VectorStore
 	searchReranker SearchReranker
 	queryAliases   map[string][]string
+	agentScope     *AgentScopeEvidence
 	providers      *ProviderHealthRegistry
 	recallWarnings *recallWarningBuffer
 }
@@ -41,6 +42,7 @@ func (s *Service) retrieval() retrievalModule {
 		vectorStore:    s.vectorStore,
 		searchReranker: s.searchReranker,
 		queryAliases:   cloneQueryAliases(s.queryAliases),
+		agentScope:     s.agentScopeEvidence(),
 		providers:      s.providerRegistry,
 		recallWarnings: &recallWarningBuffer{},
 	}
@@ -178,6 +180,7 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 			WorkspaceID: r.workspaceID,
 			ProfileID:   profileID,
 			Peer:        peer,
+			AgentScope:  cloneAgentScopeEvidence(r.agentScope),
 			Query:       params.Query,
 			Results:     []SearchHit{},
 		}, nil
@@ -223,6 +226,7 @@ func (r retrievalModule) Search(ctx context.Context, params SearchParams) (Searc
 		Peer:          peer,
 		Query:         params.Query,
 		ScopeEvidence: scopeEvidence,
+		AgentScope:    cloneAgentScopeEvidence(r.agentScope),
 		Results:       results,
 	}, nil
 }

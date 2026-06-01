@@ -35,6 +35,8 @@ type config struct {
 	Addr           string
 	WorkspaceID    string
 	ObserverPeerID string
+	AgentRoleID    string
+	AgentScopeMode string
 	ImageDir       string
 	VectorDir      string
 	MaxDBBytes     int64
@@ -74,6 +76,8 @@ type serverConfigFile struct {
 	DatabasePath   string `json:"database_path"`
 	WorkspaceID    string `json:"workspace_id"`
 	ObserverPeerID string `json:"observer_peer_id"`
+	AgentRoleID    string `json:"agent_role_id,omitempty"`
+	AgentScopeMode string `json:"agent_scope_mode,omitempty"`
 	ServeAddr      string `json:"serve_addr"`
 	AuthMode       string `json:"auth_mode"`
 	CreatedAt      string `json:"created_at"`
@@ -247,6 +251,8 @@ func parseConfig(args []string, stdout, stderr io.Writer) (config, error) {
 	}
 	fs.StringVar(&cfg.WorkspaceID, "workspace", "", "Goncho workspace ID; defaults to service default")
 	fs.StringVar(&cfg.ObserverPeerID, "observer", "", "observer peer ID; defaults to service default")
+	fs.StringVar(&cfg.AgentRoleID, "agent-role", "", "explicit local agent/role ID for scoped memory isolation")
+	fs.StringVar(&cfg.AgentScopeMode, "agent-scope", goncho.AgentScopeShared, "agent role scope mode: shared or isolated")
 	fs.StringVar(&cfg.ServerMode, "server-mode", goncho.ServerModeLocalOnly, "server capability mode: local-only, team-preview, or team-enabled")
 	fs.StringVar(&cfg.ImageDir, "image-dir", "", "optional image storage directory for disk diagnostics")
 	fs.StringVar(&cfg.VectorDir, "vector-dir", "", "optional vector index directory for disk diagnostics")
@@ -436,7 +442,7 @@ func runDoctor(ctx context.Context, cfg config) error {
 
 	addCheck("db_path", checkDBPath(dbPath))
 	addCheck("write_permissions", checkWritePermissions(dbPath))
-	rt, err := openRuntime(ctx, config{DatabasePath: dbPath, WorkspaceID: cfg.WorkspaceID, ObserverPeerID: cfg.ObserverPeerID})
+	rt, err := openRuntime(ctx, config{DatabasePath: dbPath, WorkspaceID: cfg.WorkspaceID, ObserverPeerID: cfg.ObserverPeerID, AgentRoleID: cfg.AgentRoleID, AgentScopeMode: cfg.AgentScopeMode})
 	if err != nil {
 		addCheck("migrations", err)
 	} else {
@@ -444,6 +450,7 @@ func runDoctor(ctx context.Context, cfg config) error {
 	}
 	addCheck("port_available", checkPortAvailable(addr))
 	addCheck("public_tools", checkPublicTools())
+	addCheck("graph_hook_diagnostics", nil)
 	if strings.TrimSpace(cfg.ServerURL) != "" {
 		addCheck("running_server_health", checkRunningServerHealth(ctx, cfg.ServerURL))
 	}
@@ -555,6 +562,8 @@ func runInit(ctx context.Context, cfg config) error {
 		DatabasePath:   rt.DatabasePath,
 		WorkspaceID:    rt.WorkspaceID,
 		ObserverPeerID: effectiveObserverPeerID(cfg.ObserverPeerID),
+		AgentRoleID:    strings.TrimSpace(cfg.AgentRoleID),
+		AgentScopeMode: normalizeServerAgentScopeMode(cfg.AgentScopeMode),
 		ServeAddr:      defaultServeAddr,
 		AuthMode:       "loopback_only",
 		CreatedAt:      time.Now().UTC().Format(time.RFC3339),
@@ -595,6 +604,8 @@ func openRuntime(ctx context.Context, cfg config) (*runtimeState, error) {
 		WorkspaceID:     cfg.WorkspaceID,
 		ObserverPeerID:  cfg.ObserverPeerID,
 		PeerCardEnabled: true,
+		AgentRoleID:     cfg.AgentRoleID,
+		AgentScopeMode:  cfg.AgentScopeMode,
 		ServerMode:      cfg.ServerMode,
 	}.Effective()
 	svc := goncho.NewService(store.DB(), serviceCfg, slog.Default())
@@ -1116,4 +1127,13 @@ func effectiveObserverPeerID(observer string) string {
 		return goncho.DefaultObserverPeerID
 	}
 	return observer
+}
+
+func normalizeServerAgentScopeMode(mode string) string {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case goncho.AgentScopeIsolated:
+		return goncho.AgentScopeIsolated
+	default:
+		return goncho.AgentScopeShared
+	}
 }

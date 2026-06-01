@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -326,8 +327,88 @@ func TestConnectOpenCodePlanUsesTopLevelMCPShape(t *testing.T) {
 	}
 }
 
+func TestConnectCopilotCLIPlanPrintsMCPServersPatch(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, ".copilot", "mcp-config.json")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "connect", Connector: "copilot-cli", Plan: true, ConfigPath: configPath, ServerAddr: "127.0.0.1:8725", Stdout: &stdout}); err != nil {
+		t.Fatalf("connect copilot-cli --plan: %v", err)
+	}
+	if _, err := os.Stat(filepath.Dir(configPath)); !os.IsNotExist(err) {
+		t.Fatalf("connect copilot-cli --plan created config dir or unexpected stat error: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode copilot-cli plan: %v\n%s", err, stdout.String())
+	}
+	if plan.Status != "plan" || plan.Integration != "copilot-cli" || plan.Mutates || plan.ConfigAction != "append_or_replace_mcp_server" {
+		t.Fatalf("copilot-cli plan = %+v", plan)
+	}
+	for _, want := range []string{`"mcpServers"`, `"goncho"`, `"goncho-server"`, `"127.0.0.1:8725"`} {
+		if !strings.Contains(plan.ConfigPatch, want) {
+			t.Fatalf("copilot-cli config patch = %q missing %q", plan.ConfigPatch, want)
+		}
+	}
+}
+
+func TestConnectContinuePlanUsesArrayMCPServers(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, ".continue", "config.yaml")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "connect", Connector: "continue", Plan: true, ConfigPath: configPath, ServerAddr: "127.0.0.1:8726", Stdout: &stdout}); err != nil {
+		t.Fatalf("connect continue --plan: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode continue plan: %v\n%s", err, stdout.String())
+	}
+	if plan.Status != "plan" || plan.Integration != "continue" || plan.Mutates || plan.ConfigFormat != "yaml" || plan.ConfigAction != "append_mcp_server_array_entry" {
+		t.Fatalf("continue plan = %+v", plan)
+	}
+	for _, want := range []string{"mcpServers:", "- name: goncho", "command: goncho-server", "127.0.0.1:8726", "manual"} {
+		if !strings.Contains(plan.ConfigPatch, want) {
+			t.Fatalf("continue config patch = %q missing %q", plan.ConfigPatch, want)
+		}
+	}
+}
+
+func TestConnectZedPlanUsesContextServers(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, ".config", "zed", "settings.json")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "connect", Connector: "zed", Plan: true, ConfigPath: configPath, ServerAddr: "127.0.0.1:8727", Stdout: &stdout}); err != nil {
+		t.Fatalf("connect zed --plan: %v", err)
+	}
+	var plan connectPlan
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("decode zed plan: %v\n%s", err, stdout.String())
+	}
+	if plan.Status != "plan" || plan.Integration != "zed" || plan.Mutates || plan.ConfigAction != "append_or_replace_context_server" {
+		t.Fatalf("zed plan = %+v", plan)
+	}
+	for _, want := range []string{`"context_servers"`, `"goncho"`, `"command"`, `"goncho-server"`, `"127.0.0.1:8727"`} {
+		if !strings.Contains(plan.ConfigPatch, want) {
+			t.Fatalf("zed config patch = %q missing %q", plan.ConfigPatch, want)
+		}
+	}
+}
+
+func TestConnectSecondPassAgentsRejectApply(t *testing.T) {
+	for _, connector := range []string{"copilot-cli", "qwen", "antigravity", "kiro", "warp", "cline", "continue", "zed", "droid"} {
+		t.Run(connector, func(t *testing.T) {
+			err := run(context.Background(), config{Command: "connect", Connector: connector, Apply: true, ConfigPath: filepath.Join(t.TempDir(), connector+".json"), Stdout: io.Discard})
+			if err == nil || !strings.Contains(err.Error(), "--apply is not implemented yet") {
+				t.Fatalf("connect %s --apply error = %v", connector, err)
+			}
+		})
+	}
+}
+
 func TestRemovePlansMirrorConnectPlans(t *testing.T) {
-	connectors := []string{"codex", "pi", "gormes", "cursor", "gemini-cli", "hermes", "opencode"}
+	connectors := []string{"codex", "pi", "gormes", "cursor", "gemini-cli", "hermes", "opencode", "copilot-cli", "qwen", "antigravity", "kiro", "warp", "cline", "continue", "zed", "droid"}
 	for _, connector := range connectors {
 		t.Run(connector, func(t *testing.T) {
 			var stdout bytes.Buffer

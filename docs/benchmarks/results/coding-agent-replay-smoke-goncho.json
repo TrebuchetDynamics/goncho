@@ -1,0 +1,52 @@
+{
+  "system": "goncho",
+  "dataset": "coding-agent-replay-smoke",
+  "dataset_revision": "smoke-fixture",
+  "dataset_sha256": "smoke-fixture",
+  "go_version": "go1.26.1",
+  "goos": "linux",
+  "goarch": "amd64",
+  "cpu_count": 22,
+  "memory_count": 3,
+  "question_count": 2,
+  "runs": 1,
+  "leakage": {
+    "query_in_memory": 0,
+    "gold_id_in_memory": 0
+  },
+  "recall_at_5": 1,
+  "recall_at_10": 1,
+  "recall_any_at_5": 1,
+  "recall_any_at_10": 1,
+  "mrr": 1,
+  "questions": [
+    {
+      "id": "q-auth-causal",
+      "query": "What fixed the refresh token rotation bug?",
+      "relevant_ids": [
+        "sess-auth-fix"
+      ],
+      "retrieved_ids": [
+        "sess-auth-fix"
+      ],
+      "rank": 1,
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "mrr": 1
+    },
+    {
+      "id": "q-cli-preference",
+      "query": "How should CLI delivery output be shaped?",
+      "relevant_ids": [
+        "sess-cli-pref"
+      ],
+      "retrieved_ids": [
+        "sess-cli-pref"
+      ],
+      "rank": 1,
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "mrr": 1
+    }
+  ]
+}

@@ -4,11 +4,49 @@ import (
 	"context"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/TrebuchetDynamics/goncho/memory"
 )
+
+func TestRecallAgentScopeIsolationFiltersOtherRoles(t *testing.T) {
+	ctx := context.Background()
+	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer func() {
+		if err := store.Close(ctx); err != nil {
+			t.Fatalf("Close: %v", err)
+		}
+	}()
+	architect := NewService(store.DB(), Config{WorkspaceID: "default", AgentRoleID: "architect", AgentScopeMode: AgentScopeIsolated}, nil)
+	reviewer := NewService(store.DB(), Config{WorkspaceID: "default", AgentRoleID: "reviewer", AgentScopeMode: AgentScopeIsolated}, nil)
+	if _, err := architect.Conclude(ctx, ConcludeParams{Peer: "peer-role", Conclusion: "Architect owns the amber API decision.", SessionKey: "sess-role"}); err != nil {
+		t.Fatalf("architect conclude: %v", err)
+	}
+	if _, err := reviewer.Conclude(ctx, ConcludeParams{Peer: "peer-role", Conclusion: "Reviewer owns the cobalt audit decision.", SessionKey: "sess-role"}); err != nil {
+		t.Fatalf("reviewer conclude: %v", err)
+	}
+
+	trace, err := architect.Recall(ctx, RecallQuery{Peer: "peer-role", Query: "decision", SessionKey: "sess-role", Limit: 5})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	if trace.Query.AgentID != "architect" || trace.Query.AgentScopeMode != AgentScopeIsolated {
+		t.Fatalf("query scope evidence = %+v", trace.Query)
+	}
+	for _, item := range trace.Selected {
+		if strings.Contains(item.Candidate.Content, "cobalt") || item.Candidate.AgentID != "architect" {
+			t.Fatalf("selected cross-role candidate = %+v", item.Candidate)
+		}
+	}
+	if !recallTraceHasWarning(trace, RecallWarningAgentScopeApplied) {
+		t.Fatalf("trace warnings = %+v, want agent scope evidence", trace.Warnings)
+	}
+}
 
 func TestServiceRecallReturnsScoredTraceWithProvenance(t *testing.T) {
 	svc, cleanup := newTestService(t)

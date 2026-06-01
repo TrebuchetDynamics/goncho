@@ -43,6 +43,8 @@ type Service struct {
 	searchReranker   SearchReranker
 	queryAliases     map[string][]string
 	serverMode       string
+	agentRoleID      string
+	agentScopeMode   string
 	providerRegistry *ProviderHealthRegistry
 	log              *slog.Logger
 	dialecticCaller  DialecticCaller
@@ -70,6 +72,11 @@ func NewService(db *sql.DB, cfg Config, log *slog.Logger) *Service {
 	if observer == "" {
 		observer = DefaultObserverPeerID
 	}
+	agentScopeMode := normalizeAgentScopeMode(cfg.AgentScopeMode)
+	agentRoleID := strings.TrimSpace(cfg.AgentRoleID)
+	if agentScopeMode == AgentScopeIsolated && agentRoleID != "" {
+		observer = agentRoleID
+	}
 	recentLimit := limitutil.Default(cfg.RecentMessages, DefaultRecentMessages)
 	return &Service{
 		db:               db,
@@ -86,6 +93,8 @@ func NewService(db *sql.DB, cfg Config, log *slog.Logger) *Service {
 		searchReranker:   cfg.SearchReranker,
 		queryAliases:     cloneQueryAliases(cfg.QueryAliases),
 		serverMode:       normalizeServerMode(cfg.ServerMode),
+		agentRoleID:      agentRoleID,
+		agentScopeMode:   agentScopeMode,
 		providerRegistry: NewProviderHealthRegistry(providerResilienceConfigFromServiceConfig(cfg), cfg.VectorStore),
 		log:              log,
 	}
@@ -279,6 +288,7 @@ func (s *Service) recallWithOptions(ctx context.Context, q RecallQuery, opts rec
 		return RecallTrace{}, fmt.Errorf("goncho: peer is required")
 	}
 	q.WorkspaceID = scopekey.Workspace(s.workspaceID, q.WorkspaceID, false)
+	q = s.applyAgentScopeToRecallQuery(q)
 	engine := newRecallPipelineEngine(s.retrieval(), opts)
 	trace, err := engine.Run(ctx, q)
 	if err != nil {
@@ -289,6 +299,9 @@ func (s *Service) recallWithOptions(ctx context.Context, q RecallQuery, opts rec
 		return RecallTrace{}, err
 	}
 	trace.Warnings = appendRecallWarnings(trace.Warnings, warnings...)
+	if warning, ok := s.agentScopeRecallWarning(); ok {
+		trace.Warnings = appendRecallWarnings(trace.Warnings, warning)
+	}
 	trace.TraceID = recallTraceID(trace)
 	return trace, nil
 }

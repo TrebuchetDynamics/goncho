@@ -13,7 +13,7 @@ BEAM_SMOKE_BASELINE_RESULTS := ./cmd/goncho-bench/testdata/beam-smoke/mnemosyne-
 PUBLIC_LATEST_VERSION := v0.3.0
 PUBLIC_LATEST_PUBLISHED_DATE := 2026-05-25
 
-.PHONY: release-smoke stable-e2e-bench-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke server-smoke docker-compose-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends bench-beam-smoke
+.PHONY: release-smoke stable-e2e-bench-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke server-smoke docker-compose-smoke bench-agent-replay-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends bench-beam-smoke
 
 release-smoke:
 	$(MAKE) release-metadata-smoke
@@ -146,6 +146,19 @@ server-smoke:
 
 docker-compose-smoke:
 	python3 ./scripts/docker_compose_smoke.py
+
+bench-agent-replay-smoke:
+	@mkdir -p artifacts/bench-agent-replay docs/benchmarks/results docs/benchmarks/failures
+	go run ./cmd/goncho-bench \
+		--dataset ./cmd/goncho-bench/testdata/coding-agent-replay-smoke.jsonl \
+		--out ./docs/benchmarks/results/coding-agent-replay-smoke-goncho.json \
+		--failures ./docs/benchmarks/failures/coding-agent-replay-smoke.jsonl \
+		--db ./artifacts/bench-agent-replay/goncho.db \
+		--system goncho \
+		--dataset-revision smoke-fixture \
+		--dataset-sha256 smoke-fixture \
+		--limit 5 \
+		--runs 1
 
 bench-longmemeval-s-smoke:
 	@mkdir -p artifacts/bench-smoke docs/benchmarks/results docs/benchmarks/failures

@@ -23,6 +23,7 @@ const (
 	RecallWarningScopeExcludedAllCandidates = "scope_excluded_all_candidates"
 	RecallWarningTokenBudgetTruncated       = "token_budget_truncated"
 	RecallWarningSupersededEvidenceObserved = "superseded_evidence_observed"
+	RecallWarningAgentScopeApplied          = "agent_scope_filter_applied"
 
 	RecallRejectScopeMismatch = "scope_mismatch"
 	RecallRejectTokenBudget   = "token_budget"
@@ -30,14 +31,16 @@ const (
 )
 
 type RecallQuery struct {
-	WorkspaceID string   `json:"workspace_id"`
-	Peer        string   `json:"peer"`
-	Query       string   `json:"query"`
-	SessionKey  string   `json:"session_key,omitempty"`
-	ScopeID     string   `json:"scope_id,omitempty"`
-	Sources     []string `json:"sources,omitempty"`
-	Limit       int      `json:"limit,omitempty"`
-	MaxTokens   int      `json:"max_tokens,omitempty"`
+	WorkspaceID    string   `json:"workspace_id"`
+	Peer           string   `json:"peer"`
+	Query          string   `json:"query"`
+	SessionKey     string   `json:"session_key,omitempty"`
+	ScopeID        string   `json:"scope_id,omitempty"`
+	Sources        []string `json:"sources,omitempty"`
+	Limit          int      `json:"limit,omitempty"`
+	MaxTokens      int      `json:"max_tokens,omitempty"`
+	AgentID        string   `json:"agent_id,omitempty"`
+	AgentScopeMode string   `json:"agent_scope_mode,omitempty"`
 }
 
 type EvidenceItem struct {

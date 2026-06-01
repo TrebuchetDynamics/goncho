@@ -456,6 +456,13 @@ func buildConnectPlan(cfg config) (connectPlan, error) {
 		return buildHermesConnectPlan(cfg)
 	case "opencode":
 		return buildOpenCodeConnectPlan(cfg)
+	case "copilot-cli", "qwen", "antigravity", "kiro", "warp", "cline", "droid":
+		spec := secondPassMCPConnectorSpecs()[cfg.Connector]
+		return buildMCPJSONConnectPlan(cfg, spec.Name, spec.DefaultPath, spec.HostLabel)
+	case "continue":
+		return buildContinueConnectPlan(cfg)
+	case "zed":
+		return buildZedConnectPlan(cfg)
 	case "pi":
 		return buildPiConnectPlan(cfg)
 	case "filesystem-watcher":
@@ -489,7 +496,7 @@ func buildRemovePlan(cfg config) (connectPlan, error) {
 		plan.GeneratedHookEvents = nil
 		plan.RecommendedNextStep = []string{"Remove the Goncho extension path from Pi settings.", "Delete copied extension files only after export/review if they were locally modified."}
 		return plan, nil
-	case "cursor", "gemini-cli", "hermes", "opencode":
+	case "cursor", "gemini-cli", "hermes", "opencode", "copilot-cli", "qwen", "antigravity", "kiro", "warp", "cline", "continue", "zed", "droid":
 		plan, err := buildConnectPlan(cfg)
 		if err != nil {
 			return connectPlan{}, err
@@ -1299,6 +1306,34 @@ func defaultOpenCodeConfigPath(home string) string {
 	return filepath.Join(home, ".config", "opencode", "opencode.json")
 }
 
+type mcpConnectorSpec struct {
+	Name        string
+	HostLabel   string
+	DefaultPath func(string) string
+}
+
+func secondPassMCPConnectorSpecs() map[string]mcpConnectorSpec {
+	return map[string]mcpConnectorSpec{
+		"copilot-cli": {Name: "copilot-cli", HostLabel: "GitHub Copilot CLI MCP config", DefaultPath: func(home string) string { return filepath.Join(home, ".copilot", "mcp-config.json") }},
+		"qwen":        {Name: "qwen", HostLabel: "Qwen Code MCP config", DefaultPath: func(home string) string { return filepath.Join(home, ".qwen", "settings.json") }},
+		"antigravity": {Name: "antigravity", HostLabel: "Antigravity user MCP config", DefaultPath: func(home string) string {
+			return filepath.Join(home, ".config", "Antigravity", "User", "mcp_config.json")
+		}},
+		"kiro":  {Name: "kiro", HostLabel: "Kiro user MCP config", DefaultPath: func(home string) string { return filepath.Join(home, ".kiro", "settings", "mcp.json") }},
+		"warp":  {Name: "warp", HostLabel: "Warp MCP config", DefaultPath: func(home string) string { return filepath.Join(home, ".warp", ".mcp.json") }},
+		"cline": {Name: "cline", HostLabel: "Cline MCP config", DefaultPath: func(home string) string { return filepath.Join(home, ".cline", "mcp.json") }},
+		"droid": {Name: "droid", HostLabel: "Droid MCP config", DefaultPath: func(home string) string { return filepath.Join(home, ".factory", "mcp.json") }},
+	}
+}
+
+func defaultContinueConfigPath(home string) string {
+	return filepath.Join(home, ".continue", "config.yaml")
+}
+
+func defaultZedConfigPath(home string) string {
+	return filepath.Join(home, ".config", "zed", "settings.json")
+}
+
 func resolveConnectorConfigPath(cfg config, connector string, defaultPath func(string) string) (string, error) {
 	configPath := strings.TrimSpace(cfg.ConfigPath)
 	if configPath != "" {
@@ -1352,6 +1387,74 @@ func mcpServersJSONConfigPatch(serverAddr string) string {
 				"env": map[string]string{
 					"GONCHO_TRANSPORT": "http",
 				},
+			},
+		},
+	}
+	raw, err := json.MarshalIndent(patch, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(raw) + "\n"
+}
+
+func buildContinueConnectPlan(cfg config) (connectPlan, error) {
+	configPath, err := resolveConnectorConfigPath(cfg, "continue", defaultContinueConfigPath)
+	if err != nil {
+		return connectPlan{}, err
+	}
+	serverAddr := connectorServerAddr(cfg)
+	return connectPlan{
+		Status:       "dry_run",
+		Integration:  "continue",
+		Mutates:      false,
+		ConfigPath:   configPath,
+		Protocol:     "mcp",
+		ConfigFormat: "yaml",
+		ConfigAction: "append_mcp_server_array_entry",
+		ConfigPatch:  continueYAMLConfigPatch(serverAddr),
+		MCPCommand:   []string{"goncho-server", "serve", "-addr", serverAddr},
+		RecommendedNextStep: []string{
+			"Review the Continue config.yaml array-form mcpServers snippet before pasting it manually.",
+			"If config.yaml already exists, preserve comments and anchors manually; this plan intentionally does not rewrite YAML.",
+			"Keep --apply disabled until Continue connector smoke coverage exists.",
+		},
+	}, nil
+}
+
+func continueYAMLConfigPatch(serverAddr string) string {
+	return fmt.Sprintf("# manual plan: paste this entry under Continue config.yaml mcpServers.\nmcpServers:\n  - name: goncho\n    command: goncho-server\n    args:\n      - serve\n      - -addr\n      - %q\n    env:\n      GONCHO_TRANSPORT: http\n", serverAddr)
+}
+
+func buildZedConnectPlan(cfg config) (connectPlan, error) {
+	configPath, err := resolveConnectorConfigPath(cfg, "zed", defaultZedConfigPath)
+	if err != nil {
+		return connectPlan{}, err
+	}
+	serverAddr := connectorServerAddr(cfg)
+	return connectPlan{
+		Status:       "dry_run",
+		Integration:  "zed",
+		Mutates:      false,
+		ConfigPath:   configPath,
+		Protocol:     "mcp",
+		ConfigFormat: "json",
+		ConfigAction: "append_or_replace_context_server",
+		ConfigPatch:  zedJSONConfigPatch(serverAddr),
+		MCPCommand:   []string{"goncho-server", "serve", "-addr", serverAddr},
+		RecommendedNextStep: []string{
+			"Review the Zed context_servers patch before applying it; Zed uses context_servers instead of mcpServers.",
+			"Start goncho-server with the planned address before launching Zed.",
+			"Keep --apply disabled until Zed connector smoke coverage exists.",
+		},
+	}, nil
+}
+
+func zedJSONConfigPatch(serverAddr string) string {
+	patch := map[string]any{
+		"context_servers": map[string]any{
+			"goncho": map[string]any{
+				"command": "goncho-server",
+				"args":    []string{"serve", "-addr", serverAddr},
 			},
 		},
 	}
@@ -1445,6 +1548,8 @@ func removeConfigActionForConnector(connector string) string {
 	switch connector {
 	case "opencode":
 		return "remove_top_level_mcp_server"
+	case "zed":
+		return "remove_context_server"
 	default:
 		return "remove_mcp_server"
 	}
@@ -1456,6 +1561,10 @@ func removeConfigPatchForConnector(connector string) string {
 		return "Remove the top-level mcp.goncho entry from OpenCode config; leave other mcp entries intact.\n"
 	case "hermes":
 		return "Remove the mcp_servers.goncho entry from Hermes config; use the Gormes/Hermes handoff owner if Hermes runs through Gormes.\n"
+	case "continue":
+		return "Remove the goncho entry from Continue config.yaml mcpServers array; preserve unrelated YAML comments and anchors.\n"
+	case "zed":
+		return "Remove the context_servers.goncho entry from Zed settings; leave other context servers intact.\n"
 	default:
 		return "Remove the mcpServers.goncho entry from the host JSON config; leave other MCP servers intact.\n"
 	}

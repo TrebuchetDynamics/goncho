@@ -66,13 +66,14 @@ type FacetParams struct {
 }
 
 type ViewerMemoryReport struct {
-	Status      string             `json:"status"`
-	ReadOnly    bool               `json:"read_only"`
-	WorkspaceID string             `json:"workspace_id"`
-	Facet       string             `json:"facet,omitempty"`
-	Value       string             `json:"value,omitempty"`
-	Items       []ViewerConclusion `json:"items"`
-	GeneratedAt time.Time          `json:"generated_at"`
+	Status      string              `json:"status"`
+	ReadOnly    bool                `json:"read_only"`
+	WorkspaceID string              `json:"workspace_id"`
+	Facet       string              `json:"facet,omitempty"`
+	Value       string              `json:"value,omitempty"`
+	AgentScope  *AgentScopeEvidence `json:"agent_scope,omitempty"`
+	Items       []ViewerConclusion  `json:"items"`
+	GeneratedAt time.Time           `json:"generated_at"`
 }
 
 func (s *Service) UpsertSentinel(ctx context.Context, params SentinelParams) (SentinelRecord, error) {
@@ -224,5 +225,5 @@ func (s *Service) ViewerMemoryReport(ctx context.Context, facet, value string, l
 	if err := rows.Err(); err != nil {
 		return ViewerMemoryReport{}, err
 	}
-	return ViewerMemoryReport{Status: "ok", ReadOnly: true, WorkspaceID: s.workspaceID, Facet: facet, Value: value, Items: items, GeneratedAt: timeutil.NowUTC()}, nil
+	return ViewerMemoryReport{Status: "ok", ReadOnly: true, WorkspaceID: s.workspaceID, Facet: facet, Value: value, AgentScope: s.agentScopeEvidence(), Items: items, GeneratedAt: timeutil.NowUTC()}, nil
 }

@@ -1,0 +1,6 @@
+{"type":"meta","dataset":"coding-agent-replay-smoke"}
+{"type":"memory","dataset":"coding-agent-replay-smoke","id":"sess-auth-fix","peer":"developer","session_key":"sess-auth","content":"Auth bug fix: refresh token cache must be invalidated after rotating signing keys."}
+{"type":"memory","dataset":"coding-agent-replay-smoke","id":"sess-cli-pref","peer":"developer","session_key":"sess-cli","content":"User preference: keep CLI output terse and include exact validation commands."}
+{"type":"memory","dataset":"coding-agent-replay-smoke","id":"sess-stale-warning","peer":"developer","session_key":"sess-stale","content":"Stale note: the legacy exporter used CSV before the portable JSONL manifest replaced it."}
+{"type":"question","dataset":"coding-agent-replay-smoke","id":"q-auth-causal","peer":"developer","session_key":"sess-auth","query":"What fixed the refresh token rotation bug?","relevant_ids":["sess-auth-fix"]}
+{"type":"question","dataset":"coding-agent-replay-smoke","id":"q-cli-preference","peer":"developer","session_key":"sess-cli","query":"How should CLI delivery output be shaped?","relevant_ids":["sess-cli-pref"]}

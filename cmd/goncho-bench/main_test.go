@@ -14,6 +14,28 @@ import (
 	"github.com/TrebuchetDynamics/goncho/service"
 )
 
+func TestCodingAgentReplayScoresStableIDs(t *testing.T) {
+	data, err := loadDataset(filepath.Join("testdata", "coding-agent-replay-smoke.jsonl"))
+	if err != nil {
+		t.Fatalf("loadDataset: %v", err)
+	}
+	report, err := evaluateOnce(context.Background(), data, config{System: "goncho", DatabasePath: filepath.Join(t.TempDir(), "coding-agent-replay.db"), Limit: 5})
+	if err != nil {
+		t.Fatalf("evaluateOnce: %v", err)
+	}
+	if report.Dataset != "coding-agent-replay-smoke" || report.MemoryCount != 3 || report.QuestionCount != 2 {
+		t.Fatalf("report counts = %+v", report)
+	}
+	if report.RecallAnyAt5 != 1 || report.MRR != 1 {
+		t.Fatalf("report scores = recall_any@5 %.3f mrr %.3f, want perfect stable-ID smoke", report.RecallAnyAt5, report.MRR)
+	}
+	for _, question := range report.Questions {
+		if len(question.RelevantIDs) == 0 || question.Rank != 1 || !slices.Contains(question.RetrievedIDs, question.RelevantIDs[0]) {
+			t.Fatalf("question report = %+v, want relevant stable ID retrieved at rank 1", question)
+		}
+	}
+}
+
 type testBeamJSONLRecord struct {
 	Type                  string   `json:"type"`
 	Scale                 string   `json:"scale,omitempty"`

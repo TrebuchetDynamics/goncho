@@ -49,6 +49,28 @@ func TestOnboardingOutputNamesServerAndViewerURLs(t *testing.T) {
 	}
 }
 
+func TestServerAgentScopeConfigIsExplicit(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "goncho.db")
+	configPath := filepath.Join(dir, "goncho-server.json")
+	var stdout bytes.Buffer
+
+	if err := run(context.Background(), config{Command: "init", DatabasePath: dbPath, ConfigPath: configPath, WorkspaceID: "init-workspace", AgentRoleID: "architect", AgentScopeMode: goncho.AgentScopeIsolated, Stdout: &stdout}); err != nil {
+		t.Fatalf("run init: %v", err)
+	}
+	rawConfig, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	var cfg serverConfigFile
+	if err := json.Unmarshal(rawConfig, &cfg); err != nil {
+		t.Fatalf("decode config: %v\n%s", err, rawConfig)
+	}
+	if cfg.AgentRoleID != "architect" || cfg.AgentScopeMode != goncho.AgentScopeIsolated {
+		t.Fatalf("agent scope config = %+v", cfg)
+	}
+}
+
 func TestRunInitCreatesConfigAndSQLiteDB(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "goncho.db")
@@ -78,6 +100,21 @@ func TestRunInitCreatesConfigAndSQLiteDB(t *testing.T) {
 	}
 	if report.Status != "ok" || report.ConfigPath != configPath || report.DBPath != dbPath {
 		t.Fatalf("init report = %+v, want ok paths", report)
+	}
+}
+
+func TestDoctorReportsGraphAndHookDiagnostics(t *testing.T) {
+	dir := t.TempDir()
+	var stdout bytes.Buffer
+	if err := run(context.Background(), config{Command: "doctor", DatabasePath: filepath.Join(dir, "goncho.db"), Addr: "127.0.0.1:0", Stdout: &stdout}); err != nil {
+		t.Fatalf("run doctor: %v", err)
+	}
+	var report doctorReport
+	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
+		t.Fatalf("decode doctor report: %v\n%s", err, stdout.String())
+	}
+	if _, ok := report.CheckByName("graph_hook_diagnostics"); !ok {
+		t.Fatalf("doctor checks = %+v, missing graph_hook_diagnostics", report.Checks)
 	}
 }
 

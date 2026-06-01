@@ -145,6 +145,8 @@ Goncho-specific question:
 
 ## Phase 6: Real-world replay benchmark
 
+Tracer bullet delivered: `make bench-agent-replay-smoke` runs a tiny checked-in fictional coding-agent replay fixture at `cmd/goncho-bench/testdata/coding-agent-replay-smoke.jsonl`. It scores by stable inserted memory IDs through the existing deterministic Go harness and emits JSON/failure artifacts under `docs/benchmarks/results/` and `docs/benchmarks/failures/`. This is a smoke contract, not a publishable benchmark claim.
+
 This is the most important eventual benchmark.
 
 Synthetic benchmarks do not prove agent utility. Goncho should eventually replay real sessions such as:

@@ -2,7 +2,10 @@ package goncho
 
 import (
 	"context"
+	"strings"
 	"testing"
+
+	"github.com/TrebuchetDynamics/goncho/memory"
 )
 
 func TestContextSentinelWarnsWhenImportantFactMissing(t *testing.T) {
@@ -21,6 +24,37 @@ func TestContextSentinelWarnsWhenImportantFactMissing(t *testing.T) {
 	}
 	if !contextUnavailableHasCapability(got.Unavailable, "sentinel_missing") {
 		t.Fatalf("Unavailable = %+v, want sentinel_missing warning", got.Unavailable)
+	}
+}
+
+func TestViewerMemoryReportRecordsAgentScopeEvidence(t *testing.T) {
+	ctx := context.Background()
+	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer func() {
+		if err := store.Close(ctx); err != nil {
+			t.Fatalf("Close: %v", err)
+		}
+	}()
+	architect := NewService(store.DB(), Config{WorkspaceID: "default", AgentRoleID: "architect", AgentScopeMode: AgentScopeIsolated}, nil)
+	reviewer := NewService(store.DB(), Config{WorkspaceID: "default", AgentRoleID: "reviewer", AgentScopeMode: AgentScopeIsolated}, nil)
+	if _, err := architect.Conclude(ctx, ConcludeParams{Peer: "peer-memory", Conclusion: "Architect memory visible."}); err != nil {
+		t.Fatalf("architect conclude: %v", err)
+	}
+	if _, err := reviewer.Conclude(ctx, ConcludeParams{Peer: "peer-memory", Conclusion: "Reviewer memory hidden from architect viewer."}); err != nil {
+		t.Fatalf("reviewer conclude: %v", err)
+	}
+	report, err := architect.ViewerMemoryReport(ctx, "", "", 10)
+	if err != nil {
+		t.Fatalf("ViewerMemoryReport: %v", err)
+	}
+	if report.AgentScope == nil || report.AgentScope.Mode != AgentScopeIsolated || report.AgentScope.AgentID != "architect" || !report.AgentScope.Applied {
+		t.Fatalf("agent scope evidence = %+v", report.AgentScope)
+	}
+	if len(report.Items) != 1 || !strings.Contains(report.Items[0].Content, "Architect") {
+		t.Fatalf("viewer items = %+v", report.Items)
 	}
 }
 

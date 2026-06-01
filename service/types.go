@@ -30,6 +30,8 @@ type Config struct {
 	SearchReranker               SearchReranker
 	QueryAliases                 map[string][]string
 	ServerMode                   string
+	AgentRoleID                  string
+	AgentScopeMode               string
 	ProviderFailureThreshold     int
 	ProviderCooldown             time.Duration
 	ProviderTimeout              time.Duration
@@ -44,6 +46,11 @@ const (
 	DialecticLevelMedium  DialecticLevel = "medium"
 	DialecticLevelHigh    DialecticLevel = "high"
 	DialecticLevelMax     DialecticLevel = "max"
+)
+
+const (
+	AgentScopeShared   = "shared"
+	AgentScopeIsolated = "isolated"
 )
 
 const (
@@ -225,12 +232,20 @@ type SearchLineage struct {
 }
 
 // SearchResultSet is the stable JSON shape for honcho_search.
+type AgentScopeEvidence struct {
+	Mode    string `json:"mode"`
+	AgentID string `json:"agent_id,omitempty"`
+	Applied bool   `json:"applied"`
+	Source  string `json:"source,omitempty"`
+}
+
 type SearchResultSet struct {
 	WorkspaceID   string                   `json:"workspace_id"`
 	ProfileID     string                   `json:"profile_id,omitempty"`
 	Peer          string                   `json:"peer"`
 	Query         string                   `json:"query"`
 	ScopeEvidence *CrossChatRecallEvidence `json:"scope_evidence,omitempty"`
+	AgentScope    *AgentScopeEvidence      `json:"agent_scope,omitempty"`
 	Results       []SearchHit              `json:"results"`
 }
 

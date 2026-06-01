@@ -155,7 +155,9 @@ If Goncho cannot compete with standard retrieval systems, agent-memory claims be
 
 ## Most important eventual target: real-world replay
 
-Synthetic benchmarks only go so far. Goncho eventually needs real agent session replay:
+Synthetic benchmarks only go so far. Goncho eventually needs real agent session replay. A first smoke contract now exists as `make bench-agent-replay-smoke`, using `cmd/goncho-bench/testdata/coding-agent-replay-smoke.jsonl` and stable inserted memory IDs. Treat it as a fixture-level guardrail, not a publishable benchmark claim.
+
+Goncho eventually needs real agent session replay:
 
 - real coding sessions,
 - real chat preferences,
