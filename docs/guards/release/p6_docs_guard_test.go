@@ -11,5 +11,5 @@ func TestComparisonDocsAvoidHypeAndBenchmarkOverclaims(t *testing.T) {
 }
 
 func TestReleaseChecklistDocumentsSmokeAndPublicVerification(t *testing.T) {
-	guardtest.ContainsAll(t, guardtest.ReadRepoFile(t, "docs/release-checklist.md"), "release checklist", []string{"make release-smoke", "make stable-e2e-bench-smoke", "make public-module-smoke", "GitHub release", "pkg.go.dev", "v0.3.0"})
+	guardtest.ContainsAll(t, guardtest.ReadRepoFile(t, "docs/release-checklist.md"), "release checklist", []string{"make release-smoke", "make stable-e2e-bench-smoke", "make public-module-smoke", "GitHub release", "pkg.go.dev", "v0.3.1"})
 }

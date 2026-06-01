@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.3.1 - 2026-06-01
+
 ### Added
 
 - Added Gormes live profile/session/memory evidence inspection, generic session evidence projection, and privacy-safe negative evidence candidate generation for repeated tool failures.
@@ -9,6 +11,7 @@
 - Added `goncho://negative-evidence/candidates` and viewer snapshot fields so hosts can inspect reviewable negative-memory candidates.
 - Added non-mutating `goncho embeddings reindex --plan` preview support for local embedding-index freshness checks.
 - Added a local `live-session-debugger` agent skill for read-only Gormes profile/session/memory audits used to guide Goncho improvements.
+- Added second-pass agentmemory upstream improvements: additional plan-only host connectors, explicit agent-role isolation evidence, a coding-agent replay smoke benchmark, and graph/hook diagnostics.
 
 ## v0.3.0 - 2026-05-25
 
