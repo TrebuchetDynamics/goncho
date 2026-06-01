@@ -24,11 +24,11 @@ export const docsSidebar = [
   {
     label: 'Reference',
     items: [
-      { label: 'Core API', slug: 'reference/api/core-api' },
-      { label: 'Memory Tools', slug: 'reference/memory/memory-tools' },
-      { label: 'Local Markdown Memory', slug: 'reference/memory/local-markdown-memory' },
-      { label: 'Retrieval Benchmarks', slug: 'reference/benchmarks/retrieval-benchmarks' },
-      { label: 'Honcho Compatibility', slug: 'reference/compatibility/honcho-compatibility' },
+      { label: 'Core API', slug: 'reference/core-api' },
+      { label: 'Memory Tools', slug: 'reference/memory-tools' },
+      { label: 'Local Markdown Memory', slug: 'reference/local-markdown-memory' },
+      { label: 'Retrieval Benchmarks', slug: 'reference/retrieval-benchmarks' },
+      { label: 'Honcho Compatibility', slug: 'reference/honcho-compatibility' },
     ],
   },
   {

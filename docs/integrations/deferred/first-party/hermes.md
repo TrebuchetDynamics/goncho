@@ -4,7 +4,7 @@ Status: deferred
 
 Connector status contract: deferred, local-first preview only; no install automation before `goncho-server` smoke coverage.
 
-Shared contract: [Local-First Preview Connector Contract](../contracts/local-first-preview.md).
+Shared deferred connector status contract: [Deferred Connector Readiness](../contracts/deferred-readiness.md).
 
 Hermes connector docs are intentionally deferred. Use the Gormes adapter path when Hermes is operating through Gormes, and keep Goncho local-first via `goncho-server` on loopback.
 

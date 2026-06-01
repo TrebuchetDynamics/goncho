@@ -6,7 +6,7 @@ slug: concepts/orientation-packs
 
 An agent does not need every remembered fact. It needs the facts that orient the next action.
 
-An orientation pack is the compact product Goncho assembles through [`Context`](/reference/api/core-api/).
+An orientation pack is the compact product Goncho assembles through [`Context`](/reference/core-api/).
 
 An orientation product should contain:
 

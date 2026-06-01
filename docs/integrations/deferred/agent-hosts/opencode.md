@@ -2,9 +2,7 @@
 
 Status: deferred
 
-Connector status contract: deferred, local-first preview only; no install automation before `goncho-server` smoke coverage.
-
-Shared contract: [Local-First Preview Connector Contract](../contracts/local-first-preview.md).
+Shared deferred connector status contract: [Deferred Connector Readiness](../contracts/deferred-readiness.md).
 
 OpenCode integration is deferred. A future connector must document OpenCode hook/event semantics, preview generated config, and prove local `goncho-server` compatibility before install instructions are offered.
 

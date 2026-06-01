@@ -18,5 +18,5 @@ Agents also need to remember:
 This is negative memory: remembered caution.
 
 :::note[Current status]
-Current Goncho can store and retrieve failure notes through existing [memory tools](/reference/memory/memory-tools/) and [`Conclude`/`Search`](/reference/api/core-api/) API surfaces. First-class negative-memory review is architecture direction.
+Current Goncho can store and retrieve failure notes through existing [memory tools](/reference/memory-tools/) and [`Conclude`/`Search`](/reference/core-api/) API surfaces. First-class negative-memory review is architecture direction.
 :::

@@ -2,9 +2,7 @@
 
 Status: deferred
 
-Connector status contract: deferred, local-first preview only; no install automation before `goncho-server` smoke coverage.
-
-Shared contract: [Local-First Preview Connector Contract](../contracts/local-first-preview.md).
+Shared deferred connector status contract: [Deferred Connector Readiness](../contracts/deferred-readiness.md).
 
 Cursor MCP wiring is deferred until a connector plan and golden config test exist. Goncho remains local-first: run `goncho-server` on loopback and use generic MCP guidance only when the host owner can configure it manually.
 

@@ -21,7 +21,7 @@ make ecosystem-smoke
 
 For a narrower public-release-metadata-only check, run `make public-release-smoke`; it checks the documented public `@latest` version and published date. For a narrower local-go.mod-metadata-only check, run `make local-module-smoke`. For a narrower package-documentation-only check, run `make package-doc-smoke`. For a narrower public-docs-site-only check, run `make docs-site-smoke`. For a narrower external-import-only check, run `make public-module-smoke`. For a broader local pre-tag gate, run `make release-smoke`; it wraps release metadata checks and ecosystem smoke with Go tests, vet, race tests, and the docs-site build.
 
-Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status are documented in [Retrieval Benchmarks](/reference/benchmarks/retrieval-benchmarks/). For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke` from a checkout.
+Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status are documented in [Retrieval Benchmarks](/reference/retrieval-benchmarks/). For the CI-safe external backend comparison proof, run `make bench-locomo-backends-smoke` from a checkout.
 
 From a checkout, verify the benchmark CLI only when you need reproducible local retrieval reports:
 
@@ -109,4 +109,4 @@ func main() {
 
 The example ends with `Context` because the core payoff is orientation, not just storage.
 
-See [Retrieval Benchmarks](/reference/benchmarks/retrieval-benchmarks/) for benchmark methodology.
+See [Retrieval Benchmarks](/reference/retrieval-benchmarks/) for benchmark methodology.

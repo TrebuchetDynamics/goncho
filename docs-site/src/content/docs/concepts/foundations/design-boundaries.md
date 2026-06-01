@@ -16,7 +16,7 @@ Vector search can help find evidence, but a retrieved chunk is not automatically
 
 ## Storage Boundary
 
-SQLite is Goncho's current local persistence foundation. Use [Goncho APIs](/reference/api/core-api/) and [memory tools](/reference/memory/memory-tools/) for reads and writes unless a storage contract is explicitly documented.
+SQLite is Goncho's current local persistence foundation. Use [Goncho APIs](/reference/core-api/) and [memory tools](/reference/memory-tools/) for reads and writes unless a storage contract is explicitly documented.
 
 :::caution[Failure mode]
 Globally true forever memories corrupt long-running agents. Facts need scope and revision.

@@ -21,7 +21,7 @@ Current public package signals:
 - Public import smoke: `make public-module-smoke` creates a temporary external Go module, runs `go get github.com/TrebuchetDynamics/goncho/service@latest`, and compiles a minimal import of the public service API.
 - Installable command source: `./cmd/goncho-bench`; `go install github.com/TrebuchetDynamics/goncho/cmd/goncho-bench@latest` installs the public benchmark CLI, and `make install-smoke` verifies the checkout-local path.
 - Public tool proof: `goncho_context` has E2E coverage for generated primer behavior under `max_tokens`, preserving newest in-budget turns and excluding older out-of-budget turns; `goncho_recall` has E2E coverage for persisted scored recall after SQLite restart.
-- Benchmark evidence: LongMemEval-S and LOCOMO reports use deterministic ID scoring, leakage checks, failure audits, reproducible smoke targets, and stable-ID backend comparison artifacts; see [Retrieval Benchmarks](/reference/benchmarks/retrieval-benchmarks/) for methodology, the external adapter contract, current agentmemory PR #583 stable-ID status, and the CI-safe `make bench-locomo-backends-smoke` proof.
+- Benchmark evidence: LongMemEval-S and LOCOMO reports use deterministic ID scoring, leakage checks, failure audits, reproducible smoke targets, and stable-ID backend comparison artifacts; see [Retrieval Benchmarks](/reference/retrieval-benchmarks/) for methodology, the external adapter contract, current agentmemory PR #583 stable-ID status, and the CI-safe `make bench-locomo-backends-smoke` proof.
 
 The service package is a library package, not a CLI binary and not a root `go install` target. Treat the public package as an ecosystem component with reproducible evidence, while still treating deeper graph, lifecycle, and team-memory features as roadmap direction until their APIs are explicit.
 
@@ -43,4 +43,4 @@ The service package is a library package, not a CLI binary and not a root `go in
 This site documents both the shipped library and the architecture direction. Pages call out conceptual examples when they describe constraints Goncho has not exposed as stable API.
 :::
 
-See [Retrieval Benchmarks](/reference/benchmarks/retrieval-benchmarks/) for benchmark methodology.
+See [Retrieval Benchmarks](/reference/retrieval-benchmarks/) for benchmark methodology.
