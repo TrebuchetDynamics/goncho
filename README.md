@@ -126,28 +126,89 @@ Complexity stays internal: temporal metadata, query expansion, vector fusion, gr
 
 Goncho ships benchmark code and frozen evidence because memory claims should be reproducible.
 
-**LongMemEval-S** retrieval run, 500 questions, retrieval-only evaluation — no LLM reader, no LLM judge:
+> Goncho demonstrates reproducible retrieval performance on LongMemEval-S and LOCOMO while maintaining sub-20ms retrieval latency on multi-thousand-memory corpora.
 
-| System | recall_any@5 | recall_any@10 | MRR |
-| --- | ---: | ---: | ---: |
-| agentmemory BM25+Vector reference | 95.20% | 98.60% | 88.20% |
-| Goncho 2026-05-20 run | 96.80% | 98.00% | 91.35% |
+### Retrieval benchmark: LongMemEval-S
 
-Scope matters: this evaluates retrieval over long conversational memory, not end-to-end QA. The frozen report documents leakage checks, source provenance, and the exact command.
+Full 2026-06-03 Goncho run, 23,867 memories, 500 questions, 20 runs, retrieval-only evaluation — no LLM reader, no LLM judge:
 
-Reproduce the CI-safe version:
+| System | R@5 strict | R@10 strict | recall_any@5 | recall_any@10 | MRR |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Goncho 2026-06-03 run | 91.12% | 94.66% | 96.80% | 98.00% | 91.22% |
+
+MRR is the ranking-quality signal: a 91.22% MRR on a ~24k-memory corpus means the correct memory is usually near the very top, not merely somewhere inside top-K.
+
+### Long-horizon memory benchmark: LOCOMO
+
+Full 2026-06-03 Goncho run, 5,882 memories, 1,982 questions, deterministic stable-ID scoring — retrieval-only, no answer generation, no LLM judge:
+
+| System | recall_any@5 | recall_any@10 | strict@5 | strict@10 | NDCG@10 | MRR | p50 latency | p95 latency |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Goncho 2026-06-03 run | 60.14% | 67.91% | 51.16% | 57.67% | 49.09% | 46.89% | 13ms | 18ms |
+
+LOCOMO is closer to messy long-horizon agent memory: long conversations, temporal state, speaker attribution, multi-hop dependencies, and hard distractors.
+
+### Claim scope
+
+Supported by the current benchmark evidence:
+
+- Retrieval benchmarks.
+- Memory ranking quality.
+- Long-horizon memory retrieval.
+- Deterministic stable-ID scoring with leakage checks and failure audits.
+
+Not evaluated by these numbers:
+
+- End-to-end QA.
+- Agent task completion.
+- LLM judge scoring.
+- Multi-agent coordination.
+
+### Reproduction
+
+CI-safe smoke targets are available for harness checks, but the headline numbers above are full runs, not smoke tests.
 
 ```bash
 make bench-longmemeval-s-smoke
+make bench-locomo-smoke
 ```
 
-Run the full pinned benchmark when you have the dataset prepared:
+Run the full pinned benchmarks when the datasets are prepared:
 
 ```bash
 make bench-longmemeval-s
+make bench-locomo
 ```
 
-Goncho also includes LOCOMO retrieval and backend-comparison harnesses with stable inserted IDs, leakage checks, failure buckets, and no answer-text rescue. See [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md) for methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status.
+Exact full-run commands for the current evidence:
+
+```bash
+go run ./cmd/goncho-bench \
+  --dataset ./artifacts/longmemeval/longmemeval-s-goncho.jsonl \
+  --out ./docs/benchmarks/results/longmemeval-s-2026-06-03-goncho.json \
+  --failures ./docs/benchmarks/failures/longmemeval-s-2026-06-03-goncho.jsonl \
+  --system goncho \
+  --dataset-revision 98d7416c24c778c2fee6e6f3006e7a073259d48f \
+  --dataset-sha256 d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442 \
+  --limit 10 \
+  --runs 20
+
+go run ./cmd/goncho-bench \
+  --locomo-name "LOCOMO" \
+  --locomo-memories ./data/locomo/memories.jsonl \
+  --locomo-questions ./data/locomo/questions.jsonl \
+  --out ./docs/benchmarks/results/locomo-2026-06-03-goncho.json \
+  --failures ./docs/benchmarks/failures/locomo-2026-06-03-categories.jsonl \
+  --locomo-md-out ./docs/benchmarks/locomo-2026-06-03.md \
+  --limit 10
+```
+
+Canonical evidence:
+
+- [LongMemEval-S 2026-06-03 report](docs/benchmarks/longmemeval-s-2026-06-03.md) and [JSON](docs/benchmarks/results/longmemeval-s-2026-06-03-goncho.json).
+- [LOCOMO 2026-06-03 report](docs/benchmarks/locomo-2026-06-03.md) and [JSON](docs/benchmarks/results/locomo-2026-06-03-goncho.json).
+
+Goncho also includes LOCOMO backend-comparison harnesses with stable inserted IDs, leakage checks, failure buckets, conversation-scoped scoring, and no answer-text rescue. See [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md) for methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status.
 
 ## Philosophy
 
@@ -683,12 +744,12 @@ LOCOMO benchmark scope: retrieval-only; no answer generation, no LLM judge, ID-b
 
 Pinned full run evidence:
 
-| Dataset | Questions | Memories | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | MRR |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| LOCOMO full | 1,982 | 5,882 | 60.14% | 67.91% | 51.16% | 57.67% | 46.90% |
-| LOCOMO smoke | 8 | 17 | 100.00% | 100.00% | 100.00% | 100.00% | 85.42% |
+| Dataset | Questions | Memories | recall_any@5 | recall_any@10 | strict_recall@5 | strict_recall@10 | NDCG@10 | MRR | p50 | p95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| LOCOMO full 2026-06-03 | 1,982 | 5,882 | 60.14% | 67.91% | 51.16% | 57.67% | 49.09% | 46.89% | 13ms | 18ms |
+| LOCOMO smoke | 8 | 17 | 100.00% | 100.00% | 100.00% | 100.00% | 87.60% | 85.42% | 0ms | 0ms |
 
-Result artifacts should not stop at recall and MRR. Current smoke and backend-comparison artifacts also report `NDCG@5`, `NDCG@10`, latency min/p50/p95/max, RSS, database size, memory token estimate, Top-K, failure categories, and leakage checks. Preserve the frozen historical full-run evidence at `docs/benchmarks/results/locomo-2026-05-20-goncho.json`; it is not regenerated by smoke targets. Treat regenerated smoke and backend-comparison artifacts as fresh harness checks, and remember latency/RSS measurements are host- and run-sensitive; compare backend evidence through `docs/benchmarks/results/locomo-backend-comparison.json`.
+Result artifacts should not stop at recall and MRR. Current smoke, full-run, and backend-comparison artifacts also report `NDCG@5`, `NDCG@10`, latency min/p50/p95/max, RSS, database size, memory token estimate, Top-K, failure categories, and leakage checks. Preserve the frozen historical full-run evidence at `docs/benchmarks/results/locomo-2026-05-20-goncho.json`; it is not regenerated by smoke targets. The latest full-run evidence is `docs/benchmarks/results/locomo-2026-06-03-goncho.json`. Treat regenerated smoke and backend-comparison artifacts as fresh harness checks, and remember latency/RSS measurements are host- and run-sensitive; compare backend evidence through `docs/benchmarks/results/locomo-backend-comparison.json`.
 
 - Full LOCOMO reproduction: `make bench-locomo` — manual full run with pinned conversion; writes date-stamped full-run artifacts.
 - Retrieval smoke reproduction: `make bench-locomo-smoke` — CI-safe tiny fixture for retrieval report regeneration.
@@ -788,12 +849,14 @@ Current external-backend status:
 | mem0 | no | `mem0`/`mem0ai` is not installed in the local benchmark environment; no stable-ID run was produced. |
 
 - Milestone note: [docs/benchmarks/MILESTONE-LOCOMO-CANDIDATE-GENERATION.md](docs/benchmarks/MILESTONE-LOCOMO-CANDIDATE-GENERATION.md)
-- Full report: [docs/benchmarks/locomo-2026-05-20.md](docs/benchmarks/locomo-2026-05-20.md)
+- Latest full report: [docs/benchmarks/locomo-2026-06-03.md](docs/benchmarks/locomo-2026-06-03.md)
+- Historical full report: [docs/benchmarks/locomo-2026-05-20.md](docs/benchmarks/locomo-2026-05-20.md)
 - Smoke report: [docs/benchmarks/locomo-smoke.md](docs/benchmarks/locomo-smoke.md)
 - Dataset notes: [docs/benchmarks/LOCOMO-DATASET.md](docs/benchmarks/LOCOMO-DATASET.md)
 - External backend adapter notes: [docs/benchmarks/external-backend-adapters.md](docs/benchmarks/external-backend-adapters.md)
 - Backend comparison report: [docs/benchmarks/locomo-backend-comparison.md](docs/benchmarks/locomo-backend-comparison.md)
-- JSON evidence: [docs/benchmarks/results/locomo-2026-05-20-goncho.json](docs/benchmarks/results/locomo-2026-05-20-goncho.json)
+- Latest JSON evidence: [docs/benchmarks/results/locomo-2026-06-03-goncho.json](docs/benchmarks/results/locomo-2026-06-03-goncho.json)
+- Historical JSON evidence: [docs/benchmarks/results/locomo-2026-05-20-goncho.json](docs/benchmarks/results/locomo-2026-05-20-goncho.json)
 - Backend comparison JSON: [docs/benchmarks/results/locomo-backend-comparison.json](docs/benchmarks/results/locomo-backend-comparison.json)
 - Failure audit evidence: [docs/benchmarks/failures/locomo-2026-05-20-categories.jsonl](docs/benchmarks/failures/locomo-2026-05-20-categories.jsonl) and [docs/benchmarks/failures/locomo-backend-comparison.jsonl](docs/benchmarks/failures/locomo-backend-comparison.jsonl) for retrieval-miss categories and not-comparable backend evidence.
 - Candidate-generation failure comparison audit: [docs/benchmarks/failures/locomo-2026-05-20-bm25-vs-goncho.jsonl](docs/benchmarks/failures/locomo-2026-05-20-bm25-vs-goncho.jsonl) records the BM25-win `missing_candidate` diagnosis used by the milestone.
