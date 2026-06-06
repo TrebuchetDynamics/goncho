@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://pkg.go.dev/github.com/TrebuchetDynamics/goncho/service"><img src="https://pkg.go.dev/badge/github.com/TrebuchetDynamics/goncho/service.svg" alt="Go Reference" /></a>
-  <a href="https://github.com/TrebuchetDynamics/goncho/releases/tag/v0.3.1"><img src="https://img.shields.io/badge/release-v0.3.1-blue" alt="Release v0.3.1" /></a>
+  <a href="https://github.com/TrebuchetDynamics/goncho/releases/tag/v0.3.2"><img src="https://img.shields.io/badge/release-v0.3.2-blue" alt="Release v0.3.2" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
 </p>
 
@@ -272,7 +272,7 @@ From a checkout, verify the public package, local docs, external importability, 
 make ecosystem-smoke
 ```
 
-Public `@latest` currently resolves to v0.3.1, published June 1, 2026. For production, pin the service package version rather than treating `@latest` as a deployment lock.
+Public `@latest` currently resolves to v0.3.2, published June 6, 2026. For production, pin the service package version rather than treating `@latest` as a deployment lock.
 
 ## At a Glance
 
@@ -392,13 +392,13 @@ Use this checklist when embedding Goncho in an agent host after the minimal skel
 
 ## Package Status
 
-Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.3.1 release published June 1, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. LOCOMO backend-comparison reports expose stable-ID failure buckets through the JSON `failure_buckets` field and markdown `Failure buckets` table, beside rank-based `failure_categories`, without changing scoring or regenerating frozen LOCOMO artifacts. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
+Goncho is pre-1.0, but it has the public release signals needed to evaluate it as an ecosystem component: a tagged v0.3.2 release published June 6, 2026, a valid Go module, pkg.go.dev API docs, public docs, reproducible benchmark commands, deterministic benchmark methodology, and stable-ID backend comparison artifacts. The LOCOMO backend comparison is conversation-scoped so duplicate content in other conversations cannot win by content alone. LOCOMO backend-comparison reports expose stable-ID failure buckets through the JSON `failure_buckets` field and markdown `Failure buckets` table, beside rank-based `failure_categories`, without changing scoring or regenerating frozen LOCOMO artifacts. Benchmark methodology, the external adapter contract, and current agentmemory PR #583 stable-ID status live in [Retrieval Benchmarks](docs-site/src/content/docs/reference/retrieval-benchmarks.md).
 
 ### go.dev Signal Map
 
 | go.dev signal | Current state | Local proof |
 | --- | --- | --- |
-| Version | `v0.3.1 / Latest`, published June 1, 2026 | `make public-release-smoke` checks public `@latest` metadata with `go list -m -json`. |
+| Version | `v0.3.2 / Latest`, published June 6, 2026 | `make public-release-smoke` checks public `@latest` metadata with `go list -m -json`. |
 | Valid go.mod file | Module path is `github.com/TrebuchetDynamics/goncho` | `make local-module-smoke` checks `go list -m -json` for module path and Go version. |
 | Redistributable license | `MIT` | License file is checked in and pkg.go.dev marks it redistributable. |
 | Package documentation | Root package docs render with examples | `make package-doc-smoke` checks `go doc .`; compiled examples run in `go test ./...`. |
@@ -408,7 +408,7 @@ Goncho is pre-1.0, but it has the public release signals needed to evaluate it a
 
 ### Versioning and Adoption Notes
 
-- **Pin production dependencies:** Goncho is pre-1.0 stability software. For reproducible builds, use `go get github.com/TrebuchetDynamics/goncho/service@v0.3.1` or a reviewed commit; do not treat `@latest` as a deployment lock.
+- **Pin production dependencies:** Goncho is pre-1.0 stability software. For reproducible builds, use `go get github.com/TrebuchetDynamics/goncho/service@v0.3.2` or a reviewed commit; do not treat `@latest` as a deployment lock.
 - **Read adoption counters carefully:** pkg.go.dev currently shows Imported by 0. That reverse-dependency count is not a correctness gate; use it as adoption context, then rely on the smoke checks below for package readiness.
 - **Upgrade by evidence:** before changing the pinned version, run `make ecosystem-smoke` from a checkout and keep host-side live verification in place.
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.2 - 2026-06-06
+
+### Documentation
+
+- Added CONTEXT vocabulary for host-provided semantic candidate streams, LOCOMO retrieval quality slices, and memory impact audits.
+
 ## v0.3.1 - 2026-06-01
 
 ### Added

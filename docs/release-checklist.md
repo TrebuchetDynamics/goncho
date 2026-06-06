@@ -1,6 +1,6 @@
 # Release Checklist
 
-Current public release marker: v0.3.1.
+Current public release marker: v0.3.2.
 
 Use this checklist before publishing a Goncho release or asking users to upgrade pinned hosts.
 

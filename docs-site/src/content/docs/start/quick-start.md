@@ -48,7 +48,7 @@ goncho embeddings reindex --db ./goncho.db --index ./goncho.db.vectors.json --pl
 goncho embeddings reindex --db ./goncho.db --index ./goncho.db.vectors.json --apply
 ```
 
-The service package is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.3.1, published June 1, 2026, and includes the benchmark CLI.
+The service package is a library package, not a root `go install` target; `goncho-bench` is the installable command in `./cmd/goncho-bench`. Public `@latest` currently resolves to v0.3.2, published June 6, 2026, and includes the benchmark CLI.
 
 :::note[Pre-1.0 note]
 Goncho is pre-1.0. The setup flow is intentionally small, and operators should pin the module version or commit they deploy against.
