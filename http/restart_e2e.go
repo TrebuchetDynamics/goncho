@@ -27,6 +27,7 @@ type HTTPServiceRestartE2EReport struct {
 	MessagesCreated                     int    `json:"messages_created"`
 	SearchCountBeforeRestart            int    `json:"search_count_before_restart"`
 	SearchCountAfterRestart             int    `json:"search_count_after_restart"`
+	RecallCountAfterRestart             int    `json:"recall_count_after_restart"`
 	ContextHadProfileAfterRestart       bool   `json:"context_had_profile_after_restart"`
 	ContextHadConclusionAfterRestart    bool   `json:"context_had_conclusion_after_restart"`
 	ContextHadRecentMessageAfterRestart bool   `json:"context_had_recent_message_after_restart"`
@@ -87,6 +88,10 @@ func RunHTTPServiceRestartE2E(ctx context.Context, cfg HTTPServiceRestartE2EConf
 	if err != nil {
 		return HTTPServiceRestartE2EReport{}, err
 	}
+	afterRecall, err := requestJSONNoTest[goncho.RecallTrace](reopenedHandler, http.MethodPost, "/v3/workspaces/"+cfg.WorkspaceID+"/peers/"+cfg.PeerID+"/recall", map[string]any{"query": "SQLite reopen", "session_key": cfg.SessionKey, "limit": 5})
+	if err != nil {
+		return HTTPServiceRestartE2EReport{}, err
+	}
 
 	report := HTTPServiceRestartE2EReport{
 		SQLiteRestartVerified:               len(afterSearch.Results) == 1 && gonchoHTTPContainsString(afterContext.PeerCard, profileFact) && gonchoHTTPContainsString(afterContext.Conclusions, conclusion) && gonchoHTTPMessageSlicesContain(afterContext.RecentMessages, userMessage),
@@ -95,6 +100,7 @@ func RunHTTPServiceRestartE2E(ctx context.Context, cfg HTTPServiceRestartE2EConf
 		MessagesCreated:                     len(messages.Messages),
 		SearchCountBeforeRestart:            len(beforeSearch.Results),
 		SearchCountAfterRestart:             len(afterSearch.Results),
+		RecallCountAfterRestart:             len(afterRecall.Selected),
 		ContextHadProfileAfterRestart:       gonchoHTTPContainsString(afterContext.PeerCard, profileFact),
 		ContextHadConclusionAfterRestart:    gonchoHTTPContainsString(afterContext.Conclusions, conclusion),
 		ContextHadRecentMessageAfterRestart: gonchoHTTPMessageSlicesContain(afterContext.RecentMessages, userMessage),

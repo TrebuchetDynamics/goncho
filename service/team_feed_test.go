@@ -75,6 +75,36 @@ func TestTeamFeedListsActionSignalsWithPaginationForAuthorizedActor(t *testing.T
 	}
 }
 
+func TestTeamFeedAllowsCrossProfileAdminAndAuditsDecision(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	if err := RunMigrations(svc.db); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+	ctx := context.Background()
+	if _, err := svc.UpsertAction(ctx, ActionParams{ProfileID: "profile-a", Peer: "peer-team", ActionID: "private", Title: "Private"}); err != nil {
+		t.Fatalf("UpsertAction: %v", err)
+	}
+	if _, err := svc.SignalAction(ctx, ActionSignalParams{ProfileID: "profile-a", Peer: "peer-team", ActionID: "private", Signal: "ready", Actor: "agent:a"}); err != nil {
+		t.Fatalf("SignalAction: %v", err)
+	}
+
+	allowed, err := svc.TeamFeed(ctx, TeamFeedQuery{ProfileID: "profile-a", Peer: "peer-team", Actor: "agent:admin", ActorProfileID: "profile-b", Role: "admin", Limit: 10})
+	if err != nil {
+		t.Fatalf("TeamFeed admin: %v", err)
+	}
+	if !allowed.Authorized || allowed.Decision != TeamFeedDecisionAllowed || len(allowed.Entries) != 1 || allowed.Entries[0].ActionID != "private" {
+		t.Fatalf("admin feed = %+v, want cross-profile admin access to private action signal", allowed)
+	}
+	audit, err := svc.ListTeamFeedAudit(ctx, TeamFeedAuditQuery{ProfileID: "profile-a", Peer: "peer-team"})
+	if err != nil {
+		t.Fatalf("ListTeamFeedAudit: %v", err)
+	}
+	if audit.Count != 1 || audit.Events[0].Decision != TeamFeedDecisionAllowed || audit.Events[0].Actor != "agent:admin" || audit.Events[0].Role != "admin" {
+		t.Fatalf("audit = %+v, want allowed admin actor evidence", audit)
+	}
+}
+
 func TestTeamFeedDeniesCrossProfileAndAuditsDecision(t *testing.T) {
 	svc, cleanup := newTestService(t)
 	defer cleanup()

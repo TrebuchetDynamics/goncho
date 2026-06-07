@@ -3,7 +3,9 @@ package goncho
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -105,6 +107,119 @@ func TestGonchoRecallToolCompactOutputKeepsDiagnosticsWithoutLargeTracePayload(t
 		if _, ok := recalled[omitted]; ok {
 			t.Fatalf("compact recall output included %q: %+v", omitted, recalled)
 		}
+	}
+}
+
+func TestGonchoPublicToolsSupportConcurrentRememberSearchAndRecall(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+	peer := "peer-tools-concurrent"
+	sessionKey := "session-tools-concurrent"
+	rememberTool := NewGonchoRememberTool(svc)
+	searchTool := NewGonchoSearchTool(svc)
+	recallTool := NewGonchoRecallTool(svc)
+
+	const memories = 8
+	start := make(chan struct{})
+	errs := make(chan error, memories*3)
+	var wg sync.WaitGroup
+	for i := 0; i < memories; i++ {
+		i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			payload := fmt.Sprintf(`{"peer_id":%q,"content":%q,"session_key":%q}`, peer, fmt.Sprintf("Concurrent public tool claim %02d uses quartz marker.", i), sessionKey)
+			out, err := rememberTool.Execute(ctx, json.RawMessage(payload))
+			if err != nil {
+				errs <- fmt.Errorf("remember %02d: %w", i, err)
+				return
+			}
+			var decoded map[string]any
+			if err := json.Unmarshal(out, &decoded); err != nil {
+				errs <- fmt.Errorf("decode remember %02d: %w", i, err)
+				return
+			}
+			if action, _ := decoded["action"].(string); action != "remember" {
+				errs <- fmt.Errorf("remember %02d output = %+v, want action remember", i, decoded)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	start = make(chan struct{})
+	errs = make(chan error, memories*2)
+	for i := 0; i < memories; i++ {
+		i := i
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-start
+			searched, err := executeMemoryToolNoTest(ctx, searchTool, `{"peer_id":"`+peer+`","query":"quartz marker","session_key":"`+sessionKey+`","limit":8}`)
+			if err != nil {
+				errs <- fmt.Errorf("search worker %02d: %w", i, err)
+				return
+			}
+			if got := intFieldNoTest(searched, "count"); got != memories {
+				errs <- fmt.Errorf("search worker %02d count = %d, want %d", i, got, memories)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			recalled, err := executeMemoryToolNoTest(ctx, recallTool, `{"peer_id":"`+peer+`","query":"quartz marker","session_key":"`+sessionKey+`","limit":8,"compact":true}`)
+			if err != nil {
+				errs <- fmt.Errorf("recall worker %02d: %w", i, err)
+				return
+			}
+			if got := intFieldNoTest(recalled, "selected_count"); got != memories {
+				errs <- fmt.Errorf("recall worker %02d selected_count = %d, want %d", i, got, memories)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+type executableMemoryTool interface {
+	Name() string
+	Execute(context.Context, json.RawMessage) (json.RawMessage, error)
+}
+
+func executeMemoryToolNoTest(ctx context.Context, tool executableMemoryTool, args string) (map[string]any, error) {
+	raw, err := tool.Execute(ctx, json.RawMessage(args))
+	if err != nil {
+		return nil, fmt.Errorf("%s Execute: %w", tool.Name(), err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("decode %s output %s: %w", tool.Name(), raw, err)
+	}
+	return out, nil
+}
+
+func intFieldNoTest(m map[string]any, key string) int {
+	switch v := m[key].(type) {
+	case float64:
+		return int(v)
+	case int:
+		return v
+	default:
+		return 0
 	}
 }
 

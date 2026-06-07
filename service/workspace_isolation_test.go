@@ -124,6 +124,88 @@ func TestWorkspaceIsolation_GlobalMemoriesCrossBoundaries(t *testing.T) {
 
 // TestWorkspaceIsolation_NoCrossPollution proves workspace-A memories never
 // leak into workspace-B context.
+func TestWorkspaceIsolation_RecallDoesNotLeakAcrossPeers(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	_, err := svc.Conclude(ctx, ConcludeParams{
+		Peer:       "alice",
+		Conclusion: "Alice keeps her private launch code in amber ledger.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Conclude(ctx, ConcludeParams{
+		Peer:       "bob",
+		Conclusion: "Bob keeps his private launch code in cobalt ledger.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	alice, err := svc.Recall(ctx, RecallQuery{Peer: "alice", Query: "private launch code", Limit: 5})
+	if err != nil {
+		t.Fatalf("alice recall: %v", err)
+	}
+	if len(alice.Selected) != 1 || alice.Selected[0].Candidate.Content != "Alice keeps her private launch code in amber ledger." {
+		t.Fatalf("alice recall selected = %+v, want only Alice memory", alice.Selected)
+	}
+
+	bob, err := svc.Recall(ctx, RecallQuery{Peer: "bob", Query: "private launch code", Limit: 5})
+	if err != nil {
+		t.Fatalf("bob recall: %v", err)
+	}
+	if len(bob.Selected) != 1 || bob.Selected[0].Candidate.Content != "Bob keeps his private launch code in cobalt ledger." {
+		t.Fatalf("bob recall selected = %+v, want only Bob memory", bob.Selected)
+	}
+}
+
+func TestWorkspaceIsolation_RecallDoesNotCrossWorkspaceBoundaries(t *testing.T) {
+	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer store.Close(context.Background())
+
+	ctx := context.Background()
+	svcA := NewService(store.DB(), Config{
+		WorkspaceID:    "workspace-a",
+		ObserverPeerID: "gormes",
+		RecentMessages: 4,
+	}, nil)
+	svcB := NewService(store.DB(), Config{
+		WorkspaceID:    "workspace-b",
+		ObserverPeerID: "gormes",
+		RecentMessages: 4,
+	}, nil)
+
+	_, err = svcA.Conclude(ctx, ConcludeParams{
+		Peer:       "alice",
+		Conclusion: "Alice stores the sealed vault key in project Alpha.",
+		Scope:      MemoryScopeWorkspace,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	traceA, err := svcA.Recall(ctx, RecallQuery{Peer: "alice", Query: "sealed vault key", ScopeID: MemoryScopeWorkspace, Limit: 5})
+	if err != nil {
+		t.Fatalf("workspace A recall: %v", err)
+	}
+	if len(traceA.Selected) != 1 || traceA.Selected[0].Candidate.Content != "Alice stores the sealed vault key in project Alpha." {
+		t.Fatalf("workspace A recall selected = %+v, want alpha memory", traceA.Selected)
+	}
+
+	traceB, err := svcB.Recall(ctx, RecallQuery{Peer: "alice", Query: "sealed vault key", ScopeID: MemoryScopeWorkspace, Limit: 5})
+	if err != nil {
+		t.Fatalf("workspace B recall: %v", err)
+	}
+	if len(traceB.Selected) != 0 {
+		t.Fatalf("workspace B recall selected = %+v, want no workspace-A memory leak", traceB.Selected)
+	}
+}
+
 func TestWorkspaceIsolation_NoCrossPollution(t *testing.T) {
 	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
 	if err != nil {

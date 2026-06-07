@@ -97,6 +97,40 @@ func TestLocalE2E_HTTPServiceLifecycleUsesHonchoCompatibleRoutes(t *testing.T) {
 	}
 }
 
+func TestLocalE2E_HTTPServiceRejectsMalformedAndInvalidBodies(t *testing.T) {
+	ctx := context.Background()
+	store, err := memory.OpenSqlite(t.TempDir()+"/memory.db", 0, nil)
+	if err != nil {
+		t.Fatalf("OpenSqlite: %v", err)
+	}
+	defer func() {
+		if err := store.Close(ctx); err != nil {
+			t.Fatalf("Close: %v", err)
+		}
+	}()
+	if err := goncho.RunMigrations(store.DB()); err != nil {
+		t.Fatalf("RunMigrations: %v", err)
+	}
+
+	handler := NewServiceHandler(goncho.NewService(store.DB(), goncho.Config{WorkspaceID: "http-error-workspace"}, nil))
+	path := "/v3/workspaces/http-error-workspace/conclusions"
+
+	malformed := requestRawJSON(t, handler, http.MethodPost, path, `{"peer_id":"peer-a",`, http.StatusBadRequest)
+	if !strings.Contains(malformed.Error, "decode json") {
+		t.Fatalf("malformed error = %q, want decode json", malformed.Error)
+	}
+
+	unknownField := requestRawJSON(t, handler, http.MethodPost, path, `{"peer_id":"peer-a","conclusion":"remember this","unexpected":true}`, http.StatusBadRequest)
+	if !strings.Contains(unknownField.Error, "unknown field") {
+		t.Fatalf("unknown-field error = %q, want unknown field", unknownField.Error)
+	}
+
+	missingConclusion := postJSON[httpError](t, handler, path, map[string]any{"peer_id": "peer-a"}, http.StatusBadRequest)
+	if missingConclusion.Error == "" {
+		t.Fatalf("missing conclusion error is empty")
+	}
+}
+
 func putJSON(t *testing.T, handler http.Handler, path string, body any, wantStatus int) {
 	t.Helper()
 	_ = requestJSON[map[string]any](t, handler, http.MethodPut, path, body, wantStatus)
@@ -110,6 +144,26 @@ func postJSON[T any](t *testing.T, handler http.Handler, path string, body any, 
 func getJSON[T any](t *testing.T, handler http.Handler, path string, wantStatus int) T {
 	t.Helper()
 	return requestJSON[T](t, handler, http.MethodGet, path, nil, wantStatus)
+}
+
+type httpError struct {
+	Error string `json:"error"`
+}
+
+func requestRawJSON(t *testing.T, handler http.Handler, method, path, body string, wantStatus int) httpError {
+	t.Helper()
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != wantStatus {
+		t.Fatalf("%s %s status = %d, want %d; body: %s", method, path, rec.Code, wantStatus, rec.Body.String())
+	}
+	var out httpError
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode error response for %s %s: %v\n%s", method, path, err, rec.Body.String())
+	}
+	return out
 }
 
 func requestJSON[T any](t *testing.T, handler http.Handler, method, path string, body any, wantStatus int) T {

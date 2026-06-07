@@ -13,7 +13,7 @@ BEAM_SMOKE_BASELINE_RESULTS := ./cmd/goncho-bench/testdata/beam-smoke/mnemosyne-
 PUBLIC_LATEST_VERSION := v0.3.2
 PUBLIC_LATEST_PUBLISHED_DATE := 2026-06-06
 
-.PHONY: release-smoke stable-e2e-bench-smoke release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke server-smoke docker-compose-smoke bench-agent-replay-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends bench-beam-smoke
+.PHONY: release-smoke stable-e2e-bench-smoke python-tests release-metadata-smoke ecosystem-smoke public-release-smoke local-module-smoke package-doc-smoke docs-site-smoke public-module-smoke install-smoke server-smoke docker-compose-smoke bench-agent-replay-smoke bench-longmemeval-s-smoke bench-longmemeval-s prepare-longmemeval-s bench-locomo-smoke bench-locomo bench-locomo-backends-smoke bench-locomo-backends bench-beam-smoke
 
 release-smoke:
 	$(MAKE) release-metadata-smoke
@@ -24,6 +24,7 @@ release-smoke:
 
 stable-e2e-bench-smoke:
 	$(MAKE) install-smoke
+	$(MAKE) python-tests
 	go test ./...
 	go vet ./...
 	@tmp=$$(mktemp -d); \
@@ -69,6 +70,10 @@ stable-e2e-bench-smoke:
 		--beam-paired-json-out "$$tmp/beam-smoke-paired-comparison.json" \
 		--beam-paired-md-out "$$tmp/beam-smoke-paired-comparison.md" \
 		--beam-paired-bootstrap-samples 200
+
+python-tests:
+	python3 scripts/prepare_locomo_test.py
+	PYTHONPATH=scripts/shared/tests:scripts/shared/tests/data_io python3 -m pytest scripts/shared/tests -q
 
 release-metadata-smoke:
 	go test ./service -run 'Test(ChangelogReleaseHeadingsHaveMatchingTags|ReleaseSmokeDocsMentionMetadataGuard|PublicDocsLinkGoReference|PublicDocsMentionEcosystemSmoke|PublicDocsLinkRetrievalBenchmarksReference|PublicDocsSurfaceExternalAdapterContract|PublicDocsMentionBackendComparisonSmoke|BenchmarkDocsMentionConversationScopedBackendComparison|BenchmarkDocsDocumentWrongBranchBackendRejections|BenchmarkDocsDocumentBackendComparisonFailureBucketSummaries|BenchmarkPlanDocumentsLocomoRecallValidationContract|BenchmarkPlanDocumentsLocomoFailureDrivenEvaluation|BenchmarkRoadmapSurfacesLocomoFailureDrivenEvaluationSlice|BenchmarkRoadmapSurfacesLocomoAnswerReadyCloseout|BenchmarkRoadmapSurfacesLocomoSpeakerRoutingSlice|BenchmarkRoadmapSurfacesLocomoTemporalRoutingSlice|BenchmarkPlanDocumentsLocomoTemporalSpeakerRoutingRecall|BenchmarkRoadmapSurfacesLocomoQueryDecompositionSlice|BenchmarkPlanDocumentsLocomoQueryDecompositionRecall|BenchmarkRoadmapSurfacesLocomoCoverageAwareSelectionSlice|BenchmarkRoadmapSurfacesLocomoGraphRecallSlice|BenchmarkPlanDocumentsLocomoGraphAssistedMultiHopRecall|BenchmarkRoadmapNamesLocomoImprovementPriorities|BenchmarkRoadmapNamesLocomoImplementationGate|BenchmarkDocsRecommendLocomoImprovementLevers|BenchmarkDocsSurfaceLocomoResultMetricSet|BenchmarkDocsDistinguishFrozenLocomoResultArtifacts|BenchmarkDocsNameLocomoReproductionCommands|BenchmarkDocsLinkLocomoFailureAuditArtifacts|BenchmarkDocsLabelSmokeFailureAuditArtifacts|BenchmarkDocsLinkLocomoCandidateFailureComparisonAudit|BenchmarkDocsStateLocomoRetrievalOnlyScope|BenchmarkDocsNameLocomoFullBaselineSet|BenchmarkDocsSurfaceLocomoSourceProvenance|BenchmarkDocsSurfaceLocomoConvertedDatasetEvidence|BenchmarkDocsSurfaceLocomoLeakageCheckCounts|BenchmarkDocsSurfaceLocomoCategoryMetricGroups|BenchmarkDocsSurfaceLocomoCategoryQuestionCounts|BenchmarkDocsSurfaceLocomoGonchoCategoryMetrics|BenchmarkDocsSurfaceLocomoGonchoStrictCategoryMetrics|BenchmarkDocsSurfaceLocomoBM25CategoryMetrics|BenchmarkDocsSurfaceLocomoSQLiteFTS5CategoryMetrics|BenchmarkDocsSurfaceLocomoRandomCategoryMetrics|BenchmarkDocsSurfaceLocomoRecencyCategoryMetrics|ReleaseMetadataSmokeIncludesLocomoResultDocsGuards|PublicAdoptionDocsMentionPublicModuleSmoke|PublicDocsMentionLatestReleaseVersion|PublicDocsUseLatestQualifiedGoGet|PublicDocsMentionPublishedReleaseDate|PublicDocsWarnRootGoInstallIsUnsupported|ReadmeSurfacesPkgGoDevEvaluationPath|ReadmeSurfacesTrustBoundaryGuide|ReadmeSurfacesPkgGoDevAPIMap|ReadmeSurfacesImportPathGuide|ReadmeSurfacesHostIntegrationChecklist|ReadmeSurfacesGoDevSignalMap|ReadmeSurfacesVersioningAndAdoptionNotes|ReadmeSurfacesMinimalEmbeddedSkeleton|PackageDocsIncludeCompiledNewServiceExample|PackageDocsIncludeCompiledContextExample|PackageDocsIncludeCompiledSearchExample|ReleaseMetadataSmokeIncludesReadmePkgGoDevGuard|ReleaseMetadataSmokeIncludesReadmeTrustBoundaryGuard|ReleaseMetadataSmokeIncludesReadmeAPIMapGuard|ReleaseMetadataSmokeIncludesReadmeImportPathGuard|ReleaseMetadataSmokeIncludesReadmeHostIntegrationGuard|ReleaseMetadataSmokeIncludesReadmeGoDevSignalGuard|ReleaseMetadataSmokeIncludesReadmeVersioningGuard|ReleaseMetadataSmokeIncludesReadmeMinimalSkeletonGuard|ReleaseMetadataSmokeIncludesPackageExampleGuard|ReleaseMetadataSmokeIncludesContextExampleGuard|ReleaseMetadataSmokeIncludesSearchExampleGuard|PublicDocsFrameRootModuleAsLibrary|EcosystemSmokeIncludesPublicReleaseMetadata|PublicReleaseSmokeChecksDocumentedLatestMetadata|PublicDocsExplainDocumentedLatestPublicReleaseSmoke|LocalModuleSmokeChecksGoModMetadata|PackageDocPointsPkgGoDevReadersToCompiledExamples|PackageDocSurfacesInstallAndCommandBoundary|PackageDocSurfacesImportPathGuide|PackageDocSurfacesTrustBoundaryGuide|PackageDocSurfacesHostIntegrationChecklist|PackageDocSurfacesPrimaryAPIPath|PackageDocSurfacesGoDevPackageSignals|PackageDocSurfacesVersioningAndAdoptionNotes|ReleaseMetadataSmokeIncludesPackageDocExamplesGuard|ReleaseMetadataSmokeIncludesPackageDocInstallGuard|ReleaseMetadataSmokeIncludesPackageDocImportPathGuard|ReleaseMetadataSmokeIncludesPackageDocTrustBoundaryGuard|ReleaseMetadataSmokeIncludesPackageDocHostIntegrationGuard|ReleaseMetadataSmokeIncludesPackageDocAPIPathGuard|ReleaseMetadataSmokeIncludesPackageDocGoDevSignalGuard|ReleaseMetadataSmokeIncludesPackageDocVersioningGuard|PackageDocSmokeChecksLocalGoDoc|DocsSiteSmokeBuildsPublicDocs|PublicDocsMentionDocsSiteSmoke|PublicDocsMentionPackageDocSmoke|PublicDocsMentionLocalModuleSmoke|PublicDocsMentionPublicReleaseSmoke)' -count=1
@@ -137,9 +142,11 @@ public-module-smoke:
 
 install-smoke:
 	@tmp=$$(mktemp -d); \
-	echo "installing ./cmd/goncho-bench to $$tmp"; \
-	GOBIN="$$tmp" go install ./cmd/goncho-bench; \
-	"$$tmp/goncho-bench" --help >/dev/null
+	echo "installing Goncho command binaries to $$tmp"; \
+	GOBIN="$$tmp" go install ./cmd/goncho ./cmd/goncho-bench ./cmd/goncho-server; \
+	"$$tmp/goncho" version >/dev/null; \
+	"$$tmp/goncho-bench" --help >/dev/null 2>&1; \
+	"$$tmp/goncho-server" health -db "$$tmp/goncho.db" >/dev/null
 
 server-smoke:
 	python3 ./scripts/server_smoke.py

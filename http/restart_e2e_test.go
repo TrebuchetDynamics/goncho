@@ -24,6 +24,9 @@ func TestLocalE2E_HTTPServiceLifecycleSurvivesSQLiteRestart(t *testing.T) {
 	if report.SearchCountBeforeRestart != 1 || report.SearchCountAfterRestart != 1 {
 		t.Fatalf("search counts before/after = %d/%d, want 1/1", report.SearchCountBeforeRestart, report.SearchCountAfterRestart)
 	}
+	if report.RecallCountAfterRestart != 1 {
+		t.Fatalf("recall count after restart = %d, want 1", report.RecallCountAfterRestart)
+	}
 	if !report.ContextHadProfileAfterRestart || !report.ContextHadConclusionAfterRestart || !report.ContextHadRecentMessageAfterRestart {
 		t.Fatalf("context flags after restart = %+v", report)
 	}
