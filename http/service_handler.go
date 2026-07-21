@@ -12,8 +12,8 @@ import (
 )
 
 // NewServiceHandler exposes a small local HTTP adapter over service-backed
-// Honcho-compatible routes. It is intended for embedded/local smoke tests, not
-// hosted auth, pagination, or provider orchestration.
+// Honcho-compatible routes and the evidence-preserving mem0-style /v1/memories
+// aliases. It is intended for embedded/local use, not hosted auth or provider orchestration.
 func NewServiceHandler(svc *goncho.Service) http.Handler {
 	return serviceHandler{svc: svc}
 }
@@ -28,6 +28,9 @@ func (h serviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parts := splitPath(r.URL.Path)
+	if h.serveMemoryFacadeHTTP(w, r, parts) {
+		return
+	}
 	if len(parts) < 3 || parts[0] != "v3" || parts[1] != "workspaces" {
 		writeHTTPError(w, http.StatusNotFound, "goncho http: route not found")
 		return
