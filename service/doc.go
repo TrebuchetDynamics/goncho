@@ -94,6 +94,11 @@
 //   - Service.PreviewRetention and Service.ApplyRetention provide non-destructive
 //     retention planning and audited archive/tombstone application; archived
 //     conclusions keep stable IDs but are excluded from active recall.
+//   - Service.ConsistencyReport groups normalized duplicates and deterministic
+//     fact conflicts within peer/scope boundaries without mutating memory.
+//   - Service.ExportSnapshotManifest can bind deterministic memory state to
+//     host-provided branch/worktree/commit evidence without running git;
+//     DiffSnapshotManifests warns when checkpoints cross branches.
 //   - Service.ExportPortableJSONL, Service.PreviewPortableImport,
 //     Service.ImportPortableJSONL, and Service.ExportPortableMarkdown provide
 //     portable local mirrors with checksummed manifests and preview-first import.

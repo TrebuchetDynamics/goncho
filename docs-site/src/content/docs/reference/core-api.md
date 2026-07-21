@@ -21,8 +21,14 @@ This page names the exported symbols used by the current repository and explains
 | `Context` | Assemble an orientation pack for prompt construction. |
 | `Chat` | Return a local-memory-backed chat result without requiring hosted Honcho, an LLM, or browser dependency. |
 | `Conclude` | Write or delete manual conclusions. |
+| `ConsistencyReport` | Read normalized duplicate groups and deterministic fact conflicts within peer/scope boundaries without mutating memory. |
+| `ExportSnapshotManifest` / `DiffSnapshotManifests` | Bind deterministic memory snapshots to optional host-provided branch/worktree/commit evidence and warn on cross-branch diffs without running git. |
 | `CreateMessages` | Persist session messages as lifecycle evidence. |
 | `OnSessionEnd` | Consolidate a completed session into summaries. |
+
+## Mem0-style local HTTP aliases
+
+`http.NewServiceHandler` exposes `/v1/memories` add/list/search/get/update/delete/history aliases over `MemoryFacade`. They keep caller IDs stable, preserve update/delete evidence, require `user_id` on every route, and remain bound to the handler's local workspace. They do not add mem0 cloud or hosted-auth assumptions.
 
 ## Directional Representation
 

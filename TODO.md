@@ -506,7 +506,7 @@ Agentmemory has tests and tools around retention, access logs, consistency, casc
 Deliverables:
 
 - [ ] Add retention/access reports: least-used, stale, high-risk, oversized, and unreviewed memories.
-- [ ] Add consistency scan that groups duplicate/conflicting claims by entity/scope/time.
+- [x] Add a read-only consistency scan that groups normalized duplicate claims and deterministic fact conflicts by peer/scope with timestamps, adapting the stewardship pattern from agent-memory-mcp without silent mutation.
 - [ ] Add cascade preview when a canonical claim is superseded and dependent memories/context packs may change.
 - [ ] Add `lessons` and `routines` views for reusable engineering workflows, backed by evidence.
 - [ ] Add `sentinels` for important facts that should warn if contradicted or missing from context.
@@ -646,15 +646,17 @@ Deliverables:
 
 - [ ] Add optional branch/worktree metadata to observations, conclusions, snapshots, and recall queries.
 - [ ] Add post-commit capture adapter plan that records commit hash, changed files, and summary as evidence.
-- [ ] Add checkpoint view tying memory snapshots to code snapshots without running git from core service APIs.
+- [x] Add checkpoint IDs tying deterministic memory snapshots to host-provided branch/worktree/commit evidence without running git from core service APIs.
 - [ ] Add file-index observation import for code/docs with include/exclude and checksum provenance.
 - [ ] Add stale-branch warnings when recalling claims captured on a different branch or old commit.
 
 Acceptance tests:
 
 - [ ] Branch metadata isolation/routing tests.
-- [ ] Snapshot/checkpoint manifest tests with fake commit IDs.
+- [x] Snapshot/checkpoint manifest tests with fake commit IDs.
 - [ ] Stale-branch warning test in context/recall output.
+
+First checkpoint slice delivered: snapshot manifests now preserve optional host-provided branch/worktree/commit evidence, redact absolute worktree paths, derive code-state-specific checkpoint IDs without changing memory snapshot IDs, and warn when snapshot diffs cross branches. This adapts nebu-ctx checkout binding and shokunin's frozen-time code-claim skepticism while keeping all git operations adapter-owned.
 
 Non-goals:
 
@@ -759,12 +761,13 @@ What Goncho already has:
 - Read-only `/v3/workspaces/{workspace}/viewer/sessions/{session}/timeline` JSON timeline combining messages, observations, and summaries.
 - Documented compatibility catalog plus default-enabled `memory_timeline` and `memory_audit` aliases over public service APIs.
 - File-backed `service.LocalVectorIndex` with separate `TextEmbeddingProvider`, diagnostics, and fake-vector recall coverage behind `Config.VectorStore`.
-- Mem0-style `service.MemoryFacade` with stable caller IDs, metadata filters, and history/provenance over Goncho memory slots and observations.
+- Mem0-style `service.MemoryFacade` plus local `/v1/memories` HTTP aliases with stable caller IDs, required user scoping, metadata filters, tombstones, and history/provenance over Goncho memory slots and observations.
 - Hardened MCP `/mcp` plus stdio transport with tools/resources/prompts manifests and evidence-first prompt templates.
 - Non-mutating onboarding, reversible connector/remove plans, local operator preferences, and doctor copy-paste suggestions for first-run UX.
 - `service.ExtractMemoryProposals` for bounded session-window memory proposal extraction with add/update/supersede/delete/noop operations, evidence IDs, review routing, and profile-scoped preference/procedure hints.
 - Optional-provider resilience diagnostics with circuit-breaker state, timeouts, payload guards, lexical fallback warnings, and health/doctor/viewer surfacing.
 - Retention/disk budget preview and archive apply path with DB/image/vector diagnostics, stable IDs, audit rows, and recall exclusion for archived conclusions.
+- Read-only consistency reports that group normalized duplicates and conflicting claims within peer/scope boundaries for operator stewardship.
 - Portable JSONL export/import and deterministic Markdown mirror with checksummed manifests, preview conflicts, redaction summaries, stable IDs, review state, tombstones, snapshots, and scoped export filters.
 - Eval registry, self-correction candidates, runtime recall feedback labels, and regression gate helpers for local benchmark improvement loops without LLM judges or direct memory promotion.
 - Scoped search, recall, context packs, and provenance traces.
@@ -775,7 +778,7 @@ What Goncho already has:
 - Filesystem watcher preview/import primitives plus `goncho connect filesystem-watcher --plan` for explicit include/exclude observation import.
 - Four-tier explicit consolidation API.
 - Local action graph and signals.
-- Snapshot manifests/diffs/rollback metadata.
+- Snapshot manifests with adapter-provided branch/worktree/commit evidence, code-state-specific checkpoint IDs, cross-branch diff warnings, and adapter-owned rollback metadata.
 - Image refs/checksums/metadata.
 - Public tools: context, search, recall, remember, review, handoff.
 - Memorymirror source-pinned architecture map against agentmemory.
@@ -797,7 +800,7 @@ What Goncho still lacks versus agentmemory:
 ### Delivered but may need UX polish
 
 - Top-level `goncho doctor`, `version --json`, and `upgrade-check` — exist in `cmd/goncho`. Polish gaps: golden-file tests for doctor output, `goncho-server`-aware doctor when server is running, and automated `--latest` discovery in upgrade-check.
-- Mem0-simple `MemoryFacade` — exists in `service/memory_facade.go`. Polish gaps: standalone mem0-style HTTP aliases and Go examples that feel as short as mem0 quick starts.
+- Mem0-simple `MemoryFacade` — exists in `service/memory_facade.go`, with local `/v1/memories` HTTP aliases for add/list/search/get/update/delete/history that preserve stable IDs, tombstones, and evidence history. Remaining polish gap: a copy-paste HTTP quick start.
 - Provider resilience diagnostics — exist in `service/provider_resilience.go`. Polish gaps: operator-facing `goncho provider health` command and MCP resource surface for provider degradation.
 - Disk-budget retention preview/archive — exists in `service/retention.go`. Polish gaps: retention policy cron trigger and eviction apply `--dry-run` in `goncho-server`.
 - Preference/connect/remove CLI UX — exists in `cmd/goncho`. Polish gaps: interactive onboarding wizard and golden-tested `--apply` paths.

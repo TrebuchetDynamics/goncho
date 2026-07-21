@@ -302,10 +302,11 @@ Goncho can orient the agent by storing evidence, ranking scoped memory, assembli
 | Open local memory | `memory.OpenSqlite` plus `goncho.RunMigrations` | Creates the SQLite store and schema Goncho expects. |
 | Embed the service | `goncho.NewService` | Gives your Go host the profile, search, recall, context, chat, and conclude APIs. |
 | Store durable facts | `svc.SetProfile`, `svc.Conclude`, or memory slots | Separates stable profile facts, current conclusions, and named durable facts/preferences. |
+| Use a mem0-style HTTP API | Local `/v1/memories` routes from `http.NewServiceHandler` | Adds, searches, updates, tombstones, and reads evidence history with stable caller IDs and required `user_id` scoping. |
 | Manage named slots | `CreateMemorySlot`, `GetMemorySlot`, `ListMemorySlots`, `AppendMemorySlot`, `ReplaceMemorySlot`, `DeleteMemorySlot` | Provides scoped slot memory with revisioning, tombstones, audit observations, and profile isolation. |
 | Consolidate locally | `ExecuteFourTierConsolidation` | Explicitly writes working, episodic, semantic, and procedural consolidation memories with provenance. |
 | Coordinate local actions | `UpsertAction`, `ReadActionGraph`, `CompleteAction`, `SignalAction` | Tracks local dependencies, frontier, next action, and coordination signals without server leases. |
-| Export snapshots | `ExportSnapshotManifest`, `DiffSnapshotManifests`, `BuildSnapshotRollbackMetadata` | Produces deterministic manifests and rollback metadata while leaving git operations adapter-owned. |
+| Export snapshots | `ExportSnapshotManifest`, `DiffSnapshotManifests`, `BuildSnapshotRollbackMetadata` | Produces deterministic memory manifests, optional branch/worktree/commit checkpoint IDs, and cross-branch warnings while leaving git operations adapter-owned. |
 | Store image refs | `StoreImageMemory`, `SearchImageMemories` | Stores image references, checksums, alt text, and metadata with embeddings explicitly deferred for later vision search. |
 | Retrieve scoped memory | `svc.Search` | Returns peer/profile/session-scoped hits before you decide what to verify; transparent synonym expansion is surfaced as hit provenance. |
 | Audit recall scoring | `svc.Recall` | Returns the scored `RecallTrace` with candidates, selected/rejected memories, warnings, and provenance, including query-expansion evidence, before any projection. |
