@@ -68,6 +68,39 @@ func TestSnapshotManifestIsDeterministicAndGitOperationsAreAdapterOwned(t *testi
 	}
 }
 
+func TestSnapshotManifestCarriesCheckpointMetadataAndWarnsOnBranchChange(t *testing.T) {
+	svc, cleanup := newTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	main, err := svc.ExportSnapshotManifest(ctx, SnapshotParams{Peer: "peer-snap", Branch: "main", Worktree: "/tmp/worktrees/main", Commit: "commit-a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	feature, err := svc.ExportSnapshotManifest(ctx, SnapshotParams{Peer: "peer-snap", Branch: "feature/auth", Worktree: "/tmp/worktrees/auth", Commit: "commit-b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if main.SnapshotID != feature.SnapshotID {
+		t.Fatalf("snapshot IDs = %q/%q, memory state did not change", main.SnapshotID, feature.SnapshotID)
+	}
+	if main.CheckpointID == "" || main.CheckpointID == feature.CheckpointID {
+		t.Fatalf("checkpoint IDs = %q/%q, want code-state-specific IDs", main.CheckpointID, feature.CheckpointID)
+	}
+	if main.Git.Branch != "main" || main.Git.Commit != "commit-a" || main.Git.Worktree != "main" || !main.Git.WorktreeRedacted {
+		t.Fatalf("git metadata = %+v, want host-provided branch/commit and redacted worktree", main.Git)
+	}
+
+	diff := DiffSnapshotManifests(main, feature)
+	if !diff.GitChanged || !snapshotWarningsContain(diff.Warnings, SnapshotWarningStaleBranch) {
+		t.Fatalf("snapshot diff = %+v, want stale branch warning", diff)
+	}
+}
+
+func snapshotWarningsContain(warnings []SnapshotWarning, code string) bool {
+	return slices.ContainsFunc(warnings, func(warning SnapshotWarning) bool { return warning.Code == code })
+}
+
 func snapshotEntryKeys(entries []SnapshotEntry) []string {
 	return sliceutil.Map(entries, func(entry SnapshotEntry) string { return entry.Key })
 }

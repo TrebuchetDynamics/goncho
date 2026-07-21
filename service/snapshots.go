@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/TrebuchetDynamics/goncho/service/internal/dbscan"
 	"github.com/TrebuchetDynamics/goncho/service/internal/hashutil"
@@ -15,12 +17,19 @@ type SnapshotParams struct {
 	WorkspaceID string `json:"workspace_id,omitempty"`
 	ProfileID   string `json:"profile_id,omitempty"`
 	Peer        string `json:"peer"`
+	Branch      string `json:"branch,omitempty"`
+	Worktree    string `json:"worktree,omitempty"`
+	Commit      string `json:"commit,omitempty"`
 }
 
 type SnapshotGitMetadata struct {
-	AdapterOwned bool   `json:"adapter_owned"`
-	Operation    string `json:"operation"`
-	Note         string `json:"note"`
+	AdapterOwned     bool   `json:"adapter_owned"`
+	Operation        string `json:"operation"`
+	Note             string `json:"note"`
+	Branch           string `json:"branch,omitempty"`
+	Worktree         string `json:"worktree,omitempty"`
+	Commit           string `json:"commit,omitempty"`
+	WorktreeRedacted bool   `json:"worktree_redacted,omitempty"`
 }
 
 type SnapshotEntry struct {
@@ -33,6 +42,7 @@ type SnapshotEntry struct {
 type SnapshotManifest struct {
 	ManifestVersion string              `json:"manifest_version"`
 	SnapshotID      string              `json:"snapshot_id"`
+	CheckpointID    string              `json:"checkpoint_id,omitempty"`
 	WorkspaceID     string              `json:"workspace_id"`
 	ProfileID       string              `json:"profile_id,omitempty"`
 	Peer            string              `json:"peer"`
@@ -41,12 +51,23 @@ type SnapshotManifest struct {
 	Entries         []SnapshotEntry     `json:"entries"`
 }
 
+const SnapshotWarningStaleBranch = "stale_branch"
+
+type SnapshotWarning struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	From    string `json:"from,omitempty"`
+	To      string `json:"to,omitempty"`
+}
+
 type SnapshotDiff struct {
-	FromSnapshotID string          `json:"from_snapshot_id"`
-	ToSnapshotID   string          `json:"to_snapshot_id"`
-	Added          []SnapshotEntry `json:"added"`
-	Removed        []SnapshotEntry `json:"removed"`
-	Changed        []SnapshotEntry `json:"changed"`
+	FromSnapshotID string            `json:"from_snapshot_id"`
+	ToSnapshotID   string            `json:"to_snapshot_id"`
+	Added          []SnapshotEntry   `json:"added"`
+	Removed        []SnapshotEntry   `json:"removed"`
+	Changed        []SnapshotEntry   `json:"changed"`
+	GitChanged     bool              `json:"git_changed,omitempty"`
+	Warnings       []SnapshotWarning `json:"warnings,omitempty"`
 }
 
 type SnapshotRollbackMetadata struct {
@@ -90,15 +111,14 @@ func (s *Service) ExportSnapshotManifest(ctx context.Context, params SnapshotPar
 		WorkspaceID:     scope.WorkspaceID,
 		ProfileID:       scope.ProfileID,
 		Peer:            scope.Peer,
-		Git: SnapshotGitMetadata{
-			AdapterOwned: true,
-			Operation:    "none",
-			Note:         "manifest export is deterministic; git add/commit/diff/rollback are host-adapter owned",
-		},
-		Counts:  snapshotCounts(entries),
-		Entries: entries,
+		Git:             snapshotGitMetadata(params),
+		Counts:          snapshotCounts(entries),
+		Entries:         entries,
 	}
 	manifest.SnapshotID = snapshotManifestID(manifest)
+	if manifest.Git.Branch != "" || manifest.Git.Worktree != "" || manifest.Git.Commit != "" {
+		manifest.CheckpointID = snapshotCheckpointID(manifest)
+	}
 	return manifest, nil
 }
 
@@ -111,7 +131,11 @@ func DiffSnapshotManifests(from, to SnapshotManifest) SnapshotDiff {
 	for _, entry := range to.Entries {
 		toByKey[entry.Key] = entry
 	}
-	diff := SnapshotDiff{FromSnapshotID: from.SnapshotID, ToSnapshotID: to.SnapshotID, Added: []SnapshotEntry{}, Removed: []SnapshotEntry{}, Changed: []SnapshotEntry{}}
+	diff := SnapshotDiff{FromSnapshotID: from.SnapshotID, ToSnapshotID: to.SnapshotID, Added: []SnapshotEntry{}, Removed: []SnapshotEntry{}, Changed: []SnapshotEntry{}, Warnings: []SnapshotWarning{}}
+	diff.GitChanged = from.Git.Branch != to.Git.Branch || from.Git.Worktree != to.Git.Worktree || from.Git.Commit != to.Git.Commit
+	if from.Git.Branch != "" && to.Git.Branch != "" && from.Git.Branch != to.Git.Branch {
+		diff.Warnings = append(diff.Warnings, SnapshotWarning{Code: SnapshotWarningStaleBranch, Message: "snapshot was captured on a different branch; verify remembered project state before reuse", From: from.Git.Branch, To: to.Git.Branch})
+	}
 	for key, entry := range toByKey {
 		old, ok := fromByKey[key]
 		if !ok {
@@ -240,6 +264,31 @@ func sortSnapshotEntries(entries []SnapshotEntry) {
 		}
 		return entries[i].Key < entries[j].Key
 	})
+}
+
+func snapshotGitMetadata(params SnapshotParams) SnapshotGitMetadata {
+	branch, worktree, commit := strings.TrimSpace(params.Branch), strings.TrimSpace(params.Worktree), strings.TrimSpace(params.Commit)
+	redacted := false
+	if filepath.IsAbs(worktree) {
+		worktree = filepath.Base(filepath.Clean(worktree))
+		redacted = true
+	}
+	metadata := SnapshotGitMetadata{AdapterOwned: true, Operation: "none", Note: "manifest export is deterministic; git add/commit/diff/rollback are host-adapter owned", Branch: branch, Worktree: worktree, Commit: commit, WorktreeRedacted: redacted}
+	if branch != "" || worktree != "" || commit != "" {
+		metadata.Operation = "capture_metadata"
+		metadata.Note = "branch, worktree, and commit are host-provided evidence; Goncho does not run git"
+	}
+	return metadata
+}
+
+func snapshotCheckpointID(manifest SnapshotManifest) string {
+	view := struct {
+		SnapshotID string `json:"snapshot_id"`
+		Branch     string `json:"branch,omitempty"`
+		Worktree   string `json:"worktree,omitempty"`
+		Commit     string `json:"commit,omitempty"`
+	}{manifest.SnapshotID, manifest.Git.Branch, manifest.Git.Worktree, manifest.Git.Commit}
+	return "checkpoint:" + hashutil.JSONSHA256HexPrefix(view, 12)
 }
 
 func snapshotManifestID(manifest SnapshotManifest) string {
